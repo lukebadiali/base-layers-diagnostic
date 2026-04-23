@@ -560,6 +560,7 @@ a:hover { text-decoration: underline; }
 
 /* ===== Operational Excellence tile (performance layer, non-scored) ===== */
 .tile.opex {
+  grid-column: span 2;
   background: var(--surface);          /* white, matches other tiles */
   border: 1px solid var(--line);
   box-shadow: var(--shadow-sm);
@@ -591,7 +592,7 @@ a:hover { text-decoration: underline; }
   padding: 0;
   margin: 8px 0 0;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 8px 18px;
 }
 .opex-list li {

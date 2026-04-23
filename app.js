@@ -1213,7 +1213,7 @@
     tile.appendChild(h("div", { class: "name" }, "Operational Excellence"));
     if (!isOpen) {
       tile.appendChild(h("div", { class: "tag" },
-        "Underpins the ten pillars — the performance layer that makes the model stick."));
+        "Underpins the ten pillars. This is the performance layer that makes the model stick."));
     }
 
     const foot = h("div", { class: "foot" });

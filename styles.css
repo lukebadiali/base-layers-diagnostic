@@ -50,6 +50,20 @@
 
 * { box-sizing: border-box; }
 
+/* Disable printing for client accounts — printed pages come out with a short
+   message instead of the actual content. Internal users print normally. */
+@media print {
+  body.client-view > * { display: none !important; }
+  body.client-view::before {
+    content: "Printing is disabled for client accounts. Contact your BeDeveloped team lead if you need a copy of the report.";
+    display: block;
+    padding: 48px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: #333;
+  }
+}
+
 html, body {
   margin: 0;
   padding: 0;

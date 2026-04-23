@@ -550,6 +550,7 @@
     app.innerHTML = "";
 
     const user = currentUser();
+    document.body.classList.toggle("client-view", !!(user && user.role === "client"));
     if (!user) {
       app.appendChild(renderAuth());
       return;

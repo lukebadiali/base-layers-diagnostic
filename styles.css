@@ -993,6 +993,43 @@ a:hover { text-decoration: underline; }
   letter-spacing: 0.08em;
   font-weight: 600;
 }
+.report-intro p {
+  color: var(--ink-2);
+  font-size: 14.5px;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+.report-intro h2 {
+  font-size: 24px;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+.report-snapshot {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+@media (max-width: 900px) {
+  .report-snapshot { grid-template-columns: 1fr; }
+}
+.report .r-def {
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.55;
+  margin-bottom: 8px;
+}
+.report .r-achieve {
+  color: var(--ink-2);
+  font-size: 13.5px;
+  background: var(--brand-tint);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 4px 0 0;
+}
+.report .r-band {
+  border-radius: 8px;
+}
 .report .r-pillars {
   margin-top: 28px;
 }

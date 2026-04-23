@@ -669,7 +669,7 @@
       ["actions",     "Actions"],
       ["roadmap",     "Roadmap"]
     ];
-    if (!isClient) items.push(["admin", "Admin"]);
+    // Admin access moved to the user dropdown ("Admin · manage people").
 
     const unread = org ? unreadCountTotal(org, user) : 0;
 
@@ -1968,6 +1968,33 @@
   // ================================================================
   // REPORT
   // ================================================================
+  function bandLabel(s) {
+    if (s === null || s === undefined) return "Not scored";
+    if (s < 40) return "Low";
+    if (s < 70) return "Medium";
+    return "High";
+  }
+
+  function bandStatement(pillarName, s) {
+    if (s === null || s === undefined) {
+      return `${pillarName} has not yet been scored. Once the diagnostic is complete, you will see a detailed view here including your development priorities.`;
+    }
+    if (s < 40) {
+      return `Your team scored ${s}/100 on ${pillarName}. This is a LOW score and a priority development area. Investment here is likely to unlock compounding gains across other pillars, because ${pillarName.toLowerCase()} sits upstream of how the rest of your commercial engine performs.`;
+    }
+    if (s < 70) {
+      return `Your team scored ${s}/100 on ${pillarName}. This is a MEDIUM score. Foundational elements are in place, but there is clear room to strengthen consistency, codify what is working, and remove variability between individuals and situations.`;
+    }
+    return `Your team scored ${s}/100 on ${pillarName}. This is a HIGH score and, on current evidence, a strength. The opportunity here is to maintain discipline, protect the standard as you scale, and treat this as a competitive advantage worth defending.`;
+  }
+
+  function bandColor(s) {
+    if (s === null || s === undefined) return "var(--line-2)";
+    if (s < 40) return "var(--red)";
+    if (s < 70) return "var(--amber)";
+    return "var(--green)";
+  }
+
   function renderReport(user, org) {
     const frag = h("div");
     const summary = orgSummary(org);
@@ -1983,24 +2010,57 @@
     ].filter(Boolean)));
 
     const r = h("div", { class: "report" });
-    r.appendChild(h("h1", {}, `Base Layers diagnostic — ${org.name}`));
+    r.appendChild(h("h1", {}, `Base Layers diagnostic - ${org.name}`));
     r.appendChild(h("div", { class: "sub" },
       `${isClient ? "Client view" : "Internal view"} · ${round?.label || "Current round"} · Generated ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`));
 
-    r.appendChild(reportRow("Overall health",
-      summary.avg !== null ? `${summary.avg} / 100` : "Not yet scored"));
-    r.appendChild(reportRow("Pillars scored", `${summary.scoredCount} of ${DATA.pillars.length}`));
-    r.appendChild(reportRow("Status mix",
-      `${summary.green} green · ${summary.amber} amber · ${summary.red} red · ${summary.gray} not scored`));
-    r.appendChild(reportRow("Engagement stage", stage ? stage.name : "—"));
-    const respondents = respondentsForRound(org, org.currentRoundId);
-    r.appendChild(reportRow("Respondents", `${respondents.length}`));
+    // Intro block
+    const intro = h("div", { class: "report-intro card", style: "margin:18px 0 24px;" });
+    intro.appendChild(h("h2", { style: "margin-top:0;" }, "Thank you for participating in the Base Layers Sales Assessment."));
+    intro.appendChild(h("p", {}, "Your results will provide valuable insights into your current business development processes and help you streamline your operations."));
+    intro.appendChild(h("p", {}, "We have assessed your performance from the Base Layers sales framework that covers 10 core strategic pillars:"));
+    const pillarList = h("ol", { style: "margin:6px 0 12px 20px; padding:0; font-size:14px; color:var(--ink-2);" });
+    DATA.pillars.forEach(p => {
+      pillarList.appendChild(h("li", { style: "margin-bottom:2px;" }, p.name));
+    });
+    intro.appendChild(pillarList);
+    intro.appendChild(h("p", {}, "Below, you will find a snapshot of your results. We encourage you to read through your development areas and capture any questions you have for Luke & George to improve your business development strategy."));
+    intro.appendChild(h("p", {}, "This assessment will be a guide to start improving your early-stage sales process, by embedding a fully structured implementation roadmap."));
+    r.appendChild(intro);
 
+    // Snapshot grid: donut + key metrics side-by-side
+    const snap = h("div", { class: "report-snapshot" });
+
+    const chartCard = h("div", { class: "card", style: "min-height:320px;" });
+    chartCard.appendChild(h("h3", { style: "margin-top:0;" }, "Results at a glance"));
+    chartCard.appendChild(h("p", { style: "color:var(--ink-3); font-size:12.5px; margin:-4px 0 10px;" },
+      "Each slice is one pillar. Colours show where you're strong (green), developing (amber), or need focus (red)."));
+    const canvasWrap = h("div", { style: "position:relative; height:240px;" });
+    const canvas = h("canvas", { id: "reportDonut" });
+    canvasWrap.appendChild(canvas);
+    chartCard.appendChild(canvasWrap);
+    snap.appendChild(chartCard);
+
+    const metricsCard = h("div", { class: "card" });
+    metricsCard.appendChild(h("h3", { style: "margin-top:0;" }, "Summary"));
+    [
+      ["Overall health", summary.avg !== null ? `${summary.avg} / 100` : "Not yet scored"],
+      ["Pillars scored", `${summary.scoredCount} of ${DATA.pillars.length}`],
+      ["Status mix", `${summary.green} green · ${summary.amber} amber · ${summary.red} red · ${summary.gray} not scored`],
+      ["Engagement stage", stage ? stage.name : "—"],
+      ["Respondents", String(respondentsForRound(org, org.currentRoundId).length)]
+    ].forEach(([label, val]) => metricsCard.appendChild(reportRow(label, val)));
     if (constraints.length) {
-      r.appendChild(reportRow("Top constraints",
+      metricsCard.appendChild(reportRow("Top constraints",
         constraints.map((p, i) => `${i + 1}. ${p.name} (${pillarScore(org, p.id)}/100)`).join(" · ")));
     }
+    snap.appendChild(metricsCard);
+    r.appendChild(snap);
 
+    // Draw donut once DOM is attached
+    queueMicrotask(() => drawReportDonut(org));
+
+    // Pillar detail
     const rp = h("div", { class: "r-pillars" });
     rp.appendChild(h("h2", { style: "margin-top:28px;" }, "Pillar detail"));
     DATA.pillars.forEach(p => {
@@ -2008,11 +2068,15 @@
       const prevS = prevRoundId ? pillarScoreForRound(org, prevRoundId, p.id) : null;
       const status = pillarStatus(s);
       const { done, total } = answerSummaryForPillar(org, p.id);
+      const band = bandLabel(s);
 
       const block = h("div", { class: "r-pillar" });
       const header = h("header", {}, [
         h("span", { class: "name" }, `${p.id}. ${p.name}`),
         h("span", { class: "meta" }, [
+          h("span", {
+            style: `display:inline-block; padding:2px 10px; border-radius:999px; background:${bandColor(s)}; color:#fff; font-weight:600; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; margin-right:8px;`
+          }, band),
           s !== null ? `${s}/100` : "—",
           prevS !== null ? ` (was ${prevS})` : "",
           " · ",
@@ -2020,20 +2084,21 @@
         ])
       ]);
       block.appendChild(header);
-      block.appendChild(h("p", {}, p.tagline));
 
-      // Internal notes shown only to internal
-      const iNote = ((org.internalNotes || {})[p.id] || {});
-      if (!isClient) {
-        Object.entries(iNote).forEach(([idx, text]) => {
-          if (!text) return;
-          block.appendChild(h("div", { class: "r-notes internal-note", style: "margin-top:6px;" }, [
-            h("span", { class: "internal-badge" }, "Internal"),
-            h("div", { style: "font-size:12px; color:var(--ink-3);" }, `Q${Number(idx) + 1}: ${p.diagnostics[idx]}`),
-            h("div", {}, text)
-          ]));
-        });
+      // Richer pillar definition
+      block.appendChild(h("p", { class: "r-def" }, p.dashDescription || p.overview || p.tagline));
+      if (p.dashAchieve) {
+        block.appendChild(h("p", { class: "r-achieve" }, [
+          h("strong", {}, "What good looks like: "),
+          p.dashAchieve
+        ]));
       }
+
+      // Score band statement
+      block.appendChild(h("div", {
+        class: "r-band",
+        style: `border-left:3px solid ${bandColor(s)}; padding:10px 12px; background:var(--surface-muted); margin-top:10px; font-size:13.5px;`
+      }, bandStatement(p.name, s)));
 
       const actions = (org.actions || []).filter(a => a.pillarId === p.id && (!isClient || !a.internal));
       if (actions.length) {
@@ -2053,6 +2118,54 @@
     r.appendChild(rp);
     frag.appendChild(r);
     return frag;
+  }
+
+  function drawReportDonut(org) {
+    if (!window.Chart) { setTimeout(() => drawReportDonut(org), 120); return; }
+    const canvas = $("#reportDonut");
+    if (!canvas) return;
+    if (state.reportChart) { try { state.reportChart.destroy(); } catch {} }
+
+    const labels = [];
+    const data = [];
+    const colors = [];
+    const statusPalette = {
+      red:   "#C0392B",
+      amber: "#D98E00",
+      green: "#2F8A4F",
+      gray:  "#CFD3D8"
+    };
+    DATA.pillars.forEach(p => {
+      const s = pillarScore(org, p.id);
+      labels.push(`${p.id}. ${p.shortName || p.name}`);
+      data.push(10);   // equal slices
+      colors.push(statusPalette[pillarStatus(s)] || statusPalette.gray);
+    });
+
+    state.reportChart = new Chart(canvas.getContext("2d"), {
+      type: "doughnut",
+      data: {
+        labels,
+        datasets: [{ data, backgroundColor: colors, borderColor: "#fff", borderWidth: 2 }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "58%",
+        plugins: {
+          legend: { position: "right", labels: { font: { size: 11 }, boxWidth: 12 } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const p = DATA.pillars[ctx.dataIndex];
+                const s = pillarScore(org, p.id);
+                return `${p.name}: ${s !== null ? s + "/100 (" + bandLabel(s) + ")" : "Not scored"}`;
+              }
+            }
+          }
+        }
+      }
+    });
   }
 
   function reportRow(label, value) {

@@ -1137,10 +1137,10 @@ a:hover { text-decoration: underline; }
 .auth-hero .hero-accent {
   border: 0;
   height: 3px;
-  width: 220px;
-  max-width: 60%;
+  width: 440px;
+  max-width: 80%;
   background: var(--accent);
-  margin: 24px 0 0;
+  margin: 32px 0 0;
   align-self: flex-start;
   border-radius: 2px;
 }
@@ -1212,6 +1212,7 @@ a:hover { text-decoration: underline; }
   font-weight: 400;
   font-size: 28px;
   letter-spacing: 0.04em;
+  color: #474747;
   margin: 0 0 6px;
 }
 .auth-sub {

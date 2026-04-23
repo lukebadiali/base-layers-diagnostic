@@ -292,6 +292,40 @@
     return h === s.internalPassphrase;
   }
 
+  // ---------- Client org passphrase (shared by all users of an org) ----------
+  async function setOrgClientPassphrase(orgId, pass) {
+    const org = loadOrg(orgId);
+    if (!org) return false;
+    org.clientPassphraseHash = await hashString(pass);
+    saveOrg(org);
+    return true;
+  }
+  async function verifyOrgClientPassphrase(orgId, pass) {
+    const org = loadOrg(orgId);
+    if (!org || !org.clientPassphraseHash) return false;
+    const h = await hashString(pass);
+    return h === org.clientPassphraseHash;
+  }
+  function orgHasClientPassphrase(orgId) {
+    const org = loadOrg(orgId);
+    return !!(org && org.clientPassphraseHash);
+  }
+
+  // ---------- Per-user password (client users only) ----------
+  async function setUserPassword(userId, pass) {
+    const u = findUser(userId);
+    if (!u) return false;
+    u.passwordHash = await hashString(pass);
+    upsertUser(u);
+    return true;
+  }
+  async function verifyUserPassword(userId, pass) {
+    const u = findUser(userId);
+    if (!u || !u.passwordHash) return false;
+    const h = await hashString(pass);
+    return h === u.passwordHash;
+  }
+
   // ---------- v1 → v2 migration ----------
   function migrateV1IfNeeded() {
     const users = loadUsers();
@@ -826,13 +860,30 @@
     if (state.authTab === "client") {
       container.appendChild(h("h2", { class: "auth-heading" }, "Client sign-in"));
       container.appendChild(h("p", { class: "auth-sub" },
-        "Sign in with the email your BeDeveloped contact used to invite you."));
+        "Sign in with the email your BeDeveloped contact used to invite you, your company passphrase, and your personal password."));
 
-      const email = h("input", { type: "email", placeholder: "you@company.com" });
-      const errBox = h("div");
+      const email   = h("input", { type: "email",    placeholder: "you@company.com" });
+      const team    = h("input", { type: "password", placeholder: "Company passphrase (shared)" });
+      const pass    = h("input", { type: "password", placeholder: "Your password" });
+      const passConfirm = h("input", { type: "password", placeholder: "Confirm password (first sign-in only)", style: "display:none;" });
+      const errBox  = h("div");
       if (state.authError) errBox.appendChild(h("div", { class: "auth-error" }, state.authError));
 
-      const doClientLogin = () => {
+      const hint = h("div", { class: "auth-help", style: "margin-top:0; padding-top:0; border:0;" },
+        "First time signing in? Fill in your email + company passphrase, then set a password below. It'll be remembered next time.");
+
+      // Show/hide the confirm field based on whether the entered email belongs to a fresh user
+      const updateFirstRunUI = () => {
+        const u = findUserByEmail(email.value);
+        const needsPassword = u && u.role === "client" && !u.passwordHash;
+        passConfirm.style.display = needsPassword ? "block" : "none";
+        pass.placeholder = needsPassword ? "Set your password (min 4 chars)" : "Your password";
+      };
+      email.addEventListener("blur", updateFirstRunUI);
+      email.addEventListener("input", updateFirstRunUI);
+
+      const doClientLogin = async () => {
+        state.authError = "";
         const u = findUserByEmail(email.value);
         if (!u || u.role !== "client") {
           state.authError = "We don't have a client account for that email. Ask your BeDeveloped contact to invite you.";
@@ -842,22 +893,54 @@
           state.authError = "Your client account isn't linked to an organisation yet. Contact BeDeveloped.";
           render(); return;
         }
-        state.authError = "";
+        if (!orgHasClientPassphrase(u.orgId)) {
+          state.authError = "Your organisation hasn't finished sign-in setup yet. Contact your BeDeveloped lead.";
+          render(); return;
+        }
+        const okTeam = await verifyOrgClientPassphrase(u.orgId, team.value);
+        if (!okTeam) {
+          state.authError = "Company passphrase didn't match. Ask your BeDeveloped contact for the current one.";
+          render(); return;
+        }
+        if (!u.passwordHash) {
+          // First sign-in — password in "pass" field is a new password being set.
+          if (pass.value.length < 4) {
+            state.authError = "Choose a password of at least 4 characters.";
+            render(); return;
+          }
+          if (pass.value !== passConfirm.value) {
+            state.authError = "Password and confirmation don't match.";
+            render(); return;
+          }
+          await setUserPassword(u.id, pass.value);
+        } else {
+          const okPass = await verifyUserPassword(u.id, pass.value);
+          if (!okPass) {
+            state.authError = "Password didn't match. Contact your BeDeveloped lead if you've forgotten it.";
+            render(); return;
+          }
+        }
         signIn(u.id);
         state.route = "dashboard";
         render();
       };
-      email.addEventListener("keydown", e => { if (e.key === "Enter") doClientLogin(); });
+      [email, team, pass, passConfirm].forEach(el =>
+        el.addEventListener("keydown", e => { if (e.key === "Enter") doClientLogin(); })
+      );
 
-      container.appendChild(h("div", { class: "auth-field" }, [
-        h("label", {}, "Email"),
-        email
-      ]));
+      [["Email", email], ["Company passphrase", team], ["Password", pass]].forEach(([lbl, input]) => {
+        container.appendChild(h("div", { class: "auth-field" }, [
+          h("label", {}, lbl),
+          input
+        ]));
+      });
+      container.appendChild(h("div", { class: "auth-field", style: "margin-top:-6px;" }, [passConfirm]));
+      container.appendChild(hint);
       container.appendChild(errBox);
       container.appendChild(h("button", { class: "auth-submit", onclick: doClientLogin }, "Sign in"));
 
       container.appendChild(h("div", { class: "auth-help" },
-        "Clients never see other clients' data. If your email isn't working, ask your BeDeveloped contact to re-send the invitation."));
+        "Clients only see their own company's data. If your email or passphrase isn't working, ask your BeDeveloped contact."));
     } else {
       container.appendChild(h("h2", { class: "auth-heading" }, "Internal sign-in"));
       container.appendChild(h("p", { class: "auth-sub" },
@@ -1956,13 +2039,22 @@
           h("div", { style: "color:var(--ink-3); font-size:12px;" },
             `${(o?.rounds?.length || 0)} round(s) · ${respondentsForRound(o, o.currentRoundId).length} respondents`)
         ]));
-        row.appendChild(h("div", {}, `${clients.length} client user${clients.length === 1 ? "" : "s"}`));
+        const hasPass = !!(o && o.clientPassphraseHash);
+        row.appendChild(h("div", {}, [
+          h("div", {}, `${clients.length} client user${clients.length === 1 ? "" : "s"}`),
+          h("div", { style: `font-size:11px; margin-top:2px; color: ${hasPass ? "var(--green)" : "var(--amber)"};` },
+            hasPass ? "✓ passphrase set" : "⚠ no passphrase")
+        ]));
         row.appendChild(h("div", {}, formatDate(o?.createdAt)));
         row.appendChild(h("div", { style: "display:flex; gap:6px;" }, [
           h("button", {
             class: "btn secondary sm",
             onclick: () => { state.orgId = m.id; setRoute("dashboard"); }
           }, "Open"),
+          h("button", {
+            class: "btn ghost sm",
+            onclick: () => openSetOrgPassphrase(m.id, m.name)
+          }, hasPass ? "Change passphrase" : "Set passphrase"),
           h("button", {
             class: "btn ghost sm danger",
             onclick: () => confirmDialog("Delete organisation?",
@@ -2007,14 +2099,29 @@
           style: "display:grid; grid-template-columns: 1fr 1.5fr 1fr auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); font-size:13.5px;"
         });
         row.appendChild(h("div", {}, u.name || "—"));
-        row.appendChild(h("div", {}, u.email));
+        row.appendChild(h("div", {}, [
+          h("div", {}, u.email),
+          h("div", { style: `font-size:11px; margin-top:2px; color: ${u.passwordHash ? "var(--green)" : "var(--ink-3)"};` },
+            u.passwordHash ? "password set" : "awaiting first sign-in")
+        ]));
         row.appendChild(h("div", {}, o ? o.name : "— (unassigned)"));
-        row.appendChild(h("button", {
-          class: "btn ghost sm danger",
-          onclick: () => confirmDialog("Remove client access?",
-            `${u.email} will no longer be able to sign in. Their responses from past rounds will remain in the data.`,
-            () => { deleteUser(u.id); render(); }, "Remove")
-        }, "Remove"));
+        row.appendChild(h("div", { style: "display:flex; gap:6px;" }, [
+          u.passwordHash ? h("button", {
+            class: "btn ghost sm",
+            onclick: () => confirmDialog("Reset password?",
+              `${u.email} will be asked to set a new password the next time they sign in.`,
+              () => {
+                const fresh = findUser(u.id);
+                if (fresh) { delete fresh.passwordHash; upsertUser(fresh); render(); }
+              }, "Reset")
+          }, "Reset password") : null,
+          h("button", {
+            class: "btn ghost sm danger",
+            onclick: () => confirmDialog("Remove client access?",
+              `${u.email} will no longer be able to sign in. Their responses from past rounds will remain in the data.`,
+              () => { deleteUser(u.id); render(); }, "Remove")
+          }, "Remove")
+        ].filter(Boolean)));
         table.appendChild(row);
       });
       usersCard.appendChild(table);
@@ -2078,7 +2185,7 @@
     const m = modal([
       h("h3", {}, "Invite a client"),
       h("p", { style: "color: var(--ink-3); font-size: 13px; margin-top:0;" },
-        "They'll sign in with just their email. No password required on their side."),
+        "They'll sign in with their email + the company passphrase you set, then create their own password on first login."),
       h("div", { style: "display:flex; gap:10px; flex-direction:column;" }, [
         h("div", {}, [
           h("label", { style: "font-size:12px; color:var(--ink-2); font-weight:600;" }, "Name"),
@@ -2129,6 +2236,36 @@
       ])
     ]);
     setTimeout(() => name.focus(), 10);
+  }
+
+  function openSetOrgPassphrase(orgId, orgName) {
+    const org = loadOrg(orgId);
+    const existing = !!(org && org.clientPassphraseHash);
+    const nw = h("input", { type: "password", placeholder: "New company passphrase (min 4 chars)" });
+    const confirm = h("input", { type: "password", placeholder: "Confirm passphrase" });
+    const errBox = h("div");
+    const m = modal([
+      h("h3", {}, (existing ? "Change" : "Set") + " passphrase — " + orgName),
+      h("p", { style: "color: var(--ink-3); font-size: 13px; margin-top:0;" },
+        "Share this with the client team. They'll type it alongside their email and personal password when they sign in. If you change it, tell everyone at " + orgName + " the new one."),
+      h("div", { style: "display:flex; flex-direction:column; gap:10px;" }, [nw, confirm]),
+      errBox,
+      h("div", { class: "row" }, [
+        h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
+        h("button", {
+          class: "btn",
+          onclick: async () => {
+            errBox.innerHTML = "";
+            if (nw.value.length < 4) { errBox.appendChild(h("div", { class: "auth-error" }, "Passphrase must be at least 4 characters.")); return; }
+            if (nw.value !== confirm.value) { errBox.appendChild(h("div", { class: "auth-error" }, "Passphrases don't match.")); return; }
+            await setOrgClientPassphrase(orgId, nw.value);
+            m.close();
+            render();
+          }
+        }, existing ? "Update" : "Save")
+      ])
+    ]);
+    setTimeout(() => nw.focus(), 10);
   }
 
   function openChangePassphrase() {

@@ -18,7 +18,7 @@ window.BASE_LAYERS = {
   engagementStages: [
     {
       id: "diagnosed",
-      name: "BeDiagnosed",
+      name: "Diagnose",
       summary: "Assess the business against all ten pillars. Fast, evidence-based, interview-led. Finds the real constraints — rarely where the client first assumed.",
       checklist: [
         "All ten pillars scored with evidence",
@@ -30,7 +30,7 @@ window.BASE_LAYERS = {
     },
     {
       id: "designed",
-      name: "BeDesigned",
+      name: "Design",
       summary: "Design the future state for the in-scope pillars. Tailored to the client's buying motion, segment and stage. Artefacts built to be operated, not admired.",
       checklist: [
         "Target operating model documented for in-scope pillars",
@@ -42,7 +42,7 @@ window.BASE_LAYERS = {
     },
     {
       id: "deployed",
-      name: "BeDeployed",
+      name: "Deploy",
       summary: "Deploy alongside the client's team. CRM changes, process roll out, enablement content, manager training, first cycles of operating cadence.",
       checklist: [
         "CRM changes live",

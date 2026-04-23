@@ -1917,6 +1917,7 @@
         onclick: () => {
           if (isClientView(user)) return; // clients can't change stage
           setEngagementStage(org.id, s.id);
+          render();
         }
       }, [
         h("div", { class: "n" }, `STAGE ${i + 1}`),

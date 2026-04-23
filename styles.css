@@ -1001,8 +1001,28 @@ a:hover { text-decoration: underline; }
 }
 .report-intro h2 {
   font-size: 24px;
-  color: var(--ink);
+  color: var(--brand);
   letter-spacing: 0.02em;
+}
+.report-intro ol {
+  list-style: none;
+  counter-reset: pillar;
+  padding-left: 34px;
+  margin: 6px 0 12px;
+}
+.report-intro ol li {
+  counter-increment: pillar;
+  position: relative;
+  margin-bottom: 2px;
+}
+.report-intro ol li::before {
+  content: counter(pillar) ".";
+  position: absolute;
+  left: -28px;
+  width: 24px;
+  text-align: right;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
 }
 .report-snapshot {
   display: grid;

@@ -2019,9 +2019,9 @@
     intro.appendChild(h("h2", { style: "margin-top:0;" }, "Thank you for participating in the Base Layers Sales Assessment."));
     intro.appendChild(h("p", {}, "Your results will provide valuable insights into your current business development processes and help you streamline your operations."));
     intro.appendChild(h("p", {}, "We have assessed your performance from the Base Layers sales framework that covers 10 core strategic pillars:"));
-    const pillarList = h("ol", { style: "margin:6px 0 12px 20px; padding:0; font-size:14px; color:var(--ink-2);" });
+    const pillarList = h("ol", { style: "font-size:14px; color:var(--ink-2);" });
     DATA.pillars.forEach(p => {
-      pillarList.appendChild(h("li", { style: "margin-bottom:2px;" }, p.name));
+      pillarList.appendChild(h("li", {}, p.name));
     });
     intro.appendChild(pillarList);
     intro.appendChild(h("p", {}, "Below, you will find a snapshot of your results. We encourage you to read through your development areas and capture any questions you have for Luke & George to improve your business development strategy."));

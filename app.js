@@ -2847,8 +2847,27 @@
   // ================================================================
   // INIT
   // ================================================================
+  // One-shot: clear all diagnostic responses when switching from the
+  // old 1-5 scale to the new 1-10 confidence scale. Runs once per browser.
+  function clearOldScaleResponsesIfNeeded() {
+    const s = loadSettings();
+    if (s.scaleV2Cleared) return;
+    loadOrgMetas().forEach(m => {
+      const org = loadOrg(m.id);
+      if (!org) return;
+      org.responses = {};
+      // Keep the current round id present but empty
+      if (org.currentRoundId) org.responses[org.currentRoundId] = {};
+      org.internalNotes = {};
+      saveOrg(org);
+    });
+    s.scaleV2Cleared = true;
+    saveSettings(s);
+  }
+
   function init() {
     migrateV1IfNeeded();
+    clearOldScaleResponsesIfNeeded();
     const user = currentUser();
     if (user) {
       // set initial orgId for internal

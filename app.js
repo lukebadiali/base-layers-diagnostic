@@ -292,6 +292,20 @@
     return h === s.internalPassphrase;
   }
 
+  // ---------- Hardcoded internal credentials ----------
+  // NOTE: this hash lives in a public repo. Treat as a light access gate,
+  // not real auth. Rotate the password if you suspect exposure.
+  const INTERNAL_ALLOWED_EMAILS = ["luke@bedeveloped.com", "george@bedeveloped.com"];
+  const INTERNAL_PASSWORD_HASH = "6110f27c9c91658c3489285abd5c45ffe5c1aa99c7f3f37d23e32834566e7fce";
+  function isAllowedInternalEmail(email) {
+    const e = (email || "").trim().toLowerCase();
+    return INTERNAL_ALLOWED_EMAILS.includes(e);
+  }
+  async function verifyInternalPassword(pass) {
+    const h = await hashString(pass);
+    return h === INTERNAL_PASSWORD_HASH;
+  }
+
   // ---------- Client org passphrase (shared by all users of an org) ----------
   async function setOrgClientPassphrase(orgId, pass) {
     const org = loadOrg(orgId);
@@ -756,17 +770,13 @@
   // AUTH / LOGIN SCREEN
   // ================================================================
   function renderAuth() {
-    const users = loadUsers();
-    const settings = loadSettings();
-    const firstRun = users.length === 0 || !settings.internalPassphrase;
-
     const wrap = h("div", { class: "auth-wrap" });
 
     // Hero side
     wrap.appendChild(h("div", { class: "auth-hero" }, [
       h("img", { class: "hero-logo", src: "assets/logo.png", alt: "BeDeveloped" }),
       h("div", {}, [
-        h("h1", {}, firstRun ? "Welcome to Base Layers." : "Build effective early-stage sales processes that strengthen and improve your business development function."),
+        h("h1", {}, "Build effective early-stage sales processes that strengthen and improve your business development function."),
         h("p", { class: "lede" },
           "The ten-pillar operating model BeDeveloped uses to diagnose, design and develop early-stage sales functions into repeatable revenue engines."),
         h("hr", { class: "hero-accent" })
@@ -776,13 +786,7 @@
 
     // Form side
     const form = h("div", { class: "auth-form" });
-
-    if (firstRun) {
-      form.appendChild(renderFirstRunSetup());
-    } else {
-      form.appendChild(renderSignInForm());
-    }
-
+    form.appendChild(renderSignInForm());
     wrap.appendChild(form);
     return wrap;
   }
@@ -944,20 +948,24 @@
     } else {
       container.appendChild(h("h2", { class: "auth-heading" }, "Internal sign-in"));
       container.appendChild(h("p", { class: "auth-sub" },
-        "BeDeveloped team members. Enter your email and the team passphrase."));
+        "BeDeveloped team members. Enter your work email and the team password."));
 
       const email = h("input", { type: "email",    placeholder: "you@bedeveloped.com" });
-      const pass  = h("input", { type: "password", placeholder: "Team passphrase" });
+      const pass  = h("input", { type: "password", placeholder: "Team password" });
       const errBox = h("div");
       if (state.authError) errBox.appendChild(h("div", { class: "auth-error" }, state.authError));
 
       const doInternalLogin = async () => {
-        const ok = await verifyInternalPassphrase(pass.value);
-        if (!ok) {
-          state.authError = "Passphrase didn't match. Ask another team member for the current one.";
+        state.authError = "";
+        if (!isAllowedInternalEmail(email.value)) {
+          state.authError = "That email isn't on the internal allowlist. Contact Luke to be added.";
           render(); return;
         }
-        // find or create internal user
+        const ok = await verifyInternalPassword(pass.value);
+        if (!ok) {
+          state.authError = "Password didn't match. Ask another team member for the current one.";
+          render(); return;
+        }
         let u = findUserByEmail(email.value);
         if (u && u.role !== "internal") {
           state.authError = "That email is registered as a client.";
@@ -973,14 +981,14 @@
           };
           upsertUser(u);
         }
-        state.authError = "";
         signIn(u.id);
         state.route = "dashboard";
         render();
       };
       pass.addEventListener("keydown", e => { if (e.key === "Enter") doInternalLogin(); });
+      email.addEventListener("keydown", e => { if (e.key === "Enter") doInternalLogin(); });
 
-      [["Email", email], ["Team passphrase", pass]].forEach(([lbl, input]) => {
+      [["Email", email], ["Team password", pass]].forEach(([lbl, input]) => {
         container.appendChild(h("div", { class: "auth-field" }, [
           h("label", {}, lbl),
           input
@@ -990,7 +998,7 @@
       container.appendChild(h("button", { class: "auth-submit", onclick: doInternalLogin }, "Sign in"));
 
       container.appendChild(h("div", { class: "auth-help" },
-        "The passphrase is shared across the BeDeveloped team. You can invite new clients after signing in."));
+        "Access is limited to the BeDeveloped internal team. You can invite clients after signing in."));
     }
 
     return container;
@@ -2155,16 +2163,14 @@
     }
     frag.appendChild(intCard);
 
-    // Danger zone
+    // Settings
     frag.appendChild(h("h2", {}, "Settings"));
-    const danger = h("div", { class: "card" });
-    danger.appendChild(h("p", { style: "color:var(--ink-3); font-size:13px; margin-top:0;" },
-      "Change the team passphrase used for internal sign-in. All existing internal members must be told the new passphrase."));
-    danger.appendChild(h("button", {
-      class: "btn secondary",
-      onclick: () => openChangePassphrase()
-    }, "Change team passphrase"));
-    frag.appendChild(danger);
+    const settingsCard = h("div", { class: "card" });
+    settingsCard.appendChild(h("p", { style: "color:var(--ink-2); font-size:13px; margin-top:0;" },
+      "Internal sign-in is restricted to a fixed allowlist of emails with a shared team password, configured in the app source. To add a team member or rotate the password, edit the repo."));
+    settingsCard.appendChild(h("div", { style: "font-size:12.5px; color:var(--ink-3);" },
+      "Allowed emails: " + INTERNAL_ALLOWED_EMAILS.join(", ")));
+    frag.appendChild(settingsCard);
 
     return frag;
   }

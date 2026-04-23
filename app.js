@@ -734,7 +734,8 @@
       h("div", {}, [
         h("h1", {}, firstRun ? "Welcome to Base Layers." : "Build effective early-stage sales processes that strengthen and improve your business development function."),
         h("p", { class: "lede" },
-          "The ten-pillar operating model BeDeveloped uses to diagnose, design and develop early-stage sales functions into repeatable revenue engines.")
+          "The ten-pillar operating model BeDeveloped uses to diagnose, design and develop early-stage sales functions into repeatable revenue engines."),
+        h("hr", { class: "hero-accent" })
       ]),
       h("div", { class: "quote" }, "“Early-stage sales is a function, not a personality. Process beats heroics, and repeatability beats charisma.”")
     ]));

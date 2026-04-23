@@ -1131,8 +1131,18 @@ a:hover { text-decoration: underline; }
   max-width: 60%;
   display: block;
   align-self: flex-start;
-  filter: brightness(0) invert(1);
-  opacity: 0.95;
+  filter: brightness(0) invert(0.28);
+  opacity: 1;
+}
+.auth-hero .hero-accent {
+  border: 0;
+  height: 3px;
+  width: 220px;
+  max-width: 60%;
+  background: var(--accent);
+  margin: 24px 0 0;
+  align-self: flex-start;
+  border-radius: 2px;
 }
 .auth-hero h1 {
   font-family: var(--font-display);
@@ -1199,8 +1209,9 @@ a:hover { text-decoration: underline; }
 }
 .auth-heading {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 400;
   font-size: 28px;
+  letter-spacing: 0.04em;
   margin: 0 0 6px;
 }
 .auth-sub {

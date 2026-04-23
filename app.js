@@ -587,6 +587,8 @@
     else if (route === "actions") main.appendChild(renderActions(user, org));
     else if (route === "engagement") main.appendChild(renderEngagement(user, org));
     else if (route === "report") main.appendChild(renderReport(user, org));
+    else if (route === "documents") main.appendChild(renderDocuments(user, org));
+    else if (route === "chat") main.appendChild(renderChat(user, org));
     else if (route === "admin" && !isClient) main.appendChild(renderAdmin(user));
     else {
       state.route = "dashboard";
@@ -618,7 +620,9 @@
       ["diagnostic",  "Diagnostic"],
       ["actions",     "Actions"],
       ["engagement",  "Engagement"],
-      ["report",      "Report"]
+      ["report",      "Report"],
+      ["documents",   "Documents"],
+      ["chat",        "Chat"]
     ];
     if (!isClient) items.push(["admin", "Admin"]);
 
@@ -2195,6 +2199,287 @@
 
     return frag;
   }
+
+  // ================================================================
+  // DOCUMENTS (Firebase Storage + Firestore)
+  // ================================================================
+  function fbReady() { return !!(window.FB && window.FB.currentUser); }
+
+  function formatBytes(b) {
+    if (b == null) return "";
+    if (b < 1024) return b + " B";
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+    if (b < 1024 * 1024 * 1024) return (b / (1024 * 1024)).toFixed(1) + " MB";
+    return (b / (1024 * 1024 * 1024)).toFixed(2) + " GB";
+  }
+
+  function renderDocuments(user, org) {
+    const frag = h("div");
+    frag.appendChild(h("h1", { class: "view-title" }, "Documents"));
+    frag.appendChild(h("p", { class: "view-sub" },
+      org ? `Shared with ${org.name}. Everyone in this organisation can see documents unless marked private.` : "Select an organisation to see its documents."));
+
+    if (!org) return frag;
+
+    if (!fbReady()) {
+      frag.appendChild(h("div", { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" }, "Connecting to shared storage…"));
+      return frag;
+    }
+
+    const { db, storage, firestore, storageOps } = window.FB;
+
+    // Upload card
+    const uploadCard = h("div", { class: "card" });
+    const fileInput = h("input", { type: "file", style: "display:none;" });
+    const privateChk = h("input", { type: "checkbox" });
+    const progressBar = h("div", { style: "margin-top:8px; font-size:12px; color:var(--ink-3);" });
+
+    const upload = async (file) => {
+      progressBar.textContent = "Uploading " + file.name + "…";
+      try {
+        const docId = uid("doc_");
+        const path = `orgs/${org.id}/documents/${docId}/${file.name}`;
+        const r = storageOps.ref(storage, path);
+        const task = storageOps.uploadBytesResumable(r, file, { contentType: file.type });
+        task.on("state_changed", (snap) => {
+          const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+          progressBar.textContent = `Uploading ${file.name}… ${pct}%`;
+        });
+        await task;
+        const url = await storageOps.getDownloadURL(r);
+        await firestore.setDoc(firestore.doc(db, "documents", docId), {
+          orgId: org.id,
+          uploaderId: user.id,
+          uploaderName: user.name || user.email,
+          uploaderEmail: user.email,
+          filename: file.name,
+          size: file.size,
+          contentType: file.type,
+          storagePath: path,
+          downloadURL: url,
+          visibility: privateChk.checked ? "private" : "org",
+          allowedUserIds: privateChk.checked ? [user.id] : [],
+          createdAt: firestore.serverTimestamp()
+        });
+        progressBar.textContent = `✓ Uploaded ${file.name}`;
+        privateChk.checked = false;
+      } catch (e) {
+        progressBar.textContent = "Upload failed: " + (e.message || e);
+      }
+    };
+
+    fileInput.addEventListener("change", (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f) upload(f);
+      e.target.value = "";
+    });
+
+    uploadCard.appendChild(h("div", { style: "display:flex; gap:12px; align-items:center; flex-wrap:wrap;" }, [
+      h("button", { class: "btn", onclick: () => fileInput.click() }, "+ Upload file"),
+      fileInput,
+      h("label", { style: "display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-2);" }, [
+        privateChk,
+        h("span", {}, "Private (only I can see it)")
+      ])
+    ]));
+    uploadCard.appendChild(progressBar);
+    frag.appendChild(uploadCard);
+
+    // List
+    const listCard = h("div", { class: "card", style: "margin-top:16px;" });
+    listCard.appendChild(h("h3", { style: "margin-top:0;" }, "Files"));
+    const listBody = h("div", {});
+    listBody.appendChild(h("p", { style: "color:var(--ink-3);" }, "Loading…"));
+    listCard.appendChild(listBody);
+    frag.appendChild(listCard);
+
+    const q = firestore.query(
+      firestore.collection(db, "documents"),
+      firestore.where("orgId", "==", org.id)
+    );
+    firestore.onSnapshot(q, (snap) => {
+      const docs = [];
+      snap.forEach((d) => docs.push({ id: d.id, ...d.data() }));
+      docs.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+
+      const isInternal = user.role === "internal";
+      const visible = docs.filter(d => {
+        if (d.visibility !== "private") return true;
+        if (isInternal) return true;
+        return (d.allowedUserIds || []).includes(user.id);
+      });
+
+      listBody.innerHTML = "";
+      if (!visible.length) {
+        listBody.appendChild(h("p", { style: "color:var(--ink-3);" }, "No files yet."));
+        return;
+      }
+      visible.forEach(d => {
+        const row = h("div", {
+          style: "display:grid; grid-template-columns: 1.5fr 1fr 1fr auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); font-size:13.5px;"
+        });
+        row.appendChild(h("div", {}, [
+          h("div", { style: "font-weight:600;" }, d.filename),
+          h("div", { style: "font-size:11px; color:var(--ink-3);" },
+            formatBytes(d.size) + (d.visibility === "private" ? " · private" : ""))
+        ]));
+        row.appendChild(h("div", {}, d.uploaderName || d.uploaderEmail || "—"));
+        row.appendChild(h("div", {}, d.createdAt?.toDate?.().toLocaleString?.() || ""));
+        const canDelete = isInternal || d.uploaderId === user.id;
+        const actions = h("div", { style: "display:flex; gap:6px;" }, [
+          h("a", {
+            class: "btn secondary sm",
+            href: d.downloadURL,
+            target: "_blank",
+            rel: "noopener"
+          }, "Download"),
+          canDelete ? h("button", {
+            class: "btn ghost sm danger",
+            onclick: () => confirmDialog("Delete file?", `Remove "${d.filename}" for everyone in ${org.name}? This cannot be undone.`, async () => {
+              try {
+                await storageOps.deleteObject(storageOps.ref(storage, d.storagePath));
+              } catch (e) { /* file may already be gone */ }
+              await firestore.deleteDoc(firestore.doc(db, "documents", d.id));
+            }, "Delete")
+          }, "Delete") : null
+        ].filter(Boolean));
+        row.appendChild(actions);
+        listBody.appendChild(row);
+      });
+    }, (err) => {
+      listBody.innerHTML = "";
+      listBody.appendChild(h("p", { style: "color:var(--red);" }, "Couldn't load documents: " + err.message));
+    });
+
+    return frag;
+  }
+
+  // ================================================================
+  // CHAT (Firestore real-time)
+  // ================================================================
+  function renderChat(user, org) {
+    const frag = h("div");
+    frag.appendChild(h("h1", { class: "view-title" }, "Chat"));
+    frag.appendChild(h("p", { class: "view-sub" },
+      org ? `Team channel for ${org.name}. Everyone in this organisation + BeDeveloped can post and read.` : "Select an organisation to open its channel."));
+
+    if (!org) return frag;
+
+    if (!fbReady()) {
+      frag.appendChild(h("div", { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" }, "Connecting to chat…"));
+      return frag;
+    }
+
+    const { db, firestore } = window.FB;
+
+    const card = h("div", { class: "card", style: "padding:0; display:flex; flex-direction:column; height: calc(100vh - 260px); min-height:480px;" });
+
+    // Search
+    const searchInput = h("input", {
+      type: "search",
+      placeholder: "Search messages…",
+      style: "width:100%; padding:10px 14px; border:0; border-bottom:1px solid var(--line); font:inherit; font-size:14px; background:transparent;"
+    });
+    card.appendChild(searchInput);
+
+    // Message list
+    const list = h("div", {
+      style: "flex:1; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:10px;"
+    });
+    list.appendChild(h("p", { style: "color:var(--ink-3); text-align:center;" }, "Loading…"));
+    card.appendChild(list);
+
+    // Composer
+    const textInput = h("input", {
+      type: "text",
+      placeholder: "Type a message…",
+      style: "flex:1; padding:10px 14px; border:1px solid var(--line-2); border-radius:8px; font:inherit; font-size:14px;"
+    });
+    const sendBtn = h("button", { class: "btn" }, "Send");
+
+    const composer = h("div", {
+      style: "display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--line); background:var(--surface-muted);"
+    }, [textInput, sendBtn]);
+    card.appendChild(composer);
+    frag.appendChild(card);
+
+    let allMessages = [];
+    const renderList = () => {
+      const term = (searchInput.value || "").trim().toLowerCase();
+      const filtered = term
+        ? allMessages.filter(m => (m.text || "").toLowerCase().includes(term) || (m.authorName || "").toLowerCase().includes(term))
+        : allMessages;
+      list.innerHTML = "";
+      if (!filtered.length) {
+        list.appendChild(h("p", { style: "color:var(--ink-3); text-align:center;" },
+          term ? "No messages match." : "No messages yet — start the conversation."));
+        return;
+      }
+      filtered.forEach(m => {
+        const isSelf = m.authorId === user.id;
+        const ts = m.createdAt?.toDate?.().toLocaleString?.() || "";
+        const bubble = h("div", {
+          style: `align-self:${isSelf ? "flex-end" : "flex-start"}; max-width:70%; background:${isSelf ? "var(--brand)" : "#fff"}; color:${isSelf ? "#fff" : "var(--ink)"}; padding:8px 12px; border-radius:10px; border:1px solid ${isSelf ? "var(--brand)" : "var(--line)"}; box-shadow:var(--shadow-sm);`
+        }, [
+          h("div", { style: `font-size:11px; opacity:0.8; margin-bottom:2px;` },
+            `${m.authorName || m.authorEmail || "unknown"} · ${ts}`),
+          h("div", { style: "font-size:14px; white-space:pre-wrap; word-break:break-word;" }, m.text)
+        ]);
+        list.appendChild(bubble);
+      });
+      list.scrollTop = list.scrollHeight;
+    };
+
+    searchInput.addEventListener("input", renderList);
+
+    const send = async () => {
+      const text = textInput.value.trim();
+      if (!text) return;
+      textInput.value = "";
+      try {
+        await firestore.addDoc(firestore.collection(db, "messages"), {
+          orgId: org.id,
+          authorId: user.id,
+          authorName: user.name || user.email,
+          authorEmail: user.email,
+          authorRole: user.role,
+          text,
+          createdAt: firestore.serverTimestamp()
+        });
+      } catch (e) {
+        textInput.value = text;
+        alert("Couldn't send: " + (e.message || e));
+      }
+    };
+
+    sendBtn.addEventListener("click", send);
+    textInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+
+    const q = firestore.query(
+      firestore.collection(db, "messages"),
+      firestore.where("orgId", "==", org.id),
+      firestore.orderBy("createdAt", "asc"),
+      firestore.limit(500)
+    );
+    firestore.onSnapshot(q, (snap) => {
+      allMessages = [];
+      snap.forEach((d) => allMessages.push({ id: d.id, ...d.data() }));
+      renderList();
+    }, (err) => {
+      list.innerHTML = "";
+      list.appendChild(h("p", { style: "color:var(--red);" }, "Couldn't load chat: " + err.message));
+    });
+
+    setTimeout(() => textInput.focus(), 50);
+    return frag;
+  }
+
+  // Re-render when Firebase is ready (so loading states flip to live data)
+  window.addEventListener("firebase-ready", () => {
+    if (state.route === "documents" || state.route === "chat") render();
+  });
 
   function openInviteClientModal() {
     const name  = h("input", { type: "text",  placeholder: "Client contact name" });

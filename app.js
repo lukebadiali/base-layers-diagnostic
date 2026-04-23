@@ -2461,13 +2461,14 @@
 
     const q = firestore.query(
       firestore.collection(db, "messages"),
-      firestore.where("orgId", "==", org.id),
-      firestore.orderBy("createdAt", "asc"),
-      firestore.limit(500)
+      firestore.where("orgId", "==", org.id)
     );
     firestore.onSnapshot(q, (snap) => {
       allMessages = [];
       snap.forEach((d) => allMessages.push({ id: d.id, ...d.data() }));
+      allMessages.sort((a, b) =>
+        (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0)
+      );
       renderList();
     }, (err) => {
       list.innerHTML = "";

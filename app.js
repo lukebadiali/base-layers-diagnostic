@@ -151,7 +151,8 @@
     });
     if (!allScores.length) return null;
     const avg = allScores.reduce((a, b) => a + b, 0) / allScores.length;
-    return Math.round(avg * 20);
+    // 1-10 scale → 0-100 display (avg * 10)
+    return Math.round(avg * 10);
   }
 
   function pillarScore(org, pillarId) {
@@ -1485,9 +1486,6 @@
     const teamPanel = renderTeamResponses(user, org, p);
     if (teamPanel) left.appendChild(teamPanel);
 
-    // Comments thread
-    left.appendChild(renderComments(user, org, p));
-
     grid.appendChild(left);
 
     // Right: side panels
@@ -1530,48 +1528,25 @@
     const card = h("div", { class: "q-card" });
     card.appendChild(h("div", { class: "q-text" }, `${idx + 1}. ${qText}`));
 
-    // Likert
-    const likert = h("div", { class: "likert" });
-    for (let n = 1; n <= 5; n++) {
+    // 1-10 scale
+    card.appendChild(h("div", {
+      style: "display:flex; justify-content:space-between; font-size:11px; color:var(--ink-3); margin-bottom:6px; letter-spacing:0.04em;"
+    }, [
+      h("span", {}, "1 — Not confident"),
+      h("span", {}, "10 — Extremely confident")
+    ]));
+    const likert = h("div", { class: "likert likert-10" });
+    for (let n = 1; n <= 10; n++) {
       const btn = h("button", {
         class: resp.score === n ? "sel" : "",
+        title: DATA.scoreLabels[n] || String(n),
         onclick: () => { setResponse(user, org, p.id, idx, { score: n }); render(); }
       }, [
-        h("span", { class: "n" }, String(n)),
-        h("span", { class: "t" }, DATA.scoreLabels[n])
+        h("span", { class: "n" }, String(n))
       ]);
       likert.appendChild(btn);
     }
     card.appendChild(likert);
-
-    // Evidence note
-    card.appendChild(h("div", { style: "font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-3); margin-bottom:4px;" }, "Evidence / notes (your answer)"));
-    const note = h("textarea", {
-      class: "note",
-      placeholder: "Evidence, examples, links to artefacts…"
-    });
-    note.value = resp.note || "";
-    note.addEventListener("blur", () => setResponse(user, org, p.id, idx, { note: note.value }));
-    card.appendChild(note);
-
-    // Internal shared note (not per-user)
-    if (!isClientView(user)) {
-      const internalText = ((org.internalNotes || {})[p.id] || {})[idx] || "";
-      card.appendChild(h("div", { class: "internal-badge", style: "margin-top:10px;" }, "Internal shared note"));
-      const inote = h("textarea", {
-        class: "note internal-note",
-        placeholder: "BeDeveloped commentary — visible to the team only."
-      });
-      inote.value = internalText;
-      inote.addEventListener("blur", () => {
-        const o = loadOrg(org.id);
-        o.internalNotes = o.internalNotes || {};
-        o.internalNotes[p.id] = o.internalNotes[p.id] || {};
-        o.internalNotes[p.id][idx] = inote.value;
-        saveOrg(o);
-      });
-      card.appendChild(inote);
-    }
     return card;
   }
 
@@ -1593,14 +1568,14 @@
         const r = ((byUser[uid] || {})[p.id] || {})[idx];
         const score = r?.score;
         const pill = h("span", {
-          title: (u?.name || u?.email || "respondent") + (score ? ` — ${score}/5` : " — no answer"),
+          title: (u?.name || u?.email || "respondent") + (score ? ` — ${score}/10` : " — no answer"),
           style: `display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px; background:var(--surface-muted); border:1px solid var(--line); font-size:11px; color:var(--ink-2);`
         }, [
           h("span", {
             class: "avatar",
             style: "width:16px; height:16px; font-size:8px;"
           }, initials(u?.name || u?.email || "")),
-          score ? `${score}/5` : "—"
+          score ? `${score}/10` : "—"
         ]);
         scores.appendChild(pill);
       });

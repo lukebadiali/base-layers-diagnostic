@@ -711,6 +711,15 @@ a:hover { text-decoration: underline; }
   gap: 6px;
   margin-bottom: 10px;
 }
+.likert.likert-10 {
+  grid-template-columns: repeat(10, 1fr);
+}
+.likert.likert-10 button {
+  padding: 10px 2px;
+}
+.likert.likert-10 button .n {
+  font-size: 15px;
+}
 .likert button {
   background: var(--surface-muted);
   border: 1px solid var(--line);

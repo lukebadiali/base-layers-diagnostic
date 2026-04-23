@@ -66,13 +66,18 @@ window.BASE_LAYERS = {
     }
   ],
 
-  // 1-5 Likert scale used across diagnostics
+  // 1-10 confidence scale: 1 = Not confident, 10 = Extremely confident.
   scoreLabels: {
-    1: "Not addressed",
-    2: "Early / inconsistent",
-    3: "Partially in place",
-    4: "Working well in most areas",
-    5: "Excellent, fully embedded"
+    1: "Not confident",
+    2: "Very low",
+    3: "Low",
+    4: "Somewhat low",
+    5: "Moderate",
+    6: "Somewhat confident",
+    7: "Confident",
+    8: "Very confident",
+    9: "Highly confident",
+    10: "Extremely confident"
   },
 
   pillars: [
@@ -97,10 +102,16 @@ window.BASE_LAYERS = {
         "Establish competitive positioning that every seller can defend in a live call."
       ],
       diagnostics: [
-        "Can every seller describe the ideal customer in one sentence, without marketing speak?",
-        "What is the cost of the problem to the buyer, quantified?",
-        "Why would a buyer choose you over doing nothing at all, or over the incumbent?",
-        "Where are deals most often lost — to competitors, to no decision, or to wrong fit?"
+        "How confident are you that your current business development processes are documented and accessible?",
+        "How regularly do you update strategy based on market and customer feedback?",
+        "How clearly defined is your sales funnel?",
+        "How clearly defined is your Ideal Customer Profile (ICP)?",
+        "How differentiated is your value proposition?",
+        "How well defined is your pricing and packaging strategy?",
+        "How strong is your competitive positioning?",
+        "How well aligned is your offering with current market demand?",
+        "How confident are you in your market segmentation approach?",
+        "How clearly do you understand why customers choose you over competitors?"
       ],
       whatWeDo: [
         "ICP workshops with commercial leadership, validated against closed won and closed lost data.",
@@ -134,10 +145,16 @@ window.BASE_LAYERS = {
         "Create enough signal to separate channel decay from message decay."
       ],
       diagnostics: [
-        "Which channels produced the last five closed-won deals, and do you actually know?",
-        "Is outbound declining because the channel is broken, or because the message, list and sequencing are?",
-        "What does a balanced pipeline look like for a business of your size and stage?",
-        "What would your pipeline look like if your single largest channel stopped working tomorrow?"
+        "How well structured is your lead generation process?",
+        "How effective are your multi-channel lead generation efforts?",
+        "How effective is bespoke outbound outreach?",
+        "How effective is automated or AI-assisted outreach?",
+        "How strong is your inbound lead generation performance?",
+        "How well balanced is your mix of outbound, inbound, partnerships and events?",
+        "How effectively do you convert leads into opportunities?",
+        "How consistently do you hit lead generation targets?",
+        "How strong is your lead quality versus volume balance?",
+        "How effectively do you test and improve new lead channels?"
       ],
       whatWeDo: [
         "Channel diagnostic mapping pipeline source, cost and conversion by stage.",
@@ -171,10 +188,16 @@ window.BASE_LAYERS = {
         "Encode relationship discipline in the CRM so it survives a rep leaving."
       ],
       diagnostics: [
-        "Who are the ten people in your market whose attention would move the needle, and are you in front of them?",
-        "What percentage of your last five deals had an existing relationship as the first touch?",
-        "How do you nurture a contact who is not in an active buying cycle?",
-        "If a senior relationship owner left tomorrow, would their relationships travel with them or stay with the business?"
+        "How complete is your list of strategic relationships?",
+        "How consistently do you nurture long-term relationships?",
+        "How strong is your industry presence and credibility?",
+        "How effective is your referral generation approach?",
+        "How often do relationships convert into opportunities over time?",
+        "How strong is your network within target accounts?",
+        "How well do you maintain relationships with non-active buyers?",
+        "How effectively do you engage key stakeholders outside of active sales cycles?",
+        "How intentional is your networking strategy?",
+        "How strong is your reputation within your industry?"
       ],
       whatWeDo: [
         "Relationship map and targeting plan at account and industry level.",
@@ -209,10 +232,16 @@ window.BASE_LAYERS = {
         "Reduce variance between sellers so performance becomes a system outcome."
       ],
       diagnostics: [
-        "If you removed your top rep tomorrow, what percentage of their pipeline would survive?",
-        "Can two different managers look at the same deal and agree on its stage and next step?",
-        "What is the defined qualification framework, and is it applied uniformly across the team?",
-        "Where in the deal cycle do you lose most — is the root cause discovery, value, price, or procurement?"
+        "How well defined is your end-to-end sales process?",
+        "How confident are you in your discovery process?",
+        "How effective is your qualification methodology?",
+        "How strong is your solution selling capability?",
+        "How effectively do you handle objections?",
+        "How confident are you in negotiation and closing?",
+        "How consistent is your sales execution across the team?",
+        "How well do you progress deals through the pipeline?",
+        "How strong is your win rate consistency?",
+        "How effectively do you tailor proposals to client needs?"
       ],
       whatWeDo: [
         "Discovery and qualification design, with buyer-verifiable evidence at each stage.",
@@ -247,10 +276,16 @@ window.BASE_LAYERS = {
         "Measure partner-influenced and partner-sourced pipeline as a first-class number."
       ],
       diagnostics: [
-        "Who would your buyer trust more than you, and are they in your partner programme?",
-        "What percentage of pipeline is partner-influenced today, and what is the target?",
-        "How quickly can a new partner transact after signing, and what blocks that?",
-        "Are partners paid, trained and managed in a way that makes them choose you over alternatives?"
+        "How clearly defined is your partner strategy?",
+        "How effective are your channel partners in generating revenue?",
+        "How strong are your strategic alliances?",
+        "How structured is your referral partner network?",
+        "How successful are your joint ventures?",
+        "How well do you onboard and enable partners?",
+        "How effectively do partners deliver qualified opportunities?",
+        "How consistently do partnerships contribute to pipeline?",
+        "How actively are partnerships managed and developed?",
+        "How well aligned are partners with your ideal customer profile?"
       ],
       whatWeDo: [
         "Partner archetype design and prioritisation based on buyer trust and reach.",
@@ -285,10 +320,16 @@ window.BASE_LAYERS = {
         "Convert satisfied customers into advocates who drive referrals, case studies and references."
       ],
       diagnostics: [
-        "What is your gross retention rate, and your net revenue retention rate, and do you trust the numbers?",
-        "At what point in the customer lifecycle does churn risk actually appear, and who owns it?",
-        "Is expansion a proactive motion or something that happens when a customer asks?",
-        "How many referenceable customers do you have, and is that a managed asset?"
+        "How effective is your onboarding process?",
+        "How strong are your retention strategies?",
+        "How effective is your upsell and cross-sell execution?",
+        "How strong is your customer advocacy generation?",
+        "How well do you manage key accounts post-sale?",
+        "How proactively do you prevent churn?",
+        "How satisfied are your customers with ongoing support?",
+        "How effectively do you measure customer health?",
+        "How strong is your renewal process?",
+        "How well do customers understand value delivered?"
       ],
       whatWeDo: [
         "Onboarding programme design with clear value milestones.",
@@ -323,10 +364,16 @@ window.BASE_LAYERS = {
         "Track the commercial metrics that matter: conversion by stage, cycle time, CAC, LTV, cohort performance."
       ],
       diagnostics: [
-        "Do your sellers open the CRM first thing in the morning, or last thing as a compliance task?",
-        "Is the pipeline number the same in the CRM, the spreadsheet and the board deck?",
-        "How much does your forecast move between the start of a quarter and its close, and why?",
-        "Can a new starter understand a deal's status from the CRM alone?"
+        "How effective is your CRM usage?",
+        "How well integrated is CRM with sales and marketing?",
+        "How strong is your data quality management?",
+        "How effectively do you use data for decision-making?",
+        "How well trained is your team on CRM systems?",
+        "How accurate is your pipeline data?",
+        "How customised is your CRM to your business needs?",
+        "How reliable is your forecasting process?",
+        "How well defined are your sales playbooks?",
+        "How effectively do you track funnel conversion metrics?"
       ],
       whatWeDo: [
         "CRM audit and redesign against the operating process, not against a feature list.",
@@ -360,10 +407,16 @@ window.BASE_LAYERS = {
         "Measure the commercial impact of brand and thought leadership, not just reach."
       ],
       diagnostics: [
-        "If a buyer searched for your founder or your category tomorrow, what would they find?",
-        "Do you have ten strong case studies in active use by sellers and partners?",
-        "Does the editorial voice of the business match the narrative your sellers use in calls?",
-        "Which pieces of content most correlate with closed-won deals, and are you making more of them?"
+        "How integrated is marketing with business development?",
+        "How strong is your campaign planning process?",
+        "How consistent is your messaging across channels?",
+        "How clearly defined is your target audience?",
+        "How effectively do you track campaign performance?",
+        "How strong is your content strategy?",
+        "How effective is your personal or founder brand?",
+        "How strong is your case study and social proof library?",
+        "How consistently do you publish thought leadership content?",
+        "How effectively does marketing generate inbound leads?"
       ],
       whatWeDo: [
         "Editorial and content strategy aligned to positioning and ICP.",
@@ -397,10 +450,16 @@ window.BASE_LAYERS = {
         "Make the loop visible, so contributors can see their input influence decisions."
       ],
       diagnostics: [
-        "Where does customer and prospect feedback live today, and is anyone reading it?",
-        "When was the last time a positioning or product decision was clearly influenced by field input?",
-        "Do sellers know how to feed insight back, and do they trust that it goes anywhere?",
-        "What are your top five lost-deal reasons this quarter, and what is being done about them?"
+        "How effectively is customer feedback captured?",
+        "How well is feedback integrated into product development?",
+        "How well do you use market insights to refine positioning?",
+        "How quickly do you iterate based on feedback?",
+        "How strong is communication between sales and product teams?",
+        "How well do you identify emerging customer needs?",
+        "How effectively do you test new propositions?",
+        "How aligned is product development with market demand?",
+        "How structured is your feedback collection process?",
+        "How often does market insight influence strategy?"
       ],
       whatWeDo: [
         "Structured capture of win/loss, customer feedback and market signal.",
@@ -435,10 +494,16 @@ window.BASE_LAYERS = {
         "Measure lifetime value cohorts and connect them back to acquisition decisions."
       ],
       diagnostics: [
-        "What is your fully loaded cost of acquisition by channel, and do you trust the number?",
-        "Which customer segments have the best lifetime value, and are you prioritising acquisition there?",
-        "Are your pricing and packaging decisions driven by margin and value, or by anchoring and discounting?",
-        "How quickly do you discover that a channel or segment is unprofitable?"
+        "How strong is your pricing strategy?",
+        "How well do you manage margins?",
+        "How accurately do you calculate CAC?",
+        "How clearly defined is your LTV?",
+        "How confident are you in ROI from sales and marketing spend?",
+        "How well do you model revenue growth scenarios?",
+        "How disciplined is your commercial decision making?",
+        "How well do you understand unit economics?",
+        "How effectively do you optimise pricing over time?",
+        "How strong is your profitability management?"
       ],
       whatWeDo: [
         "Unit economics model covering pricing, margin, CAC and LTV by segment and channel.",

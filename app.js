@@ -1137,7 +1137,7 @@
           render();
         }
       });
-      tile.appendChild(h("div", { class: "num" }, `PILLAR ${String(p.id).padStart(2,"0")}`));
+      tile.appendChild(h("div", { class: "num" }, `PILLAR ${p.id}`));
       tile.appendChild(h("div", { class: "name" }, p.name));
 
       if (!isOpen) {
@@ -1414,7 +1414,7 @@
         class: "tile",
         onclick: () => setRoute("pillar:" + p.id)
       });
-      tile.appendChild(h("div", { class: "num" }, `PILLAR ${String(p.id).padStart(2,"0")}`));
+      tile.appendChild(h("div", { class: "num" }, `PILLAR ${p.id}`));
       tile.appendChild(h("div", { class: "name" }, p.name));
       tile.appendChild(h("div", { class: "tag" },
         isClientView(user)
@@ -1457,7 +1457,7 @@
           class: "back",
           onclick: () => setRoute("diagnostic")
         }, "← Back to diagnostic"),
-        h("div", { class: "pillar-pill" }, `PILLAR ${String(p.id).padStart(2,"0")}`),
+        h("div", { class: "pillar-pill" }, `PILLAR ${p.id}`),
         h("h1", { class: "view-title", style: "margin-top:2px;" }, p.name),
         h("p", { class: "view-sub", style: "max-width:720px;" }, p.tagline)
       ]),

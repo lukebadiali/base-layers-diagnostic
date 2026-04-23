@@ -463,10 +463,13 @@ a:hover { text-decoration: underline; }
 }
 .tile .num {
   font-family: var(--font-display);
-  color: var(--ink-4);
+  color: var(--brand);
   font-size: 13px;
   letter-spacing: 0.14em;
   margin-bottom: 6px;
+}
+.tile.opex .num {
+  color: var(--accent);
 }
 .tile .name {
   font-family: var(--font-display);

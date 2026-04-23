@@ -1213,15 +1213,11 @@
     tile.appendChild(h("div", { class: "name" }, "Operational Excellence"));
     if (!isOpen) {
       tile.appendChild(h("div", { class: "tag" },
-        "Underpins the ten pillars. This is the performance layer that makes the model stick."));
+        "Underpins the ten pillars to ensure clarity and coaching is developed, not just strategy and theory. Ensures early-stage sales is implemented, adopted and sustained, not treated as a one-off initiative or leadership push."));
     }
 
-    const foot = h("div", { class: "foot" });
-    foot.appendChild(h("div", { class: "score" }, "—"));
-    const rightFoot = h("div", { style: "display:flex; align-items:center; gap:8px;" });
-    rightFoot.appendChild(h("span", { class: "badge gray" }, "NOT SCORED"));
-    rightFoot.appendChild(h("span", { class: "tile-caret", "aria-hidden": "true" }, "▾"));
-    foot.appendChild(rightFoot);
+    const foot = h("div", { class: "foot", style: "justify-content: flex-end;" });
+    foot.appendChild(h("span", { class: "tile-caret", "aria-hidden": "true" }, "▾"));
     tile.appendChild(foot);
 
     if (isOpen) {

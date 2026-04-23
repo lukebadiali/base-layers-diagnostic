@@ -1951,9 +1951,9 @@
     const prevRoundId = previousRoundId(org);
 
     frag.appendChild(h("div", { class: "report-toolbar" }, [
-      h("button", { class: "btn secondary", onclick: () => window.print() }, "Print / save PDF"),
+      !isClient ? h("button", { class: "btn secondary", onclick: () => window.print() }, "Print / save PDF") : null,
       !isClient ? h("button", { class: "btn secondary", onclick: exportData }, "Export JSON") : null
-    ]));
+    ].filter(Boolean)));
 
     const r = h("div", { class: "report" });
     r.appendChild(h("h1", {}, `Base Layers diagnostic — ${org.name}`));

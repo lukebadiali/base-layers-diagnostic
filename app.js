@@ -1200,14 +1200,39 @@
       "Commercial decision-making supported by data and insight, not instinct alone",
       "Governance structures that maintain discipline and quality as the organisation scales"
     ];
-    const tile = h("div", { class: "tile opex" });
+    const isOpen = state.expandedPillars.has("opex");
+    const tile = h("div", {
+      class: "tile opex" + (isOpen ? " expanded" : ""),
+      onclick: () => {
+        if (isOpen) state.expandedPillars.delete("opex");
+        else state.expandedPillars.add("opex");
+        render();
+      }
+    });
+    tile.appendChild(h("div", { class: "num" }, "PERFORMANCE LAYER"));
     tile.appendChild(h("div", { class: "name" }, "Operational Excellence"));
-    tile.appendChild(h("p", { class: "opex-lede" },
-      "Underpins the ten pillars to ensure clarity and coaching is developed, not just strategy and theory. Ensures early-stage sales is implemented, adopted and sustained, not treated as a one-off initiative or leadership push."
-    ));
-    const ul = h("ul", { class: "opex-list" });
-    points.forEach(p => ul.appendChild(h("li", {}, p)));
-    tile.appendChild(ul);
+    if (!isOpen) {
+      tile.appendChild(h("div", { class: "tag" },
+        "Underpins the ten pillars — the performance layer that makes the model stick."));
+    }
+
+    const foot = h("div", { class: "foot" });
+    foot.appendChild(h("div", { class: "score" }, "—"));
+    const rightFoot = h("div", { style: "display:flex; align-items:center; gap:8px;" });
+    rightFoot.appendChild(h("span", { class: "badge gray" }, "NOT SCORED"));
+    rightFoot.appendChild(h("span", { class: "tile-caret", "aria-hidden": "true" }, "▾"));
+    foot.appendChild(rightFoot);
+    tile.appendChild(foot);
+
+    if (isOpen) {
+      const exp = h("div", { class: "tile-expansion", onclick: (e) => e.stopPropagation() });
+      exp.appendChild(h("p", { class: "exp-desc" },
+        "Underpins the ten pillars to ensure clarity and coaching is developed, not just strategy and theory. Ensures early-stage sales is implemented, adopted and sustained, not treated as a one-off initiative or leadership push."));
+      const ul = h("ul", { class: "opex-list" });
+      points.forEach(p => ul.appendChild(h("li", {}, p)));
+      exp.appendChild(ul);
+      tile.appendChild(exp);
+    }
     return tile;
   }
 
@@ -1299,12 +1324,12 @@
         label: "Previous",
         data: prev,
         fill: true,
-        backgroundColor: "rgba(154, 160, 168, 0.12)",
-        borderColor: "rgba(154, 160, 168, 0.85)",
+        backgroundColor: "rgba(237, 125, 49, 0.12)",
+        borderColor: "rgba(237, 125, 49, 0.9)",
         borderWidth: 1.5,
         borderDash: [4, 4],
         pointRadius: 2,
-        pointBackgroundColor: "#9aa0a8"
+        pointBackgroundColor: "#ED7D31"
       });
     }
     datasets.push({

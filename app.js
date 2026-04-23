@@ -589,6 +589,7 @@
     else if (route === "report") main.appendChild(renderReport(user, org));
     else if (route === "documents") main.appendChild(renderDocuments(user, org));
     else if (route === "chat") main.appendChild(renderChat(user, org));
+    else if (route === "roadmap") main.appendChild(renderRoadmap(user, org));
     else if (route === "admin" && !isClient) main.appendChild(renderAdmin(user));
     else {
       state.route = "dashboard";
@@ -618,11 +619,12 @@
     const items = [
       ["dashboard",   "Dashboard"],
       ["diagnostic",  "Diagnostic"],
-      ["actions",     "Actions"],
-      ["engagement",  "Engagement"],
       ["report",      "Report"],
+      ["engagement",  "Engagement"],
       ["documents",   "Documents"],
-      ["chat",        "Chat"]
+      ["chat",        "Chat"],
+      ["actions",     "Actions"],
+      ["roadmap",     "Roadmap"]
     ];
     if (!isClient) items.push(["admin", "Admin"]);
 
@@ -2476,9 +2478,221 @@
     return frag;
   }
 
+  // ================================================================
+  // ROADMAP (Firestore — internal edits, clients read-only)
+  // ================================================================
+  function emptyRoadmap(orgId) {
+    return {
+      orgId,
+      months: Array.from({ length: 12 }, () => ({ pillarIds: [], outcomes: [] })),
+      updatedAt: null
+    };
+  }
+
+  function renderRoadmap(user, org) {
+    const frag = h("div");
+    frag.appendChild(h("h1", { class: "view-title" }, "Roadmap"));
+    frag.appendChild(h("p", { class: "view-sub" },
+      org
+        ? `12-month delivery plan for ${org.name}. ${user.role === "internal" ? "Drag pillars into a month and add outcomes." : "Your BeDeveloped team will update this as the engagement progresses."}`
+        : "Select an organisation to see its roadmap."));
+    if (!org) return frag;
+
+    if (!fbReady()) {
+      frag.appendChild(h("div", { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" }, "Connecting to shared storage…"));
+      return frag;
+    }
+
+    const { db, firestore } = window.FB;
+    const canEdit = user.role === "internal";
+    const docRef = firestore.doc(db, "roadmaps", org.id);
+
+    const layout = h("div", { style: "display:grid; grid-template-columns: 1fr 260px; gap:18px; align-items:start;" });
+    const monthsCol = h("div", { style: "display:flex; flex-direction:column; gap:10px;" });
+    const palette = h("div", { class: "card", style: "position:sticky; top:18px; padding:14px;" });
+
+    // Pillar palette
+    palette.appendChild(h("div", { style: "font-family: var(--font-display); letter-spacing:0.08em; color: var(--brand); font-size:12px; margin-bottom:8px;" }, "PILLARS"));
+    palette.appendChild(h("p", { style: "font-size:11.5px; color:var(--ink-3); margin:0 0 10px; line-height:1.4;" },
+      canEdit ? "Drag any pillar into a month. A pillar can appear in more than one month." : "Pillars assigned to each month appear below."));
+    DATA.pillars.forEach(p => {
+      const chip = h("div", {
+        "data-pillar": p.id,
+        style: `padding:6px 10px; margin-bottom:6px; border:1px solid var(--line-2); border-radius:999px; background:var(--brand-tint); color:var(--brand-ink); font-size:12px; ${canEdit ? "cursor:grab;" : ""}`
+      }, `${p.id}. ${p.shortName || p.name}`);
+      if (canEdit) {
+        chip.setAttribute("draggable", "true");
+        chip.addEventListener("dragstart", (e) => {
+          e.dataTransfer.setData("text/pillar-id", String(p.id));
+          e.dataTransfer.effectAllowed = "copy";
+        });
+      }
+      palette.appendChild(chip);
+    });
+
+    // Render helper for a month card (takes current data, re-renders on save)
+    let localData = emptyRoadmap(org.id);
+    const save = async (next) => {
+      localData = next;
+      try {
+        await firestore.setDoc(docRef, { ...next, updatedAt: firestore.serverTimestamp() }, { merge: true });
+      } catch (e) {
+        alert("Couldn't save roadmap: " + (e.message || e));
+      }
+    };
+
+    const renderMonths = () => {
+      monthsCol.innerHTML = "";
+      localData.months.forEach((m, idx) => {
+        const card = h("div", { class: "card", style: "padding:14px;" });
+        card.appendChild(h("div", { style: "display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;" }, [
+          h("div", { style: "font-family: var(--font-display); font-size:18px; letter-spacing:0.02em; color: var(--brand-ink);" }, `Month ${idx + 1}`),
+          h("div", { style: "font-size:11px; color:var(--ink-3);" }, `${(m.pillarIds || []).length} pillar${(m.pillarIds || []).length === 1 ? "" : "s"} · ${(m.outcomes || []).length} outcome${(m.outcomes || []).length === 1 ? "" : "s"}`)
+        ]));
+
+        // Pillars drop zone
+        const drop = h("div", {
+          style: `min-height:42px; padding:8px; border:1px dashed var(--line-2); border-radius:8px; display:flex; flex-wrap:wrap; gap:6px; background:var(--surface-muted); margin-bottom:10px;`
+        });
+        if (!(m.pillarIds || []).length) {
+          drop.appendChild(h("span", { style: "font-size:12px; color:var(--ink-4);" },
+            canEdit ? "Drag pillars here" : "No pillars assigned yet"));
+        }
+        (m.pillarIds || []).forEach(pid => {
+          const p = DATA.pillars.find(pp => pp.id === pid);
+          if (!p) return;
+          const chip = h("span", {
+            style: "display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--brand); color:#fff; font-size:12px;"
+          }, [
+            h("span", {}, `${p.id}. ${p.shortName || p.name}`),
+            canEdit ? h("button", {
+              style: "border:0; background:transparent; color:#fff; cursor:pointer; padding:0 0 0 4px; font-size:13px; line-height:1;",
+              onclick: () => {
+                const next = { ...localData, months: localData.months.map((mm, i) =>
+                  i === idx ? { ...mm, pillarIds: (mm.pillarIds || []).filter(x => x !== pid) } : mm
+                ) };
+                save(next);
+                renderMonths();
+              }
+            }, "×") : null
+          ].filter(Boolean));
+          drop.appendChild(chip);
+        });
+        if (canEdit) {
+          drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.style.background = "var(--brand-tint)"; });
+          drop.addEventListener("dragleave", () => { drop.style.background = "var(--surface-muted)"; });
+          drop.addEventListener("drop", (e) => {
+            e.preventDefault();
+            drop.style.background = "var(--surface-muted)";
+            const pid = Number(e.dataTransfer.getData("text/pillar-id"));
+            if (!pid) return;
+            const current = localData.months[idx]?.pillarIds || [];
+            if (current.includes(pid)) return;
+            const next = { ...localData, months: localData.months.map((mm, i) =>
+              i === idx ? { ...mm, pillarIds: [...current, pid] } : mm
+            ) };
+            save(next);
+            renderMonths();
+          });
+        }
+        card.appendChild(drop);
+
+        // Outcomes
+        card.appendChild(h("div", { style: "font-size:11px; letter-spacing:0.08em; color:var(--ink-3); text-transform:uppercase; margin-bottom:6px;" }, "Outcomes"));
+        const outList = h("div", { style: "display:flex; flex-direction:column; gap:4px; margin-bottom:8px;" });
+        if (!(m.outcomes || []).length) {
+          outList.appendChild(h("div", { style: "font-size:12px; color:var(--ink-4);" }, "None yet."));
+        }
+        (m.outcomes || []).forEach(o => {
+          const row = h("div", { style: "display:flex; align-items:center; gap:8px; font-size:13px;" });
+          const check = h("input", { type: "checkbox" });
+          check.checked = !!o.done;
+          if (canEdit) {
+            check.addEventListener("change", () => {
+              const next = { ...localData, months: localData.months.map((mm, i) =>
+                i === idx ? { ...mm, outcomes: (mm.outcomes || []).map(oo =>
+                  oo.id === o.id ? { ...oo, done: check.checked } : oo
+                ) } : mm
+              ) };
+              save(next);
+              renderMonths();
+            });
+          } else {
+            check.disabled = true;
+          }
+          row.appendChild(check);
+          row.appendChild(h("span", {
+            style: `flex:1; ${o.done ? "text-decoration:line-through; color:var(--ink-4);" : ""}`
+          }, o.text));
+          if (canEdit) {
+            row.appendChild(h("button", {
+              class: "btn ghost sm danger",
+              style: "padding:2px 8px; font-size:11px;",
+              onclick: () => {
+                const next = { ...localData, months: localData.months.map((mm, i) =>
+                  i === idx ? { ...mm, outcomes: (mm.outcomes || []).filter(oo => oo.id !== o.id) } : mm
+                ) };
+                save(next);
+                renderMonths();
+              }
+            }, "Remove"));
+          }
+          outList.appendChild(row);
+        });
+        card.appendChild(outList);
+
+        if (canEdit) {
+          const input = h("input", {
+            type: "text",
+            placeholder: "Add outcome (e.g. Pipeline forecasting in place)",
+            style: "flex:1; padding:6px 10px; border:1px solid var(--line-2); border-radius:6px; font:inherit; font-size:13px;"
+          });
+          const addBtn = h("button", { class: "btn sm" }, "Add");
+          const addOutcome = () => {
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = "";
+            const o = { id: uid("out_"), text, done: false };
+            const next = { ...localData, months: localData.months.map((mm, i) =>
+              i === idx ? { ...mm, outcomes: [...(mm.outcomes || []), o] } : mm
+            ) };
+            save(next);
+            renderMonths();
+          };
+          addBtn.addEventListener("click", addOutcome);
+          input.addEventListener("keydown", (e) => { if (e.key === "Enter") addOutcome(); });
+          card.appendChild(h("div", { style: "display:flex; gap:6px;" }, [input, addBtn]));
+        }
+
+        monthsCol.appendChild(card);
+      });
+    };
+
+    layout.appendChild(monthsCol);
+    layout.appendChild(palette);
+    frag.appendChild(layout);
+
+    // Initial paint + live updates
+    renderMonths();
+    firestore.onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        const d = snap.data();
+        const months = Array.isArray(d.months) && d.months.length === 12
+          ? d.months
+          : emptyRoadmap(org.id).months;
+        localData = { orgId: org.id, months, updatedAt: d.updatedAt || null };
+      } else {
+        localData = emptyRoadmap(org.id);
+      }
+      renderMonths();
+    }, (err) => console.error("Roadmap snapshot error:", err));
+
+    return frag;
+  }
+
   // Re-render when Firebase is ready (so loading states flip to live data)
   window.addEventListener("firebase-ready", () => {
-    if (state.route === "documents" || state.route === "chat") render();
+    if (state.route === "documents" || state.route === "chat" || state.route === "roadmap") render();
   });
 
   function openInviteClientModal() {

@@ -904,16 +904,20 @@ a:hover { text-decoration: underline; }
   transition: border-color .1s, box-shadow .12s;
   box-shadow: var(--shadow-sm);
 }
-.stage-card:hover { border-color: var(--line-2); }
+.stage-card:hover { border-color: var(--brand); }
+.stage-card.read-only { cursor: default; }
+.stage-card.read-only:hover { border-color: var(--line); }
 .stage-card.active {
   border-color: var(--brand);
-  box-shadow: 0 0 0 2px rgba(31,58,166,0.15), var(--shadow-sm);
+  background: var(--brand-tint);
+  box-shadow: 0 0 0 3px rgba(87, 158, 192, 0.25), var(--shadow-sm);
 }
 .stage-card .n {
   font-family: var(--font-display);
-  color: var(--ink-4);
+  color: var(--brand);
   font-size: 12px;
   letter-spacing: 0.08em;
+  font-weight: 600;
 }
 .stage-card .name {
   font-family: var(--font-display);

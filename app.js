@@ -1907,19 +1907,25 @@
 
     const current = org.engagement?.currentStageId || "diagnosed";
     const stages = h("div", { class: "stages" });
+    const readOnly = isClientView(user);
     DATA.engagementStages.forEach((s, i) => {
       const checks = (org.engagement?.stageChecks || {})[s.id] || {};
       const checkedCount = s.checklist.filter((_, idx) => checks[idx]).length;
       const pct = Math.round((checkedCount / s.checklist.length) * 100);
+      const isActive = current === s.id;
 
-      const card = h("div", {
-        class: `stage-card ${current === s.id ? "active" : ""}`,
-        onclick: () => {
-          if (isClientView(user)) return; // clients can't change stage
+      const cardAttrs = {
+        class: `stage-card ${isActive ? "active" : ""} ${readOnly ? "read-only" : ""}`
+      };
+      if (!readOnly) {
+        cardAttrs.onclick = (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
           setEngagementStage(org.id, s.id);
           render();
-        }
-      }, [
+        };
+      }
+      const card = h("div", cardAttrs, [
         h("div", { class: "n" }, `STAGE ${i + 1}`),
         h("div", { class: "name" }, s.name),
         h("div", { class: "sum" }, s.summary),

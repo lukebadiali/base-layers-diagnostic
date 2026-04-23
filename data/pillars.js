@@ -103,7 +103,12 @@ window.BASE_LAYERS = {
       ],
       diagnostics: [
         "How confident are you that your current business development processes are documented and accessible?",
-        "How regularly do you update strategy based on market and customer feedback?",
+        {
+          text: "How regularly do you update strategy based on market and customer feedback?",
+          scale: 5,
+          anchors: { low: "Yearly", high: "Monthly" },
+          labels: { 1: "Yearly", 3: "6-monthly", 5: "Monthly" }
+        },
         "How clearly defined is your sales funnel?",
         "How clearly defined is your Ideal Customer Profile (ICP)?",
         "How differentiated is your value proposition?",
@@ -189,7 +194,12 @@ window.BASE_LAYERS = {
       ],
       diagnostics: [
         "How complete is your list of strategic relationships?",
-        "How consistently do you nurture long-term relationships?",
+        {
+          text: "How consistently do you nurture long-term relationships?",
+          scale: 5,
+          anchors: { low: "Rarely", high: "Monthly" },
+          labels: { 1: "Rarely", 3: "6-monthly", 5: "Monthly" }
+        },
         "How strong is your industry presence and credibility?",
         "How effective is your referral generation approach?",
         "How often do relationships convert into opportunities over time?",
@@ -327,7 +337,7 @@ window.BASE_LAYERS = {
         "How well do you manage key accounts post-sale?",
         "How proactively do you prevent churn?",
         "How satisfied are your customers with ongoing support?",
-        "How effectively do you measure customer health?",
+        "How effectively do you measure customer satisfaction through a scoring system? (Like NPS)",
         "How strong is your renewal process?",
         "How well do customers understand value delivered?"
       ],
@@ -459,7 +469,11 @@ window.BASE_LAYERS = {
         "How effectively do you test new propositions?",
         "How aligned is product development with market demand?",
         "How structured is your feedback collection process?",
-        "How often does market insight influence strategy?"
+        {
+          text: "How often does market insight influence strategy?",
+          scale: 10,
+          anchors: { low: "Not at all", high: "All the time" }
+        }
       ],
       whatWeDo: [
         "Structured capture of win/loss, customer feedback and market signal.",
@@ -496,8 +510,8 @@ window.BASE_LAYERS = {
       diagnostics: [
         "How strong is your pricing strategy?",
         "How well do you manage margins?",
-        "How accurately do you calculate CAC?",
-        "How clearly defined is your LTV?",
+        "How accurately do you calculate CAC (Customer acquisition cost)?",
+        "How clearly defined is your LTV (lifetime value)?",
         "How confident are you in ROI from sales and marketing spend?",
         "How well do you model revenue growth scenarios?",
         "How disciplined is your commercial decision making?",

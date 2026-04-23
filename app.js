@@ -139,20 +139,61 @@
     return rs[idx - 1].id;
   }
 
+  // ---------- Diagnostic question meta ----------
+  // A diagnostic entry can be a plain string (1-10 scale, anchors derived from
+  // the question text) or an object: { text, scale, anchors, labels }.
+  function questionMeta(entry) {
+    const baseScale = 10;
+    if (typeof entry === "string") {
+      return {
+        text: entry,
+        scale: baseScale,
+        anchors: deriveAnchors(entry),
+        labels: null
+      };
+    }
+    return {
+      text: entry.text || "",
+      scale: entry.scale || baseScale,
+      anchors: entry.anchors || deriveAnchors(entry.text || ""),
+      labels: entry.labels || null
+    };
+  }
+
+  function deriveAnchors(text) {
+    const m = /^How\s+(\w+)/i.exec(text || "");
+    const raw = (m ? m[1] : "good").toLowerCase();
+    const special = {
+      regularly:    { low: "Rarely",      high: "Very regularly" },
+      often:        { low: "Never",       high: "Always" },
+      consistently: { low: "Rarely",      high: "Very consistently" },
+      quickly:      { low: "Very slowly", high: "Very quickly" },
+      well:         { low: "Not at all",  high: "Very well" }
+    };
+    if (special[raw]) return special[raw];
+    // Strip trailing "-ly" so adverbs read as their adjective form
+    // ("effectively" -> "effective", "accurately" -> "accurate").
+    const adj = raw.length > 4 && raw.endsWith("ly") ? raw.slice(0, -2) : raw;
+    return { low: "Not " + adj, high: "Extremely " + adj };
+  }
+
   // ---------- Scoring (aggregated across users in a round) ----------
   function pillarScoreForRound(org, roundId, pillarId) {
+    const p = DATA.pillars.find(pp => pp.id === pillarId);
+    if (!p) return null;
     const byUser = (org.responses || {})[roundId] || {};
-    const allScores = [];
+    const normalized = [];
     Object.values(byUser).forEach(perPillar => {
       const perQ = (perPillar || {})[pillarId] || {};
-      Object.values(perQ).forEach(r => {
-        if (Number.isFinite(r.score)) allScores.push(r.score);
+      Object.entries(perQ).forEach(([idx, r]) => {
+        if (!Number.isFinite(r.score)) return;
+        const meta = questionMeta(p.diagnostics[Number(idx)]);
+        if (!meta || !meta.scale) return;
+        normalized.push((r.score / meta.scale) * 100);
       });
     });
-    if (!allScores.length) return null;
-    const avg = allScores.reduce((a, b) => a + b, 0) / allScores.length;
-    // 1-10 scale → 0-100 display (avg * 10)
-    return Math.round(avg * 10);
+    if (!normalized.length) return null;
+    return Math.round(normalized.reduce((a, b) => a + b, 0) / normalized.length);
   }
 
   function pillarScore(org, pillarId) {
@@ -1523,27 +1564,36 @@
     return frag;
   }
 
-  function renderQuestion(user, org, p, idx, qText) {
+  function renderQuestion(user, org, p, idx, qEntry) {
+    const meta = questionMeta(qEntry);
     const resp = (((((org.responses || {})[org.currentRoundId] || {})[user.id] || {})[p.id] || {})[idx]) || {};
     const card = h("div", { class: "q-card" });
-    card.appendChild(h("div", { class: "q-text" }, `${idx + 1}. ${qText}`));
+    card.appendChild(h("div", { class: "q-text" }, `${idx + 1}. ${meta.text}`));
 
-    // 1-10 scale
+    // Anchor row
     card.appendChild(h("div", {
       style: "display:flex; justify-content:space-between; font-size:11px; color:var(--ink-3); margin-bottom:6px; letter-spacing:0.04em;"
     }, [
-      h("span", {}, "1 — Not confident"),
-      h("span", {}, "10 — Extremely confident")
+      h("span", {}, `1 - ${meta.anchors.low}`),
+      h("span", {}, `${meta.scale} - ${meta.anchors.high}`)
     ]));
-    const likert = h("div", { class: "likert likert-10" });
-    for (let n = 1; n <= 10; n++) {
+
+    // Buttons
+    const scaleClass = meta.scale === 10 ? "likert likert-10" : "likert likert-" + meta.scale;
+    const likert = h("div", { class: scaleClass });
+    // Clamp any stale responses to this question's scale so old data doesn't get stuck selected out-of-range.
+    const selectedScore = (resp.score >= 1 && resp.score <= meta.scale) ? resp.score : null;
+    for (let n = 1; n <= meta.scale; n++) {
       const btn = h("button", {
-        class: resp.score === n ? "sel" : "",
-        title: DATA.scoreLabels[n] || String(n),
+        class: selectedScore === n ? "sel" : "",
+        title: (meta.labels && meta.labels[n]) || DATA.scoreLabels[n] || String(n),
         onclick: () => { setResponse(user, org, p.id, idx, { score: n }); render(); }
       }, [
-        h("span", { class: "n" }, String(n))
-      ]);
+        h("span", { class: "n" }, String(n)),
+        (meta.labels && meta.labels[n])
+          ? h("span", { class: "t" }, meta.labels[n])
+          : null
+      ].filter(Boolean));
       likert.appendChild(btn);
     }
     card.appendChild(likert);
@@ -1560,22 +1610,23 @@
       `Team responses (${users.length} respondents)`));
 
     p.diagnostics.forEach((q, idx) => {
+      const meta = questionMeta(q);
       const row = h("div", { style: "padding: 10px 0; border-top: 1px solid var(--line);" });
-      row.appendChild(h("div", { style: "font-size:13px; font-weight:500; margin-bottom:6px;" }, `Q${idx + 1}. ${q}`));
+      row.appendChild(h("div", { style: "font-size:13px; font-weight:500; margin-bottom:6px;" }, `Q${idx + 1}. ${meta.text}`));
       const scores = h("div", { style: "display:flex; flex-wrap:wrap; gap:6px;" });
       users.forEach(uid => {
         const u = findUser(uid);
         const r = ((byUser[uid] || {})[p.id] || {})[idx];
         const score = r?.score;
         const pill = h("span", {
-          title: (u?.name || u?.email || "respondent") + (score ? ` — ${score}/10` : " — no answer"),
+          title: (u?.name || u?.email || "respondent") + (score ? ` - ${score}/${meta.scale}` : " - no answer"),
           style: `display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px; background:var(--surface-muted); border:1px solid var(--line); font-size:11px; color:var(--ink-2);`
         }, [
           h("span", {
             class: "avatar",
             style: "width:16px; height:16px; font-size:8px;"
           }, initials(u?.name || u?.email || "")),
-          score ? `${score}/10` : "—"
+          score ? `${score}/${meta.scale}` : "—"
         ]);
         scores.appendChild(pill);
       });

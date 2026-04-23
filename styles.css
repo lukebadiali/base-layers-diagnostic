@@ -720,6 +720,9 @@ a:hover { text-decoration: underline; }
 .likert.likert-10 button .n {
   font-size: 15px;
 }
+.likert.likert-5 {
+  grid-template-columns: repeat(5, 1fr);
+}
 .likert button {
   background: var(--surface-muted);
   border: 1px solid var(--line);

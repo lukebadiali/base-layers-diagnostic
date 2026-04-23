@@ -2047,7 +2047,6 @@
       ["Overall health", summary.avg !== null ? `${summary.avg} / 100` : "Not yet scored"],
       ["Pillars scored", `${summary.scoredCount} of ${DATA.pillars.length}`],
       ["Status mix", `${summary.green} green · ${summary.amber} amber · ${summary.red} red · ${summary.gray} not scored`],
-      ["Engagement stage", stage ? stage.name : "—"],
       ["Respondents", String(respondentsForRound(org, org.currentRoundId).length)]
     ].forEach(([label, val]) => metricsCard.appendChild(reportRow(label, val)));
     if (constraints.length) {

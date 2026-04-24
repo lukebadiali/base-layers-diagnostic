@@ -759,6 +759,15 @@
           onclick: () => { state.userMenuOpen = false; setRoute("admin"); }
         }, "Admin · manage people"));
       }
+      if (isClient && user.passwordHash) {
+        menu.appendChild(h("button", {
+          onclick: () => {
+            state.userMenuOpen = false;
+            render();
+            openChangePasswordModal(user);
+          }
+        }, "Change password"));
+      }
       menu.appendChild(h("button", {
         onclick: () => {
           state.userMenuOpen = false;
@@ -2910,13 +2919,100 @@
               createdAt: iso()
             };
             upsertUser(user);
+            const chosenOrg = loadOrgMetas().find(o => o.id === select.value);
+            const chosenOrgFull = loadOrg(select.value);
             m.close();
             render();
+            openInviteInstructionsModal(user, chosenOrg, !!(chosenOrgFull && chosenOrgFull.clientPassphraseHash));
           }
-        }, "Send invite")
+        }, "Create account")
       ])
     ]);
     setTimeout(() => name.focus(), 10);
+  }
+
+  function openInviteInstructionsModal(client, org, hasPassphrase) {
+    const signInUrl = "https://baselayers.bedeveloped.com";
+    const firstName = (client.name || "").split(" ")[0] || "there";
+    const emailSubject = `Your ${org?.name || "BeDeveloped"} Base Layers account`;
+    const emailBody =
+`Hi ${firstName},
+
+You've been set up with access to the BeDeveloped Base Layers diagnostic${org?.name ? ` for ${org.name}` : ""}.
+
+To sign in:
+1. Go to ${signInUrl}
+2. Enter your email: ${client.email}
+3. Enter the company passphrase (I'll share this with you separately)
+4. Create your own password on first sign-in - you'll use this from then on
+
+Any questions, just let me know.`;
+
+    const mailto = `mailto:${encodeURIComponent(client.email)}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+
+    const textArea = h("textarea", {
+      readonly: "",
+      style: "width:100%; min-height:190px; padding:12px; border:1px solid var(--line); border-radius:8px; font:13px/1.5 var(--font-sans, inherit); resize:vertical;"
+    });
+    textArea.value = emailBody;
+
+    const copyBtn = h("button", { class: "btn secondary" }, "Copy text");
+    copyBtn.onclick = async () => {
+      try { await navigator.clipboard.writeText(emailBody); copyBtn.textContent = "Copied ✓"; }
+      catch { textArea.select(); document.execCommand && document.execCommand("copy"); copyBtn.textContent = "Copied ✓"; }
+      setTimeout(() => { copyBtn.textContent = "Copy text"; }, 1800);
+    };
+
+    const m = modal([
+      h("h3", {}, "Client account created"),
+      h("p", { style: "color: var(--ink-2); font-size:13.5px; margin-top:0;" },
+        `${client.email} can now sign in. There's no automatic email - send them the details below. You'll also need to share the company passphrase for ${org?.name || "their organisation"} separately.`),
+      !hasPassphrase ? h("div", {
+        style: "background: var(--amber-bg, #FFF4E0); border:1px solid var(--amber); color: var(--ink-2); padding:10px 12px; border-radius:8px; font-size:12.5px; margin-bottom:10px;"
+      }, `⚠ ${org?.name || "This organisation"} doesn't have a company passphrase set yet. Set one from the Admin page before the client tries to sign in.`) : null,
+      h("label", { style: "font-size:12px; color:var(--ink-3); display:block; margin-bottom:4px;" }, "Suggested message"),
+      textArea,
+      h("div", { class: "row" }, [
+        h("button", { class: "btn secondary", onclick: () => m.close() }, "Done"),
+        copyBtn,
+        h("a", {
+          class: "btn",
+          href: mailto,
+          style: "text-decoration:none; display:inline-flex; align-items:center;",
+          onclick: () => { setTimeout(() => m.close(), 100); }
+        }, "Open in email")
+      ])
+    ].filter(Boolean));
+  }
+
+  function openChangePasswordModal(user) {
+    const cur = h("input", { type: "password", placeholder: "Current password" });
+    const nw = h("input", { type: "password", placeholder: "New password (min 6 chars)" });
+    const confirmPw = h("input", { type: "password", placeholder: "Confirm new password" });
+    const errBox = h("div");
+    const m = modal([
+      h("h3", {}, "Change password"),
+      h("p", { style: "color:var(--ink-3); font-size:13px; margin-top:0;" },
+        "Enter your current password, then choose a new one. You'll use the new password next time you sign in."),
+      h("div", { style: "display:flex; flex-direction:column; gap:10px;" }, [cur, nw, confirmPw]),
+      errBox,
+      h("div", { class: "row" }, [
+        h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
+        h("button", {
+          class: "btn",
+          onclick: async () => {
+            errBox.innerHTML = "";
+            const ok = await verifyUserPassword(user.id, cur.value);
+            if (!ok) { errBox.appendChild(h("div", { class: "auth-error" }, "Current password is wrong.")); return; }
+            if ((nw.value || "").length < 6) { errBox.appendChild(h("div", { class: "auth-error" }, "New password must be at least 6 characters.")); return; }
+            if (nw.value !== confirmPw.value) { errBox.appendChild(h("div", { class: "auth-error" }, "New passwords don't match.")); return; }
+            await setUserPassword(user.id, nw.value);
+            m.close();
+          }
+        }, "Update password")
+      ])
+    ]);
+    setTimeout(() => cur.focus(), 10);
   }
 
   function openSetOrgPassphrase(orgId, orgName) {

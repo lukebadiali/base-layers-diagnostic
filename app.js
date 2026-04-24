@@ -1680,6 +1680,8 @@
     const filteredActions = (org.actions || [])
       .filter(a => a.pillarId === p.id)
       .filter(a => !isClient || !a.internal);
+    const openActions = filteredActions.filter(a => !a.done);
+    const completedActions = filteredActions.filter(a => a.done);
 
     const actionsPanel = h("div", { class: "side-panel" }, [
       h("div", { style: "display:flex; justify-content:space-between; align-items:center;" }, [
@@ -1692,10 +1694,19 @@
       ]),
       filteredActions.length === 0
         ? h("p", { style: "color: var(--ink-3); font-size:13px; margin-top:10px;" }, "No actions yet.")
-        : h("ul", {}, filteredActions.map(a =>
-            h("li", { style: a.done ? "text-decoration:line-through; color: var(--ink-4);" : "" }, a.title)
-          ))
-    ]);
+        : openActions.length === 0
+          ? h("p", { style: "color: var(--ink-3); font-size:13px; margin-top:10px;" }, "No open actions.")
+          : h("ul", {}, openActions.map(a => h("li", {}, a.title))),
+      completedActions.length
+        ? h("div", { style: "margin-top:14px; padding-top:10px; border-top: 1px solid var(--line);" }, [
+            h("div", {
+              style: "font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color: var(--ink-3); margin-bottom:6px;"
+            }, `Completed (${completedActions.length})`),
+            h("ul", { style: "margin:0;" }, completedActions.map(a =>
+              h("li", { style: "text-decoration:line-through; color: var(--ink-4);" }, a.title)))
+          ])
+        : null
+    ].filter(Boolean));
     right.appendChild(actionsPanel);
 
     grid.appendChild(right);
@@ -1943,17 +1954,40 @@
       return frag;
     }
 
-    const table = h("div", { class: "actions-table" });
-    table.appendChild(h("div", { class: "action-row" }, [
+    const openActions = all.filter(a => !a.done);
+    const completedActions = all.filter(a => a.done);
+    const headerRow = () => h("div", { class: "action-row" }, [
       h("div", {}, "✓"),
       h("div", {}, "Action"),
       h("div", {}, "Pillar"),
       h("div", {}, "Owner"),
       h("div", {}, "Due"),
       h("div", {}, "")
-    ]));
-    all.forEach(a => table.appendChild(renderActionRow(a)));
-    frag.appendChild(table);
+    ]);
+
+    // Open actions
+    const openTable = h("div", { class: "actions-table" });
+    openTable.appendChild(headerRow());
+    if (openActions.length === 0) {
+      openTable.appendChild(h("div", {
+        style: "padding:14px 16px; color: var(--ink-3); font-size:13px;"
+      }, "No open actions."));
+    } else {
+      openActions.forEach(a => openTable.appendChild(renderActionRow(a)));
+    }
+    frag.appendChild(openTable);
+
+    // Completed actions, in their own section
+    if (completedActions.length) {
+      frag.appendChild(h("h2", {
+        style: "margin-top:28px; margin-bottom:10px;"
+      }, `Completed (${completedActions.length})`));
+      const doneTable = h("div", { class: "actions-table" });
+      doneTable.appendChild(headerRow());
+      completedActions.forEach(a => doneTable.appendChild(renderActionRow(a)));
+      frag.appendChild(doneTable);
+    }
+
     return frag;
   }
 

@@ -52,6 +52,23 @@
   const initials = (name = "") =>
     name.split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0].toUpperCase()).join("");
 
+  // Take "Luke Badiali" -> "Luke", "luke.badiali@x.com" -> "Luke", "luke@x.com" -> "Luke".
+  const capitalise = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
+  const firstNameFromAuthor = (m) => {
+    const name = (m.authorName || "").trim();
+    if (name) {
+      const first = name.split(/\s+/)[0];
+      if (first) return first;
+    }
+    const email = (m.authorEmail || "").trim();
+    if (email) {
+      const local = email.split("@")[0] || "";
+      const piece = local.split(/[.\-_+]/)[0] || "";
+      if (piece) return capitalise(piece);
+    }
+    return "Unknown";
+  };
+
   // ---------- JSON helpers ----------
   const jget = (k, fallback) => {
     try { const v = LS.getItem(k); return v == null ? fallback : JSON.parse(v); }
@@ -2696,11 +2713,12 @@
       filtered.forEach(m => {
         const isSelf = m.authorId === user.id;
         const ts = m.createdAt?.toDate?.().toLocaleString?.() || "";
+        const who = firstNameFromAuthor(m);
         const bubble = h("div", {
           style: `align-self:${isSelf ? "flex-end" : "flex-start"}; max-width:70%; background:${isSelf ? "var(--brand)" : "#fff"}; color:${isSelf ? "#fff" : "var(--ink)"}; padding:8px 12px; border-radius:10px; border:1px solid ${isSelf ? "var(--brand)" : "var(--line)"}; box-shadow:var(--shadow-sm);`
         }, [
           h("div", { style: `font-size:11px; opacity:0.8; margin-bottom:2px;` },
-            `${m.authorName || m.authorEmail || "unknown"} · ${ts}`),
+            `${who} · ${ts}`),
           h("div", { style: "font-size:14px; white-space:pre-wrap; word-break:break-word;" }, m.text)
         ]);
         list.appendChild(bubble);

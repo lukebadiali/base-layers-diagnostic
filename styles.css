@@ -445,7 +445,8 @@ a:hover { text-decoration: underline; }
 .summary-cell .value {
   font-family: var(--font-display);
   font-size: 28px;
-  font-weight: 600;
+  font-weight: 400;
+  letter-spacing: 0.02em;
   margin-top: 4px;
 }
 .summary-cell.red .value    { color: var(--red); }

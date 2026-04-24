@@ -395,6 +395,13 @@
     startChatSubscription(user);
   }
 
+  const BASE_TAB_TITLE = "BeDeveloped - The Base Layers";
+  function updateTabTitleBadge() {
+    const user = currentUser();
+    const unread = (user && user.role === "internal") ? unreadChatTotal(user) : 0;
+    document.title = unread > 0 ? `(${unread}) ${BASE_TAB_TITLE}` : BASE_TAB_TITLE;
+  }
+
   // trivial hashing for demo purposes (NOT secure — just to avoid plaintext storage)
   async function hashString(s) {
     try {
@@ -678,6 +685,8 @@
 
   function render() {
     if (state.chart) { try { state.chart.destroy(); } catch {} state.chart = null; }
+
+    updateTabTitleBadge();
 
     const app = appEl();
     app.innerHTML = "";
@@ -1203,6 +1212,30 @@
 
     const respondents = respondentsForRound(org, org.currentRoundId);
     const respUsers = respondents.map(id => findUser(id)).filter(Boolean);
+
+    // Internal-only: alert banner for unread client chat messages across all orgs
+    if (user.role === "internal") {
+      const unreadChat = unreadChatTotal(user);
+      if (unreadChat > 0) {
+        frag.appendChild(h("div", {
+          style: "display:flex; align-items:center; gap:14px; padding:12px 16px; margin-bottom:16px; background: var(--red-bg); border:1px solid var(--red); border-radius: 10px;"
+        }, [
+          h("div", {
+            style: "min-width:32px; height:32px; border-radius:50%; background: var(--red); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;"
+          }, String(unreadChat)),
+          h("div", { style: "flex:1; color: var(--ink);" }, [
+            h("div", { style: "font-weight:600;" },
+              `${unreadChat} unread client message${unreadChat === 1 ? "" : "s"}`),
+            h("div", { style: "font-size:12.5px; color: var(--ink-3);" },
+              "Across every client channel - click through to respond.")
+          ]),
+          h("button", {
+            class: "btn sm",
+            onclick: () => setRoute("chat")
+          }, "Open chat")
+        ]));
+      }
+    }
 
     // Heading
     frag.appendChild(h("h1", { class: "view-title" }, org.name));
@@ -2691,8 +2724,14 @@
   function renderChat(user, org) {
     const frag = h("div");
     frag.appendChild(h("h1", { class: "view-title" }, "Chat"));
-    frag.appendChild(h("p", { class: "view-sub" },
+    frag.appendChild(h("p", { class: "view-sub", style: "margin-bottom:4px;" },
       org ? `Team channel for ${org.name}. Everyone in this organisation + BeDeveloped can post and read.` : "Select an organisation to open its channel."));
+    if (org) {
+      frag.appendChild(h("p", {
+        class: "view-sub",
+        style: "margin-top:0; color: var(--ink-3); font-style: italic; font-size: 13px;"
+      }, "The team will aim to respond within 24hrs."));
+    }
 
     if (!org) return frag;
 
@@ -2751,10 +2790,12 @@
       }
       filtered.forEach(m => {
         const isSelf = m.authorId === user.id;
+        const isInternalAuthor = m.authorRole === "internal";
+        const bg = isInternalAuthor ? "var(--ink)" : "var(--brand)";
         const ts = m.createdAt?.toDate?.().toLocaleString?.() || "";
         const who = firstNameFromAuthor(m);
         const bubble = h("div", {
-          style: `align-self:${isSelf ? "flex-end" : "flex-start"}; max-width:70%; background:${isSelf ? "var(--brand)" : "#fff"}; color:${isSelf ? "#fff" : "var(--ink)"}; padding:8px 12px; border-radius:10px; border:1px solid ${isSelf ? "var(--brand)" : "var(--line)"}; box-shadow:var(--shadow-sm);`
+          style: `align-self:${isSelf ? "flex-end" : "flex-start"}; max-width:70%; background:${bg}; color:#fff; padding:8px 12px; border-radius:10px; border:1px solid ${bg}; box-shadow:var(--shadow-sm);`
         }, [
           h("div", { style: `font-size:11px; opacity:0.8; margin-bottom:2px;` },
             `${who} · ${ts}`),
@@ -2880,7 +2921,7 @@
       localData.months.forEach((m, idx) => {
         const card = h("div", { class: "card", style: "padding:14px;" });
         card.appendChild(h("div", { style: "display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;" }, [
-          h("div", { style: "font-family: var(--font-display); font-size:18px; letter-spacing:0.02em; color: var(--brand-ink);" }, `Month ${idx + 1}`),
+          h("div", { style: "font-family: var(--font-display); font-size:18px; letter-spacing:0.02em; color: var(--ink);" }, `Month ${idx + 1}`),
           h("div", { style: "font-size:11px; color:var(--ink-3);" }, `${(m.pillarIds || []).length} pillar${(m.pillarIds || []).length === 1 ? "" : "s"} · ${(m.outcomes || []).length} outcome${(m.outcomes || []).length === 1 ? "" : "s"}`)
         ]));
 

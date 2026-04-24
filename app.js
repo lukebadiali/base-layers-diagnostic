@@ -803,8 +803,9 @@
     const actions = h("span", { class: "footer-actions" }, [
       h("button", {
         class: "btn ghost",
+        title: "Full backup of all orgs, users and responses. For internal recovery only.",
         onclick: exportData
-      }, "Export data"),
+      }, "Export backup"),
       (() => {
         const input = h("input", { type: "file", accept: "application/json", style: "display:none;" });
         input.addEventListener("change", (e) => {
@@ -813,8 +814,9 @@
         });
         const btn = h("button", {
           class: "btn ghost",
+          title: "Restore a previously exported JSON backup. Overwrites current data.",
           onclick: () => input.click()
-        }, "Import data");
+        }, "Restore backup");
         return h("span", {}, [btn, input]);
       })()
     ]);
@@ -2055,7 +2057,7 @@
 
     frag.appendChild(h("div", { class: "report-toolbar" }, [
       h("button", { class: "btn secondary", onclick: () => window.print() }, "Print / save PDF"),
-      !isClient ? h("button", { class: "btn secondary", onclick: exportData }, "Export JSON") : null
+      !isClient ? h("button", { class: "btn secondary", title: "Full backup of all orgs, users and responses. Internal only - not a client report.", onclick: exportData }, "Export backup (JSON)") : null
     ].filter(Boolean)));
 
     const r = h("div", { class: "report" });

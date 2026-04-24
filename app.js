@@ -2996,9 +2996,7 @@
             check.disabled = true;
           }
           row.appendChild(check);
-          row.appendChild(h("span", {
-            style: `flex:1; ${o.done ? "text-decoration:line-through; color:var(--ink-4);" : ""}`
-          }, o.text));
+          row.appendChild(h("span", { style: "flex:1;" }, o.text));
           if (canEdit) {
             row.appendChild(h("button", {
               class: "btn ghost sm danger",

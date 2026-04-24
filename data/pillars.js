@@ -200,7 +200,7 @@ window.BASE_LAYERS = {
           anchors: { low: "Rarely", high: "Monthly" },
           labels: { 1: "Rarely", 3: "6-monthly", 5: "Monthly" }
         },
-        "How strong is your industry presence and credibility?",
+        "How strong is your industry presence and credibility, compared to similar firms?",
         "How effective is your referral generation approach?",
         "How often do relationships convert into opportunities over time?",
         "How strong is your network within target accounts?",
@@ -246,7 +246,7 @@ window.BASE_LAYERS = {
         "How confident are you in your discovery process?",
         "How effective is your qualification methodology?",
         "How strong is your solution selling capability?",
-        "How effectively do you handle objections?",
+        "How effectively do you and the team handle objections from prospects?",
         "How confident are you in negotiation and closing?",
         "How consistent is your sales execution across the team?",
         "How well do you progress deals through the pipeline?",
@@ -330,7 +330,7 @@ window.BASE_LAYERS = {
         "Convert satisfied customers into advocates who drive referrals, case studies and references."
       ],
       diagnostics: [
-        "How effective is your onboarding process?",
+        "How effective is your client onboarding process? Process is documented.",
         "How strong are your retention strategies?",
         "How effective is your upsell and cross-sell execution?",
         "How strong is your customer advocacy generation?",
@@ -420,12 +420,12 @@ window.BASE_LAYERS = {
         "How integrated is marketing with business development?",
         "How strong is your campaign planning process?",
         "How consistent is your messaging across channels?",
-        "How clearly defined is your target audience?",
+        "How clearly defined is your brand for your target audience?",
         "How effectively do you track campaign performance?",
         "How strong is your content strategy?",
         "How effective is your personal or founder brand?",
         "How strong is your case study and social proof library?",
-        "How consistently do you publish thought leadership content?",
+        "How consistently do you publish thought leadership content as an SLT and company page?",
         "How effectively does marketing generate inbound leads?"
       ],
       whatWeDo: [
@@ -460,10 +460,10 @@ window.BASE_LAYERS = {
         "Make the loop visible, so contributors can see their input influence decisions."
       ],
       diagnostics: [
-        "How effectively is customer feedback captured?",
-        "How well is feedback integrated into product development?",
+        "How effectively is customer feedback captured and documented?",
+        "How well is feedback integrated into product/service development?",
         "How well do you use market insights to refine positioning?",
-        "How quickly do you iterate based on feedback?",
+        "How quickly do you make adjustments based on feedback?",
         "How strong is communication between sales and product teams?",
         "How well do you identify emerging customer needs?",
         "How effectively do you test new propositions?",
@@ -509,13 +509,18 @@ window.BASE_LAYERS = {
       ],
       diagnostics: [
         "How strong is your pricing strategy?",
-        "How well do you manage margins?",
+        {
+          text: "What is your current margins on average?",
+          scale: 5,
+          anchors: { low: "<10%", high: "50%+" },
+          labels: { 1: "<10%", 2: "11-25%", 3: "25-35%", 4: "36-50%", 5: "50%+" }
+        },
         "How accurately do you calculate CAC (Customer acquisition cost)?",
         "How clearly defined is your LTV (lifetime value)?",
         "How confident are you in ROI from sales and marketing spend?",
         "How well do you model revenue growth scenarios?",
         "How disciplined is your commercial decision making?",
-        "How well do you understand unit economics?",
+        "How well do you understand unit economics? i.e biggest costs",
         "How effectively do you optimise pricing over time?",
         "How strong is your profitability management?"
       ],

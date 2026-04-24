@@ -304,7 +304,78 @@
     jset(K.session, { userId });
   }
   function signOut() {
+    stopChatSubscription();
     LS.removeItem(K.session);
+  }
+
+  // ---------- Chat unread tracking ----------
+  function chatReadKey(userId) { return `baselayers:chatLastRead:${userId}`; }
+  function loadChatLastRead(userId) { return jget(chatReadKey(userId), {}); }
+  function saveChatLastRead(userId, map) { jset(chatReadKey(userId), map); }
+  function markChatReadFor(userId, orgId) {
+    if (!userId || !orgId) return;
+    const m = loadChatLastRead(userId);
+    m[orgId] = iso();
+    saveChatLastRead(userId, m);
+  }
+  function lastReadMillis(userId, orgId) {
+    const m = loadChatLastRead(userId);
+    return m[orgId] ? new Date(m[orgId]).getTime() : 0;
+  }
+  function msgMillis(msg) {
+    return msg.createdAt?.toMillis?.() ||
+           (msg.createdAt ? new Date(msg.createdAt).getTime() : 0);
+  }
+  function unreadChatForOrg(user, orgId) {
+    if (!user || !orgId) return 0;
+    const lastT = lastReadMillis(user.id, orgId);
+    return (state.chatMessages || []).filter(m =>
+      m.orgId === orgId && m.authorId !== user.id && msgMillis(m) > lastT
+    ).length;
+  }
+  function unreadChatTotal(user) {
+    if (!user) return 0;
+    if (user.role === "client") return unreadChatForOrg(user, user.orgId);
+    // internal: count across every org they're seeing
+    return (state.chatMessages || []).reduce((n, m) => {
+      if (m.authorId === user.id) return n;
+      const lastT = lastReadMillis(user.id, m.orgId);
+      return msgMillis(m) > lastT ? n + 1 : n;
+    }, 0);
+  }
+
+  function stopChatSubscription() {
+    if (state.chatSubscription) { try { state.chatSubscription(); } catch {} state.chatSubscription = null; }
+    state.chatMessages = [];
+    state.chatSubscribedFor = null;
+  }
+  function startChatSubscription(user) {
+    stopChatSubscription();
+    if (!user) return;
+    if (!(window.FB && window.FB.currentUser && window.FB.firestore)) return;
+    const { db, firestore } = window.FB;
+    let q;
+    if (user.role === "internal") {
+      q = firestore.collection(db, "messages");
+    } else if (user.orgId) {
+      q = firestore.query(firestore.collection(db, "messages"),
+        firestore.where("orgId", "==", user.orgId));
+    } else {
+      return;
+    }
+    state.chatSubscribedFor = user.id;
+    state.chatSubscription = firestore.onSnapshot(q, (snap) => {
+      const list = [];
+      snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+      state.chatMessages = list;
+      render();
+    }, (err) => console.error("Chat subscription error:", err));
+  }
+  function ensureChatSubscription(user) {
+    if (!user) { stopChatSubscription(); return; }
+    if (state.chatSubscribedFor === user.id && state.chatSubscription) return;
+    if (!(window.FB && window.FB.currentUser)) return;
+    startChatSubscription(user);
   }
 
   // trivial hashing for demo purposes (NOT secure — just to avoid plaintext storage)
@@ -467,7 +538,10 @@
     userMenuOpen: false,
     authTab: "client",
     authError: "",
-    expandedPillars: new Set()    // dashboard-tile accordion state
+    expandedPillars: new Set(),   // dashboard-tile accordion state
+    chatMessages: [],             // live feed from Firestore, filtered by role
+    chatSubscription: null,       // unsubscribe function for the live listener
+    chatSubscribedFor: null       // user.id the current subscription is for
   };
 
   function activeOrgForUser(user) {
@@ -592,6 +666,7 @@
     app.innerHTML = "";
 
     const user = currentUser();
+    ensureChatSubscription(user);
     document.body.classList.toggle("client-view", !!(user && user.role === "client"));
     if (!user) {
       app.appendChild(renderAuth());
@@ -672,6 +747,7 @@
     // Admin access moved to the user dropdown ("Admin · manage people").
 
     const unread = org ? unreadCountTotal(org, user) : 0;
+    const unreadChat = unreadChatTotal(user);
 
     items.forEach(([route, label]) => {
       const btn = h("button", {
@@ -683,6 +759,13 @@
       // Unread indicator on diagnostic (since comments live on pillar pages)
       if (route === "diagnostic" && unread > 0) {
         btn.appendChild(h("span", { class: "dot", title: `${unread} unread comment(s)` }));
+      }
+      // Unread indicator on chat
+      if (route === "chat" && unreadChat > 0) {
+        btn.appendChild(h("span", {
+          class: "count-badge",
+          title: `${unreadChat} unread message${unreadChat === 1 ? "" : "s"}`
+        }, String(unreadChat)));
       }
       nav.appendChild(btn);
     });
@@ -2557,6 +2640,9 @@
 
     if (!org) return frag;
 
+    // Mark everything up to now as read for this user/org combination.
+    markChatReadFor(user.id, org.id);
+
     if (!fbReady()) {
       frag.appendChild(h("div", { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" }, "Connecting to chat…"));
       return frag;
@@ -2928,6 +3014,7 @@
 
   // Re-render when Firebase is ready (so loading states flip to live data)
   window.addEventListener("firebase-ready", () => {
+    ensureChatSubscription(currentUser());
     if (state.route === "documents" || state.route === "chat" || state.route === "roadmap") render();
   });
 

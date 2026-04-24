@@ -2430,10 +2430,16 @@
       orgs.forEach(m => {
         const o = loadOrg(m.id);
         const clients = loadUsers().filter(u => u.role === "client" && u.orgId === m.id);
+        const currentTier = orgTier(o);
         const row = h("div", { style: "display:grid; grid-template-columns: 1.5fr 1fr 1fr auto; gap:12px; align-items:center; padding:12px 0; border-top:1px solid var(--line);" });
         row.appendChild(h("div", {}, [
-          h("div", { style: "font-weight:600;" }, m.name),
-          h("div", { style: "color:var(--ink-3); font-size:12px;" },
+          h("div", { style: "display:flex; align-items:center; gap:8px;" }, [
+            h("span", { style: "font-weight:600;" }, m.name),
+            h("span", {
+              style: `display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; background: ${currentTier === "performance" ? "var(--ink)" : "var(--brand-tint)"}; color: ${currentTier === "performance" ? "#fff" : "var(--brand)"};`
+            }, currentTier === "performance" ? "Performance" : "Standard")
+          ]),
+          h("div", { style: "color:var(--ink-3); font-size:12px; margin-top:4px;" },
             `${(o?.rounds?.length || 0)} round(s) · ${respondentsForRound(o, o.currentRoundId).length} respondents`)
         ]));
         const hasPass = !!(o && o.clientPassphraseHash);
@@ -2443,7 +2449,26 @@
             hasPass ? "✓ passphrase set" : "⚠ no passphrase")
         ]));
         row.appendChild(h("div", {}, formatDate(o?.createdAt)));
-        row.appendChild(h("div", { style: "display:flex; gap:6px;" }, [
+        const tierSelect = h("select", {
+          title: "Tier determines roadmap cadence. Standard = 12 months. Performance = 4 quarters.",
+          style: "padding:5px 8px; border:1px solid var(--line); border-radius:6px; font:inherit; font-size:12px; background:#fff; cursor:pointer;"
+        });
+        ["standard", "performance"].forEach(v => {
+          const opt = document.createElement("option");
+          opt.value = v;
+          opt.textContent = v === "performance" ? "Performance" : "Standard";
+          if (v === currentTier) opt.selected = true;
+          tierSelect.appendChild(opt);
+        });
+        tierSelect.addEventListener("change", () => {
+          const fresh = loadOrg(m.id);
+          if (!fresh) return;
+          fresh.tier = tierSelect.value;
+          saveOrg(fresh);
+          render();
+        });
+        row.appendChild(h("div", { style: "display:flex; gap:6px; align-items:center;" }, [
+          tierSelect,
           h("button", {
             class: "btn secondary sm",
             onclick: () => { state.orgId = m.id; setRoute("dashboard"); }
@@ -2856,10 +2881,16 @@
   // ================================================================
   // ROADMAP (Firestore — internal edits, clients read-only)
   // ================================================================
-  function emptyRoadmap(orgId) {
+  function orgTier(org) { return org?.tier === "performance" ? "performance" : "standard"; }
+  function periodCount(org) { return orgTier(org) === "performance" ? 4 : 12; }
+  function periodLabelPrefix(org) { return orgTier(org) === "performance" ? "Quarter" : "Month"; }
+  function periodsField(org) { return orgTier(org) === "performance" ? "quarters" : "months"; }
+
+  function emptyRoadmap(orgId, tier) {
+    const count = tier === "performance" ? 4 : 12;
     return {
       orgId,
-      months: Array.from({ length: 12 }, () => ({ pillarIds: [], outcomes: [] })),
+      periods: Array.from({ length: count }, () => ({ pillarIds: [], outcomes: [] })),
       updatedAt: null
     };
   }
@@ -2867,9 +2898,12 @@
   function renderRoadmap(user, org) {
     const frag = h("div");
     frag.appendChild(h("h1", { class: "view-title" }, "Roadmap"));
+    const tier = orgTier(org);
+    const periodCadence = tier === "performance" ? "4-quarter" : "12-month";
+    const periodLabelLower = tier === "performance" ? "quarter" : "month";
     frag.appendChild(h("p", { class: "view-sub" },
       org
-        ? `12-month delivery plan for ${org.name}. ${user.role === "internal" ? "Drag pillars into a month and add outcomes." : "Your BeDeveloped team will update this as the engagement progresses."}`
+        ? `${periodCadence} delivery plan for ${org.name}. ${user.role === "internal" ? `Drag pillars into a ${periodLabelLower} and add outcomes.` : "Your BeDeveloped team will update this as the engagement progresses."}`
         : "Select an organisation to see its roadmap."));
     if (!org) return frag;
 
@@ -2883,13 +2917,13 @@
     const docRef = firestore.doc(db, "roadmaps", org.id);
 
     const layout = h("div", { style: "display:grid; grid-template-columns: 1fr 260px; gap:18px; align-items:start;" });
-    const monthsCol = h("div", { style: "display:flex; flex-direction:column; gap:10px;" });
+    const periodsCol = h("div", { style: "display:flex; flex-direction:column; gap:10px;" });
     const palette = h("div", { class: "card", style: "position:sticky; top:18px; padding:14px;" });
 
     // Pillar palette
     palette.appendChild(h("div", { style: "font-family: var(--font-display); letter-spacing:0.08em; color: var(--brand); font-size:12px; margin-bottom:8px;" }, "PILLARS"));
     palette.appendChild(h("p", { style: "font-size:11.5px; color:var(--ink-3); margin:0 0 10px; line-height:1.4;" },
-      canEdit ? "Drag any pillar into a month. A pillar can appear in more than one month." : "Pillars assigned to each month appear below."));
+      canEdit ? `Drag any pillar into a ${periodLabelLower}. A pillar can appear in more than one ${periodLabelLower}.` : `Pillars assigned to each ${periodLabelLower} appear below.`));
     DATA.pillars.forEach(p => {
       const chip = h("div", {
         "data-pillar": p.id,
@@ -2905,23 +2939,29 @@
       palette.appendChild(chip);
     });
 
-    // Render helper for a month card (takes current data, re-renders on save)
-    let localData = emptyRoadmap(org.id);
+    // Render helper for each period card (takes current data, re-renders on save)
+    const persistField = periodsField(org);
+    const periodLabel = periodLabelPrefix(org);
+    let localData = emptyRoadmap(org.id, tier);
     const save = async (next) => {
       localData = next;
       try {
-        await firestore.setDoc(docRef, { ...next, updatedAt: firestore.serverTimestamp() }, { merge: true });
+        await firestore.setDoc(docRef, {
+          orgId: org.id,
+          [persistField]: next.periods,
+          updatedAt: firestore.serverTimestamp()
+        }, { merge: true });
       } catch (e) {
         alert("Couldn't save roadmap: " + (e.message || e));
       }
     };
 
-    const renderMonths = () => {
-      monthsCol.innerHTML = "";
-      localData.months.forEach((m, idx) => {
+    const renderPeriods = () => {
+      periodsCol.innerHTML = "";
+      localData.periods.forEach((m, idx) => {
         const card = h("div", { class: "card", style: "padding:14px;" });
         card.appendChild(h("div", { style: "display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;" }, [
-          h("div", { style: "font-family: var(--font-display); font-size:18px; letter-spacing:0.02em; color: var(--ink);" }, `Month ${idx + 1}`),
+          h("div", { style: "font-family: var(--font-display); font-size:18px; letter-spacing:0.02em; color: var(--ink);" }, `${periodLabel} ${idx + 1}`),
           h("div", { style: "font-size:11px; color:var(--ink-3);" }, `${(m.pillarIds || []).length} pillar${(m.pillarIds || []).length === 1 ? "" : "s"} · ${(m.outcomes || []).length} outcome${(m.outcomes || []).length === 1 ? "" : "s"}`)
         ]));
 
@@ -2943,11 +2983,11 @@
             canEdit ? h("button", {
               style: "border:0; background:transparent; color:#fff; cursor:pointer; padding:0 0 0 4px; font-size:13px; line-height:1;",
               onclick: () => {
-                const next = { ...localData, months: localData.months.map((mm, i) =>
+                const next = { ...localData, periods: localData.periods.map((mm, i) =>
                   i === idx ? { ...mm, pillarIds: (mm.pillarIds || []).filter(x => x !== pid) } : mm
                 ) };
                 save(next);
-                renderMonths();
+                renderPeriods();
               }
             }, "×") : null
           ].filter(Boolean));
@@ -2961,13 +3001,13 @@
             drop.style.background = "var(--surface-muted)";
             const pid = Number(e.dataTransfer.getData("text/pillar-id"));
             if (!pid) return;
-            const current = localData.months[idx]?.pillarIds || [];
+            const current = localData.periods[idx]?.pillarIds || [];
             if (current.includes(pid)) return;
-            const next = { ...localData, months: localData.months.map((mm, i) =>
+            const next = { ...localData, periods: localData.periods.map((mm, i) =>
               i === idx ? { ...mm, pillarIds: [...current, pid] } : mm
             ) };
             save(next);
-            renderMonths();
+            renderPeriods();
           });
         }
         card.appendChild(drop);
@@ -2984,13 +3024,13 @@
           check.checked = !!o.done;
           if (canEdit) {
             check.addEventListener("change", () => {
-              const next = { ...localData, months: localData.months.map((mm, i) =>
+              const next = { ...localData, periods: localData.periods.map((mm, i) =>
                 i === idx ? { ...mm, outcomes: (mm.outcomes || []).map(oo =>
                   oo.id === o.id ? { ...oo, done: check.checked } : oo
                 ) } : mm
               ) };
               save(next);
-              renderMonths();
+              renderPeriods();
             });
           } else {
             check.disabled = true;
@@ -3002,11 +3042,11 @@
               class: "btn ghost sm danger",
               style: "padding:2px 8px; font-size:11px;",
               onclick: () => {
-                const next = { ...localData, months: localData.months.map((mm, i) =>
+                const next = { ...localData, periods: localData.periods.map((mm, i) =>
                   i === idx ? { ...mm, outcomes: (mm.outcomes || []).filter(oo => oo.id !== o.id) } : mm
                 ) };
                 save(next);
-                renderMonths();
+                renderPeriods();
               }
             }, "Remove"));
           }
@@ -3027,11 +3067,11 @@
             if (!text) return;
             input.value = "";
             const o = { id: uid("out_"), text, done: false };
-            const next = { ...localData, months: localData.months.map((mm, i) =>
+            const next = { ...localData, periods: localData.periods.map((mm, i) =>
               i === idx ? { ...mm, outcomes: [...(mm.outcomes || []), o] } : mm
             ) };
             save(next);
-            renderMonths();
+            renderPeriods();
           };
           const addManyOutcomes = (lines) => {
             const clean = lines
@@ -3039,45 +3079,46 @@
               .filter(Boolean);
             if (!clean.length) return;
             const newOutcomes = clean.map(text => ({ id: uid("out_"), text, done: false }));
-            const next = { ...localData, months: localData.months.map((mm, i) =>
+            const next = { ...localData, periods: localData.periods.map((mm, i) =>
               i === idx ? { ...mm, outcomes: [...(mm.outcomes || []), ...newOutcomes] } : mm
             ) };
             save(next);
-            renderMonths();
+            renderPeriods();
           };
           addBtn.addEventListener("click", addOutcome);
           input.addEventListener("keydown", (e) => { if (e.key === "Enter") addOutcome(); });
-          pasteBtn.addEventListener("click", () => openBulkOutcomeModal(idx + 1, addManyOutcomes));
+          pasteBtn.addEventListener("click", () => openBulkOutcomeModal(`${periodLabel} ${idx + 1}`, addManyOutcomes));
           card.appendChild(h("div", { style: "display:flex; gap:6px;" }, [input, addBtn, pasteBtn]));
         }
 
-        monthsCol.appendChild(card);
+        periodsCol.appendChild(card);
       });
     };
 
-    layout.appendChild(monthsCol);
+    layout.appendChild(periodsCol);
     layout.appendChild(palette);
     frag.appendChild(layout);
 
     // Initial paint + live updates
-    renderMonths();
+    renderPeriods();
+    const expectedLen = periodCount(org);
     firestore.onSnapshot(docRef, (snap) => {
       if (snap.exists()) {
         const d = snap.data();
-        const months = Array.isArray(d.months) && d.months.length === 12
-          ? d.months
-          : emptyRoadmap(org.id).months;
-        localData = { orgId: org.id, months, updatedAt: d.updatedAt || null };
+        const loaded = Array.isArray(d[persistField]) && d[persistField].length === expectedLen
+          ? d[persistField]
+          : emptyRoadmap(org.id, tier).periods;
+        localData = { orgId: org.id, periods: loaded, updatedAt: d.updatedAt || null };
       } else {
-        localData = emptyRoadmap(org.id);
+        localData = emptyRoadmap(org.id, tier);
       }
-      renderMonths();
+      renderPeriods();
     }, (err) => console.error("Roadmap snapshot error:", err));
 
     return frag;
   }
 
-  function openBulkOutcomeModal(monthNumber, onAdd) {
+  function openBulkOutcomeModal(periodLabel, onAdd) {
     const ta = h("textarea", {
       placeholder: "Paste outcomes, one per line. Lines starting with -, •, *, or a number are cleaned up.\n\nExample:\n- Pipeline forecasting in place\n- Weekly revenue review running\n- Proposal template standardised",
       style: "width:100%; min-height:220px; padding:12px; border:1px solid var(--line); border-radius:8px; font:13px/1.5 var(--font-sans, inherit); resize:vertical;"
@@ -3088,7 +3129,7 @@
       countLbl.textContent = `${n} outcome${n === 1 ? "" : "s"}`;
     });
     const m = modal([
-      h("h3", {}, `Paste multiple outcomes — Month ${monthNumber}`),
+      h("h3", {}, `Paste multiple outcomes - ${periodLabel}`),
       h("p", { style: "color:var(--ink-3); font-size:13px; margin-top:0;" },
         "One outcome per line. Bullet markers and numbering are stripped automatically."),
       ta,

@@ -746,7 +746,7 @@
     });
     const brand = h("div", { class: "brand" }, [
       logoImg,
-      h("span", { class: "brand-sub" }, "Base Layers")
+      h("span", { class: "brand-sub" }, "The Base Layers")
     ]);
 
     // Nav
@@ -896,7 +896,7 @@
     if (!user || user.role === "client") {
       // minimal footer for clients
       return h("footer", { class: "footer" }, [
-        h("span", {}, `BeDeveloped Base Layers — ${org ? org.name : "client view"}`),
+        h("span", {}, `The Base Layers — ${org ? org.name : "client view"}`),
         h("span", {})
       ]);
     }
@@ -921,7 +921,7 @@
       })()
     ]);
     return h("footer", { class: "footer" }, [
-      h("span", {}, "BeDeveloped Base Layers — local build. Data stays in this browser."),
+      h("span", {}, "The Base Layers — local build. Data stays in this browser."),
       actions
     ]);
   }
@@ -1178,7 +1178,7 @@
     return h("div", { class: "card", style: "text-align:center; padding:48px;" }, [
       h("h2", { style: "margin-top:0; font-size: 28px;" }, "Create your first client engagement"),
       h("p", { style: "color: var(--ink-3); max-width: 520px; margin: 0 auto 20px;" },
-        "Start by adding an organisation. Then you can invite their team to complete the Base Layers diagnostic."),
+        "Start by adding an organisation. Then you can invite their team to complete The Base Layers diagnostic."),
       h("button", {
         class: "btn",
         onclick: () => promptText("New organisation", "e.g. Acme Ltd", (name) => {
@@ -1209,7 +1209,7 @@
 
     frag.appendChild(h("p", { class: "view-sub" },
       summary.scoredCount === 0
-        ? "No diagnostics completed yet. Start scoring a pillar to see the Base Layers view."
+        ? "No diagnostics completed yet. Start scoring a pillar to see The Base Layers view."
         : `Scored ${summary.scoredCount} of ${DATA.pillars.length} pillars. Overall health ${summary.avg ?? "—"} / 100.`
     ));
 
@@ -1221,7 +1221,7 @@
 
     // Radar card
     const chartCard = h("div", { class: "card" });
-    chartCard.appendChild(h("h3", {}, "Base Layers"));
+    chartCard.appendChild(h("h3", {}, "The Base Layers"));
     const chartWrap = h("div", { class: "chart-wrap" });
     chartWrap.appendChild(h("canvas", { id: "radar" }));
     chartCard.appendChild(chartWrap);
@@ -2161,15 +2161,15 @@
     ].filter(Boolean)));
 
     const r = h("div", { class: "report" });
-    r.appendChild(h("h1", {}, `Base Layers diagnostic - ${org.name}`));
+    r.appendChild(h("h1", {}, `The Base Layers diagnostic - ${org.name}`));
     r.appendChild(h("div", { class: "sub" },
       `${isClient ? "Client view" : "Internal view"} · ${round?.label || "Current round"} · Generated ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`));
 
     // Intro block
     const intro = h("div", { class: "report-intro card", style: "margin:18px 0 24px;" });
-    intro.appendChild(h("h2", { style: "margin-top:0;" }, "Thank you for participating in the Base Layers Sales Assessment."));
+    intro.appendChild(h("h2", { style: "margin-top:0;" }, "Thank you for participating in The Base Layers Sales Assessment."));
     intro.appendChild(h("p", {}, "Your results will provide valuable insights into your current business development processes and help you streamline your operations."));
-    intro.appendChild(h("p", {}, "We have assessed your performance from the Base Layers sales framework that covers 10 core strategic pillars:"));
+    intro.appendChild(h("p", {}, "We have assessed your performance from The Base Layers sales framework that covers 10 core strategic pillars:"));
     const pillarList = h("ol", { style: "font-size:14px; color:var(--ink-2);" });
     DATA.pillars.forEach(p => {
       pillarList.appendChild(h("li", {}, p.name));
@@ -3111,11 +3111,11 @@
   function openInviteInstructionsModal(client, org, hasPassphrase) {
     const signInUrl = "https://baselayers.bedeveloped.com";
     const firstName = (client.name || "").split(" ")[0] || "there";
-    const emailSubject = `Your ${org?.name || "BeDeveloped"} Base Layers account`;
+    const emailSubject = `Your ${org?.name ? org.name + " " : ""}account on The Base Layers`;
     const emailBody =
 `Hi ${firstName},
 
-You've been set up with access to the BeDeveloped Base Layers diagnostic${org?.name ? ` for ${org.name}` : ""}.
+You've been set up with access to The Base Layers diagnostic${org?.name ? ` for ${org.name}` : ""}.
 
 To sign in:
 1. Go to ${signInUrl}

@@ -921,8 +921,10 @@ a:hover { text-decoration: underline; }
 }
 .stage-card .name {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 400;
   font-size: 18px;
+  letter-spacing: 0.02em;
+  color: var(--brand-ink);
   margin: 4px 0 8px;
 }
 .stage-card .sum {

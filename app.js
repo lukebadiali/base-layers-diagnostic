@@ -202,8 +202,8 @@
 
   function pillarStatus(score) {
     if (score === null || score === undefined) return "gray";
-    if (score < 40) return "red";
-    if (score < 70) return "amber";
+    if (score <= 50) return "red";
+    if (score <= 75) return "amber";
     return "green";
   }
 
@@ -1523,6 +1523,14 @@
       left.appendChild(renderQuestion(user, org, p, idx, q));
     });
 
+    // Complete button - returns to the diagnostic landing
+    left.appendChild(h("div", { style: "margin-top:20px; display:flex; justify-content:flex-end;" }, [
+      h("button", {
+        class: "btn",
+        onclick: () => setRoute("diagnostic")
+      }, "Complete")
+    ]));
+
     // Team average (if more than self-has-answered)
     const teamPanel = renderTeamResponses(user, org, p);
     if (teamPanel) left.appendChild(teamPanel);
@@ -1977,8 +1985,8 @@
   // ================================================================
   function bandLabel(s) {
     if (s === null || s === undefined) return "Not scored";
-    if (s < 40) return "Low";
-    if (s < 70) return "Medium";
+    if (s <= 50) return "Low";
+    if (s <= 75) return "Medium";
     return "High";
   }
 
@@ -1986,10 +1994,10 @@
     if (s === null || s === undefined) {
       return `${pillarName} has not yet been scored. Once the diagnostic is complete, you will see a detailed view here including your development priorities.`;
     }
-    if (s < 40) {
+    if (s <= 50) {
       return `Your team scored ${s}/100 on ${pillarName}. This is a LOW score and a priority development area. Investment here is likely to unlock compounding gains across other pillars, because ${pillarName.toLowerCase()} sits upstream of how the rest of your commercial engine performs.`;
     }
-    if (s < 70) {
+    if (s <= 75) {
       return `Your team scored ${s}/100 on ${pillarName}. This is a MEDIUM score. Foundational elements are in place, but there is clear room to strengthen consistency, codify what is working, and remove variability between individuals and situations.`;
     }
     return `Your team scored ${s}/100 on ${pillarName}. This is a HIGH score and, on current evidence, a strength. The opportunity here is to maintain discipline, protect the standard as you scale, and treat this as a competitive advantage worth defending.`;
@@ -1997,8 +2005,8 @@
 
   function bandColor(s) {
     if (s === null || s === undefined) return "var(--line-2)";
-    if (s < 40) return "var(--red)";
-    if (s < 70) return "var(--amber)";
+    if (s <= 50) return "var(--red)";
+    if (s <= 75) return "var(--amber)";
     return "var(--green)";
   }
 

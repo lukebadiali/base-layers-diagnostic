@@ -924,7 +924,7 @@ a:hover { text-decoration: underline; }
   font-weight: 400;
   font-size: 18px;
   letter-spacing: 0.02em;
-  color: var(--brand-ink);
+  color: var(--ink);
   margin: 4px 0 8px;
 }
 .stage-card .sum {
@@ -1077,7 +1077,7 @@ a:hover { text-decoration: underline; }
   font-weight: 400;
   font-size: 18px;
   letter-spacing: 0.02em;
-  color: var(--brand-ink);
+  color: var(--ink);
 }
 .report .r-pillar .meta {
   color: var(--ink-3);

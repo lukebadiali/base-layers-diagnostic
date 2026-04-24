@@ -1552,7 +1552,7 @@
     frag.appendChild(h("p", { class: "view-sub" },
       isClientView(user)
         ? "Score each pillar honestly against the diagnostic questions. Your responses join the team view."
-        : "Score each pillar against its diagnostic questions. Evidence-based, 1–5."));
+        : "Score each pillar against its diagnostic questions."));
 
     // Show current user's own completion if client/internal preview
     if (isClientView(user)) {

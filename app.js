@@ -2236,7 +2236,12 @@
     ].forEach(([label, val]) => metricsCard.appendChild(reportRow(label, val)));
     if (constraints.length) {
       metricsCard.appendChild(reportRow("Top constraints",
-        constraints.map((p, i) => `${i + 1}. ${p.name} (${pillarScore(org, p.id)}/100)`).join(" · ")));
+        h("div", { style: "display:flex; flex-direction:column; gap:4px;" },
+          constraints.map((p, i) =>
+            h("div", {}, `${i + 1}. ${p.name} (${pillarScore(org, p.id)}/100)`)
+          )
+        )
+      ));
     }
     snap.appendChild(metricsCard);
     r.appendChild(snap);

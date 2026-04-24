@@ -61,7 +61,7 @@ window.BASE_LAYERS = {
         "Measurement rhythm running without us",
         "Handover pack delivered",
         "Checkpoints agreed for ongoing review",
-        "BeDeveloped team stood down"
+        "BeDeveloped team to scope for future improvements"
       ]
     }
   ],

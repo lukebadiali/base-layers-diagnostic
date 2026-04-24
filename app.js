@@ -1213,7 +1213,17 @@
       const rightFoot = h("div", { style: "display:flex; align-items:center; gap:8px;" });
       rightFoot.appendChild(h("span", { class: `badge ${status}` },
         statusLabel(status, done, total)));
-      rightFoot.appendChild(h("span", { class: "tile-caret", "aria-hidden": "true" }, "▾"));
+      rightFoot.appendChild(h("button", {
+        class: "tile-toggle",
+        "aria-label": isOpen ? "Collapse pillar" : "Expand pillar",
+        title: isOpen ? "Collapse" : "Expand",
+        onclick: (e) => {
+          e.stopPropagation();
+          if (isOpen) state.expandedPillars.delete(p.id);
+          else state.expandedPillars.add(p.id);
+          render();
+        }
+      }, "▾"));
       foot.appendChild(rightFoot);
       tile.appendChild(foot);
 
@@ -1275,7 +1285,17 @@
     }
 
     const foot = h("div", { class: "foot", style: "justify-content: flex-end;" });
-    foot.appendChild(h("span", { class: "tile-caret", "aria-hidden": "true" }, "▾"));
+    foot.appendChild(h("button", {
+      class: "tile-toggle",
+      "aria-label": isOpen ? "Collapse" : "Expand",
+      title: isOpen ? "Collapse" : "Expand",
+      onclick: (e) => {
+        e.stopPropagation();
+        if (isOpen) state.expandedPillars.delete("opex");
+        else state.expandedPillars.add("opex");
+        render();
+      }
+    }, "▾"));
     tile.appendChild(foot);
 
     if (isOpen) {
@@ -1837,7 +1857,9 @@
 
   function renderActionRow(a) {
     const p = DATA.pillars.find(x => x.id === a.pillarId);
-    const row = h("div", { class: `action-row ${a.done ? "done" : ""}` });
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const isOverdue = !a.done && !!a.due && a.due < todayIso;
+    const row = h("div", { class: `action-row ${a.done ? "done" : ""} ${isOverdue ? "overdue" : ""}` });
 
     const chk = h("input", { type: "checkbox" });
     chk.checked = !!a.done;
@@ -1859,9 +1881,12 @@
     owner.addEventListener("blur", () => updateAction(a.id, { owner: owner.value }));
     row.appendChild(owner);
 
+    const dueWrap = h("div", { style: "display:flex; align-items:center; gap:6px;" });
     const due = h("input", { type: "date", class: "a-due", value: a.due || "" });
     due.addEventListener("change", () => updateAction(a.id, { due: due.value }));
-    row.appendChild(due);
+    dueWrap.appendChild(due);
+    if (isOverdue) dueWrap.appendChild(h("span", { class: "overdue-tag", title: "Due date has passed" }, "Overdue"));
+    row.appendChild(dueWrap);
 
     const del = h("button", {
       class: "btn ghost sm",
@@ -2029,7 +2054,7 @@
     const prevRoundId = previousRoundId(org);
 
     frag.appendChild(h("div", { class: "report-toolbar" }, [
-      !isClient ? h("button", { class: "btn secondary", onclick: () => window.print() }, "Print / save PDF") : null,
+      h("button", { class: "btn secondary", onclick: () => window.print() }, "Print / save PDF"),
       !isClient ? h("button", { class: "btn secondary", onclick: exportData }, "Export JSON") : null
     ].filter(Boolean)));
 
@@ -2812,6 +2837,7 @@
             style: "flex:1; padding:6px 10px; border:1px solid var(--line-2); border-radius:6px; font:inherit; font-size:13px;"
           });
           const addBtn = h("button", { class: "btn sm" }, "Add");
+          const pasteBtn = h("button", { class: "btn sm secondary", title: "Paste a list — one outcome per line" }, "Paste multiple");
           const addOutcome = () => {
             const text = input.value.trim();
             if (!text) return;
@@ -2823,9 +2849,22 @@
             save(next);
             renderMonths();
           };
+          const addManyOutcomes = (lines) => {
+            const clean = lines
+              .map(s => s.replace(/^\s*[-•*\d.\)]+\s*/, "").trim())
+              .filter(Boolean);
+            if (!clean.length) return;
+            const newOutcomes = clean.map(text => ({ id: uid("out_"), text, done: false }));
+            const next = { ...localData, months: localData.months.map((mm, i) =>
+              i === idx ? { ...mm, outcomes: [...(mm.outcomes || []), ...newOutcomes] } : mm
+            ) };
+            save(next);
+            renderMonths();
+          };
           addBtn.addEventListener("click", addOutcome);
           input.addEventListener("keydown", (e) => { if (e.key === "Enter") addOutcome(); });
-          card.appendChild(h("div", { style: "display:flex; gap:6px;" }, [input, addBtn]));
+          pasteBtn.addEventListener("click", () => openBulkOutcomeModal(idx + 1, addManyOutcomes));
+          card.appendChild(h("div", { style: "display:flex; gap:6px;" }, [input, addBtn, pasteBtn]));
         }
 
         monthsCol.appendChild(card);
@@ -2852,6 +2891,37 @@
     }, (err) => console.error("Roadmap snapshot error:", err));
 
     return frag;
+  }
+
+  function openBulkOutcomeModal(monthNumber, onAdd) {
+    const ta = h("textarea", {
+      placeholder: "Paste outcomes, one per line. Lines starting with -, •, *, or a number are cleaned up.\n\nExample:\n- Pipeline forecasting in place\n- Weekly revenue review running\n- Proposal template standardised",
+      style: "width:100%; min-height:220px; padding:12px; border:1px solid var(--line); border-radius:8px; font:13px/1.5 var(--font-sans, inherit); resize:vertical;"
+    });
+    const countLbl = h("div", { style: "font-size:12px; color:var(--ink-3);" }, "0 outcomes");
+    ta.addEventListener("input", () => {
+      const n = ta.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean).length;
+      countLbl.textContent = `${n} outcome${n === 1 ? "" : "s"}`;
+    });
+    const m = modal([
+      h("h3", {}, `Paste multiple outcomes — Month ${monthNumber}`),
+      h("p", { style: "color:var(--ink-3); font-size:13px; margin-top:0;" },
+        "One outcome per line. Bullet markers and numbering are stripped automatically."),
+      ta,
+      countLbl,
+      h("div", { class: "row" }, [
+        h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
+        h("button", {
+          class: "btn",
+          onclick: () => {
+            const lines = ta.value.split(/\r?\n/);
+            onAdd(lines);
+            m.close();
+          }
+        }, "Add all")
+      ])
+    ]);
+    setTimeout(() => ta.focus(), 10);
   }
 
   // Re-render when Firebase is ready (so loading states flip to live data)

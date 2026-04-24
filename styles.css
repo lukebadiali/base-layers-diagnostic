@@ -1075,7 +1075,7 @@ a:hover { text-decoration: underline; }
   font-weight: 400;
   font-size: 18px;
   letter-spacing: 0.02em;
-  color: var(--brand);
+  color: var(--brand-ink);
 }
 .report .r-pillar .meta {
   color: var(--ink-3);

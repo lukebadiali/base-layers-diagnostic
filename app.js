@@ -734,6 +734,7 @@
     else if (route === "documents") main.appendChild(renderDocuments(user, org));
     else if (route === "chat") main.appendChild(renderChat(user, org));
     else if (route === "roadmap") main.appendChild(renderRoadmap(user, org));
+    else if (route === "funnel") main.appendChild(renderFunnel(user, org));
     else if (route === "admin" && !isClient) main.appendChild(renderAdmin(user));
     else {
       state.route = "dashboard";
@@ -768,7 +769,8 @@
       ["documents",   "Documents"],
       ["chat",        "Chat"],
       ["actions",     "Actions"],
-      ["roadmap",     "Roadmap"]
+      ["roadmap",     "Roadmap"],
+      ["funnel",      "Funnel"]
     ];
     // Admin access moved to the user dropdown ("Admin · manage people").
 
@@ -3152,8 +3154,183 @@
   // Re-render when Firebase is ready (so loading states flip to live data)
   window.addEventListener("firebase-ready", () => {
     ensureChatSubscription(currentUser());
-    if (state.route === "documents" || state.route === "chat" || state.route === "roadmap") render();
+    if (state.route === "documents" || state.route === "chat" || state.route === "roadmap" || state.route === "funnel") render();
   });
+
+  // ================================================================
+  // FUNNEL (Firestore - shared per org, everyone can edit)
+  // ================================================================
+  const FUNNEL_METRICS = [
+    { key: "leads",              label: "Leads" },
+    { key: "mqls",               label: "MQL's" },
+    { key: "leadToMql",          label: "Lead > MQL %",                  type: "percent", num: "mqls",          den: "leads" },
+    { key: "sqls",               label: "SQL's" },
+    { key: "mqlToSql",           label: "MQL > SQL %",                   type: "percent", num: "sqls",          den: "mqls" },
+    { key: "proposalsSent",      label: "Proposals sent" },
+    { key: "sqlToProposal",      label: "SQL > Proposal %",              type: "percent", num: "proposalsSent", den: "sqls" },
+    { key: "qualifiedOutOur",    label: "Qualified out (Our decision)" },
+    { key: "qualifiedOutTheir",  label: "Qualified out (Their decision)" },
+    { key: "closedWon",          label: "Closed Won" }
+  ];
+  const FUNNEL_QUARTERS = ["Q1", "Q2", "Q3", "Q4"];
+  const FUNNEL_YEARS = [2026, 2027];
+
+  function renderFunnel(user, org) {
+    const frag = h("div");
+    frag.appendChild(h("h1", { class: "view-title" }, "Funnel"));
+    frag.appendChild(h("p", { class: "view-sub" },
+      org
+        ? `Early-stage sales funnel for ${org.name}. Numbers are shared with your team in real time. Percentages calculate automatically.`
+        : "Select an organisation to see its funnel."));
+    if (!org) return frag;
+
+    if (!fbReady()) {
+      frag.appendChild(h("div", { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" }, "Connecting to shared storage…"));
+      return frag;
+    }
+
+    const { db, firestore } = window.FB;
+    const docRef = firestore.doc(db, "funnels", org.id);
+
+    const localData = { years: {} };
+    FUNNEL_YEARS.forEach(y => {
+      localData.years[y] = {};
+      FUNNEL_QUARTERS.forEach(q => { localData.years[y][q] = {}; });
+    });
+
+    const inputs = {};
+    const pctCells = {};
+
+    const fmtPct = (num, den) => {
+      const n = Number(num) || 0;
+      const d = Number(den) || 0;
+      if (!d) return "-";
+      return `${((n / d) * 100).toFixed(1)}%`;
+    };
+
+    const updatePctCells = (year, q) => {
+      FUNNEL_METRICS.forEach(m => {
+        if (m.type !== "percent") return;
+        const cell = pctCells[`${year}.${q}.${m.key}`];
+        if (!cell) return;
+        const data = (localData.years[year] && localData.years[year][q]) || {};
+        cell.textContent = fmtPct(data[m.num], data[m.den]);
+      });
+    };
+
+    let saveTimer = null;
+    const saveCell = (year, q, key, value) => {
+      if (!localData.years[year]) localData.years[year] = {};
+      if (!localData.years[year][q]) localData.years[year][q] = {};
+      localData.years[year][q][key] = value;
+      updatePctCells(year, q);
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(async () => {
+        try {
+          await firestore.setDoc(docRef, {
+            orgId: org.id,
+            years: localData.years,
+            updatedAt: firestore.serverTimestamp()
+          }, { merge: true });
+        } catch (e) {
+          alert("Couldn't save funnel: " + (e.message || e));
+        }
+      }, 250);
+    };
+
+    const buildYearTable = (year) => {
+      const wrap = h("div", { class: "funnel-table-wrap" });
+      const table = h("table", { class: "funnel-table" });
+      const thead = h("thead");
+      thead.appendChild(h("tr", {}, [
+        h("th", { class: "funnel-metric-head" }, "Metric"),
+        ...FUNNEL_QUARTERS.map(q => h("th", {}, q))
+      ]));
+      table.appendChild(thead);
+
+      const tbody = h("tbody");
+      FUNNEL_METRICS.forEach(m => {
+        const isPct = m.type === "percent";
+        const row = h("tr", { class: isPct ? "funnel-row-pct" : "" });
+        row.appendChild(h("td", { class: "funnel-metric-label" }, m.label));
+        FUNNEL_QUARTERS.forEach(q => {
+          const td = h("td");
+          if (isPct) {
+            const cell = h("span", { class: "funnel-pct" }, "-");
+            pctCells[`${year}.${q}.${m.key}`] = cell;
+            td.appendChild(cell);
+          } else {
+            const inp = h("input", {
+              type: "number",
+              min: "0",
+              step: "1",
+              inputmode: "numeric",
+              class: "funnel-input",
+              placeholder: "0"
+            });
+            inputs[`${year}.${q}.${m.key}`] = inp;
+            const commit = () => {
+              const raw = inp.value.trim();
+              const v = raw === "" ? null : Number(raw);
+              if (raw !== "" && Number.isNaN(v)) return;
+              saveCell(year, q, m.key, v);
+            };
+            inp.addEventListener("input", commit);
+            inp.addEventListener("blur", commit);
+            inp.addEventListener("keydown", (e) => { if (e.key === "Enter") inp.blur(); });
+            td.appendChild(inp);
+          }
+          row.appendChild(td);
+        });
+        tbody.appendChild(row);
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      return wrap;
+    };
+
+    FUNNEL_YEARS.forEach((year, idx) => {
+      const details = h("details", { class: "funnel-year" });
+      if (idx === 0) details.setAttribute("open", "");
+      details.appendChild(h("summary", { class: "funnel-year-summary" }, [
+        h("span", { class: "funnel-year-label" }, String(year)),
+        h("span", { class: "funnel-year-hint" }, "Click to toggle")
+      ]));
+      details.appendChild(buildYearTable(year));
+      frag.appendChild(details);
+    });
+
+    const applySnapshot = () => {
+      FUNNEL_YEARS.forEach(y => {
+        FUNNEL_QUARTERS.forEach(q => {
+          const data = (localData.years[y] && localData.years[y][q]) || {};
+          FUNNEL_METRICS.forEach(m => {
+            if (m.type === "percent") return;
+            const inp = inputs[`${y}.${q}.${m.key}`];
+            if (!inp) return;
+            if (document.activeElement === inp) return;
+            const v = data[m.key];
+            inp.value = (v === null || v === undefined || Number.isNaN(v)) ? "" : String(v);
+          });
+          updatePctCells(y, q);
+        });
+      });
+    };
+
+    firestore.onSnapshot(docRef, (snap) => {
+      const d = snap.exists() ? snap.data() : null;
+      const years = (d && d.years) || {};
+      FUNNEL_YEARS.forEach(y => {
+        if (!localData.years[y]) localData.years[y] = {};
+        FUNNEL_QUARTERS.forEach(q => {
+          localData.years[y][q] = (years[y] && years[y][q]) || (years[String(y)] && years[String(y)][q]) || {};
+        });
+      });
+      applySnapshot();
+    }, (err) => console.error("Funnel snapshot error:", err));
+
+    return frag;
+  }
 
   function openInviteClientModal() {
     const name  = h("input", { type: "text",  placeholder: "Client contact name" });

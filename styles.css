@@ -1645,3 +1645,81 @@ a:hover { text-decoration: underline; }
   .auth-wrap { grid-template-columns: 1fr; }
   .auth-hero { display: none; }
 }
+
+/* ===================== FUNNEL ===================== */
+.funnel-year {
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  margin: 14px 0;
+  overflow: hidden;
+}
+.funnel-year[open] { box-shadow: 0 1px 0 rgba(0,0,0,0.02); }
+.funnel-year-summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface-muted);
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+}
+.funnel-year-summary::-webkit-details-marker { display: none; }
+.funnel-year-summary::before {
+  content: "▸";
+  margin-right: 10px;
+  color: var(--ink-3);
+  transition: transform 0.15s ease;
+  display: inline-block;
+}
+.funnel-year[open] .funnel-year-summary::before { transform: rotate(90deg); }
+.funnel-year-label { font-size: 20px; color: var(--ink); flex: 1; }
+.funnel-year-hint { font-size: 11px; color: var(--ink-3); letter-spacing: 0.06em; text-transform: uppercase; }
+
+.funnel-table-wrap { overflow-x: auto; padding: 8px 14px 14px; }
+.funnel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.funnel-table thead th {
+  text-align: center;
+  padding: 8px 10px;
+  font-weight: 600;
+  color: var(--ink-3);
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line-2);
+  background: var(--surface-muted);
+}
+.funnel-table thead th.funnel-metric-head { text-align: left; }
+.funnel-table tbody td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line-2);
+  text-align: center;
+}
+.funnel-table tbody td.funnel-metric-label {
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  padding-right: 16px;
+}
+.funnel-row-pct td.funnel-metric-label { color: var(--ink-3); font-style: italic; font-weight: 400; }
+.funnel-row-pct { background: var(--brand-tint); }
+.funnel-input {
+  width: 100%;
+  max-width: 110px;
+  padding: 6px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  text-align: right;
+  background: #fff;
+}
+.funnel-input:focus { outline: none; border-color: var(--brand, #1A6FA0); box-shadow: 0 0 0 2px var(--brand-tint); }
+.funnel-pct { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 500; }

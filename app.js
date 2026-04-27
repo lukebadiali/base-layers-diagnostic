@@ -777,7 +777,7 @@
       ["documents",   "Documents"],
       ["chat",        "Chat"],
       ["actions",     "Actions"],
-      ["roadmap",     "Roadmap"],
+      ["roadmap",     "Plan"],
       ["funnel",      "Funnel"]
     ];
     // Admin access moved to the user dropdown ("Admin · manage people").
@@ -3044,14 +3044,14 @@
 
   function renderRoadmap(user, org) {
     const frag = h("div");
-    frag.appendChild(h("h1", { class: "view-title" }, "Roadmap"));
+    frag.appendChild(h("h1", { class: "view-title" }, "Plan"));
     const tier = orgTier(org);
     const periodCadence = tier === "performance" ? "4-quarter" : "12-month";
     const periodLabelLower = tier === "performance" ? "quarter" : "month";
     frag.appendChild(h("p", { class: "view-sub" },
       org
         ? `${periodCadence} delivery plan for ${org.name}. ${user.role === "internal" ? `Drag pillars into a ${periodLabelLower} and add outcomes.` : "Your BeDeveloped team will update this as the engagement progresses."}`
-        : "Select an organisation to see its roadmap."));
+        : "Select an organisation to see its plan."));
     if (!org) return frag;
 
     if (!fbReady()) {

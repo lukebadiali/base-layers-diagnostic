@@ -3353,6 +3353,7 @@
 
     const inputs = {};
     const pctCells = {};
+    const avgCells = {};
 
     // ---------- KPI section ----------
     const kpiCard = h("section", { class: "kpi-section" });
@@ -3484,6 +3485,40 @@
       });
     };
 
+    const updateAvgCells = (year) => {
+      FUNNEL_METRICS.forEach(m => {
+        const cell = avgCells[`${year}.${m.key}`];
+        if (!cell) return;
+        if (m.type === "percent") {
+          const pcts = [];
+          FUNNEL_QUARTERS.forEach(q => {
+            const data = (localData.years[year] && localData.years[year][q]) || {};
+            const num = Number(data[m.num]);
+            const den = denTotal(m, data);
+            if (den > 0 && !Number.isNaN(num)) {
+              pcts.push((num / den) * 100);
+            }
+          });
+          if (!pcts.length) { cell.textContent = "-"; return; }
+          const avg = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+          cell.textContent = `${avg.toFixed(1)}%`;
+        } else {
+          const vals = [];
+          FUNNEL_QUARTERS.forEach(q => {
+            const data = (localData.years[year] && localData.years[year][q]) || {};
+            const v = data[m.key];
+            if (v === null || v === undefined || v === "") return;
+            const n = Number(v);
+            if (!Number.isNaN(n)) vals.push(n);
+          });
+          if (!vals.length) { cell.textContent = "-"; return; }
+          const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+          const allInt = vals.every(v => Number.isInteger(v));
+          cell.textContent = allInt ? Math.round(avg).toString() : avg.toFixed(1);
+        }
+      });
+    };
+
     const saveStatus = h("span", { class: "funnel-save-status" }, "Changes save automatically.");
 
     let saveTimer = null;
@@ -3509,6 +3544,7 @@
       if (!localData.years[year][q]) localData.years[year][q] = {};
       localData.years[year][q][key] = value;
       updatePctCells(year, q);
+      updateAvgCells(year);
       saveStatus.textContent = "Editing…";
       clearTimeout(saveTimer);
       saveTimer = setTimeout(flushSave, 600);
@@ -3520,7 +3556,8 @@
       const thead = h("thead");
       thead.appendChild(h("tr", {}, [
         h("th", { class: "funnel-metric-head" }, "Metric"),
-        ...FUNNEL_QUARTERS.map(q => h("th", {}, q))
+        ...FUNNEL_QUARTERS.map(q => h("th", {}, q)),
+        h("th", { class: "funnel-avg-head" }, "Avg")
       ]));
       table.appendChild(thead);
 
@@ -3558,6 +3595,11 @@
           }
           row.appendChild(td);
         });
+        const avgTd = h("td", { class: "funnel-avg-cell" });
+        const avgSpan = h("span", { class: "funnel-avg" }, "-");
+        avgCells[`${year}.${m.key}`] = avgSpan;
+        avgTd.appendChild(avgSpan);
+        row.appendChild(avgTd);
         tbody.appendChild(row);
       });
       table.appendChild(tbody);
@@ -3620,6 +3662,7 @@
           });
           updatePctCells(y, q);
         });
+        updateAvgCells(y);
       });
     };
 

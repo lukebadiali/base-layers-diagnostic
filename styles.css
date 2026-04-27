@@ -1877,6 +1877,18 @@ a:hover { text-decoration: underline; }
 }
 .funnel-input:focus { outline: none; border-color: var(--brand, #1A6FA0); box-shadow: 0 0 0 2px var(--brand-tint); }
 .funnel-pct { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 500; }
+.funnel-table thead th.funnel-avg-head {
+  border-left: 1px solid var(--line);
+  background: var(--surface-muted);
+  color: var(--ink);
+}
+.funnel-table tbody td.funnel-avg-cell {
+  border-left: 1px solid var(--line);
+  background: var(--surface-muted);
+  font-weight: 600;
+}
+.funnel-row-pct td.funnel-avg-cell { font-weight: 500; }
+.funnel-avg { font-variant-numeric: tabular-nums; color: var(--ink); }
 
 .funnel-save-row {
   display: flex;

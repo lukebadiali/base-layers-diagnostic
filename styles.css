@@ -1631,19 +1631,173 @@ a:hover { text-decoration: underline; }
   .report { box-shadow: none; border: 0; padding: 0; max-width: none; }
 }
 
-/* ------------------- Responsive ------------------- */
+/* ============================================================
+   RESPONSIVE — TABLET & PHONE
+   Layered breakpoints:
+     ≤1100px  iPad landscape & small desktops (tighten only)
+     ≤900px   iPad portrait & landscape phones (stack topbar, simplify grids)
+     ≤640px   phone portrait (stack everything, wrap likert-10, full-width modals)
+     ≤380px   small phones (extra-tight)
+   ============================================================ */
+
+/* iPad landscape / small laptops — let topnav wrap so every tab is visible without scrolling */
+@media (max-width: 1280px) {
+  .topnav {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 4px;
+  }
+}
+
+/* iPad landscape / small desktops — keep horizontal layout, tighten paddings */
+@media (max-width: 1100px) {
+  .topbar { padding: 8px 16px; gap: 14px; }
+  .nav-btn { padding: 6px 11px; font-size: 12.5px; }
+  .brand-sub { display: none; }
+  #orgSelect { min-width: 140px; }
+  main { padding: 24px 18px 56px; }
+  .footer { padding: 14px 18px 24px; }
+  .view-title { font-size: 34px; }
+  .report { padding: 28px 28px; }
+}
+
+/* iPad portrait & landscape phones — stack topbar, collapse grids */
 @media (max-width: 900px) {
-  .topbar { grid-template-columns: 1fr; gap: 10px; }
-  .topnav { justify-self: stretch; overflow-x: auto; }
-  .topright { flex-wrap: wrap; }
-  .dash-top { grid-template-columns: 1fr; }
+  .topbar { grid-template-columns: 1fr; gap: 10px; padding: 10px 16px; }
+  .topnav {
+    justify-self: stretch;
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 4px;
+  }
+  .nav-btn { white-space: nowrap; padding: 8px 14px; font-size: 13px; }
+  .topright { flex-wrap: wrap; gap: 8px; }
+  #orgSelect { flex: 1; min-width: 120px; }
+
+  .dash-top { grid-template-columns: 1fr; gap: 16px; }
+  .chart-wrap { height: 320px; }
   .pillar-grid { grid-template-columns: 1fr; }
   .stages { grid-template-columns: repeat(2, 1fr); }
   .summary-grid { grid-template-columns: repeat(2, 1fr); }
   .action-row { grid-template-columns: auto 1fr 1fr auto; }
   .action-row .a-owner, .action-row .a-due { grid-column: span 1; }
+
   .auth-wrap { grid-template-columns: 1fr; }
   .auth-hero { display: none; }
+  .auth-form { padding: 40px 28px; max-width: 520px; }
+
+  .report { padding: 28px 24px; max-width: 100%; }
+  .report-snapshot { grid-template-columns: 1fr; }
+
+  /* Roadmap: stack the 1fr/260px layout so palette sits above periods */
+  .roadmap-layout { grid-template-columns: 1fr !important; }
+  .roadmap-palette { position: static !important; }
+
+  .modal { padding: 20px; }
+}
+
+/* Phone portrait — stack everything, wrap likert-10, taller touch targets */
+@media (max-width: 640px) {
+  html, body { font-size: 14.5px; }
+
+  .topbar { padding: 8px 12px; }
+  main { padding: 18px 12px 48px; }
+  .footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 14px 12px 24px;
+  }
+
+  .view-title { font-size: 28px; }
+  .view-sub { font-size: 13.5px; margin-bottom: 18px; }
+  h2 { font-size: 22px; }
+
+  .summary-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .summary-cell { padding: 12px; }
+  .summary-cell .value { font-size: 24px; }
+
+  .stages { grid-template-columns: 1fr; }
+  .tile { min-height: 140px; padding: 16px; }
+
+  /* Likert: wrap 10-button row to two rows of 5 so each button is finger-sized */
+  .likert.likert-10 { grid-template-columns: repeat(5, 1fr); }
+  .likert.likert-10 button { padding: 12px 4px; min-height: 48px; }
+  .likert.likert-10 button .n { font-size: 16px; }
+  .likert.likert-5 button { min-height: 48px; }
+  .likert button .t { font-size: 10px; }
+
+  /* Action rows stack: hide the column-header row, give each row a card-like layout */
+  .actions-table { border-radius: 12px; }
+  .action-row {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "chk title del"
+      "pil pil pil"
+      "own own own"
+      "due due due";
+    gap: 6px 10px;
+    padding: 12px;
+    align-items: center;
+  }
+  .action-row:first-child { display: none; }
+  .action-row > input[type=checkbox] { grid-area: chk; }
+  .action-row .a-title { grid-area: title; }
+  .action-row > div:nth-of-type(1) { grid-area: pil; font-size: 12.5px; }
+  .action-row .a-owner { grid-area: own; }
+  .action-row > div:nth-of-type(2) { grid-area: due; }
+  .action-row > button { grid-area: del; }
+
+  /* Report */
+  .report { padding: 22px 16px; }
+  .report .row { grid-template-columns: 1fr; gap: 4px; padding: 10px 0; }
+  .report h1 { font-size: 32px; }
+  .report-toolbar { padding: 0 4px; }
+
+  /* Auth */
+  .auth-form { padding: 32px 20px; }
+  .auth-heading { font-size: 24px; }
+
+  /* Topbar — drop role line, shrink chip */
+  .user-chip .who .role { display: none; }
+  .user-chip { padding: 4px 8px 4px 4px; }
+
+  /* Touch-friendly buttons */
+  .btn { padding: 10px 14px; font-size: 13.5px; }
+  .btn.sm { padding: 7px 12px; font-size: 12.5px; }
+
+  /* OpEx tile spans single column on phone (already 1-col grid for tiles auto-fill) */
+  .tile.opex { grid-column: span 1; }
+
+  /* Comments composer stacks */
+  .comment-composer { flex-direction: column; align-items: stretch; }
+  .comment-composer .opts { flex-direction: row; justify-content: flex-end; gap: 12px; }
+
+  /* Round bar: stack label and actions */
+  .round-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .round-bar-actions { width: 100%; flex-wrap: wrap; }
+
+  /* Pillar header: stack back/score */
+  .pillar-header { flex-direction: column; gap: 12px; }
+
+  /* Score block trims a bit */
+  .score-block { padding: 16px 12px; }
+  .score-block .big { font-size: 44px; }
+
+  /* Modal: full-bleed */
+  .modal-root { padding: 12px; }
+  .modal { padding: 18px; max-width: 100%; }
+
+  /* Funnel inputs: don't cap width on phone (so they fill their cell) */
+  .funnel-input { max-width: none; }
+}
+
+/* Small phones */
+@media (max-width: 380px) {
+  .summary-grid { grid-template-columns: 1fr; }
+  .view-title { font-size: 24px; }
+  .nav-btn { padding: 7px 12px; font-size: 12.5px; }
+  .brand-logo { height: 32px; }
 }
 
 /* ===================== FUNNEL ===================== */
@@ -1723,3 +1877,28 @@ a:hover { text-decoration: underline; }
 }
 .funnel-input:focus { outline: none; border-color: var(--brand, #1A6FA0); box-shadow: 0 0 0 2px var(--brand-tint); }
 .funnel-pct { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 500; }
+
+.funnel-save-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  gap: 12px;
+}
+.funnel-save-status {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+@media (max-width: 640px) {
+  .funnel-save-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .funnel-save-row .btn { width: 100%; }
+}

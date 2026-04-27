@@ -93,21 +93,29 @@
     const i = users.findIndex(u => u.id === user.id);
     if (i >= 0) users[i] = user; else users.push(user);
     saveUsers(users);
+    cloudPushUser(user);
   }
   function deleteUser(id) {
     saveUsers(loadUsers().filter(u => u.id !== id));
+    cloudDeleteUser(id);
   }
 
   // ---------- Orgs ----------
   function loadOrgMetas() { return jget(K.orgs, []); }
   function saveOrgMetas(m)  { jset(K.orgs, m); }
   function loadOrg(id)      { return jget(K.org(id), null); }
-  function saveOrg(org)     { jset(K.org(org.id), org); }
+  function saveOrg(org)     {
+    jset(K.org(org.id), org);
+    cloudPushOrg(org);
+  }
   function deleteOrg(id) {
     LS.removeItem(K.org(id));
     saveOrgMetas(loadOrgMetas().filter(o => o.id !== id));
     // cascade: delete client users bound to this org
+    const orphanedClientIds = loadUsers().filter(u => u.orgId === id).map(u => u.id);
     saveUsers(loadUsers().filter(u => u.orgId !== id));
+    cloudDeleteOrg(id);
+    orphanedClientIds.forEach(uid => cloudDeleteUser(uid));
   }
   function createOrg(name) {
     const id = uid("org_");
@@ -865,7 +873,7 @@
       menu.appendChild(h("div", { style: "padding: 8px 12px; font-size: 12px; color: var(--ink-3);" },
         `Signed in as ${user.email}`));
       menu.appendChild(h("div", { class: "divider" }));
-      if (!isClient) {
+      if (!isClient && !isClientView(user)) {
         menu.appendChild(h("button", {
           onclick: () => { state.userMenuOpen = false; setRoute("admin"); }
         }, "Admin · manage people"));
@@ -2439,7 +2447,7 @@
             h("span", { style: "font-weight:600;" }, m.name),
             h("span", {
               style: `display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; background: ${currentTier === "performance" ? "var(--ink)" : "var(--brand-tint)"}; color: ${currentTier === "performance" ? "#fff" : "var(--brand)"};`
-            }, currentTier === "performance" ? "Performance" : "Standard")
+            }, currentTier === "performance" ? "Performance" : "Transformation")
           ]),
           h("div", { style: "color:var(--ink-3); font-size:12px; margin-top:4px;" },
             `${(o?.rounds?.length || 0)} round(s) · ${respondentsForRound(o, o.currentRoundId).length} respondents`)
@@ -2452,13 +2460,13 @@
         ]));
         row.appendChild(h("div", {}, formatDate(o?.createdAt)));
         const tierSelect = h("select", {
-          title: "Tier determines roadmap cadence. Standard = 12 months. Performance = 4 quarters.",
+          title: "Tier determines roadmap cadence. Performance = 4 quarters. Transformation = 12 months.",
           style: "padding:5px 8px; border:1px solid var(--line); border-radius:6px; font:inherit; font-size:12px; background:#fff; cursor:pointer;"
         });
-        ["standard", "performance"].forEach(v => {
+        ["performance", "transformation"].forEach(v => {
           const opt = document.createElement("option");
           opt.value = v;
-          opt.textContent = v === "performance" ? "Performance" : "Standard";
+          opt.textContent = v === "performance" ? "Performance" : "Transformation";
           if (v === currentTier) opt.selected = true;
           tierSelect.appendChild(opt);
         });
@@ -2592,9 +2600,128 @@
   }
 
   // ================================================================
-  // DOCUMENTS (Firebase Storage + Firestore)
+  // CLOUD SYNC (Firestore) - keep orgs and users synced across devices
+  // localStorage is the working cache; Firestore is the source of truth
+  // across devices. Pushes are debounced; pulls happen once on app boot.
   // ================================================================
   function fbReady() { return !!(window.FB && window.FB.currentUser); }
+
+  const cloudSaveTimers = {};
+  function cloudPushOrg(org) {
+    if (!fbReady() || !org || !org.id) return;
+    clearTimeout(cloudSaveTimers["org:" + org.id]);
+    cloudSaveTimers["org:" + org.id] = setTimeout(async () => {
+      try {
+        const { db, firestore } = window.FB;
+        await firestore.setDoc(firestore.doc(db, "orgs", org.id), org);
+      } catch (e) {
+        console.error("Cloud push org failed:", e);
+      }
+    }, 400);
+  }
+
+  function cloudPushUser(user) {
+    if (!fbReady() || !user || !user.id) return;
+    clearTimeout(cloudSaveTimers["user:" + user.id]);
+    cloudSaveTimers["user:" + user.id] = setTimeout(async () => {
+      try {
+        const { db, firestore } = window.FB;
+        await firestore.setDoc(firestore.doc(db, "users", user.id), user);
+      } catch (e) {
+        console.error("Cloud push user failed:", e);
+      }
+    }, 400);
+  }
+
+  async function cloudDeleteOrg(orgId) {
+    if (!fbReady() || !orgId) return;
+    try {
+      const { db, firestore } = window.FB;
+      await firestore.deleteDoc(firestore.doc(db, "orgs", orgId));
+    } catch (e) {
+      console.error("Cloud delete org failed:", e);
+    }
+  }
+
+  async function cloudDeleteUser(userId) {
+    if (!fbReady() || !userId) return;
+    try {
+      const { db, firestore } = window.FB;
+      await firestore.deleteDoc(firestore.doc(db, "users", userId));
+    } catch (e) {
+      console.error("Cloud delete user failed:", e);
+    }
+  }
+
+  async function cloudFetchAllOrgs() {
+    if (!fbReady()) return null;
+    try {
+      const { db, firestore } = window.FB;
+      const snap = await firestore.getDocs(firestore.collection(db, "orgs"));
+      return snap.docs.map(d => d.data());
+    } catch (e) {
+      console.error("Cloud fetch orgs failed:", e);
+      return null;
+    }
+  }
+
+  async function cloudFetchAllUsers() {
+    if (!fbReady()) return null;
+    try {
+      const { db, firestore } = window.FB;
+      const snap = await firestore.getDocs(firestore.collection(db, "users"));
+      return snap.docs.map(d => d.data());
+    } catch (e) {
+      console.error("Cloud fetch users failed:", e);
+      return null;
+    }
+  }
+
+  // Bootstrap: pull cloud orgs/users into local cache. Anything that exists
+  // locally but not in cloud (e.g. a brand-new install) gets pushed up.
+  // Cloud wins on overlap. Bails silently if either fetch errors so we never
+  // wipe local data on a network blip.
+  async function syncFromCloud() {
+    if (!fbReady()) return;
+    const [cloudOrgs, cloudUsers] = await Promise.all([
+      cloudFetchAllOrgs(),
+      cloudFetchAllUsers()
+    ]);
+    if (cloudOrgs === null || cloudUsers === null) return;
+
+    // ---- Orgs ----
+    const localMetas = jget(K.orgs, []);
+    const cloudOrgIds = new Set(cloudOrgs.map(o => o.id));
+    localMetas.forEach(meta => {
+      if (!cloudOrgIds.has(meta.id)) {
+        const local = jget(K.org(meta.id), null);
+        if (local) cloudPushOrg(local);
+      }
+    });
+    cloudOrgs.forEach(o => { if (o && o.id) jset(K.org(o.id), o); });
+    const newMetas = cloudOrgs
+      .filter(o => o && o.id)
+      .map(o => ({ id: o.id, name: o.name }));
+    localMetas.forEach(m => { if (!cloudOrgIds.has(m.id)) newMetas.push(m); });
+    jset(K.orgs, newMetas);
+
+    // ---- Users ----
+    const localUsers = jget(K.users, []);
+    const cloudUserIds = new Set(cloudUsers.map(u => u.id));
+    localUsers.forEach(u => {
+      if (!cloudUserIds.has(u.id)) cloudPushUser(u);
+    });
+    const merged = [...cloudUsers];
+    localUsers.forEach(u => { if (!cloudUserIds.has(u.id)) merged.push(u); });
+    jset(K.users, merged);
+
+    // Re-render so the UI reflects synced data
+    if (typeof render === "function") render();
+  }
+
+  // ================================================================
+  // DOCUMENTS (Firebase Storage + Firestore)
+  // ================================================================
 
   function formatBytes(b) {
     if (b == null) return "";
@@ -2883,7 +3010,7 @@
   // ================================================================
   // ROADMAP (Firestore — internal edits, clients read-only)
   // ================================================================
-  function orgTier(org) { return org?.tier === "performance" ? "performance" : "standard"; }
+  function orgTier(org) { return org?.tier === "performance" ? "performance" : "transformation"; }
   function periodCount(org) { return orgTier(org) === "performance" ? 4 : 12; }
   function periodLabelPrefix(org) { return orgTier(org) === "performance" ? "Quarter" : "Month"; }
   function periodsField(org) { return orgTier(org) === "performance" ? "quarters" : "months"; }
@@ -2918,9 +3045,9 @@
     const canEdit = user.role === "internal";
     const docRef = firestore.doc(db, "roadmaps", org.id);
 
-    const layout = h("div", { style: "display:grid; grid-template-columns: 1fr 260px; gap:18px; align-items:start;" });
+    const layout = h("div", { class: "roadmap-layout", style: "display:grid; grid-template-columns: 1fr 260px; gap:18px; align-items:start;" });
     const periodsCol = h("div", { style: "display:flex; flex-direction:column; gap:10px;" });
-    const palette = h("div", { class: "card", style: "position:sticky; top:18px; padding:14px;" });
+    const palette = h("div", { class: "card roadmap-palette", style: "position:sticky; top:18px; padding:14px;" });
 
     // Pillar palette
     palette.appendChild(h("div", { style: "font-family: var(--font-display); letter-spacing:0.08em; color: var(--brand); font-size:12px; margin-bottom:8px;" }, "PILLARS"));
@@ -3154,6 +3281,7 @@
   // Re-render when Firebase is ready (so loading states flip to live data)
   window.addEventListener("firebase-ready", () => {
     ensureChatSubscription(currentUser());
+    syncFromCloud();
     if (state.route === "documents" || state.route === "chat" || state.route === "roadmap" || state.route === "funnel") render();
   });
 
@@ -3170,13 +3298,19 @@
     { key: "sqlToProposal",      label: "SQL > Proposal %",              type: "percent", num: "proposalsSent", den: "sqls" },
     { key: "qualifiedOutOur",    label: "Qualified out (Our decision)" },
     { key: "qualifiedOutTheir",  label: "Qualified out (Their decision)" },
-    { key: "closedWon",          label: "Closed Won" }
+    { key: "closedWon",          label: "Closed Won" },
+    { key: "conversion",         label: "Conversion %",                   type: "percent", num: "closedWon",     denKeys: ["sqls", "qualifiedOutTheir"] }
   ];
   const FUNNEL_QUARTERS = ["Q1", "Q2", "Q3", "Q4"];
   const FUNNEL_YEARS = [2026, 2027];
 
   function renderFunnel(user, org) {
     const frag = h("div");
+    frag.appendChild(h("button", {
+      class: "back",
+      style: "margin-bottom: 6px;",
+      onclick: () => setRoute("dashboard")
+    }, "← Back to dashboard"));
     frag.appendChild(h("h1", { class: "view-title" }, "Funnel"));
     frag.appendChild(h("p", { class: "view-sub" },
       org
@@ -3208,34 +3342,51 @@
       return `${((n / d) * 100).toFixed(1)}%`;
     };
 
+    const denTotal = (m, data) => {
+      if (m.denKeys) {
+        return m.denKeys.reduce((acc, k) => acc + (Number(data[k]) || 0), 0);
+      }
+      return Number(data[m.den]) || 0;
+    };
+
     const updatePctCells = (year, q) => {
       FUNNEL_METRICS.forEach(m => {
         if (m.type !== "percent") return;
         const cell = pctCells[`${year}.${q}.${m.key}`];
         if (!cell) return;
         const data = (localData.years[year] && localData.years[year][q]) || {};
-        cell.textContent = fmtPct(data[m.num], data[m.den]);
+        cell.textContent = fmtPct(data[m.num], denTotal(m, data));
       });
     };
 
+    const saveStatus = h("span", { class: "funnel-save-status" }, "Changes save automatically.");
+
     let saveTimer = null;
+    const flushSave = async () => {
+      saveStatus.textContent = "Saving…";
+      try {
+        await firestore.setDoc(docRef, {
+          orgId: org.id,
+          years: localData.years,
+          updatedAt: firestore.serverTimestamp()
+        }, { merge: true });
+        const t = new Date();
+        const hh = String(t.getHours()).padStart(2, "0");
+        const mm = String(t.getMinutes()).padStart(2, "0");
+        saveStatus.textContent = `Saved at ${hh}:${mm}`;
+      } catch (e) {
+        saveStatus.textContent = "Save failed - " + (e.message || e);
+        console.error("Funnel save error:", e);
+      }
+    };
     const saveCell = (year, q, key, value) => {
       if (!localData.years[year]) localData.years[year] = {};
       if (!localData.years[year][q]) localData.years[year][q] = {};
       localData.years[year][q][key] = value;
       updatePctCells(year, q);
+      saveStatus.textContent = "Editing…";
       clearTimeout(saveTimer);
-      saveTimer = setTimeout(async () => {
-        try {
-          await firestore.setDoc(docRef, {
-            orgId: org.id,
-            years: localData.years,
-            updatedAt: firestore.serverTimestamp()
-          }, { merge: true });
-        } catch (e) {
-          alert("Couldn't save funnel: " + (e.message || e));
-        }
-      }, 250);
+      saveTimer = setTimeout(flushSave, 600);
     };
 
     const buildYearTable = (year) => {
@@ -3299,6 +3450,15 @@
       details.appendChild(buildYearTable(year));
       frag.appendChild(details);
     });
+
+    const saveBtn = h("button", { class: "btn" }, "Save now");
+    saveBtn.addEventListener("click", async () => {
+      clearTimeout(saveTimer);
+      saveBtn.disabled = true;
+      await flushSave();
+      saveBtn.disabled = false;
+    });
+    frag.appendChild(h("div", { class: "funnel-save-row" }, [saveStatus, saveBtn]));
 
     const applySnapshot = () => {
       FUNNEL_YEARS.forEach(y => {
@@ -3569,7 +3729,10 @@ Any questions, just let me know.`;
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result);
-        if (data.users) saveUsers(data.users);
+        if (data.users) {
+          saveUsers(data.users);
+          data.users.forEach(u => cloudPushUser(u));
+        }
         if (data.settings) saveSettings(data.settings);
         if (Array.isArray(data.orgs)) {
           data.orgs.forEach(org => {

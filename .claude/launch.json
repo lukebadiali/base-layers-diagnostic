@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "base-layers-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["/Users/lukebadiali/Documents/BeDeveloped/BeDeveloped/AI Projects/base-layers-app/.claude/serve.py"],
+      "port": 5178
+    }
+  ]
+}

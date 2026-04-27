@@ -2948,13 +2948,31 @@
         const bg = isInternalAuthor ? "var(--ink)" : "var(--brand)";
         const ts = m.createdAt?.toDate?.().toLocaleString?.() || "";
         const who = firstNameFromAuthor(m);
+        const canDelete = isSelf || !isClientView(user);
         const bubble = h("div", {
-          style: `align-self:${isSelf ? "flex-end" : "flex-start"}; max-width:70%; background:${bg}; color:#fff; padding:8px 12px; border-radius:10px; border:1px solid ${bg}; box-shadow:var(--shadow-sm);`
+          class: "chat-bubble",
+          style: `align-self:${isSelf ? "flex-end" : "flex-start"}; background:${bg}; border-color:${bg};`
         }, [
-          h("div", { style: `font-size:11px; opacity:0.8; margin-bottom:2px;` },
-            `${who} · ${ts}`),
-          h("div", { style: "font-size:14px; white-space:pre-wrap; word-break:break-word;" }, m.text)
+          h("div", { class: "chat-bubble-meta" }, `${who} · ${ts}`),
+          h("div", { class: "chat-bubble-text" }, m.text)
         ]);
+        if (canDelete) {
+          const del = h("button", {
+            class: "chat-bubble-del",
+            title: "Delete",
+            onclick: (e) => {
+              e.stopPropagation();
+              confirmDialog("Delete message?", "This cannot be undone.", async () => {
+                try {
+                  await firestore.deleteDoc(firestore.doc(db, "messages", m.id));
+                } catch (err) {
+                  alert("Couldn't delete: " + (err.message || err));
+                }
+              }, "Delete");
+            }
+          }, "×");
+          bubble.appendChild(del);
+        }
         list.appendChild(bubble);
       });
       list.scrollTop = list.scrollHeight;
@@ -3666,6 +3684,7 @@
         const bg = isInternalAuthor ? "var(--ink)" : "var(--brand)";
         const ts = m.createdAt?.toDate?.().toLocaleString?.() || "";
         const who = firstNameFromAuthor(m);
+        const canDelete = isSelf || !isClientView(user);
         const bubble = h("div", {
           class: "comment-bubble",
           style: `align-self:${isSelf ? "flex-end" : "flex-start"}; background:${bg}; border-color:${bg};`
@@ -3673,6 +3692,23 @@
           h("div", { class: "comment-meta" }, `${who} · ${ts}`),
           h("div", { class: "comment-text" }, m.text)
         ]);
+        if (canDelete) {
+          const del = h("button", {
+            class: "comment-bubble-del",
+            title: "Delete",
+            onclick: (e) => {
+              e.stopPropagation();
+              confirmDialog("Delete comment?", "This cannot be undone.", async () => {
+                try {
+                  await firestore.deleteDoc(firestore.doc(db, "funnelComments", m.id));
+                } catch (err) {
+                  alert("Couldn't delete: " + (err.message || err));
+                }
+              }, "Delete");
+            }
+          }, "×");
+          bubble.appendChild(del);
+        }
         commentsList.appendChild(bubble);
       });
       commentsList.scrollTop = commentsList.scrollHeight;

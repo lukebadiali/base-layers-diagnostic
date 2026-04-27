@@ -2048,7 +2048,7 @@ a:hover { text-decoration: underline; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 360px;
+  height: 280px;
   overflow-y: auto;
 }
 .comments-empty {
@@ -2057,7 +2057,9 @@ a:hover { text-decoration: underline; }
   margin: 0;
   font-size: 13px;
 }
-.comment-bubble {
+.comment-bubble,
+.chat-bubble {
+  position: relative;
   max-width: 70%;
   color: #fff;
   padding: 8px 12px;
@@ -2065,6 +2067,42 @@ a:hover { text-decoration: underline; }
   border: 1px solid;
   box-shadow: var(--shadow-sm);
 }
+.chat-bubble-meta,
+.comment-meta {
+  font-size: 11px;
+  opacity: 0.8;
+  margin-bottom: 2px;
+}
+.chat-bubble-text,
+.comment-text {
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.comment-bubble-del,
+.chat-bubble-del {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  line-height: 1;
+  font-size: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+.comment-bubble:hover .comment-bubble-del,
+.chat-bubble:hover .chat-bubble-del,
+.comment-bubble-del:focus,
+.chat-bubble-del:focus { opacity: 1; }
+.comment-bubble-del:hover,
+.chat-bubble-del:hover { background: rgba(255, 255, 255, 0.35); }
 .comment-meta {
   font-size: 11px;
   opacity: 0.8;

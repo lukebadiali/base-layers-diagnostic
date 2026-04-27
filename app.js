@@ -3331,9 +3331,116 @@
       localData.years[y] = {};
       FUNNEL_QUARTERS.forEach(q => { localData.years[y][q] = {}; });
     });
+    let localKpis = [];
 
     const inputs = {};
     const pctCells = {};
+
+    // ---------- KPI section ----------
+    const kpiCard = h("section", { class: "kpi-section" });
+    const kpiHeader = h("div", { class: "kpi-section-header" }, [
+      h("div", {}, [
+        h("h2", { class: "kpi-section-title" }, "KPIs"),
+        h("p", { class: "kpi-section-sub" },
+          "Track the metrics that matter for this client. Both teams can edit.")
+      ])
+    ]);
+    const kpiAddBtn = h("button", { class: "btn" }, "+ New KPI");
+    kpiHeader.appendChild(kpiAddBtn);
+    kpiCard.appendChild(kpiHeader);
+
+    const kpiTable = h("div", { class: "kpi-table" });
+    kpiTable.appendChild(h("div", { class: "kpi-row kpi-head" }, [
+      h("div", {}, "KPI"),
+      h("div", {}, "Target"),
+      h("div", {}, "Current"),
+      h("div", {}, "Notes"),
+      h("div", {}, "")
+    ]));
+    const kpiList = h("div", { class: "kpi-list" });
+    kpiTable.appendChild(kpiList);
+    kpiCard.appendChild(kpiTable);
+
+    const kpiStatus = h("span", { class: "kpi-save-status" }, "");
+    kpiCard.appendChild(h("div", { class: "kpi-status-row" }, [kpiStatus]));
+    frag.appendChild(kpiCard);
+
+    let kpiSaveTimer = null;
+    const flushKpiSave = async () => {
+      kpiStatus.textContent = "Saving…";
+      try {
+        await firestore.setDoc(docRef, {
+          orgId: org.id,
+          kpis: localKpis,
+          updatedAt: firestore.serverTimestamp()
+        }, { merge: true });
+        const t = new Date();
+        const hh = String(t.getHours()).padStart(2, "0");
+        const mm = String(t.getMinutes()).padStart(2, "0");
+        kpiStatus.textContent = `Saved at ${hh}:${mm}`;
+      } catch (e) {
+        kpiStatus.textContent = "Save failed - " + (e.message || e);
+        console.error("KPI save error:", e);
+      } finally {
+        kpiSaveTimer = null;
+      }
+    };
+    const queueKpiSave = () => {
+      kpiStatus.textContent = "Editing…";
+      clearTimeout(kpiSaveTimer);
+      kpiSaveTimer = setTimeout(flushKpiSave, 600);
+    };
+
+    const renderKpiRows = () => {
+      kpiList.innerHTML = "";
+      if (!localKpis.length) {
+        kpiList.appendChild(h("div", { class: "kpi-empty" },
+          "No KPIs yet. Click + New KPI to add one."));
+        return;
+      }
+      localKpis.forEach(k => {
+        const row = h("div", { class: "kpi-row" });
+        const mkInput = (field, placeholder) => {
+          const inp = h("input", {
+            type: "text", class: "kpi-input",
+            placeholder, value: k[field] || ""
+          });
+          inp.addEventListener("input", () => {
+            k[field] = inp.value;
+            queueKpiSave();
+          });
+          return inp;
+        };
+        row.appendChild(mkInput("name", "e.g. New leads / week"));
+        row.appendChild(mkInput("target", "Target"));
+        row.appendChild(mkInput("current", "Current"));
+        row.appendChild(mkInput("notes", "Notes"));
+        const del = h("button", {
+          class: "btn ghost sm", style: "border-color: var(--line);",
+          onclick: () => confirmDialog("Delete KPI?", "This cannot be undone.", () => {
+            localKpis = localKpis.filter(x => x.id !== k.id);
+            renderKpiRows();
+            queueKpiSave();
+          }, "Delete")
+        }, "×");
+        row.appendChild(del);
+        kpiList.appendChild(row);
+      });
+    };
+
+    kpiAddBtn.addEventListener("click", () => {
+      localKpis.push({ id: uid("kpi_"), name: "", target: "", current: "", notes: "" });
+      renderKpiRows();
+      queueKpiSave();
+      const rows = kpiList.querySelectorAll(".kpi-row");
+      const lastRow = rows[rows.length - 1];
+      if (lastRow) {
+        const firstInput = lastRow.querySelector(".kpi-input");
+        if (firstInput) firstInput.focus();
+      }
+    });
+
+    renderKpiRows();
 
     const fmtPct = (num, den) => {
       const n = Number(num) || 0;
@@ -3440,6 +3547,10 @@
       return wrap;
     };
 
+    const funnelLayout = h("div", { class: "funnel-layout" });
+    const funnelTablesCol = h("div", { class: "funnel-tables-col" });
+    funnelLayout.appendChild(funnelTablesCol);
+
     FUNNEL_YEARS.forEach((year, idx) => {
       const details = h("details", { class: "funnel-year" });
       if (idx === 0) details.setAttribute("open", "");
@@ -3448,8 +3559,25 @@
         h("span", { class: "funnel-year-hint" }, "Click to toggle")
       ]));
       details.appendChild(buildYearTable(year));
-      frag.appendChild(details);
+      funnelTablesCol.appendChild(details);
     });
+
+    const glossary = h("aside", { class: "side-panel funnel-glossary" });
+    glossary.appendChild(h("h3", {}, "Definitions"));
+    const dl = h("dl", { class: "funnel-glossary-list" });
+    [
+      ["Lead", "Un-qualified. i.e. engaged with content but yet to be qualified to your ICP."],
+      ["MQL",  "Qualified lead generated from marketing, fits ICP."],
+      ["SQL",  "Sales Qualified lead. The point the sales conversation has happened and the sales team deem it an opportunity."],
+      ["%",    "Shows the conversion results."]
+    ].forEach(([term, def]) => {
+      dl.appendChild(h("dt", { class: "funnel-glossary-term" }, term));
+      dl.appendChild(h("dd", { class: "funnel-glossary-def" }, def));
+    });
+    glossary.appendChild(dl);
+    funnelLayout.appendChild(glossary);
+
+    frag.appendChild(funnelLayout);
 
     const saveBtn = h("button", { class: "btn" }, "Save now");
     saveBtn.addEventListener("click", async () => {
@@ -3487,7 +3615,106 @@
         });
       });
       applySnapshot();
+      // KPIs - skip while user is mid-edit so we don't clobber typing
+      if (!kpiSaveTimer) {
+        const remoteKpis = (d && Array.isArray(d.kpis)) ? d.kpis : [];
+        const focusedRow = document.activeElement && document.activeElement.closest && document.activeElement.closest(".kpi-row");
+        if (!focusedRow) {
+          localKpis = remoteKpis.map(k => ({
+            id: k.id || uid("kpi_"),
+            name: k.name || "",
+            target: k.target || "",
+            current: k.current || "",
+            notes: k.notes || ""
+          }));
+          renderKpiRows();
+        }
+      }
     }, (err) => console.error("Funnel snapshot error:", err));
+
+    // ---------- Comments section ----------
+    const commentsCard = h("section", { class: "comments-section" });
+    commentsCard.appendChild(h("div", { class: "comments-section-header" }, [
+      h("h2", { class: "comments-section-title" }, "Comments"),
+      h("p", { class: "comments-section-sub" },
+        "Discuss the funnel - questions, observations, follow-ups. Visible to your team and BeDeveloped.")
+    ]));
+
+    const commentsList = h("div", { class: "comments-list" });
+    commentsList.appendChild(h("p", { class: "comments-empty" }, "Loading…"));
+    commentsCard.appendChild(commentsList);
+
+    const commentInput = h("textarea", {
+      class: "comments-input",
+      placeholder: "Add a comment…",
+      rows: "1"
+    });
+    const commentSendBtn = h("button", { class: "btn" }, "Send");
+    commentsCard.appendChild(h("div", { class: "comments-composer" }, [commentInput, commentSendBtn]));
+    frag.appendChild(commentsCard);
+
+    let allComments = [];
+    const renderComments = () => {
+      commentsList.innerHTML = "";
+      if (!allComments.length) {
+        commentsList.appendChild(h("p", { class: "comments-empty" }, "No comments yet — start the conversation."));
+        return;
+      }
+      allComments.forEach(m => {
+        const isSelf = m.authorId === user.id;
+        const isInternalAuthor = m.authorRole === "internal";
+        const bg = isInternalAuthor ? "var(--ink)" : "var(--brand)";
+        const ts = m.createdAt?.toDate?.().toLocaleString?.() || "";
+        const who = firstNameFromAuthor(m);
+        const bubble = h("div", {
+          class: "comment-bubble",
+          style: `align-self:${isSelf ? "flex-end" : "flex-start"}; background:${bg}; border-color:${bg};`
+        }, [
+          h("div", { class: "comment-meta" }, `${who} · ${ts}`),
+          h("div", { class: "comment-text" }, m.text)
+        ]);
+        commentsList.appendChild(bubble);
+      });
+      commentsList.scrollTop = commentsList.scrollHeight;
+    };
+
+    const sendComment = async () => {
+      const text = commentInput.value.trim();
+      if (!text) return;
+      commentInput.value = "";
+      try {
+        await firestore.addDoc(firestore.collection(db, "funnelComments"), {
+          orgId: org.id,
+          authorId: user.id,
+          authorName: user.name || user.email,
+          authorEmail: user.email,
+          authorRole: user.role,
+          text,
+          createdAt: firestore.serverTimestamp()
+        });
+      } catch (e) {
+        commentInput.value = text;
+        alert("Couldn't send: " + (e.message || e));
+      }
+    };
+    commentSendBtn.addEventListener("click", sendComment);
+    commentInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendComment(); }
+    });
+
+    const commentsQ = firestore.query(
+      firestore.collection(db, "funnelComments"),
+      firestore.where("orgId", "==", org.id)
+    );
+    firestore.onSnapshot(commentsQ, (snap) => {
+      allComments = [];
+      snap.forEach(d => allComments.push({ id: d.id, ...d.data() }));
+      allComments.sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+      renderComments();
+    }, (err) => {
+      commentsList.innerHTML = "";
+      commentsList.appendChild(h("p", { style: "color:var(--red);" }, "Couldn't load comments: " + err.message));
+    });
 
     return frag;
   }

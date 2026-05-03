@@ -245,37 +245,40 @@ Acknowledged but deferred — not in this milestone's roadmap.
 
 ## Traceability
 
-Mapping each v1 requirement to its phase. **Phase numbers below are the roadmap input — the gsd-roadmapper agent will validate and produce the canonical ROADMAP.md.**
+**Canonical phase mapping** — validated by `gsd-roadmapper` against the four load-bearing sequencing constraints (Pitfalls 1, 9, 14-16) and the 12-phase plan in `.planning/research/SUMMARY.md` / `.planning/ROADMAP.md`.
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| TOOL-01 to TOOL-12 | Phase 1 | Pending |
-| TEST-01 to TEST-07 | Phase 2 | Pending |
-| TEST-08, TEST-09 | Phase 5, 7 | Pending |
-| TEST-10 | Phase 2 / Phase 4 | Pending |
-| HOST-01, HOST-02, HOST-03, HOST-04, HOST-05, HOST-08 | Phase 3 | Pending |
-| HOST-06, HOST-07 | Phase 10 | Pending |
-| CODE-01, CODE-02 | Phase 4 | Pending |
-| CODE-03 to CODE-13 | Phase 4 | Pending |
-| DATA-01 to DATA-07 | Phase 5 | Pending |
-| RULES-01 to RULES-06 | Phase 5 | Pending |
-| RULES-07 (deploy + rollback) | Phase 6 | Pending |
-| AUTH-01 to AUTH-15 | Phase 6 | Pending |
-| FN-01 to FN-10 | Phase 7 | Pending |
-| AUDIT-01 to AUDIT-04, AUDIT-06, AUDIT-07 | Phase 7 | Pending |
-| AUDIT-05 (wiring) | Phase 9 | Pending |
-| LIFE-01 to LIFE-06 | Phase 8 | Pending |
-| GDPR-01 to GDPR-05 | Phase 8 | Pending |
-| BACKUP-01 to BACKUP-07 | Phase 8 | Pending |
-| OBS-01 to OBS-08 | Phase 9 | Pending |
-| DOC-01 to DOC-09 | Phase 11 | Pending |
-| DOC-10 (incremental) | All phases | Pending |
-| WALK-01 to WALK-04 | Phase 12 | Pending |
+| Requirement | Phase | Status | Notes |
+|-------------|-------|--------|-------|
+| TOOL-01 to TOOL-12 | Phase 1 | Pending | — |
+| TEST-01 to TEST-07 | Phase 2 | Pending | Tests-first regression baseline (Pitfall 9) |
+| TEST-08 | Phase 5 | Pending | Rules-unit-test suite written alongside the rules (committed in Phase 5; deployed in Phase 6) |
+| TEST-09 | Phase 7 | Pending | `firebase-functions-test` suite written alongside Cloud Functions |
+| TEST-10 | Phase 2 | Pending | Snapshot tests as the regression baseline for the Phase 4 modular split |
+| HOST-01 to HOST-05, HOST-08 | Phase 3 | Pending | Hosting cutover + report-only CSP + per-PR previews |
+| HOST-06, HOST-07 | Phase 10 | Pending | HSTS preload submission + strict CSP after Phase 4 inline-style sweep |
+| CODE-01 to CODE-13 | Phase 4 | Pending | Modular split + quick wins, gated by Phase 2 tests being green |
+| DATA-01 to DATA-07 | Phase 5 | Pending | Subcollection migration + H7 fix folded in (DATA-07) |
+| RULES-01 to RULES-06 | Phase 5 | Pending | Authored, unit-tested, committed — NOT deployed (deploy gate held for Phase 6) |
+| RULES-07 | Phase 6 | Pending | Production deploy + rollback plan; the load-bearing cutover step |
+| AUTH-01 to AUTH-15 | Phase 6 | Pending | Anonymous Auth disabled; Email/Password + custom claims + TOTP MFA + bootstrap; password hash deleted |
+| FN-01 to FN-09 | Phase 7 | Pending | `functions/` workspace + App Check + audit log infrastructure + rate limiting |
+| FN-10 | Phase 3 | Pending | `csp-violations` endpoint pairs with HOST-05 — ships with the hosting cutover |
+| AUDIT-01 to AUDIT-04, AUDIT-06, AUDIT-07 | Phase 7 | Pending | Audit-log infrastructure (collection, schema, BigQuery sink, mirror triggers, retention, audited-user-cannot-read-own) |
+| AUDIT-05 | Phase 9 | Pending | Wiring of `auditWrite` calls through every view (depends on Phase 7 infrastructure + Phase 8 lifecycle callers) |
+| LIFE-01 to LIFE-06 | Phase 8 | Pending | Soft-delete + 30-day restore + admin UI + scheduled purge |
+| GDPR-01 to GDPR-05 | Phase 8 | Pending | Art. 15 export + Art. 17 erasure + cascade + audit-vs-erasure conflict resolution + backup propagation |
+| BACKUP-01 to BACKUP-07 | Phase 8 | Pending | Daily Firestore export + GCS lifecycle + PITR + Storage versioning + signed-URL TTL + quarterly drill cadence + one drill performed |
+| OBS-01 to OBS-08 | Phase 9 | Pending | Sentry browser + node + EU region + scrubber + Slack alerts + uptime + budget alerts |
+| DOC-01 to DOC-09 | Phase 11 | Pending | Evidence pack — written against existing controls, not new design |
+| DOC-10 | All phases (canonical owner: Phase 11) | Pending | Cross-cutting — every phase appends to `SECURITY.md` as it closes findings; Phase 11 does the final pass |
+| WALK-01 to WALK-04 | Phase 12 | Pending | Translation map → end-to-end checklist run → `SECURITY_AUDIT_REPORT.md` + LLM-section N/A rationale |
 
 **Coverage:**
-- v1 requirements: ~120 total (across 15 categories)
-- Mapped to phases: all (subject to roadmapper validation)
+- v1 requirements: 120 total (across 15 categories)
+- Mapped to phases: 120 / 120 ✓
 - Unmapped: 0 ✓
+- Phases with zero requirements: 0 ✓
+- Sequencing constraints (Pitfalls 1, 9, 14-16) preserved: ✓ (see ROADMAP.md "Sequencing Constraint Validation")
 
 ---
 
@@ -292,4 +295,4 @@ These citations appear in `docs/CONTROL_MATRIX.md` (DOC-04) one-row-per-control 
 
 ---
 *Requirements defined: 2026-05-03*
-*Last updated: 2026-05-03 after initial definition*
+*Last updated: 2026-05-03 — Traceability table validated and made canonical by `gsd-roadmapper`*

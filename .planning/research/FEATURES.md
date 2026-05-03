@@ -1,0 +1,485 @@
+# Feature Research — Compliance-Credible Controls Layer
+
+**Domain:** Multi-tenant Firebase SaaS hardening pass — security, compliance, and platform-maturity controls.
+**Researched:** 2026-05-03
+**Confidence:** HIGH (Firebase capabilities verified against current Google docs; framework citations cross-checked against OWASP ASVS 5.0 / ISO 27001:2022 / SOC 2 TSC 2017 / GDPR 2016/679; CONCERNS.md and SECURITY_AUDIT.md provide the project-specific anchor.)
+
+## Scope and Bar
+
+This is **not** a new product feature landscape. This is the *controls* landscape — the set of capabilities that move BeDeveloped Base Layers from "MVP that works" to "credibly defensible to a prospect's IT/risk reviewer". The bar is **compliance-credible**, not certified:
+
+- A reviewer reading `SECURITY.md` + completing a vendor security questionnaire (VSQ) using this evidence pack walks away with a YES.
+- The control claims map honestly onto SOC 2 Common Criteria, ISO 27001:2022 Annex A, GDPR Art. 32, and OWASP ASVS L2.
+- We are not claiming certification; we are claiming "on track for, with the technical foundation in place."
+
+Every recommendation below is **calibrated to that bar** — no gold-plating (no SIEM, no formal pen-test, no SOC 2 Type II evidence collection) and no under-shooting (we do not ship without server-side authz, MFA for staff, audit log, backups, GDPR rights, and documented controls).
+
+The Firebase platform is fixed (per `PROJECT.md` Constraints) — every recommendation is feasible on the existing Firebase project (`bedeveloped-base-layers`).
+
+---
+
+## Compliance Framework Cross-Reference
+
+Throughout this document, controls are mapped to:
+
+- **OWASP ASVS L2** (Application Security Verification Standard 5.0 — the technical baseline the security audit targets)
+- **ISO 27001:2022 Annex A** (Information Security Controls — what an ISO auditor looks for)
+- **SOC 2 Common Criteria** (CC1–CC9, Trust Services Criteria 2017 — what a SaaS prospect's procurement team looks for)
+- **GDPR Art. 32 / Art. 15 / Art. 17 / Art. 30** (data security, right of access, right of erasure, records of processing — what a UK/EU prospect's DPO looks for)
+
+Format: `ASVS V2.1.1 / ISO A.5.15 / SOC2 CC6.1 / GDPR Art.32(1)(b)` — multi-citation where a single control hits multiple frameworks.
+
+---
+
+## Feature Landscape
+
+### Table Stakes (Compliance-Credible Bar)
+
+Missing any of these = the milestone fails its commercial-credibility goal. A reviewer would correctly downgrade the questionnaire score.
+
+#### 1. Authentication & Access Management
+
+| Feature | Why Table Stakes | Complexity | Concern / Audit Mapping | Compliance Citations |
+|---|---|---|---|---|
+| **Real per-user Firebase Auth** (Email/Password, no anonymous, no shared passphrase) | Anonymous auth + shared password is the central failure of the current build. Cannot honestly answer "who can access this data?" without per-user identity. Every other control assumes this. | M | CONCERNS C1, C2, M6 / `SECURITY_AUDIT.md` §3 | ASVS V2.1, V3.1 / ISO A.5.16, A.5.17, A.8.5 / SOC2 CC6.1, CC6.2 / GDPR Art.32(1)(b) |
+| **Custom claims for `role` and `orgId`** issued via `beforeUserCreated` Cloud Function trigger | The substrate Firestore Security Rules check for tenant isolation. Without claims set server-side, the rules have nothing trustworthy to evaluate. | M | CONCERNS C3, M6 / `SECURITY_AUDIT.md` §2 A01 | ASVS V4.1, V4.2 / ISO A.5.15, A.8.3 / SOC2 CC6.3 |
+| **Password policy: ≥12 chars, complexity OR HIBP leaked-password check** | Current 4-char minimum is indefensible. Firebase Auth supports `passwordPolicy` config natively (no custom code). | S | CONCERNS H3 / `SECURITY_AUDIT.md` §2 A07 | ASVS V2.1.1, V2.1.7 / ISO A.5.17, A.8.5 / SOC2 CC6.1 / NIST SP 800-63B |
+| **MFA (TOTP) enrolment available; ENFORCED for all `internal` role users** | Internal staff can read every client's data. MFA on this account class is the difference between "admin compromise" and "tenant breach." Firebase Auth Identity Platform supports TOTP MFA (free tier covers needs at this scale). | M | CONCERNS H3 / `SECURITY_AUDIT.md` §2 A07, §3 | ASVS V2.7, V2.8 / ISO A.5.17, A.8.5 / SOC2 CC6.1 / GDPR Art.32(1)(b) |
+| **Account lockout / progressive delay on failed sign-in** | Brute-force is trivial without it. Firebase Auth has built-in throttling for Email/Password sign-in (no custom code), but document the behaviour explicitly. | S | CONCERNS H3 / `SECURITY_AUDIT.md` §2 A07 | ASVS V2.2.1 / ISO A.8.5 / SOC2 CC6.1 |
+| **Session timeout / re-auth for sensitive operations** | Default Firebase Auth tokens are 1h with refresh; that's defensible. What's needed is forced re-auth for: password change, MFA enrolment, role changes, data export. | S | `SECURITY_AUDIT.md` §3 | ASVS V3.3, V3.7 / ISO A.5.16 / SOC2 CC6.1 |
+| **Email verification before privileged actions** | Stops attacker-registered accounts from immediately writing data. Built into Firebase Auth via `sendEmailVerification`. | S | `SECURITY_AUDIT.md` §2 A07 | ASVS V2.1.9 / ISO A.5.16 / SOC2 CC6.1 |
+| **Identity-disclosure-resistant error messages** ("Email or password incorrect" — single string) | Stops account enumeration, which is a reportable VSQ finding. | S | CONCERNS L1 / `SECURITY_AUDIT.md` §3 | ASVS V2.2.4 / ISO A.5.7 / SOC2 CC6.1 |
+| **Documented session termination on password change / role change / MFA enrolment** | Prevents lingering sessions surviving credential change — must be in Cloud Function trigger, not just client code. | S | `SECURITY_AUDIT.md` §3 | ASVS V3.3.1 / ISO A.8.5 |
+
+#### 2. Authorization (Server-Side Tenant Isolation)
+
+| Feature | Why Table Stakes | Complexity | Concern / Audit Mapping | Compliance Citations |
+|---|---|---|---|---|
+| **`firestore.rules` — committed, deployed, enforced** | The single highest-leverage fix in the entire milestone. Without rules, every other control is theatre. Per CONCERNS C3 these don't exist in the repo today. Rules must: require non-anonymous auth, require `resource.data.orgId == request.auth.token.orgId` on reads, disallow client writes to `users` and `orgs` (admin via Cloud Functions), require `request.resource.data.authorId == request.auth.uid` on writes to messages/comments/documents. | L | CONCERNS C3 / `SECURITY_AUDIT.md` §2 A01 | ASVS V4.1, V4.2, V4.3 / ISO A.5.15, A.8.3 / SOC2 CC6.3, CC6.6 / GDPR Art.32(1)(b), Art.5(1)(f) |
+| **`storage.rules` — committed, deployed, enforced** | Same as Firestore rules, applied to file uploads. Must enforce: tenant scoping by path prefix `orgs/{orgId}/...`, size cap (e.g. 25 MB), MIME allowlist, request.auth claims match path. | M | CONCERNS C3, H6 / `SECURITY_AUDIT.md` §8.5 (translated) | ASVS V4.1, V12.1 / ISO A.5.15, A.8.3 / SOC2 CC6.3 |
+| **Rules unit tests in CI** (`@firebase/rules-unit-testing` + Vitest) | A control that isn't tested isn't a control — it's a hope. Auditors expect to see passing rule tests in CI on every PR. | M | CONCERNS H2 / `SECURITY_AUDIT.md` §10.9 | ASVS V14.2 / ISO A.8.29 / SOC2 CC8.1 |
+| **Role-based access — `internal` vs `client` enforced server-side** | Already a concept in the app (CONCERNS C1) but enforced only client-side. Migrate to custom claims + rules predicates. | S (if rules layer exists) | CONCERNS C1, M6 | ASVS V4.1.3 / ISO A.5.15 / SOC2 CC6.3 |
+| **Admin operations (delete user, delete org, change role) gated to Cloud Function with claims check** | Client must never `setDoc` on `users` or `orgs`. All such operations go through callable functions that re-verify the caller's claims. | M | CONCERNS C1, C3 | ASVS V4.2 / ISO A.5.15, A.8.3 / SOC2 CC6.3, CC7.2 |
+| **App Check enrolled (reCAPTCHA Enterprise provider) and ENFORCED on Firestore + Storage + Functions** | Binds Firestore/Storage requests to legitimate app instances. Without it, an attacker with valid credentials can hit the API directly from a script. reCAPTCHA Enterprise has 10k free assessments/month — fits this scale. | M | `SECURITY_AUDIT.md` §9.2 (translated) / CONCERNS Missing Critical Features | ASVS V11.1 / ISO A.8.23 / SOC2 CC6.6 |
+
+#### 3. Audit Logging
+
+| Feature | Why Table Stakes | Complexity | Concern / Audit Mapping | Compliance Citations |
+|---|---|---|---|---|
+| **Server-side audit log of sensitive events** (auth events, role changes, admin actions, data exports, deletes, permission changes, document upload/download). Written by Cloud Functions to a dedicated `auditLog` Firestore collection (or BigQuery sink). Client cannot write directly. | The single most asked-about control on a VSQ after access management. "Who deleted that?" investigations are unanswerable today. The current state (`console.error` only — CONCERNS M4) is below the credibility line. | L | CONCERNS Missing Critical Features / `SECURITY_AUDIT.md` §2 A09 | ASVS V8.1, V8.2, V8.3 / ISO A.5.28, A.8.15, A.8.16 / SOC2 CC7.2, CC7.3, CC7.4 / GDPR Art.30, Art.32(1)(d) |
+| **Required event types logged**: sign-in success/failure, MFA enrolment/disenrolment, password change, role change, org create/delete, user create/delete, document upload/delete/download, data export (GDPR), permission claim change, all admin Cloud Function invocations. Each entry: actor uid, actor email, target resource, action, timestamp (`serverTimestamp()`), client IP, user-agent, resulting state hash. | Without this catalogue documented, the answer to "what do you log?" is hand-wavy. Reviewers want a list. | M (mostly catalogue; helpers reuse) | `SECURITY_AUDIT.md` §2 A09 | ASVS V8.2 / ISO A.8.15 / SOC2 CC7.2 / GDPR Art.30 |
+| **Audit log access-controlled** — only `internal` role can read; nobody can write/edit/delete via client. Rules: `allow read: if request.auth.token.role == 'internal'; allow write, update, delete: if false;` | If the actor under investigation can edit the log, the log is useless. | S | `SECURITY_AUDIT.md` §2 A09 | ASVS V8.3.4 / ISO A.8.15 (integrity) / SOC2 CC7.4 |
+| **Retention: 12 months minimum, documented in `RETENTION.md`** | 12 months is the cross-framework consensus (ISO 27001 expects ≥12mo to "demonstrate control effectiveness over time"; PCI matches; SOC 2 has no fixed minimum but auditors expect to *see* a documented policy). | S (policy doc + a Cloud Function that purges entries > 12 months) | `SECURITY_AUDIT.md` §2 A09 | ISO A.5.33, A.8.10 / SOC2 CC7.2 / PCI DSS 10.5.1 (referenced as norm) |
+| **Tamper-resistance: append-only via rules + scheduled hash-chaining or BigQuery export** | "Append-only" via Security Rules is sufficient for the credibility bar. True cryptographic immutability is gold-plating at this stage. | S (rules-only) / M (BigQuery sink) | `SECURITY_AUDIT.md` §2 A09 | ASVS V8.3.4 / ISO A.8.15 / SOC2 CC7.4 |
+
+#### 4. Data Lifecycle (Retention, Deletion, GDPR Rights)
+
+| Feature | Why Table Stakes | Complexity | Concern / Audit Mapping | Compliance Citations |
+|---|---|---|---|---|
+| **Soft-delete + 30-day restore window** for orgs, users, comments, documents, messages, funnel comments. Implemented as a `deletedAt` timestamp on each doc; rules hide soft-deleted docs from normal queries; a daily Cloud Function purges entries with `deletedAt < now() - 30d`. | Currently a misclick on "Delete org" is unrecoverable (CONCERNS Missing Critical Features). 30 days is the SaaS standard (Google Workspace: 25–30d; M365: 30d; Atlassian: ~14–60d depending on plan; Slack: ~30d). | L (touches every collection + all delete paths) | CONCERNS Missing Critical Features | ASVS V8.3 (data lifecycle) / ISO A.8.10, A.8.13 / SOC2 CC6.5 / GDPR Art.5(1)(c), (e) |
+| **Hard-delete after retention period; documented in `RETENTION.md`** | "We never delete" is a GDPR finding. Auditor-acceptable retention requires documented deletion. | S | (this milestone) | ISO A.5.33, A.8.10 / GDPR Art.5(1)(e), Art.17 |
+| **GDPR Right of Access (Art. 15)** — per-user data export. Callable Cloud Function `exportMyData` returns a JSON bundle of all docs where `userId == request.auth.uid` (auth events, comments authored, messages authored, documents uploaded, profile data). Internal-role users get a workspace-scoped export tool that bundles everything for a given subject on request. | A direct GDPR right; absence is a hard fail on a UK/EU questionnaire. | M | (this milestone) | GDPR Art.15 / ISO A.5.34 / SOC2 P5.1 (Privacy series) |
+| **GDPR Right to Erasure (Art. 17)** — callable Cloud Function `eraseUser` that: hard-deletes `users/{uid}`, soft-deletes their authored content with author replaced by `[deleted]` tombstone, removes them from `orgs/{id}.members`, deletes their Auth account, **writes an audit-log entry referencing the action** (the action of erasure is itself logged for accountability — the *content* of erased PII is gone, but the fact of erasure is preserved). | Standard GDPR pattern: tombstone preserves audit-trail integrity while erasing personal data. | M | (this milestone) | GDPR Art.17, Art.5(1)(c) / ISO A.5.34 |
+| **Documented data retention + deletion policy (`RETENTION.md`)** with: org data, user data, audit log, backups, chat messages, documents — each with retention period, basis, deletion mechanism. | A `RETENTION.md` is the single most efficient artefact for VSQ responses. Reviewers will quote it back to you. | S | CONCERNS Missing Critical Features / `SECURITY_AUDIT.md` §0 | ISO A.5.33, A.8.10 / SOC2 CC6.5 / GDPR Art.5(1)(e), Art.30 |
+
+#### 5. Operational Controls (Backups, IR, Disclosure)
+
+| Feature | Why Table Stakes | Complexity | Concern / Audit Mapping | Compliance Citations |
+|---|---|---|---|---|
+| **Automated daily Firestore backup** (scheduled export to GCS via Firebase native scheduled backups feature, OR PITR + nightly export via Cloud Scheduler + Cloud Function). 30-day retention on the bucket. | Manual export-only (CONCERNS Missing Critical Features) is below the credibility line. Firebase has native scheduled backups (max 14-week retention; daily/weekly cadence) — use this directly, no custom code. | S (Firebase native) | CONCERNS Missing Critical Features / `SECURITY_AUDIT.md` §5.1, §7 (Ransomware) | ASVS V8.4 / ISO A.5.30, A.8.13, A.8.14 / SOC2 A1.2, CC9.1 / GDPR Art.32(1)(c) |
+| **Point-in-Time Recovery (PITR) enabled — 7-day window** | Native Firestore feature. One toggle. Defends against the "intern ran a script that wiped the responses field" scenario. | S | `SECURITY_AUDIT.md` §5.1 | ISO A.5.30, A.8.14 / SOC2 A1.2 / GDPR Art.32(1)(c) |
+| **Documented restore drill — once before milestone close, then quarterly** | "Untested backups are not backups." A reviewer asks "when did you last restore?" — the answer cannot be "never." | S (one drill within milestone, then add to operations cadence) | `SECURITY_AUDIT.md` §5.1 | ISO A.5.30 / SOC2 A1.3, CC7.5 |
+| **Incident response runbook (`docs/IR_RUNBOOK.md`)** covering: credential compromise, data leak / RLS bypass, dependency CVE, supply-chain compromise, lost backup. Each scenario: trigger, owner, decision tree, comms template, RCA template. | Auditor checklist item. Doesn't have to be elaborate — has to exist. | M | `SECURITY_AUDIT.md` §9.8 / NCSC CAF D1 | ISO A.5.24, A.5.26, A.5.27, A.5.29 / SOC2 CC7.3, CC7.4, CC7.5 / GDPR Art.33 (breach notification) |
+| **`SECURITY.md` at repo root with disclosure contact** | Industry-standard since GitHub started auto-detecting it. Absence = "they're not even thinking about it." | S | `SECURITY_AUDIT.md` §12 | ISO A.5.5, A.5.6 / SOC2 CC2.3 |
+| **`security.txt` at `/.well-known/security.txt`** (RFC 9116) — same content as `SECURITY.md`, served from the live site | Researcher-discoverable; trivial to add to the static site. | S | (industry norm) | ISO A.5.6 / SOC2 CC2.3 |
+| **Vulnerability disclosure policy** (one paragraph in `SECURITY.md` — "report to security@bedeveloped.com, we acknowledge within 5 business days, no legal action against good-faith researchers") | Cheapest credibility-builder in the entire milestone. | S | `SECURITY_AUDIT.md` §12 | ISO A.5.5 / SOC2 CC2.3 |
+| **Sub-processor list in `PRIVACY.md`** (Google/Firebase, Sentry if added, Google Fonts CDN, jsdelivr CDN if not self-hosted) | GDPR Art. 28 expectation. Reviewers ask. | S | `SECURITY_AUDIT.md` §0 | GDPR Art.28, Art.30 / ISO A.5.19, A.5.20, A.5.21 / SOC2 CC9.2 |
+| **Documented data-flow diagram** (one PNG/SVG in `docs/DATA_FLOW.md`): Client → Firebase Auth → Firestore → Storage → Cloud Functions → Sentry. With data classifications + region annotations. | Reviewers ask for it by name. Drawing it once forces honest cataloguing of what data goes where. | S | `SECURITY_AUDIT.md` §0 | ISO A.5.12, A.5.14 / SOC2 CC3.2 / GDPR Art.30 |
+
+#### 6. Monitoring & Alerting
+
+| Feature | Why Table Stakes | Complexity | Concern / Audit Mapping | Compliance Citations |
+|---|---|---|---|---|
+| **Centralised error tracking** — Sentry free tier (or self-hosted equivalent) wired into both client (`init` + `captureException` in error boundaries) and Cloud Functions. | Currently `console.error` is the only telemetry (CONCERNS M4). Live ops without error visibility = "we don't know if it's broken until a user tells us." | S | CONCERNS M4 / `SECURITY_AUDIT.md` §2 A09 | ASVS V8.2 / ISO A.8.16 / SOC2 CC7.2 |
+| **Uptime monitoring** — Better Stack / UptimeRobot / Google Cloud Monitoring uptime check on `baselayers.bedeveloped.com`. Email alert on outage. | Cheap; expected on a VSQ ("how do you detect outages?"). | S | `SECURITY_AUDIT.md` §5.1 | ISO A.8.16 / SOC2 A1.1, CC7.2 |
+| **Alerting on auth anomalies** — Cloud Function watches `auditLog` for: >5 failed sign-ins from a single IP in 5min, MFA disenrolment events, role escalation events, unusual hour data exports. Posts to Slack webhook. | The bar is "we'd notice if something weird happened" — not full SIEM. A handful of Cloud Function rules satisfies that. | M | `SECURITY_AUDIT.md` §2 A09, §9.7 | ISO A.5.25, A.8.16 / SOC2 CC7.2, CC7.3 |
+| **Cost / quota alerts** — Firebase budget alerts at 50% / 80% / 100% of monthly cap | Denial-of-wallet defence. Configured in GCP Billing, no code. | S | `SECURITY_AUDIT.md` §6 LLM10 (translated) | ISO A.8.16 / SOC2 A1.1 |
+
+#### 7. Data Protection (In Transit, At Rest)
+
+| Feature | Why Table Stakes | Complexity | Concern / Audit Mapping | Compliance Citations |
+|---|---|---|---|---|
+| **TLS 1.2+ everywhere** — automatic on Firebase Hosting and `*.googleapis.com` | Already the case; document explicitly in `SECURITY.md`. No work needed beyond the doc. | S | `SECURITY_AUDIT.md` §5.1 | ASVS V9.1 / ISO A.8.24 / SOC2 CC6.7 / GDPR Art.32(1)(a) |
+| **AES-256 at-rest encryption** — automatic for Firestore, Storage, Auth via Google KMS | Already the case; document explicitly. Cite Google's whitepaper in `SECURITY.md`. | S | `SECURITY_AUDIT.md` §5.1 | ASVS V6.2 / ISO A.8.24 / SOC2 CC6.7 / GDPR Art.32(1)(a) |
+| **HSTS preload + security headers** (Strict-Transport-Security, X-Content-Type-Options: nosniff, Referrer-Policy, X-Frame-Options: DENY or `frame-ancestors 'none'` in CSP, Permissions-Policy) | GitHub Pages does not auto-set most of these — must be `<meta>` tags or, post-migration to Firebase Hosting, `firebase.json` headers config. | S | CONCERNS H4 / `SECURITY_AUDIT.md` §2 A02, §9.5 (translated) | ASVS V14.4 / ISO A.8.23, A.8.26 / SOC2 CC6.6 |
+| **Strict CSP** — `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src fonts.gstatic.com; img-src 'self' data: firebasestorage.googleapis.com; connect-src *.googleapis.com *.firebaseio.com wss://*.firebaseio.com;` (or stricter once Vite removes inline styles) | Backstop for the latent XSS in CONCERNS C4. CSP without `'unsafe-eval'` and without remote `script-src` is the credible posture. | M (initial CSP is straightforward; tightening requires removing CONCERNS M5 inline styles) | CONCERNS C4, H4, M5 / `SECURITY_AUDIT.md` §2 A02 | ASVS V14.4.6 / ISO A.8.23 / SOC2 CC6.6 |
+| **Subresource Integrity (SRI) on all third-party scripts — OR self-host them** | Per CONCERNS H4, jsdelivr + gstatic CDNs are loaded with no SRI. The cleaner answer is self-hosting via Vite — that's already in scope per `PROJECT.md`. | S (included in Vite work) | CONCERNS H4 / `SECURITY_AUDIT.md` §2 A08 | ASVS V14.4 / ISO A.8.23 / SOC2 CC6.6 |
+| **CSPRNG for all security-relevant IDs** — `crypto.randomUUID()` replacing `Math.random()` per CONCERNS H5 | One-line change; non-negotiable per ASVS. | S | CONCERNS H5 / `SECURITY_AUDIT.md` §2 A04 | ASVS V6.3.1 / ISO A.8.24 / SOC2 CC6.7 |
+| **File upload validation** — size cap (e.g. 25 MB), MIME allowlist (`application/pdf`, `image/*`, `text/*`, common Office types), filename sanitisation, enforced both client-side and in `storage.rules` | Per CONCERNS H6 — currently zero validation. Both layers required: client UX + server enforcement. | M | CONCERNS H6 / `SECURITY_AUDIT.md` §4 | ASVS V12.1, V12.2, V12.3 / ISO A.5.10, A.8.7 / SOC2 CC6.6 |
+
+#### 8. Vendor / Sub-Processor Management
+
+| Feature | Why Table Stakes | Complexity | Concern / Audit Mapping | Compliance Citations |
+|---|---|---|---|---|
+| **DPA reference in `PRIVACY.md`** — Google Cloud DPA covers Firebase by default; cite it (https://cloud.google.com/terms/data-processing-addendum) | Reviewers ask "do you have a DPA with your sub-processors?" — the answer is "yes, Google's standard DPA." Document it once. | S | `SECURITY_AUDIT.md` §0 | GDPR Art.28 / ISO A.5.19, A.5.20 / SOC2 CC9.2 |
+| **Sub-processor list maintained** in `PRIVACY.md` with: name, purpose, data category, region, DPA link | Standard GDPR Art. 28 expectation. | S | `SECURITY_AUDIT.md` §0 | GDPR Art.28, Art.30 / ISO A.5.19 |
+| **Data residency documented** — Firestore region for `bedeveloped-base-layers` recorded in `PRIVACY.md` (verify via `gcloud firestore databases describe` / Firebase console). For UK/EU clients ideally `europe-west2` (London) or `eur3`; if currently US, document and have a migration plan | If the project's Firestore is in `nam5` and a UK client asks "where is our data?" — the honest answer matters. **Verify the actual region during this milestone.** | S (verify; M if migration needed) | `SECURITY_AUDIT.md` §0 | GDPR Art.44–49 (international transfers) / ISO A.5.14 / SOC2 CC3.2 |
+| **Standard Contractual Clauses (SCCs) reference** if any non-EU sub-processor handles EU data (Google's DPA includes SCCs by default — note this in `PRIVACY.md`) | EU adequacy / international-transfer answer on VSQs. | S | `SECURITY_AUDIT.md` §0 | GDPR Art.46 / ISO A.5.14 |
+
+#### 9. Documentation Deliverables (The "Evidence Pack")
+
+| Feature | Why Table Stakes | Complexity | Concern / Audit Mapping | Compliance Citations |
+|---|---|---|---|---|
+| **`SECURITY.md`** — controls catalogue mapped to OWASP ASVS / ISO 27001 / SOC2 / GDPR; disclosure contact; supported versions | The single document a VSQ reviewer reads first. Without it, the milestone has not produced its commercial deliverable. | M | `SECURITY_AUDIT.md` §12 / `PROJECT.md` Active | ISO A.5.5, A.5.37 / SOC2 CC2.3 |
+| **`PRIVACY.md`** — data we collect, lawful basis, retention, sub-processors, DPA, international transfers, contact, data subject rights flow | GDPR-mandated content; consolidates §4 + §8 above. | M | `SECURITY_AUDIT.md` §0 | GDPR Art.13, Art.14, Art.30 / ISO A.5.34 |
+| **`THREAT_MODEL.md`** — STRIDE-style or written-prose threat model covering: auth bypass, tenant boundary breach, file upload abuse, denial-of-wallet, supply-chain compromise, insider misuse | OWASP ASVS V1 (Architecture) calls this out explicitly. Doesn't need to be elaborate — needs to exist and be honest. | M | `SECURITY_AUDIT.md` §2 A06 | ASVS V1.1, V1.2 / ISO A.5.7, A.5.8 / SOC2 CC3.1, CC3.2 |
+| **Control matrix** (`docs/CONTROL_MATRIX.md`) — table mapping each control we claim to its source (code path, config, doc) and to the framework section it satisfies (ASVS V_, ISO A._, SOC2 CC_, GDPR Art._) | The artefact a VSQ reviewer can quote back to populate their own framework. Single biggest credibility-multiplier per hour spent. | M | `PROJECT.md` Active | ISO A.5.36, A.5.37 / SOC2 CC1–CC9 / GDPR Art.5(2) (accountability) |
+| **`docs/RETENTION.md`** — covered above in §4 | Single source of truth for "how long do you keep X?" | S | (this milestone) | ISO A.5.33, A.8.10 / GDPR Art.5(1)(e) |
+| **`docs/IR_RUNBOOK.md`** — covered above in §5 | | M | `SECURITY_AUDIT.md` §9.8 | ISO A.5.24–.29 / SOC2 CC7.3–.5 |
+| **`docs/DATA_FLOW.md`** — covered above in §5 | | S | `SECURITY_AUDIT.md` §0 | ISO A.5.12 / GDPR Art.30 |
+| **`SECURITY_AUDIT_REPORT.md`** — the output of running the translated `SECURITY_AUDIT.md` end-to-end against the hardened repo (per `PROJECT.md` Active) | Closes the loop on the audit framework. The artefact says "we ran the checklist; here's what passed; here's what didn't and why." | M | `PROJECT.md` Active | ISO A.5.36 / SOC2 CC4.1, CC4.2 |
+| **VSQ-ready evidence pack** — a folder `docs/evidence/` containing: screenshots of MFA enrolment for both internal users, a sample audit log entry redacted, the Firebase backup-policy console screenshot, the Firestore region screenshot, the App Check enforcement screenshot, the rules deployment screenshot, the latest `npm audit` clean run, the latest CI run | Reviewers asks for evidence, not promises. Pre-collecting the screenshots once turns a 3-day VSQ scramble into a 1-hour copy-paste. | M | `PROJECT.md` Active | ISO A.5.36 / SOC2 CC4.1 |
+
+#### 10. Engineering Foundations (Pre-requisite for Everything Above)
+
+| Feature | Why Table Stakes | Complexity | Concern / Audit Mapping | Compliance Citations |
+|---|---|---|---|---|
+| **`package.json` + Vite build pipeline** | Self-hosting third-party bundles (closes H4 SRI gap), enables Vitest, enables hashed cache-busting (closes M1), unblocks Dependabot | M | CONCERNS H1, H4, M1 / `PROJECT.md` Active | ASVS V14.2 / ISO A.8.25, A.8.28 / SOC2 CC8.1 |
+| **Vitest test suite** — data integrity helpers (scoring, completion, migration, sync, unread, auth) + Firestore Rules unit tests | Tests are the artefact that proves controls work. Rules tests in particular are non-negotiable for credibility. | L | CONCERNS H2 / `PROJECT.md` Active | ASVS V14.3 / ISO A.8.29, A.8.30 / SOC2 CC8.1 |
+| **Modular split of `app.js`** into `auth.js / storage.js / cloud-sync.js / domain/scoring.js / views/*.js` — no framework rewrite | A 4,103-line untestable monolith (CONCERNS H1) is itself a finding ("absence of separation of concerns" / ASVS V1.1). Modular split is the testability prerequisite. | L | CONCERNS H1 / `PROJECT.md` Active | ASVS V1.1.4 / ISO A.8.4 / SOC2 CC8.1 |
+| **GitHub Actions CI workflow** — typecheck (JSDoc), Vitest, Firestore rules tests, `npm audit`, `gitleaks`, build | The CI run is the ongoing-evidence artefact. "How do you ensure the controls stay in place?" → "Every PR runs the security checks." | M | `PROJECT.md` Active / `SECURITY_AUDIT.md` §10.9 | ASVS V14.2, V14.3 / ISO A.8.29, A.8.31 / SOC2 CC8.1 |
+| **Dependabot or Renovate** | Standard supply-chain hygiene; required for OWASP A03 (Software Supply Chain Failures, NEW in 2025). | S | `PROJECT.md` Active / `SECURITY_AUDIT.md` §2 A03 | ASVS V14.2 / ISO A.8.8 / SOC2 CC7.1 |
+| **`gitleaks` / secret-scan in CI + `.gitignore` covering env files** | One missed `.env` commit = compromise. Pre-commit hook + CI gate is the pattern. | S | CONCERNS M7 / `SECURITY_AUDIT.md` §10.3 | ASVS V14.4 / ISO A.5.10 / SOC2 CC6.1 |
+
+---
+
+### Differentiators (Above the Credibility Bar — Not Required, But Strong Signals)
+
+These would set BeDeveloped above peer consultancies of similar size on a VSQ scoring exercise. **None are required to ship the milestone.** Documented here so the roadmapper knows where the gold-plating temptations live and the user knows what's available later.
+
+| Feature | Value Proposition | Complexity | Concern / Audit Mapping | Compliance Citations |
+|---|---|---|---|---|
+| **Single Sign-On (SAML/OIDC)** for client organisations using Google Workspace / Microsoft 365 | Removes per-user password management for client orgs; signals enterprise-readiness on a VSQ. Firebase Auth Identity Platform supports SAML/OIDC providers. | L | `SECURITY_AUDIT.md` §3 | ASVS V2.6 / ISO A.5.16 / SOC2 CC6.1 |
+| **SCIM provisioning** for client org user lifecycle | Auto-provisions/deprovisions users when staff join/leave a client org. Major procurement value-add for enterprise clients. Requires custom Cloud Function endpoint. | L | (industry differentiator) | ISO A.5.18 / SOC2 CC6.2, CC6.3 |
+| **IP allowlisting for `internal` role users** | Limits internal-staff sign-in to BeDeveloped office / VPN ranges. Implementable via `beforeSignIn` Cloud Function blocking trigger that checks `request.ipAddress`. | M | `SECURITY_AUDIT.md` §3 | ISO A.5.16, A.8.20 / SOC2 CC6.6 |
+| **Just-in-time admin access** — `internal` users start with `client`-level claims; elevate to `internal` for a 4-hour window via Slack-approval Cloud Function | Implements the principle of least privilege at human level. SOC 2 CC6.3 darling. | L | `SECURITY_AUDIT.md` §3 | ISO A.5.15, A.8.2 / SOC2 CC6.3 |
+| **Attribute-based access control (ABAC)** — fine-grained policies (e.g. "this user can see this org's funnel but not its diagnostic responses") | Roles-only is sufficient for the credibility bar. ABAC is what enterprise clients with tiered consultant teams ask for next. | L | `SECURITY_AUDIT.md` §2 A01 | ASVS V4.2 / ISO A.5.15 |
+| **Field-level encryption** for sensitive PII (e.g. names, emails) using Cloud KMS envelope encryption | Defence against the "Google insider" threat and against backups-leakage. Beyond the credibility bar; relevant only if client data classifies as special category. | L | `SECURITY_AUDIT.md` §2 A04 | ASVS V6.2.4 / ISO A.8.24 / GDPR Art.32(1)(a) (recital 83) |
+| **Append-only audit log via BigQuery export** (replacing rules-only append-only Firestore collection) | True cryptographic-grade tamper-evidence; queryable by SQL. Worth doing once audit-log volume exceeds Firestore comfortable read budget (~10k entries/day). | M | `SECURITY_AUDIT.md` §2 A09 | ISO A.8.15 / SOC2 CC7.4 |
+| **SIEM integration** — Cloud Logging sink → Datadog / Splunk / Sumo | Reviewers love it. Free tier of any of these handles this scale; orchestration is the cost. | M | `SECURITY_AUDIT.md` §9.7 | ISO A.5.25, A.8.16 / SOC2 CC7.2 |
+| **Anomaly detection on Firestore reads** (Cloud Function watches usage patterns; alerts on spikes per-user) | Defence against compromised-credentials data exfiltration. | M | `SECURITY_AUDIT.md` §2 A09 | ISO A.5.25 / SOC2 CC7.2 |
+| **Bug bounty programme** (HackerOne, Bugcrowd, Intigriti — or even a self-managed "we pay £500 for valid criticals" page) | Opens the door to the security-research community. Strong signal of maturity — but invites volume and operational burden. **Defer until ops cadence exists to triage reports.** | M (operational; programme cost) | (industry differentiator) | ISO A.5.7 / SOC2 CC4.1 |
+| **Third-party penetration test report** | Strongest evidence on a VSQ. Costs £5–15k for a SaaS this size. Out of scope for *this* milestone (per `PROJECT.md` Out of Scope) but the controls put in place here are what the pen-tester would test. | XL (external dependency) | `PROJECT.md` Out of Scope | ISO A.8.29 / SOC2 CC4.1 |
+| **SOC 2 Type II audit** | Out of scope per `PROJECT.md`. Listed for completeness; the controls in this milestone are 80% of what Type II would evidence. | XL | `PROJECT.md` Out of Scope | SOC2 (entire) |
+| **Customer-facing Trust Centre** (status page + `SECURITY.md` published as a webpage at `bedeveloped.com/security` + sub-processor list) | Pre-empts VSQs entirely. Companies like Vanta and Drata sell this; we can build it as a static page once the underlying docs exist. | M | (industry differentiator) | ISO A.5.5 / SOC2 CC2.3 |
+| **HSM-backed signing keys** for any future webhook outbound | Beyond what's needed today; relevant if the app ever publishes events to client systems. | L | `SECURITY_AUDIT.md` §5.4 | ASVS V6.4 / ISO A.8.24 |
+
+---
+
+### Anti-Features (Deliberately NOT Built — They Create More Risk Than They Mitigate)
+
+These look like security wins but are net-negative for a small SaaS hardening pass.
+
+| Anti-Feature | Why Tempting | Why It's Wrong | What To Do Instead |
+|---|---|---|---|
+| **Roll our own session tokens / cookies** | "Firebase tokens look opaque; let's wrap them" | Re-implements crypto. Every line of custom auth code is a finding waiting to happen. The current build's SHA-256-of-password (CONCERNS C2) is the textbook example. | Use Firebase Auth tokens directly. Document them. Stop. |
+| **Custom encryption of fields beyond what Cloud KMS provides** | "More encryption = more secure" | Adds key-management burden (rotation, backup, audit) that overwhelms a small team. Lost keys = lost data with no recovery. Field-level encryption is a *Differentiator* worth doing only when special-category data justifies the operational cost. | Rely on Google's at-rest KMS. Document it. Add field-level only when actually needed. |
+| **In-house password storage (replacing Firebase Auth Email/Password)** | "I'd like more control over the password format" | Argon2id implementation, salt management, password reset flows, MFA integration, brute-force protection — Firebase has all of it free. Re-implementing is months of work for *worse* security. | Firebase Auth Email/Password. Configure `passwordPolicy`. Done. |
+| **"Trust me" admin-only routes that bypass rules** | "Admins need to do things rules block" | The Supabase incident pattern (`service_role` everywhere — `SECURITY_AUDIT.md` §8.8 anti-pattern #1). Once an admin route exists that skips rules, the rules become advisory. Compromised admin = full breach. | Admin operations go through callable Cloud Functions that *re-verify* claims and *log* the action. Rules apply uniformly. |
+| **Custom audit log format / custom database** | "Let's build our own logging service" | Firestore + Cloud Functions handle this fine at this scale. Custom log infrastructure is a parallel system to maintain and secure. | One `auditLog` Firestore collection with rules `allow write: if false; allow read: if internal` is sufficient. Upgrade to BigQuery only if volume demands it. |
+| **Real-time SIEM for everything** | "Defence in depth" | A SIEM with no triage is a noise generator. Mean-time-to-respond is what matters; a 2-person team cannot triage live alerts. | Sentry for errors. Cloud Function alerts on auth anomalies → Slack. SIEM is a *Differentiator* once headcount supports triage. |
+| **Public bug bounty programme on day one** | "Signals maturity" | Without a triage process, valid reports rot in the inbox while invalid reports pile up. Reputational worse than no programme. | Private `SECURITY.md` disclosure contact first. Open programme once IR runbook is exercised and ops cadence is in place. |
+| **Self-built MFA / TOTP secrets storage** | "I'd like the seed value myself" | Same anti-pattern as custom auth. Firebase Auth's TOTP MFA is free, audited, and well-tested. | Firebase Auth Identity Platform TOTP MFA. |
+| **Aggressive auto-deletion of "old" data without retention policy doc** | "GDPR says delete what we don't need" | Without documented retention rules, this is unauditable and breaks investigations. "We deleted last week's audit log because it was old" = catastrophic. | Documented `RETENTION.md`. Scheduled deletion runs against documented periods. Erasure logged. |
+| **DRM / watermarking on uploaded documents** | "Client docs need protection" | Adds nothing against authorised users; trivially defeated by screenshots. Implementation cost is high and signals security theatre. | Storage Rules + signed URLs with short TTL + audit log of downloads. That's the credible posture. |
+| **CAPTCHAs everywhere (every form)** | "Stops bots" | Hurts UX without proportional security gain on internal-team flows. Signal-to-noise gets worse the more places CAPTCHA appears. | App Check (reCAPTCHA Enterprise) on Firebase backend, **once** at app boot. Not on every form. |
+| **Continuous compliance scanning tools (Vanta, Drata, Secureframe) installed at this stage** | "Automates SOC 2" | These tools are valuable when you're going for certification (out of scope). At the credibility bar, they generate evidence we don't have time to act on. £15–50k/year for output we'd hand-curate anyway in this milestone. | Hand-build the evidence pack once during this milestone. Re-evaluate Vanta/Drata if the user actually pursues SOC 2 certification. |
+| **Dual-control / multi-party approval on every admin action** | "SOC 2 CC6.3" | Adds friction; on a 2-person internal team (`PROJECT.md` Audience), forces "Luke approves Luke's own changes by walking over to George" or rubber-stamping. Documented audit log + retrospective review covers the SOC 2 expectation. | Audit log + quarterly internal access review documented in `IR_RUNBOOK.md`. |
+| **Rate limiting via custom token-bucket in Cloud Functions** | "We want fine-grained control" | Cloud Functions concurrency + Firestore Rules `request.time` constraints + App Check abuse protection cover the realistic threat. Custom token-bucket = state to maintain, race conditions to debug. | Firebase App Check + Firestore Rules time predicate (e.g. cap chat writes per uid per minute) + Cloud Function concurrency limit. |
+
+---
+
+## Feature Dependencies
+
+```
+                    [Modular split + Vite + package.json]   ← Engineering foundation
+                              │
+                ┌─────────────┼─────────────┐
+                ▼             ▼             ▼
+       [Vitest tests]  [Self-host bundles] [Hashed cache-busting]
+                │             │
+                ▼             ▼
+       [Rules unit tests]  [SRI / strict CSP]
+                │             │
+                ▼             ▼
+       [firestore.rules]   [Security headers]
+                │
+       ┌────────┴────────┐
+       ▼                 ▼
+[Firebase Auth real]  [storage.rules]
+       │                 │
+       ▼                 ▼
+[Custom claims    ]  [File upload validation]
+       │
+       ├─────────────┬─────────────┬─────────────┐
+       ▼             ▼             ▼             ▼
+   [App Check]  [MFA for       [Audit log via [Soft-delete
+                 internal      Cloud Funcs]    + restore]
+                 users]               │
+                                      ▼
+                              [Audit log retention
+                               + tamper-resistance]
+
+[Audit log]   ──enables──> [Anomaly detection / alerts]
+[Audit log]   ──enables──> [GDPR Art.30 records of processing]
+[Soft-delete] ──enables──> [GDPR Art.17 erasure flow + tombstones]
+[Real auth]   ──enables──> [GDPR Art.15 per-user data export]
+[Backup]      ──enables──> [Restore drill + IR runbook]
+
+[Documentation pack: SECURITY.md / PRIVACY.md / RETENTION.md /
+ IR_RUNBOOK.md / DATA_FLOW.md / THREAT_MODEL.md / CONTROL_MATRIX.md]
+                ↑
+        ──synthesises──┴── all the controls above
+```
+
+### Critical Dependency Notes (For Roadmap Phase Ordering)
+
+1. **`firestore.rules` deployment is the first phase.** Per CONCERNS Recommended Fix Order. Until rules are in place, every other control is theatre — auth without rules just gives the attacker a token. Rules tests in the emulator can be written *before* real auth lands, against a stub claims model.
+2. **Real Firebase Auth must precede MFA, audit logging, App Check, and GDPR rights.** All of these reference `request.auth.token.uid` / `request.auth.token.role` / `request.auth.token.orgId`. Anonymous auth has none of these meaningfully populated.
+3. **Engineering foundations (`package.json` + Vite + Vitest + CI) precede everything else *as a leverage point*** — every subsequent control benefits from being testable, dependency-monitored, and self-hosted. This is the inverse-priority insight: the boring work first multiplies everything that comes after.
+4. **Documentation pack is the *last* phase, not the first.** Writing `SECURITY.md` before the controls exist is fiction. Writing it after lets the doc be a literal cataloguing exercise — and that's exactly what reviewers want.
+5. **Audit log depends on Cloud Functions infrastructure** — first Cloud Function deployed in the milestone is likely `beforeUserCreated` (claims) or `auditLog` (writer); they share a deploy pipeline. Pair them in one phase.
+6. **Soft-delete touches every collection** — risky to do incrementally. Land in one phase across all collections rather than piecewise to avoid half-states.
+
+---
+
+## MVP Definition (Compliance-Credible v1)
+
+### Launch With (Must Ship to Close the Milestone)
+
+The minimum set of controls to honestly answer "yes" on a vendor security questionnaire and ship `SECURITY.md` + `PRIVACY.md` + the evidence pack. Every item below is non-negotiable.
+
+**Phase A — Server-side authorisation foundation:**
+- [ ] `firestore.rules` + `storage.rules` deployed and tested (closes C3, H6)
+- [ ] Rules unit-test suite via `@firebase/rules-unit-testing` in CI (closes the "rules without tests aren't rules" critique)
+
+**Phase B — Real authentication:**
+- [ ] Firebase Auth Email/Password with `passwordPolicy` ≥12 chars (closes C1, C2, M6, H3)
+- [ ] Cloud Function `beforeUserCreated` setting `role` + `orgId` custom claims
+- [ ] Hardcoded `INTERNAL_PASSWORD_HASH` + email allowlist deleted
+- [ ] TOTP MFA enabled and **enforced** for `role: internal` users
+- [ ] Account lockout / progressive delay verified (Firebase Auth default)
+- [ ] Email verification enforced before privileged actions
+- [ ] Sign-in error messages unified ("Email or password incorrect")
+
+**Phase C — Engineering foundation enabling everything else:**
+- [ ] `package.json` + Vite build pipeline, Firebase + Chart.js self-hosted (closes H4 SRI)
+- [ ] Vitest configured with initial data-integrity tests (closes H2 priority gaps)
+- [ ] GitHub Actions CI: typecheck, Vitest, rules tests, `npm audit`, `gitleaks`, build (closes "no CI" gap)
+- [ ] Modular split of `app.js` into `auth.js / storage.js / cloud-sync.js / domain/scoring.js / views/*.js` (closes H1)
+- [ ] `Math.random()` → `crypto.randomUUID()` (closes H5)
+- [ ] `html:` escape hatch in `h()` deleted; XSS regression tests added (closes C4)
+- [ ] Strict CSP + security headers + SRI on any remaining external resources (closes H4)
+- [ ] File upload size + MIME + filename validation, both client and rules (closes H6)
+- [ ] Dependabot / Renovate enabled
+
+**Phase D — Operational controls (the audit-trail layer):**
+- [ ] Cloud Function `auditLog` writer covering all required event types
+- [ ] `auditLog` Firestore collection with append-only + internal-only-read rules
+- [ ] App Check (reCAPTCHA Enterprise) enrolled and enforced on Firestore + Storage + Functions
+- [ ] Soft-delete + 30-day restore window for orgs, users, comments, documents, messages, funnel comments (closes the no-undo gap from CONCERNS Missing Critical Features)
+- [ ] Rate limiting on chat / comment / upload writes (rules predicate + App Check)
+- [ ] Firebase native scheduled daily backup configured; PITR enabled
+- [ ] One restore drill performed and documented before milestone close
+- [ ] Sentry (free tier) wired into client + Cloud Functions
+- [ ] Cloud Function alerting on auth anomalies → Slack
+- [ ] Uptime monitor on `baselayers.bedeveloped.com`
+- [ ] Firebase budget alerts configured
+
+**Phase E — GDPR rights:**
+- [ ] Callable Cloud Function `exportMyData` (Right of Access)
+- [ ] Callable Cloud Function `eraseUser` with tombstone + audit-log entry (Right to Erasure)
+- [ ] Documented data retention + deletion policy (`RETENTION.md`)
+
+**Phase F — Documentation pack (the deliverable):**
+- [ ] `SECURITY.md` — controls catalogue, mapped to ASVS / ISO / SOC2 / GDPR; disclosure contact; supported versions
+- [ ] `PRIVACY.md` — sub-processors, DPA, retention, data residency, international transfers
+- [ ] `THREAT_MODEL.md`
+- [ ] `docs/CONTROL_MATRIX.md` — control-to-evidence-to-framework table
+- [ ] `docs/IR_RUNBOOK.md` — credential compromise, data leak, dependency CVE, supply-chain compromise scenarios
+- [ ] `docs/DATA_FLOW.md` — diagram + classifications + regions
+- [ ] `docs/RETENTION.md`
+- [ ] `/.well-known/security.txt`
+- [ ] `docs/evidence/` — VSQ-ready screenshots and CI-run captures
+- [ ] `SECURITY_AUDIT_REPORT.md` — output of running translated `SECURITY_AUDIT.md` against hardened repo
+
+### Add After Validation (v1.x — Post-Milestone)
+
+Items above the credibility bar that are likely the next set of asks once a real prospect engagement starts:
+
+- [ ] SAML/OIDC SSO for client orgs (trigger: a client requests "we use Google Workspace, can you SSO?")
+- [ ] IP allowlisting for `internal` role (trigger: BeDeveloped formalises office IPs / VPN)
+- [ ] BigQuery audit log sink (trigger: audit log exceeds ~10k entries/day or a query gets slow in Firestore)
+- [ ] Customer-facing Trust Centre page (trigger: more than one prospect VSQ)
+- [ ] Anomaly detection on Firestore reads (trigger: first incident review where it would have helped)
+
+### Future Consideration (v2+)
+
+Items deferred until product-market-fit on the security-mature SaaS positioning:
+
+- [ ] SCIM provisioning (trigger: enterprise client with >25 client-side users)
+- [ ] ABAC / fine-grained policies (trigger: tiered-team consultancy use-case emerges)
+- [ ] Field-level encryption (trigger: special-category data per GDPR Art. 9)
+- [ ] Just-in-time admin elevation (trigger: BeDeveloped grows beyond 5 internal staff)
+- [ ] Third-party pen test (trigger: pursuing SOC 2 Type II or ISO 27001 certification)
+- [ ] SOC 2 Type II audit (trigger: enterprise revenue commitments make audit cost defensible)
+- [ ] Public bug bounty (trigger: ops cadence formed and IR runbook exercised)
+- [ ] Vanta / Drata continuous compliance (trigger: actively in SOC 2 certification process)
+
+---
+
+## Feature Prioritization Matrix
+
+| Feature | Compliance Value | Implementation Cost | Priority | Notes |
+|---|---|---|---|---|
+| `firestore.rules` + `storage.rules` deployment | HIGH | MEDIUM | **P1** | Single highest leverage; closes C3 |
+| Real Firebase Auth + custom claims | HIGH | MEDIUM | **P1** | Substrate for everything; closes C1, C2, M6 |
+| MFA enforced for internal users | HIGH | MEDIUM | **P1** | Compensates for highest blast-radius account class |
+| Audit log via Cloud Function | HIGH | LARGE | **P1** | The single most-asked-about control |
+| Soft-delete + 30-day restore | HIGH | LARGE | **P1** | Closes recovery / GDPR foundation |
+| GDPR rights (export + erasure) | HIGH | MEDIUM | **P1** | Hard fail on UK/EU VSQs without |
+| Automated daily backup + PITR | HIGH | SMALL | **P1** | Native Firebase; one config |
+| App Check enrolled + enforced | HIGH | MEDIUM | **P1** | Closes "anyone can hit the API directly" gap |
+| `SECURITY.md` + `PRIVACY.md` + `CONTROL_MATRIX.md` | HIGH | MEDIUM | **P1** | The deliverable |
+| Engineering foundation (Vite + Vitest + CI + Dependabot) | HIGH | LARGE | **P1** | Multiplies every subsequent control |
+| Strict CSP + security headers + SRI | HIGH | SMALL | **P1** | Closes H4 |
+| File upload validation | HIGH | MEDIUM | **P1** | Closes H6 |
+| `crypto.randomUUID()` replacing `Math.random()` | MEDIUM | SMALL | **P1** | One-line fix; ASVS V6.3 |
+| Sentry error tracking + Slack alerts | MEDIUM | SMALL | **P1** | Closes M4 |
+| Threat model + IR runbook + data flow doc | MEDIUM | MEDIUM | **P1** | Auditor checklist items |
+| Restore drill (once before milestone close) | HIGH | SMALL | **P1** | "Untested backups aren't backups" |
+| Rate limiting on writes | MEDIUM | SMALL | **P1** | Denial-of-wallet defence |
+| `security.txt` + vuln disclosure policy | LOW | SMALL | **P1** | Cheapest credibility-builder |
+| Data residency verification + documentation | HIGH | SMALL | **P1** | Direct GDPR Art.44–49 question |
+| SSO (SAML/OIDC) | MEDIUM | LARGE | **P2** | Differentiator; trigger-driven |
+| IP allowlisting (internal role) | MEDIUM | MEDIUM | **P2** | Differentiator |
+| BigQuery audit log sink | LOW | MEDIUM | **P2** | Volume-triggered |
+| Customer Trust Centre | MEDIUM | MEDIUM | **P2** | Once underlying docs exist |
+| SCIM provisioning | LOW | LARGE | **P3** | Enterprise-trigger |
+| ABAC fine-grained policies | LOW | LARGE | **P3** | Use-case-trigger |
+| Field-level encryption | LOW | LARGE | **P3** | Data-classification-trigger |
+| JIT admin access | LOW | LARGE | **P3** | Headcount-trigger |
+| Third-party pen test | MEDIUM | LARGE | **P3** | Out of scope per `PROJECT.md` |
+| Public bug bounty | LOW | MEDIUM | **P3** | Operational-maturity-trigger |
+| SOC 2 Type II audit | HIGH | XL | **P3** | Out of scope per `PROJECT.md` |
+| Custom session tokens | NEGATIVE | LARGE | **P-never** | Anti-feature |
+| Custom field encryption beyond KMS | NEGATIVE | LARGE | **P-never** | Anti-feature unless specific class data |
+| In-house password storage | NEGATIVE | XL | **P-never** | Anti-feature |
+| "Trust me" admin bypass routes | NEGATIVE | MEDIUM | **P-never** | Anti-feature |
+| DRM on documents | NEGATIVE | LARGE | **P-never** | Anti-feature |
+
+---
+
+## Cross-Reference: How These Features Map to CONCERNS.md and SECURITY_AUDIT.md
+
+This is the table the roadmapper uses to sequence work by leverage:
+
+| Concern (severity) | Closing Feature(s) From Above | Phase |
+|---|---|---|
+| **C1** (CRITICAL) — Client-side-only auth | Real Firebase Auth + Custom claims + Auth-state in rules | B |
+| **C2** (CRITICAL) — Hardcoded password hash + email allowlist | Real Firebase Auth + delete constants | B |
+| **C3** (CRITICAL) — No Firestore / Storage rules | `firestore.rules` + `storage.rules` + rules unit tests | A |
+| **C4** (CRITICAL) — XSS-via-`html:` escape hatch | Delete `html:` branch + strict CSP + XSS regression test | C |
+| **H1** (HIGH) — `app.js` monolith | Modular split + Vite | C |
+| **H2** (HIGH) — Zero tests | Vitest + initial test suite + CI gate | C |
+| **H3** (HIGH) — Weak password policy + no MFA + no lockout | `passwordPolicy` ≥12 + MFA enforced for internal + verify Firebase Auth lockout | B |
+| **H4** (HIGH) — No CSP / SRI / headers | Self-host bundles + strict CSP + security headers | C |
+| **H5** (HIGH) — `Math.random()` for security IDs | `crypto.randomUUID()` | C |
+| **H6** (HIGH) — File upload no validation | Storage Rules size/MIME predicate + client validation + filename sanitisation | A/C |
+| **H7** (HIGH) — Mixed `serverTimestamp()` / client clock | Pull last-read into Firestore (`serverTimestamp()` both sides) | C/D |
+| **H8** (HIGH) — Last-writer-wins cloud sync | Subcollections OR transactional writes with version field | C |
+| **M1** | Hashed cache-busting via Vite | C |
+| **M2** | `replaceChildren()` replacement of `innerHTML = ""` | C |
+| **M3** | Inline toast/banner + central notify helper | C |
+| **M4** | Sentry + Slack alert webhook | D |
+| **M5** | CSS classes replacing inline styles | C |
+| **M6** | Real Firebase Auth (subsumed by C1) | B |
+| **M7** | `.gitignore` env files + `gitleaks` in CI | C |
+| **M8** | Extract `renderConversation` helper | (refactor; out-of-band) |
+| **M9** | Memoise `document.title` writes | (perf; out-of-band) |
+| **L1** | Unified sign-in error message | B |
+| **L2–L5** | Tidy-up during modular split | C |
+| **Missing: server-side authz** | `firestore.rules` (closes; same as C3) | A |
+| **Missing: real auth** | Firebase Auth Email/Password (same as C1) | B |
+| **Missing: audit log** | Cloud Function `auditLog` + collection + retention | D |
+| **Missing: backup schedule** | Firebase native scheduled backup + PITR + drill | D |
+| **Missing: soft-delete** | `deletedAt` + 30-day window across all collections | D |
+| **Missing: rate limiting** | App Check + Rules time predicate + Cloud Function concurrency | D |
+
+| Audit framework section | Closing Feature(s) From Above |
+|---|---|
+| `SECURITY_AUDIT.md` §1 Discovery | (analysis-only; produces report) |
+| §2 A01 Broken Access Control | `firestore.rules` + `storage.rules` + custom claims + admin via Cloud Functions |
+| §2 A02 Security Misconfiguration | CSP + security headers + cookie flags (no app cookies in this build) + remove debug paths |
+| §2 A03 Software Supply Chain | Vite self-host + Dependabot + `npm audit` in CI + lockfile + `gitleaks` |
+| §2 A04 Cryptographic Failures | `crypto.randomUUID()` + delete SHA-256 password + Firebase Auth Argon2id |
+| §2 A05 Injection (XSS) | Delete `html:` escape + strict CSP + DOMPurify if rich-text added later |
+| §2 A06 Insecure Design | Threat model doc |
+| §2 A07 Authentication Failures | All of "Authentication & access" table-stakes |
+| §2 A08 Data Integrity | SRI / self-host + lockfile + signed commits (defer) |
+| §2 A09 Logging Failures | Cloud Function `auditLog` + Sentry + alerts |
+| §2 A10 Mishandling Exceptions | Inline error UX (closes M3); fail-closed default in rules |
+| §3 Auth, Sessions, Identity | Subsumed by Authentication & Access section above |
+| §4 Input Validation | File upload validation; schema validation on callable functions (Zod) |
+| §5 Network/Infra | TLS 1.2+ on Firebase (already); document; data residency |
+| §6 LLM (N/A — no LLM) | — |
+| §7 Attack Class Defences | Each attack class mapped via the Authentication / Authorization / Audit / Operational sections above |
+| §8 Supabase (N/A — Firebase) | Translate to Firebase: RLS → Firestore Rules; service_role → custom claims; Edge Functions → Cloud Functions; pgaudit → Cloud Function audit log; PITR → Firestore PITR; CAPTCHA → App Check (reCAPTCHA Enterprise) |
+| §9 Vercel (N/A — GitHub Pages → Firebase Hosting) | Translate: Vercel Firewall → Firebase App Check + Cloud Armor; BotID → reCAPTCHA Enterprise; OIDC federation → Firebase Auth tokens; Audit Logs → Cloud Logging + Cloud Function audit log |
+| §10 Vulnerability Scanning | `npm audit`, `osv-scanner`, `gitleaks`, Semgrep in CI; Trivy if containers (none today) |
+| §11 Remediation Tiers | (process; informs roadmap, not a feature) |
+| §12 Output | `SECURITY_AUDIT_REPORT.md` produced at end |
+| §13 Sign-off Checklist | The `CONTROL_MATRIX.md` is essentially this checklist applied |
+
+---
+
+## Sources
+
+**Primary (HIGH confidence — official documentation, current):**
+- Firebase Authentication: TOTP MFA — https://firebase.google.com/docs/auth/web/totp-mfa
+- Firebase Authentication: Multi-factor authentication overview — https://firebase.google.com/docs/auth/web/multi-factor
+- Firebase Identity Platform: Enable TOTP MFA — https://docs.cloud.google.com/identity-platform/docs/admin/enabling-totp-mfa
+- Firebase Authentication: Password policy — https://firebase.google.com/docs/auth/web/password-policy
+- Firestore: Point-in-time recovery overview — https://firebase.google.com/docs/firestore/pitr
+- Firestore: Backups (scheduled / on-demand) — https://firebase.google.com/docs/firestore/backups
+- Firestore: Disaster recovery planning — https://firebase.google.com/docs/firestore/disaster-recovery
+- Firestore: Schedule data exports — https://firebase.google.com/docs/firestore/solutions/schedule-export
+- Firebase App Check overview — https://firebase.google.com/docs/app-check
+- Firebase App Check with reCAPTCHA Enterprise (web) — https://firebase.google.com/docs/app-check/web/recaptcha-enterprise-provider
+- Firestore Security Rules — https://firebase.google.com/docs/firestore/security/get-started
+- Firebase Cloud Functions — Auth blocking triggers — https://firebase.google.com/docs/auth/extend-with-blocking-functions
+- Google Cloud Data Processing Addendum — https://cloud.google.com/terms/data-processing-addendum
+
+**Compliance frameworks (HIGH confidence — authoritative):**
+- OWASP ASVS 5.0 — https://owasp.org/ASVS/
+- OWASP Top 10 for Web Applications 2025 — https://owasp.org/Top10/2025/
+- ISO/IEC 27001:2022 Annex A — international standard (cited inline; auditor will look up)
+- AICPA SOC 2 Trust Services Criteria 2017 — https://www.aicpa-cima.com/
+- GDPR (Regulation (EU) 2016/679) — https://gdpr-info.eu/
+
+**Industry context (MEDIUM confidence — multiple corroborating sources):**
+- ISO 27001 Audit Record Retention Requirements — https://www.ignyteplatform.com/blog/iso-27001/iso-27001-record-retention/
+- ISO 27001 Data Retention Policy guide — https://hightable.io/iso-27001-data-retention-policy/
+- SOC 2 Data Retention Guide (Konfirmity) — https://www.konfirmity.com/blog/soc-2-data-retention-guide
+- Telemetry Retention for SOC 2 / ISO 27001 (OneUptime) — https://oneuptime.com/blog/post/2026-02-06-telemetry-retention-soc2-iso27001/view
+
+**Internal (HIGH confidence — project-specific):**
+- `.planning/codebase/CONCERNS.md` — 2026-05-03 audit findings
+- `.planning/codebase/INTEGRATIONS.md` — 2026-05-03 Firebase footprint
+- `SECURITY_AUDIT.md` (project root) — audit playbook used as framework
+- `.planning/PROJECT.md` — milestone scope and constraints
+
+---
+
+*Feature research for: compliance-credible Firebase SaaS hardening pass*
+*Researched: 2026-05-03*

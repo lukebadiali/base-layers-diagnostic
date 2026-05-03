@@ -1,7 +1,7 @@
 # State: Base Layers Diagnostic — Hardening Pass
 
 **Initialized:** 2026-05-03
-**Last updated:** 2026-05-03
+**Last updated:** 2026-05-03 — Phase 1 planned (6 plans, ready to execute)
 
 ---
 
@@ -22,8 +22,8 @@ Full Hardening Pass milestone — close all CRITICAL + HIGH `CONCERNS.md` findin
 ## Current Position
 
 **Phase:** 1 — Engineering Foundation (Tooling)
-**Plan:** Not started
-**Status:** Ready to begin
+**Plan:** 6 plans created (Waves 0-5), 0/6 executed
+**Status:** Ready to execute
 **Progress:** 0/12 phases complete
 
 ```
@@ -32,7 +32,7 @@ Full Hardening Pass milestone — close all CRITICAL + HIGH `CONCERNS.md` findin
  .  .  .  .  .  .  .  .  .  .  .  .
 ```
 
-**Next action:** `/gsd-plan-phase 1`
+**Next action:** `/gsd-execute-phase 1`
 
 ---
 
@@ -123,11 +123,11 @@ Additional non-negotiables:
 
 ## Session Continuity
 
-**Last session:** Phase 1 context captured. Five gray areas locked via baked-in recommendations after milestone confirmation: (1) coexistence with un-split `app.js` via per-line disables + cleanup ledger; (2) `index.html` rewrite deferred to Phase 3; (3) husky + lint-staged for pre-commit; (4) branch protection in scope as manual `gh api` runbook; (5) `SECURITY.md` skeleton with three populated sections (Build & Supply Chain, Dependency Monitoring, Secret Scanning) per DOC-10. Output: `.planning/phases/01-engineering-foundation-tooling/01-CONTEXT.md` + `01-DISCUSSION-LOG.md`.
+**Last session:** Phase 1 planned end-to-end. Research resolved 8 open questions from CONTEXT.md (Vite+index.html coexistence — use index.html as direct entry, no dev-index split needed; husky 9 `prepare` script must be `"husky || true"` for CI; OSV-Scanner is NOT on npm — use `google/osv-scanner-action` with `continue-on-error: true`; branch protection MUST run after first green CI to avoid status-check lockout — Pitfall A). Pattern-mapping confirmed greenfield (19/22 files have no in-repo analog). Planner produced 6 PLAN.md files (one per wave); plan-checker verified on first iteration (PASSED across all 12 dimensions: requirement coverage, task completeness, dependency correctness, scope sanity, verification derivation, context compliance, scope-reduction detection, architectural tier compliance, Nyquist Dimension 8, cross-plan data contracts, CLAUDE.md compliance, pattern compliance). VALIDATION.md approved with `nyquist_compliant: true`.
 
-**Resume point:** `/gsd-plan-phase 1` — produce executable plan for Phase 1 from the captured context.
+**Resume point:** `/gsd-execute-phase 1` — execute the 6 plans (waves 0→5). Wave 3 and Wave 5 each carry checkpoint tasks (`autonomous: false`) — execution will pause for human verification on first green CI and Socket.dev/branch-protection setup.
 
 ---
 
 *State initialized: 2026-05-03 after roadmap creation*
-*Last updated: 2026-05-03 — Phase 1 context captured*
+*Last updated: 2026-05-03 — Phase 1 planned (6 plans, plan-checker PASSED first iteration)*

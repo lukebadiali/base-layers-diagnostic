@@ -52,7 +52,13 @@ Trying to merge (e.g.) Phase 5 with Phase 6, or Phase 1 with Phase 2, violates o
   4. Adding a new committed file containing a credential pattern (the prior `INTERNAL_PASSWORD_HASH` shape) fails CI via gitleaks
   5. Dependabot opens weekly PRs against `npm` + `github-actions` ecosystems
   6. Vite production build outputs hashed-filename bundles in `dist/`, replacing the hand-bumped `?v=46` cache-busting pattern
-**Plans**: TBD
+**Plans**: 6 plans
+- [ ] 01-01-PLAN.md — Wave 0: package.json + npm install + .npmrc + .gitignore augment (TOOL-01, TOOL-03, TOOL-04)
+- [ ] 01-02-PLAN.md — Wave 1: vite.config.js + tsconfig.json + eslint.config.js + .prettierrc.json + types/globals.d.ts (TOOL-02, TOOL-05, TOOL-06, TOOL-07)
+- [ ] 01-03-PLAN.md — Wave 2: .husky/pre-commit + .gitleaks.toml (TOOL-12)
+- [ ] 01-04-PLAN.md — Wave 3: .github/workflows/ci.yml with SHA-pinned Actions + first green CI checkpoint (TOOL-08, TOOL-09)
+- [ ] 01-05-PLAN.md — Wave 4: .github/dependabot.yml (TOOL-10)
+- [ ] 01-06-PLAN.md — Wave 5: smoke test + 4 runbooks + CONTRIBUTING.md + SECURITY.md + Socket.dev install + branch-protection bootstrap (TOOL-08, TOOL-09, TOOL-11, DOC-10)
 
 ### Phase 2: Test Suite Foundation (Tests-First)
 **Goal**: A regression baseline exists for every data-integrity path that the modular split (Phase 4) and downstream phases will touch — so behavioural drift becomes visible before it becomes user-visible.
@@ -211,7 +217,7 @@ Trying to merge (e.g.) Phase 5 with Phase 6, or Phase 1 with Phase 2, violates o
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Engineering Foundation (Tooling) | 0/0 | Not started | - |
+| 1. Engineering Foundation (Tooling) | 0/6 | Not started | - |
 | 2. Test Suite Foundation (Tests-First) | 0/0 | Not started | - |
 | 3. Hosting Cutover + Baseline Security Headers | 0/0 | Not started | - |
 | 4. Modular Split + Quick Wins | 0/0 | Not started | - |

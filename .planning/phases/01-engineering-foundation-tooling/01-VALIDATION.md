@@ -1,10 +1,11 @@
 ---
 phase: 1
 slug: engineering-foundation-tooling
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-05-03
+approved: 2026-05-03
 ---
 
 # Phase 1 — Validation Strategy
@@ -93,4 +94,4 @@ Mapping below uses `{plan}-{task}` task IDs. Plans/tasks are produced by `gsd-pl
 - [ ] Feedback latency < 15s for the local quick-run loop
 - [ ] `nyquist_compliant: true` set in frontmatter once gsd-plan-checker confirms coverage
 
-**Approval:** pending
+**Approval:** approved 2026-05-03 (gsd-plan-checker Dimension 8 — all 13 REQ rows mapped to automated `<verify>` entries or named Manual-Only Verifications)

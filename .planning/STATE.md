@@ -123,10 +123,11 @@ Additional non-negotiables:
 
 ## Session Continuity
 
-**Last session:** Project initialization — research synthesis (`SUMMARY.md`, `PITFALLS.md`, `ARCHITECTURE.md`, `STACK.md`, `FEATURES.md`) complete; codebase analysis (`.planning/codebase/`) complete; PROJECT.md + REQUIREMENTS.md defined; ROADMAP.md and STATE.md created from validated 12-phase plan.
+**Last session:** Phase 1 context captured. Five gray areas locked via baked-in recommendations after milestone confirmation: (1) coexistence with un-split `app.js` via per-line disables + cleanup ledger; (2) `index.html` rewrite deferred to Phase 3; (3) husky + lint-staged for pre-commit; (4) branch protection in scope as manual `gh api` runbook; (5) `SECURITY.md` skeleton with three populated sections (Build & Supply Chain, Dependency Monitoring, Secret Scanning) per DOC-10. Output: `.planning/phases/01-engineering-foundation-tooling/01-CONTEXT.md` + `01-DISCUSSION-LOG.md`.
 
-**Resume point:** `/gsd-plan-phase 1` — begin planning Phase 1 (Engineering Foundation / Tooling).
+**Resume point:** `/gsd-plan-phase 1` — produce executable plan for Phase 1 from the captured context.
 
 ---
 
 *State initialized: 2026-05-03 after roadmap creation*
+*Last updated: 2026-05-03 — Phase 1 context captured*

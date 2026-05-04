@@ -218,28 +218,28 @@ Acknowledged but deferred — not in this milestone's roadmap.
 
 ## Out of Scope
 
-| Feature | Reason |
-|---------|--------|
-| Framework rewrite (React / Vue / Svelte) | Auditors care about controls, not framework. Rewrite during hardening doubles risk + dilutes audit narrative. Defer to a separate milestone if hiring/maintainability ever motivates it. |
-| Platform migration to Vercel + Supabase | Decision to stay on Firebase (PROJECT.md). Translating `SECURITY_AUDIT.md`'s Vercel/Supabase guidance to Firebase is the lighter lift. Firebase has parity for every required control. |
-| Native mobile apps | Web-only milestone. |
-| New diagnostic features (more pillars, new visualisations, new collab tools) | Adding features mid-hardening invalidates the audit narrative ("the version we secured is the version we shipped"). |
-| SOC2 Type II / ISO 27001 certification | Separate workstream involving auditors, organisational policies, and ongoing operational evidence. This milestone produces the technical foundation it would build on. |
-| Backwards-compatibility for existing localStorage sessions / shared passwords | App is not in active use during this milestone. Clean cutover migrations are simpler, more defensible, and lower risk. |
-| Replacing `mailto:` invite flow with transactional email | Likely valuable but defer to v2. Invite UX works; security gap is in auth, not email delivery. |
-| Custom session tokens / cookies | Anti-feature. Use Firebase Auth ID tokens — never roll our own. |
-| In-house password storage | Anti-feature. Use Firebase Auth's hashing. |
-| Custom encryption beyond Google's KMS | Anti-feature. Application-level field encryption introduces key management without commensurate threat-model benefit at this scale. |
-| "Trust me" admin-bypass routes | Anti-feature. Every admin path goes through claims-checked Cloud Functions or rules-checked Firestore writes. |
-| Client-written audit log | Anti-feature. Audit log is server-only — client writes are forgeable. |
-| SIEM with no triage | Anti-feature. We don't have headcount to staff a SIEM. Sentry + Slack alerts is the right tier. |
-| Bug bounty programme on day one | Anti-feature pre-maturity. Bug bounty without coordinated-disclosure infrastructure attracts noise. Re-evaluate after 6 months. |
-| Aggressive auto-deletion without retention policy | Anti-feature. Soft-delete + documented retention is the credible pattern. |
-| DRM / watermarking on uploaded documents | Anti-feature. Adds friction without preventing the threat model (a malicious internal user can screenshot). |
-| CAPTCHAs on every form | Anti-feature. App Check + rate limiting do this without UX cost. |
-| Dual-control approval on every admin action | Anti-feature for current scale. Two-admin recovery is the relevant dual-control case. |
-| Continuous-compliance scanners (Vanta / Drata) at this stage | v2 — overkill for one engineer + two consultants pre-certification. |
-| `html:` rich-text path replacement via DOMPurify | Out of scope unless a feature requires it. The escape hatch is being deleted (CODE-04); reintroducing rich-text rendering would need a separate hardening review. |
+| Feature                                                                       | Reason                                                                                                                                                                                   |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework rewrite (React / Vue / Svelte)                                      | Auditors care about controls, not framework. Rewrite during hardening doubles risk + dilutes audit narrative. Defer to a separate milestone if hiring/maintainability ever motivates it. |
+| Platform migration to Vercel + Supabase                                       | Decision to stay on Firebase (PROJECT.md). Translating `SECURITY_AUDIT.md`'s Vercel/Supabase guidance to Firebase is the lighter lift. Firebase has parity for every required control.   |
+| Native mobile apps                                                            | Web-only milestone.                                                                                                                                                                      |
+| New diagnostic features (more pillars, new visualisations, new collab tools)  | Adding features mid-hardening invalidates the audit narrative ("the version we secured is the version we shipped").                                                                      |
+| SOC2 Type II / ISO 27001 certification                                        | Separate workstream involving auditors, organisational policies, and ongoing operational evidence. This milestone produces the technical foundation it would build on.                   |
+| Backwards-compatibility for existing localStorage sessions / shared passwords | App is not in active use during this milestone. Clean cutover migrations are simpler, more defensible, and lower risk.                                                                   |
+| Replacing `mailto:` invite flow with transactional email                      | Likely valuable but defer to v2. Invite UX works; security gap is in auth, not email delivery.                                                                                           |
+| Custom session tokens / cookies                                               | Anti-feature. Use Firebase Auth ID tokens — never roll our own.                                                                                                                          |
+| In-house password storage                                                     | Anti-feature. Use Firebase Auth's hashing.                                                                                                                                               |
+| Custom encryption beyond Google's KMS                                         | Anti-feature. Application-level field encryption introduces key management without commensurate threat-model benefit at this scale.                                                      |
+| "Trust me" admin-bypass routes                                                | Anti-feature. Every admin path goes through claims-checked Cloud Functions or rules-checked Firestore writes.                                                                            |
+| Client-written audit log                                                      | Anti-feature. Audit log is server-only — client writes are forgeable.                                                                                                                    |
+| SIEM with no triage                                                           | Anti-feature. We don't have headcount to staff a SIEM. Sentry + Slack alerts is the right tier.                                                                                          |
+| Bug bounty programme on day one                                               | Anti-feature pre-maturity. Bug bounty without coordinated-disclosure infrastructure attracts noise. Re-evaluate after 6 months.                                                          |
+| Aggressive auto-deletion without retention policy                             | Anti-feature. Soft-delete + documented retention is the credible pattern.                                                                                                                |
+| DRM / watermarking on uploaded documents                                      | Anti-feature. Adds friction without preventing the threat model (a malicious internal user can screenshot).                                                                              |
+| CAPTCHAs on every form                                                        | Anti-feature. App Check + rate limiting do this without UX cost.                                                                                                                         |
+| Dual-control approval on every admin action                                   | Anti-feature for current scale. Two-admin recovery is the relevant dual-control case.                                                                                                    |
+| Continuous-compliance scanners (Vanta / Drata) at this stage                  | v2 — overkill for one engineer + two consultants pre-certification.                                                                                                                      |
+| `html:` rich-text path replacement via DOMPurify                              | Out of scope unless a feature requires it. The escape hatch is being deleted (CODE-04); reintroducing rich-text rendering would need a separate hardening review.                        |
 
 ---
 
@@ -247,33 +247,34 @@ Acknowledged but deferred — not in this milestone's roadmap.
 
 **Canonical phase mapping** — validated by `gsd-roadmapper` against the four load-bearing sequencing constraints (Pitfalls 1, 9, 14-16) and the 12-phase plan in `.planning/research/SUMMARY.md` / `.planning/ROADMAP.md`.
 
-| Requirement | Phase | Status | Notes |
-|-------------|-------|--------|-------|
-| TOOL-01 to TOOL-12 | Phase 1 | Pending | — |
-| TEST-01 to TEST-07 | Phase 2 | Pending | Tests-first regression baseline (Pitfall 9) |
-| TEST-08 | Phase 5 | Pending | Rules-unit-test suite written alongside the rules (committed in Phase 5; deployed in Phase 6) |
-| TEST-09 | Phase 7 | Pending | `firebase-functions-test` suite written alongside Cloud Functions |
-| TEST-10 | Phase 2 | Pending | Snapshot tests as the regression baseline for the Phase 4 modular split |
-| HOST-01 to HOST-05, HOST-08 | Phase 3 | Pending | Hosting cutover + report-only CSP + per-PR previews |
-| HOST-06, HOST-07 | Phase 10 | Pending | HSTS preload submission + strict CSP after Phase 4 inline-style sweep |
-| CODE-01 to CODE-13 | Phase 4 | Pending | Modular split + quick wins, gated by Phase 2 tests being green |
-| DATA-01 to DATA-07 | Phase 5 | Pending | Subcollection migration + H7 fix folded in (DATA-07) |
-| RULES-01 to RULES-06 | Phase 5 | Pending | Authored, unit-tested, committed — NOT deployed (deploy gate held for Phase 6) |
-| RULES-07 | Phase 6 | Pending | Production deploy + rollback plan; the load-bearing cutover step |
-| AUTH-01 to AUTH-15 | Phase 6 | Pending | Anonymous Auth disabled; Email/Password + custom claims + TOTP MFA + bootstrap; password hash deleted |
-| FN-01 to FN-09 | Phase 7 | Pending | `functions/` workspace + App Check + audit log infrastructure + rate limiting |
-| FN-10 | Phase 3 | Pending | `csp-violations` endpoint pairs with HOST-05 — ships with the hosting cutover |
-| AUDIT-01 to AUDIT-04, AUDIT-06, AUDIT-07 | Phase 7 | Pending | Audit-log infrastructure (collection, schema, BigQuery sink, mirror triggers, retention, audited-user-cannot-read-own) |
-| AUDIT-05 | Phase 9 | Pending | Wiring of `auditWrite` calls through every view (depends on Phase 7 infrastructure + Phase 8 lifecycle callers) |
-| LIFE-01 to LIFE-06 | Phase 8 | Pending | Soft-delete + 30-day restore + admin UI + scheduled purge |
-| GDPR-01 to GDPR-05 | Phase 8 | Pending | Art. 15 export + Art. 17 erasure + cascade + audit-vs-erasure conflict resolution + backup propagation |
-| BACKUP-01 to BACKUP-07 | Phase 8 | Pending | Daily Firestore export + GCS lifecycle + PITR + Storage versioning + signed-URL TTL + quarterly drill cadence + one drill performed |
-| OBS-01 to OBS-08 | Phase 9 | Pending | Sentry browser + node + EU region + scrubber + Slack alerts + uptime + budget alerts |
-| DOC-01 to DOC-09 | Phase 11 | Pending | Evidence pack — written against existing controls, not new design |
-| DOC-10 | All phases (canonical owner: Phase 11) | Pending | Cross-cutting — every phase appends to `SECURITY.md` as it closes findings; Phase 11 does the final pass |
-| WALK-01 to WALK-04 | Phase 12 | Pending | Translation map → end-to-end checklist run → `SECURITY_AUDIT_REPORT.md` + LLM-section N/A rationale |
+| Requirement                              | Phase                                  | Status  | Notes                                                                                                                               |
+| ---------------------------------------- | -------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| TOOL-01 to TOOL-12                       | Phase 1                                | Pending | —                                                                                                                                   |
+| TEST-01 to TEST-07                       | Phase 2                                | Pending | Tests-first regression baseline (Pitfall 9)                                                                                         |
+| TEST-08                                  | Phase 5                                | Pending | Rules-unit-test suite written alongside the rules (committed in Phase 5; deployed in Phase 6)                                       |
+| TEST-09                                  | Phase 7                                | Pending | `firebase-functions-test` suite written alongside Cloud Functions                                                                   |
+| TEST-10                                  | Phase 2                                | Pending | Snapshot tests as the regression baseline for the Phase 4 modular split                                                             |
+| HOST-01 to HOST-05, HOST-08              | Phase 3                                | Pending | Hosting cutover + report-only CSP + per-PR previews                                                                                 |
+| HOST-06, HOST-07                         | Phase 10                               | Pending | HSTS preload submission + strict CSP after Phase 4 inline-style sweep                                                               |
+| CODE-01 to CODE-13                       | Phase 4                                | Pending | Modular split + quick wins, gated by Phase 2 tests being green                                                                      |
+| DATA-01 to DATA-07                       | Phase 5                                | Pending | Subcollection migration + H7 fix folded in (DATA-07)                                                                                |
+| RULES-01 to RULES-06                     | Phase 5                                | Pending | Authored, unit-tested, committed — NOT deployed (deploy gate held for Phase 6)                                                      |
+| RULES-07                                 | Phase 6                                | Pending | Production deploy + rollback plan; the load-bearing cutover step                                                                    |
+| AUTH-01 to AUTH-15                       | Phase 6                                | Pending | Anonymous Auth disabled; Email/Password + custom claims + TOTP MFA + bootstrap; password hash deleted                               |
+| FN-01 to FN-09                           | Phase 7                                | Pending | `functions/` workspace + App Check + audit log infrastructure + rate limiting                                                       |
+| FN-10                                    | Phase 3                                | Pending | `csp-violations` endpoint pairs with HOST-05 — ships with the hosting cutover                                                       |
+| AUDIT-01 to AUDIT-04, AUDIT-06, AUDIT-07 | Phase 7                                | Pending | Audit-log infrastructure (collection, schema, BigQuery sink, mirror triggers, retention, audited-user-cannot-read-own)              |
+| AUDIT-05                                 | Phase 9                                | Pending | Wiring of `auditWrite` calls through every view (depends on Phase 7 infrastructure + Phase 8 lifecycle callers)                     |
+| LIFE-01 to LIFE-06                       | Phase 8                                | Pending | Soft-delete + 30-day restore + admin UI + scheduled purge                                                                           |
+| GDPR-01 to GDPR-05                       | Phase 8                                | Pending | Art. 15 export + Art. 17 erasure + cascade + audit-vs-erasure conflict resolution + backup propagation                              |
+| BACKUP-01 to BACKUP-07                   | Phase 8                                | Pending | Daily Firestore export + GCS lifecycle + PITR + Storage versioning + signed-URL TTL + quarterly drill cadence + one drill performed |
+| OBS-01 to OBS-08                         | Phase 9                                | Pending | Sentry browser + node + EU region + scrubber + Slack alerts + uptime + budget alerts                                                |
+| DOC-01 to DOC-09                         | Phase 11                               | Pending | Evidence pack — written against existing controls, not new design                                                                   |
+| DOC-10                                   | All phases (canonical owner: Phase 11) | Pending | Cross-cutting — every phase appends to `SECURITY.md` as it closes findings; Phase 11 does the final pass                            |
+| WALK-01 to WALK-04                       | Phase 12                               | Pending | Translation map → end-to-end checklist run → `SECURITY_AUDIT_REPORT.md` + LLM-section N/A rationale                                 |
 
 **Coverage:**
+
 - v1 requirements: 120 total (across 15 categories)
 - Mapped to phases: 120 / 120 ✓
 - Unmapped: 0 ✓
@@ -294,5 +295,6 @@ This requirements set explicitly maps to:
 These citations appear in `docs/CONTROL_MATRIX.md` (DOC-04) one-row-per-control with code path, config, test, and framework section.
 
 ---
-*Requirements defined: 2026-05-03*
-*Last updated: 2026-05-03 — Traceability table validated and made canonical by `gsd-roadmapper`*
+
+_Requirements defined: 2026-05-03_
+_Last updated: 2026-05-03 — Traceability table validated and made canonical by `gsd-roadmapper`_

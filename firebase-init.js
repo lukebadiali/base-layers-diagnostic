@@ -5,14 +5,33 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
-  query, where, orderBy, onSnapshot, serverTimestamp, limit
+  getFirestore,
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+  limit,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
-  getAuth, signInAnonymously, onAuthStateChanged
+  getAuth,
+  signInAnonymously,
+  onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
-  getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject
+  getStorage,
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+  deleteObject,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
 
 const firebaseConfig = {
@@ -21,7 +40,7 @@ const firebaseConfig = {
   projectId: "bedeveloped-base-layers",
   storageBucket: "bedeveloped-base-layers.firebasestorage.app",
   messagingSenderId: "76749944951",
-  appId: "1:76749944951:web:9d0db9603ecaa7cc5fee72"
+  appId: "1:76749944951:web:9d0db9603ecaa7cc5fee72",
 };
 
 const app = initializeApp(firebaseConfig);
@@ -30,17 +49,34 @@ const auth = getAuth(app);
 const storage = getStorage(app);
 
 let readyResolve;
-const ready = new Promise((res) => { readyResolve = res; });
+const ready = new Promise((res) => {
+  readyResolve = res;
+});
 
 window.FB = {
-  app, db, auth, storage,
+  app,
+  db,
+  auth,
+  storage,
   currentUser: null,
   ready,
   firestore: {
-    collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc,
-    query, where, orderBy, onSnapshot, serverTimestamp, limit
+    collection,
+    doc,
+    setDoc,
+    getDoc,
+    getDocs,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    query,
+    where,
+    orderBy,
+    onSnapshot,
+    serverTimestamp,
+    limit,
   },
-  storageOps: { ref, uploadBytesResumable, getDownloadURL, deleteObject }
+  storageOps: { ref, uploadBytesResumable, getDownloadURL, deleteObject },
 };
 
 onAuthStateChanged(auth, (u) => {

@@ -13,5 +13,12 @@
     "ignoreDeprecations": "6.0"
   },
   "include": ["**/*.js", "**/*.d.ts"],
-  "exclude": ["node_modules", "dist", "functions/lib", "coverage", "vite.config.js"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "functions/lib",
+    "coverage",
+    "vite.config.js",
+    "eslint.config.js"
+  ]
 }

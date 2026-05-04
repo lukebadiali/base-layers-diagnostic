@@ -14,22 +14,23 @@
   "use strict";
 
   const DATA = window.BASE_LAYERS;
-  const LS   = window.localStorage;
+  const LS = window.localStorage;
 
   // ---------- Storage keys ----------
   const K = {
-    users:       "baselayers:users",
-    session:     "baselayers:session",
-    settings:    "baselayers:settings",
-    orgs:        "baselayers:orgs",
-    mode:        "baselayers:mode",
-    org:         (id) => `baselayers:org:${id}`,
+    users: "baselayers:users",
+    session: "baselayers:session",
+    settings: "baselayers:settings",
+    orgs: "baselayers:orgs",
+    mode: "baselayers:mode",
+    org: (id) => `baselayers:org:${id}`,
     // v1 compat
-    v1Active:    "baselayers:active"
+    v1Active: "baselayers:active",
   };
 
   // ---------- Utilities ----------
   const uid = (p = "") =>
+    // eslint-disable-next-line no-restricted-syntax -- Phase 4: replace with crypto.randomUUID(). See runbooks/phase-4-cleanup-ledger.md
     p + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 
   const iso = () => new Date().toISOString();
@@ -41,21 +42,29 @@
     if (mins < 1) return "just now";
     if (mins < 60) return `${mins}m ago`;
     if (mins < 60 * 24) return `${Math.round(mins / 60)}h ago`;
-    if (mins < 60 * 24 * 7) return `${Math.round(mins / (60*24))}d ago`;
+    if (mins < 60 * 24 * 7) return `${Math.round(mins / (60 * 24))}d ago`;
     return d.toLocaleDateString();
   };
 
   const formatDate = (when) => {
     if (!when) return "";
-    return new Date(when).toLocaleDateString(undefined,
-      { year: "numeric", month: "short", day: "numeric" });
+    return new Date(when).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
   const initials = (name = "") =>
-    name.split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0].toUpperCase()).join("");
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((s) => s[0].toUpperCase())
+      .join("");
 
   // Take "Luke Badiali" -> "Luke", "luke.badiali@x.com" -> "Luke", "luke@x.com" -> "Luke".
-  const capitalise = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
+  const capitalise = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
   const firstNameFromAuthor = (m) => {
     const name = (m.authorName || "").trim();
     if (name) {
@@ -73,51 +82,74 @@
 
   // ---------- JSON helpers ----------
   const jget = (k, fallback) => {
-    try { const v = LS.getItem(k); return v == null ? fallback : JSON.parse(v); }
-    catch { return fallback; }
+    try {
+      const v = LS.getItem(k);
+      return v == null ? fallback : JSON.parse(v);
+    } catch {
+      return fallback;
+    }
   };
   const jset = (k, v) => LS.setItem(k, JSON.stringify(v));
 
   // ---------- Settings ----------
-  function loadSettings() { return jget(K.settings, { internalPassphrase: null }); }
-  function saveSettings(s) { jset(K.settings, s); }
+  function loadSettings() {
+    return jget(K.settings, { internalPassphrase: null });
+  }
+  function saveSettings(s) {
+    jset(K.settings, s);
+  }
 
   // ---------- Users ----------
-  function loadUsers() { return jget(K.users, []); }
-  function saveUsers(u) { jset(K.users, u); }
-  function findUser(id) { return loadUsers().find(u => u.id === id) || null; }
+  function loadUsers() {
+    return jget(K.users, []);
+  }
+  function saveUsers(u) {
+    jset(K.users, u);
+  }
+  function findUser(id) {
+    return loadUsers().find((u) => u.id === id) || null;
+  }
   function findUserByEmail(email) {
     const e = (email || "").trim().toLowerCase();
-    return loadUsers().find(u => u.email.toLowerCase() === e) || null;
+    return loadUsers().find((u) => u.email.toLowerCase() === e) || null;
   }
   function upsertUser(user) {
     const users = loadUsers();
-    const i = users.findIndex(u => u.id === user.id);
-    if (i >= 0) users[i] = user; else users.push(user);
+    const i = users.findIndex((u) => u.id === user.id);
+    if (i >= 0) users[i] = user;
+    else users.push(user);
     saveUsers(users);
     cloudPushUser(user);
   }
   function deleteUser(id) {
-    saveUsers(loadUsers().filter(u => u.id !== id));
+    saveUsers(loadUsers().filter((u) => u.id !== id));
     cloudDeleteUser(id);
   }
 
   // ---------- Orgs ----------
-  function loadOrgMetas() { return jget(K.orgs, []); }
-  function saveOrgMetas(m)  { jset(K.orgs, m); }
-  function loadOrg(id)      { return jget(K.org(id), null); }
-  function saveOrg(org)     {
+  function loadOrgMetas() {
+    return jget(K.orgs, []);
+  }
+  function saveOrgMetas(m) {
+    jset(K.orgs, m);
+  }
+  function loadOrg(id) {
+    return jget(K.org(id), null);
+  }
+  function saveOrg(org) {
     jset(K.org(org.id), org);
     cloudPushOrg(org);
   }
   function deleteOrg(id) {
     LS.removeItem(K.org(id));
-    saveOrgMetas(loadOrgMetas().filter(o => o.id !== id));
+    saveOrgMetas(loadOrgMetas().filter((o) => o.id !== id));
     // cascade: delete client users bound to this org
-    const orphanedClientIds = loadUsers().filter(u => u.orgId === id).map(u => u.id);
-    saveUsers(loadUsers().filter(u => u.orgId !== id));
+    const orphanedClientIds = loadUsers()
+      .filter((u) => u.orgId === id)
+      .map((u) => u.id);
+    saveUsers(loadUsers().filter((u) => u.orgId !== id));
     cloudDeleteOrg(id);
-    orphanedClientIds.forEach(uid => cloudDeleteUser(uid));
+    orphanedClientIds.forEach((uid) => cloudDeleteUser(uid));
   }
   function createOrg(name) {
     const id = uid("org_");
@@ -133,7 +165,7 @@
       actions: [],
       engagement: { currentStageId: "diagnosed", stageChecks: {} },
       comments: {},
-      readStates: {}
+      readStates: {},
     };
     saveOrg(org);
     const metas = loadOrgMetas();
@@ -156,12 +188,12 @@
   }
 
   function roundById(org, id) {
-    return (org.rounds || []).find(r => r.id === id) || null;
+    return (org.rounds || []).find((r) => r.id === id) || null;
   }
 
   function previousRoundId(org) {
     const rs = org.rounds || [];
-    const idx = rs.findIndex(r => r.id === org.currentRoundId);
+    const idx = rs.findIndex((r) => r.id === org.currentRoundId);
     if (idx <= 0) return null;
     return rs[idx - 1].id;
   }
@@ -176,14 +208,14 @@
         text: entry,
         scale: baseScale,
         anchors: deriveAnchors(entry),
-        labels: null
+        labels: null,
       };
     }
     return {
       text: entry.text || "",
       scale: entry.scale || baseScale,
       anchors: entry.anchors || deriveAnchors(entry.text || ""),
-      labels: entry.labels || null
+      labels: entry.labels || null,
     };
   }
 
@@ -191,11 +223,11 @@
     const m = /^How\s+(\w+)/i.exec(text || "");
     const raw = (m ? m[1] : "good").toLowerCase();
     const special = {
-      regularly:    { low: "Rarely",      high: "Very regularly" },
-      often:        { low: "Never",       high: "Always" },
-      consistently: { low: "Rarely",      high: "Very consistently" },
-      quickly:      { low: "Very slowly", high: "Very quickly" },
-      well:         { low: "Not at all",  high: "Very well" }
+      regularly: { low: "Rarely", high: "Very regularly" },
+      often: { low: "Never", high: "Always" },
+      consistently: { low: "Rarely", high: "Very consistently" },
+      quickly: { low: "Very slowly", high: "Very quickly" },
+      well: { low: "Not at all", high: "Very well" },
     };
     if (special[raw]) return special[raw];
     // Strip trailing "-ly" so adverbs read as their adjective form
@@ -206,11 +238,11 @@
 
   // ---------- Scoring (aggregated across users in a round) ----------
   function pillarScoreForRound(org, roundId, pillarId) {
-    const p = DATA.pillars.find(pp => pp.id === pillarId);
+    const p = DATA.pillars.find((pp) => pp.id === pillarId);
     if (!p) return null;
     const byUser = (org.responses || {})[roundId] || {};
     const normalized = [];
-    Object.values(byUser).forEach(perPillar => {
+    Object.values(byUser).forEach((perPillar) => {
       const perQ = (perPillar || {})[pillarId] || {};
       Object.entries(perQ).forEach(([idx, r]) => {
         if (!Number.isFinite(r.score)) return;
@@ -239,10 +271,11 @@
     return Object.keys(byUser);
   }
 
+  // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead code or wire up call site. See runbooks/phase-4-cleanup-ledger.md
   function answeredCount(org, roundId, userId, pillarId) {
     const resp = (((org.responses || {})[roundId] || {})[userId] || {})[pillarId] || {};
-    const total = DATA.pillars.find(p => p.id === pillarId).diagnostics.length;
-    const done = Object.values(resp).filter(r => Number.isFinite(r.score)).length;
+    const total = DATA.pillars.find((p) => p.id === pillarId).diagnostics.length;
+    const done = Object.values(resp).filter((r) => Number.isFinite(r.score)).length;
     return { done, total };
   }
 
@@ -250,38 +283,36 @@
     const totalQ = DATA.pillars.reduce((s, p) => s + p.diagnostics.length, 0);
     const resp = ((org.responses || {})[roundId] || {})[userId] || {};
     let done = 0;
-    DATA.pillars.forEach(p => {
+    DATA.pillars.forEach((p) => {
       const pq = resp[p.id] || {};
-      done += Object.values(pq).filter(r => Number.isFinite(r.score)).length;
+      done += Object.values(pq).filter((r) => Number.isFinite(r.score)).length;
     });
     return Math.round((done / totalQ) * 100);
   }
 
   function orgSummary(org) {
-    const scored = DATA.pillars
-      .map(p => pillarScore(org, p.id))
-      .filter(s => s !== null);
+    const scored = DATA.pillars.map((p) => pillarScore(org, p.id)).filter((s) => s !== null);
     const avg = scored.length
       ? Math.round(scored.reduce((a, b) => a + b, 0) / scored.length)
       : null;
-    const statuses = DATA.pillars.map(p => pillarStatus(pillarScore(org, p.id)));
+    const statuses = DATA.pillars.map((p) => pillarStatus(pillarScore(org, p.id)));
     return {
       avg,
-      red:   statuses.filter(s => s === "red").length,
-      amber: statuses.filter(s => s === "amber").length,
-      green: statuses.filter(s => s === "green").length,
-      gray:  statuses.filter(s => s === "gray").length,
-      scoredCount: scored.length
+      red: statuses.filter((s) => s === "red").length,
+      amber: statuses.filter((s) => s === "amber").length,
+      green: statuses.filter((s) => s === "green").length,
+      gray: statuses.filter((s) => s === "gray").length,
+      scoredCount: scored.length,
     };
   }
 
   function topConstraints(org, n = 3) {
     return DATA.pillars
-      .map(p => ({ p, s: pillarScore(org, p.id) }))
-      .filter(x => x.s !== null)
+      .map((p) => ({ p, s: pillarScore(org, p.id) }))
+      .filter((x) => x.s !== null)
       .sort((a, b) => a.s - b.s)
       .slice(0, n)
-      .map(x => x.p);
+      .map((x) => x.p);
   }
 
   // ---------- Comments ----------
@@ -290,7 +321,10 @@
     org.comments[pillarId] = org.comments[pillarId] || [];
     const c = {
       id: uid("c_"),
-      authorId, text, internal: !!internal, createdAt: iso()
+      authorId,
+      text,
+      internal: !!internal,
+      createdAt: iso(),
     };
     org.comments[pillarId].push(c);
     saveOrg(org);
@@ -299,7 +333,7 @@
 
   function commentsFor(org, pillarId, user) {
     const list = (org.comments || {})[pillarId] || [];
-    if (user && user.role === "client") return list.filter(c => !c.internal);
+    if (user && user.role === "client") return list.filter((c) => !c.internal);
     return list;
   }
 
@@ -307,7 +341,8 @@
     const list = commentsFor(org, pillarId, user);
     const last = ((org.readStates || {})[user.id] || {})[pillarId];
     const lastT = last ? new Date(last).getTime() : 0;
-    return list.filter(c => new Date(c.createdAt).getTime() > lastT && c.authorId !== user.id).length;
+    return list.filter((c) => new Date(c.createdAt).getTime() > lastT && c.authorId !== user.id)
+      .length;
   }
 
   function unreadCountTotal(org, user) {
@@ -322,7 +357,9 @@
   }
 
   // ---------- Auth ----------
-  function currentSession() { return jget(K.session, null); }
+  function currentSession() {
+    return jget(K.session, null);
+  }
   function currentUser() {
     const s = currentSession();
     return s ? findUser(s.userId) : null;
@@ -336,9 +373,15 @@
   }
 
   // ---------- Chat unread tracking ----------
-  function chatReadKey(userId) { return `baselayers:chatLastRead:${userId}`; }
-  function loadChatLastRead(userId) { return jget(chatReadKey(userId), {}); }
-  function saveChatLastRead(userId, map) { jset(chatReadKey(userId), map); }
+  function chatReadKey(userId) {
+    return `baselayers:chatLastRead:${userId}`;
+  }
+  function loadChatLastRead(userId) {
+    return jget(chatReadKey(userId), {});
+  }
+  function saveChatLastRead(userId, map) {
+    jset(chatReadKey(userId), map);
+  }
   function markChatReadFor(userId, orgId) {
     if (!userId || !orgId) return;
     const m = loadChatLastRead(userId);
@@ -350,14 +393,13 @@
     return m[orgId] ? new Date(m[orgId]).getTime() : 0;
   }
   function msgMillis(msg) {
-    return msg.createdAt?.toMillis?.() ||
-           (msg.createdAt ? new Date(msg.createdAt).getTime() : 0);
+    return msg.createdAt?.toMillis?.() || (msg.createdAt ? new Date(msg.createdAt).getTime() : 0);
   }
   function unreadChatForOrg(user, orgId) {
     if (!user || !orgId) return 0;
     const lastT = lastReadMillis(user.id, orgId);
-    return (state.chatMessages || []).filter(m =>
-      m.orgId === orgId && m.authorId !== user.id && msgMillis(m) > lastT
+    return (state.chatMessages || []).filter(
+      (m) => m.orgId === orgId && m.authorId !== user.id && msgMillis(m) > lastT,
     ).length;
   }
   function unreadChatTotal(user) {
@@ -372,7 +414,13 @@
   }
 
   function stopChatSubscription() {
-    if (state.chatSubscription) { try { state.chatSubscription(); } catch {} state.chatSubscription = null; }
+    if (state.chatSubscription) {
+      try {
+        state.chatSubscription();
+        // eslint-disable-next-line no-empty -- Phase 4: replace with explicit ignore + comment. See runbooks/phase-4-cleanup-ledger.md
+      } catch {}
+      state.chatSubscription = null;
+    }
     state.chatMessages = [];
     state.chatSubscribedFor = null;
   }
@@ -385,21 +433,30 @@
     if (user.role === "internal") {
       q = firestore.collection(db, "messages");
     } else if (user.orgId) {
-      q = firestore.query(firestore.collection(db, "messages"),
-        firestore.where("orgId", "==", user.orgId));
+      q = firestore.query(
+        firestore.collection(db, "messages"),
+        firestore.where("orgId", "==", user.orgId),
+      );
     } else {
       return;
     }
     state.chatSubscribedFor = user.id;
-    state.chatSubscription = firestore.onSnapshot(q, (snap) => {
-      const list = [];
-      snap.forEach(d => list.push({ id: d.id, ...d.data() }));
-      state.chatMessages = list;
-      render();
-    }, (err) => console.error("Chat subscription error:", err));
+    state.chatSubscription = firestore.onSnapshot(
+      q,
+      (snap) => {
+        const list = [];
+        snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
+        state.chatMessages = list;
+        render();
+      },
+      (err) => console.error("Chat subscription error:", err),
+    );
   }
   function ensureChatSubscription(user) {
-    if (!user) { stopChatSubscription(); return; }
+    if (!user) {
+      stopChatSubscription();
+      return;
+    }
     if (state.chatSubscribedFor === user.id && state.chatSubscription) return;
     if (!(window.FB && window.FB.currentUser)) return;
     startChatSubscription(user);
@@ -408,7 +465,7 @@
   const BASE_TAB_TITLE = "BeDeveloped - The Base Layers";
   function updateTabTitleBadge() {
     const user = currentUser();
-    const unread = (user && user.role === "internal") ? unreadChatTotal(user) : 0;
+    const unread = user && user.role === "internal" ? unreadChatTotal(user) : 0;
     document.title = unread > 0 ? `(${unread}) ${BASE_TAB_TITLE}` : BASE_TAB_TITLE;
   }
 
@@ -417,11 +474,13 @@
     try {
       const enc = new TextEncoder().encode(String(s));
       const buf = await crypto.subtle.digest("SHA-256", enc);
-      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+      return Array.from(new Uint8Array(buf))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
     } catch {
       // fallback
       let h = 0;
-      for (const ch of String(s)) h = ((h << 5) - h) + ch.charCodeAt(0) | 0;
+      for (const ch of String(s)) h = ((h << 5) - h + ch.charCodeAt(0)) | 0;
       return String(h);
     }
   }
@@ -504,12 +563,12 @@
       email: "legacy@bedeveloped.local",
       name: "Legacy respondent",
       role: "client",
-      orgId: null,   // set later if single-org
-      createdAt: iso()
+      orgId: null, // set later if single-org
+      createdAt: iso(),
     };
     upsertUser(legacy);
 
-    v1Orgs.forEach(meta => {
+    v1Orgs.forEach((meta) => {
       const raw = loadOrg(meta.id);
       if (!raw) return;
 
@@ -525,10 +584,10 @@
         rounds: [{ id: roundId, label: "Round 1 (migrated)", createdAt: raw.createdAt || iso() }],
         responses: { [roundId]: {} },
         internalNotes: {},
-        actions: (raw.actions || []).map(a => ({ ...a, createdBy: legacyId })),
+        actions: (raw.actions || []).map((a) => ({ ...a, createdBy: legacyId })),
         engagement: raw.engagement || { currentStageId: "diagnosed", stageChecks: {} },
         comments: {},
-        readStates: {}
+        readStates: {},
       };
 
       // migrate old responses (single respondent)
@@ -540,7 +599,7 @@
         Object.entries(qs || {}).forEach(([idx, r]) => {
           byUser[legacyId][pillarId][idx] = {
             score: r.score,
-            note: r.note || ""
+            note: r.note || "",
           };
           if (r.internalNote) {
             migrated.internalNotes[pillarId] = migrated.internalNotes[pillarId] || {};
@@ -566,16 +625,16 @@
   const state = {
     mode: jget(K.mode, "internal"), // internal view mode (only meaningful for internal role)
     route: "dashboard",
-    orgId: null,     // current selected org (for internal role; for client it's pinned)
+    orgId: null, // current selected org (for internal role; for client it's pinned)
     pillarId: null,
     chart: null,
     userMenuOpen: false,
     authTab: "client",
     authError: "",
-    expandedPillars: new Set(),   // dashboard-tile accordion state
-    chatMessages: [],             // live feed from Firestore, filtered by role
-    chatSubscription: null,       // unsubscribe function for the live listener
-    chatSubscribedFor: null       // user.id the current subscription is for
+    expandedPillars: new Set(), // dashboard-tile accordion state
+    chatMessages: [], // live feed from Firestore, filtered by role
+    chatSubscription: null, // unsubscribe function for the live listener
+    chatSubscribedFor: null, // user.id the current subscription is for
   };
 
   function activeOrgForUser(user) {
@@ -607,21 +666,24 @@
   }
 
   // ---------- DOM helpers ----------
-  const $  = (sel, el = document) => el.querySelector(sel);
+  const $ = (sel, el = document) => el.querySelector(sel);
+  // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead helper or expose via export. See runbooks/phase-4-cleanup-ledger.md
   const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
   const h = (tag, attrs = {}, children = []) => {
     const el = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs)) {
       if (k === "class") el.className = v;
+      // eslint-disable-next-line no-unsanitized/property -- Phase 4: replace innerHTML with replaceChildren() / DOMPurify.sanitize(). See runbooks/phase-4-cleanup-ledger.md
       else if (k === "html") el.innerHTML = v;
       else if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.slice(2), v);
       else if (v === false || v === null || v === undefined) continue;
       else if (v === true) el.setAttribute(k, "");
       else el.setAttribute(k, v);
     }
-    (Array.isArray(children) ? children : [children]).forEach(c => {
+    (Array.isArray(children) ? children : [children]).forEach((c) => {
       if (c === null || c === undefined || c === false) return;
-      if (typeof c === "string" || typeof c === "number") el.appendChild(document.createTextNode(c));
+      if (typeof c === "string" || typeof c === "number")
+        el.appendChild(document.createTextNode(c));
       else el.appendChild(c);
     });
     return el;
@@ -647,7 +709,7 @@
         ev.isProgrammatic = true;
         Object.defineProperty(ev, "target", { value: root });
         close(ev);
-      }
+      },
     };
   }
 
@@ -655,21 +717,23 @@
     const input = h("input", { type: "text", placeholder });
     input.value = initial;
     const cancel = h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel");
-    const ok = h("button", {
-      class: "btn",
-      onclick: () => {
-        const v = input.value.trim();
-        if (!v) return;
-        onSubmit(v);
-        m.close();
-      }
-    }, "Save");
-    input.addEventListener("keydown", e => { if (e.key === "Enter") ok.click(); });
-    const m = modal([
-      h("h3", {}, title),
-      input,
-      h("div", { class: "row" }, [cancel, ok])
-    ]);
+    const ok = h(
+      "button",
+      {
+        class: "btn",
+        onclick: () => {
+          const v = input.value.trim();
+          if (!v) return;
+          onSubmit(v);
+          m.close();
+        },
+      },
+      "Save",
+    );
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") ok.click();
+    });
+    const m = modal([h("h3", {}, title), input, h("div", { class: "row" }, [cancel, ok])]);
     setTimeout(() => input.focus(), 10);
   }
 
@@ -679,8 +743,18 @@
       h("p", { style: "color: var(--ink-2); font-size: 14px;" }, message),
       h("div", { class: "row" }, [
         h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-        h("button", { class: "btn", onclick: () => { onOk(); m.close(); } }, okLabel)
-      ])
+        h(
+          "button",
+          {
+            class: "btn",
+            onclick: () => {
+              onOk();
+              m.close();
+            },
+          },
+          okLabel,
+        ),
+      ]),
     ]);
   }
 
@@ -694,7 +768,13 @@
   const appEl = () => $("#app");
 
   function render() {
-    if (state.chart) { try { state.chart.destroy(); } catch {} state.chart = null; }
+    if (state.chart) {
+      try {
+        state.chart.destroy();
+        // eslint-disable-next-line no-empty -- Phase 4: replace with explicit ignore + comment. See runbooks/phase-4-cleanup-ledger.md
+      } catch {}
+      state.chart = null;
+    }
 
     updateTabTitleBadge();
 
@@ -737,8 +817,7 @@
     else if (route.startsWith("pillar:")) {
       const id = Number(route.split(":")[1]);
       main.appendChild(renderPillar(user, org, id));
-    }
-    else if (route === "actions") main.appendChild(renderActions(user, org));
+    } else if (route === "actions") main.appendChild(renderActions(user, org));
     else if (route === "engagement") main.appendChild(renderEngagement(user, org));
     else if (route === "report") main.appendChild(renderReport(user, org));
     else if (route === "documents") main.appendChild(renderDocuments(user, org));
@@ -762,25 +841,25 @@
     const logoImg = h("img", {
       class: "brand-logo",
       src: "assets/logo.png",
-      alt: "BeDeveloped"
+      alt: "BeDeveloped",
     });
     const brand = h("div", { class: "brand" }, [
       logoImg,
-      h("span", { class: "brand-sub" }, "The Base Layers")
+      h("span", { class: "brand-sub" }, "The Base Layers"),
     ]);
 
     // Nav
     const nav = h("nav", { class: "topnav" });
     const items = [
-      ["dashboard",   "Dashboard"],
-      ["diagnostic",  "Diagnostic"],
-      ["report",      "Report"],
-      ["engagement",  "Engagement"],
-      ["documents",   "Documents"],
-      ["chat",        "Chat"],
-      ["actions",     "Actions"],
-      ["roadmap",     "Plan"],
-      ["funnel",      "Funnel"]
+      ["dashboard", "Dashboard"],
+      ["diagnostic", "Diagnostic"],
+      ["report", "Report"],
+      ["engagement", "Engagement"],
+      ["documents", "Documents"],
+      ["chat", "Chat"],
+      ["actions", "Actions"],
+      ["roadmap", "Plan"],
+      ["funnel", "Funnel"],
     ];
     // Admin access moved to the user dropdown ("Admin · manage people").
 
@@ -788,22 +867,35 @@
     const unreadChat = unreadChatTotal(user);
 
     items.forEach(([route, label]) => {
-      const btn = h("button", {
-        class: "nav-btn" + (state.route === route ||
-          (route === "diagnostic" && state.route.startsWith("pillar:")) ? " active" : ""),
-        "data-route": route,
-        onclick: () => setRoute(route)
-      }, label);
+      const btn = h(
+        "button",
+        {
+          class:
+            "nav-btn" +
+            (state.route === route || (route === "diagnostic" && state.route.startsWith("pillar:"))
+              ? " active"
+              : ""),
+          "data-route": route,
+          onclick: () => setRoute(route),
+        },
+        label,
+      );
       // Unread indicator on diagnostic (since comments live on pillar pages)
       if (route === "diagnostic" && unread > 0) {
         btn.appendChild(h("span", { class: "dot", title: `${unread} unread comment(s)` }));
       }
       // Unread indicator on chat
       if (route === "chat" && unreadChat > 0) {
-        btn.appendChild(h("span", {
-          class: "count-badge",
-          title: `${unreadChat} unread message${unreadChat === 1 ? "" : "s"}`
-        }, String(unreadChat)));
+        btn.appendChild(
+          h(
+            "span",
+            {
+              class: "count-badge",
+              title: `${unreadChat} unread message${unreadChat === 1 ? "" : "s"}`,
+            },
+            String(unreadChat),
+          ),
+        );
       }
       nav.appendChild(btn);
     });
@@ -812,29 +904,33 @@
 
     // Internal-only: mode toggle + org switcher
     if (!isClient) {
-      const modeToggle = h("label", {
-        class: "mode-toggle",
-        title: "Internal view shows private commentary. Client view previews what a client sees."
-      }, [
-        h("span", {}, state.mode === "internal" ? "Internal" : "Client preview"),
-        (() => {
-          const input = h("input", {
-            type: "checkbox",
-            checked: state.mode === "internal"
-          });
-          input.addEventListener("change", () => {
-            state.mode = input.checked ? "internal" : "external";
-            jset(K.mode, state.mode);
-            render();
-          });
-          return input;
-        })(),
-        h("span", { class: "switch" })
-      ]);
+      const modeToggle = h(
+        "label",
+        {
+          class: "mode-toggle",
+          title: "Internal view shows private commentary. Client view previews what a client sees.",
+        },
+        [
+          h("span", {}, state.mode === "internal" ? "Internal" : "Client preview"),
+          (() => {
+            const input = h("input", {
+              type: "checkbox",
+              checked: state.mode === "internal",
+            });
+            input.addEventListener("change", () => {
+              state.mode = input.checked ? "internal" : "external";
+              jset(K.mode, state.mode);
+              render();
+            });
+            return input;
+          })(),
+          h("span", { class: "switch" }),
+        ],
+      );
       topright.appendChild(modeToggle);
 
       const orgSelect = h("select", { "aria-label": "Select organisation" });
-      loadOrgMetas().forEach(o => {
+      loadOrgMetas().forEach((o) => {
         const opt = document.createElement("option");
         opt.value = o.id;
         opt.textContent = o.name;
@@ -851,56 +947,91 @@
     }
 
     // User chip
-    const avatar = h("span", {
-      class: "avatar" + (isClient ? "" : " internal")
-    }, initials(user.name || user.email));
+    const avatar = h(
+      "span",
+      {
+        class: "avatar" + (isClient ? "" : " internal"),
+      },
+      initials(user.name || user.email),
+    );
     const who = h("div", { class: "who" }, [
       h("div", { class: "name" }, user.name || user.email),
-      h("div", { class: "role" }, isClient
-        ? (org ? org.name : "Client")
-        : "BeDeveloped team")
+      h("div", { class: "role" }, isClient ? (org ? org.name : "Client") : "BeDeveloped team"),
     ]);
-    const chip = h("button", {
-      class: "user-chip",
-      onclick: (e) => {
-        e.stopPropagation();
-        state.userMenuOpen = !state.userMenuOpen;
-        render();
-      }
-    }, [avatar, who]);
+    const chip = h(
+      "button",
+      {
+        class: "user-chip",
+        onclick: (e) => {
+          e.stopPropagation();
+          state.userMenuOpen = !state.userMenuOpen;
+          render();
+        },
+      },
+      [avatar, who],
+    );
 
     if (state.userMenuOpen) {
       const menu = h("div", { class: "user-menu" });
-      menu.addEventListener("click", e => e.stopPropagation());
-      menu.appendChild(h("div", { style: "padding: 8px 12px; font-size: 12px; color: var(--ink-3);" },
-        `Signed in as ${user.email}`));
+      menu.addEventListener("click", (e) => e.stopPropagation());
+      menu.appendChild(
+        h(
+          "div",
+          { style: "padding: 8px 12px; font-size: 12px; color: var(--ink-3);" },
+          `Signed in as ${user.email}`,
+        ),
+      );
       menu.appendChild(h("div", { class: "divider" }));
       if (!isClient && !isClientView(user)) {
-        menu.appendChild(h("button", {
-          onclick: () => { state.userMenuOpen = false; setRoute("admin"); }
-        }, "Admin · manage people"));
+        menu.appendChild(
+          h(
+            "button",
+            {
+              onclick: () => {
+                state.userMenuOpen = false;
+                setRoute("admin");
+              },
+            },
+            "Admin · manage people",
+          ),
+        );
       }
       if (isClient && user.passwordHash) {
-        menu.appendChild(h("button", {
-          onclick: () => {
-            state.userMenuOpen = false;
-            render();
-            openChangePasswordModal(user);
-          }
-        }, "Change password"));
+        menu.appendChild(
+          h(
+            "button",
+            {
+              onclick: () => {
+                state.userMenuOpen = false;
+                render();
+                openChangePasswordModal(user);
+              },
+            },
+            "Change password",
+          ),
+        );
       }
-      menu.appendChild(h("button", {
-        onclick: () => {
-          state.userMenuOpen = false;
-          signOut();
-          render();
-        }
-      }, "Sign out"));
+      menu.appendChild(
+        h(
+          "button",
+          {
+            onclick: () => {
+              state.userMenuOpen = false;
+              signOut();
+              render();
+            },
+          },
+          "Sign out",
+        ),
+      );
       chip.appendChild(menu);
 
       // click-outside to close
       setTimeout(() => {
-        const handler = () => { state.userMenuOpen = false; render(); };
+        const handler = () => {
+          state.userMenuOpen = false;
+          render();
+        };
         document.addEventListener("click", handler, { once: true });
       }, 10);
     }
@@ -918,32 +1049,44 @@
       // minimal footer for clients
       return h("footer", { class: "footer" }, [
         h("span", {}, `The Base Layers — ${org ? org.name : "client view"}`),
-        h("span", {})
+        h("span", {}),
       ]);
     }
     const actions = h("span", { class: "footer-actions" }, [
-      h("button", {
-        class: "btn ghost",
-        title: "Full backup of all orgs, users and responses. For internal recovery only.",
-        onclick: exportData
-      }, "Export backup"),
+      h(
+        "button",
+        {
+          class: "btn ghost",
+          title: "Full backup of all orgs, users and responses. For internal recovery only.",
+          onclick: exportData,
+        },
+        "Export backup",
+      ),
       (() => {
-        const input = h("input", { type: "file", accept: "application/json", style: "display:none;" });
+        const input = h("input", {
+          type: "file",
+          accept: "application/json",
+          style: "display:none;",
+        });
         input.addEventListener("change", (e) => {
           if (e.target.files && e.target.files[0]) importData(e.target.files[0]);
           e.target.value = "";
         });
-        const btn = h("button", {
-          class: "btn ghost",
-          title: "Restore a previously exported JSON backup. Overwrites current data.",
-          onclick: () => input.click()
-        }, "Restore backup");
+        const btn = h(
+          "button",
+          {
+            class: "btn ghost",
+            title: "Restore a previously exported JSON backup. Overwrites current data.",
+            onclick: () => input.click(),
+          },
+          "Restore backup",
+        );
         return h("span", {}, [btn, input]);
-      })()
+      })(),
     ]);
     return h("footer", { class: "footer" }, [
       h("span", {}, "The Base Layers — local build. Data stays in this browser."),
-      actions
+      actions,
     ]);
   }
 
@@ -954,16 +1097,29 @@
     const wrap = h("div", { class: "auth-wrap" });
 
     // Hero side
-    wrap.appendChild(h("div", { class: "auth-hero" }, [
-      h("img", { class: "hero-logo", src: "assets/logo.png", alt: "BeDeveloped" }),
-      h("div", {}, [
-        h("h1", {}, "Build effective early-stage sales processes that strengthen and improve your business development function."),
-        h("p", { class: "lede" },
-          "The ten-pillar operating model BeDeveloped uses to diagnose, design and develop early-stage sales functions into repeatable revenue engines."),
-        h("hr", { class: "hero-accent" })
+    wrap.appendChild(
+      h("div", { class: "auth-hero" }, [
+        h("img", { class: "hero-logo", src: "assets/logo.png", alt: "BeDeveloped" }),
+        h("div", {}, [
+          h(
+            "h1",
+            {},
+            "Build effective early-stage sales processes that strengthen and improve your business development function.",
+          ),
+          h(
+            "p",
+            { class: "lede" },
+            "The ten-pillar operating model BeDeveloped uses to diagnose, design and develop early-stage sales functions into repeatable revenue engines.",
+          ),
+          h("hr", { class: "hero-accent" }),
+        ]),
+        h(
+          "div",
+          { class: "quote" },
+          "“Early-stage sales is a function, not a personality. Process beats heroics, and repeatability beats charisma.”",
+        ),
       ]),
-      h("div", { class: "quote" }, "“Early-stage sales is a function, not a personality. Process beats heroics, and repeatability beats charisma.”")
-    ]));
+    );
 
     // Form side
     const form = h("div", { class: "auth-form" });
@@ -972,57 +1128,77 @@
     return wrap;
   }
 
+  // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead code or wire up call site. See runbooks/phase-4-cleanup-ledger.md
   function renderFirstRunSetup() {
     const container = h("div");
     container.appendChild(h("h2", { class: "auth-heading" }, "First-time setup"));
-    container.appendChild(h("p", { class: "auth-sub" },
-      "Create the first BeDeveloped internal account. You'll use this to sign in and to invite clients."));
+    container.appendChild(
+      h(
+        "p",
+        { class: "auth-sub" },
+        "Create the first BeDeveloped internal account. You'll use this to sign in and to invite clients.",
+      ),
+    );
 
-    const name  = h("input", { type: "text",     placeholder: "e.g. Luke Badiali" });
-    const email = h("input", { type: "email",    placeholder: "you@bedeveloped.com" });
-    const pass  = h("input", { type: "password", placeholder: "Team passphrase (shared by internal team)" });
+    const name = h("input", { type: "text", placeholder: "e.g. Luke Badiali" });
+    const email = h("input", { type: "email", placeholder: "you@bedeveloped.com" });
+    const pass = h("input", {
+      type: "password",
+      placeholder: "Team passphrase (shared by internal team)",
+    });
 
     const errBox = h("div");
 
-    const submit = h("button", {
-      class: "auth-submit",
-      onclick: async () => {
-        errBox.innerHTML = "";
-        if (!name.value.trim() || !email.value.trim() || pass.value.length < 4) {
-          errBox.appendChild(h("div", { class: "auth-error" },
-            "Please complete all fields. Passphrase must be at least 4 characters."));
-          return;
-        }
-        await setInternalPassphrase(pass.value);
-        const user = {
-          id: uid("u_"),
-          email: email.value.trim(),
-          name: name.value.trim(),
-          role: "internal",
-          createdAt: iso()
-        };
-        upsertUser(user);
-        signIn(user.id);
-        render();
-      }
-    }, "Create account");
+    const submit = h(
+      "button",
+      {
+        class: "auth-submit",
+        onclick: async () => {
+          errBox.innerHTML = "";
+          if (!name.value.trim() || !email.value.trim() || pass.value.length < 4) {
+            errBox.appendChild(
+              h(
+                "div",
+                { class: "auth-error" },
+                "Please complete all fields. Passphrase must be at least 4 characters.",
+              ),
+            );
+            return;
+          }
+          await setInternalPassphrase(pass.value);
+          const user = {
+            id: uid("u_"),
+            email: email.value.trim(),
+            name: name.value.trim(),
+            role: "internal",
+            createdAt: iso(),
+          };
+          upsertUser(user);
+          signIn(user.id);
+          render();
+        },
+      },
+      "Create account",
+    );
 
     [
       ["Your name", name],
       ["Email", email],
-      ["Team passphrase", pass]
+      ["Team passphrase", pass],
     ].forEach(([lbl, input]) => {
-      container.appendChild(h("div", { class: "auth-field" }, [
-        h("label", {}, lbl),
-        input
-      ]));
+      container.appendChild(h("div", { class: "auth-field" }, [h("label", {}, lbl), input]));
     });
 
     container.appendChild(errBox);
     container.appendChild(submit);
 
-    container.appendChild(h("div", { class: "auth-help" },
-      "The team passphrase is shared by all BeDeveloped internal team members. Client accounts you invite later will log in with their email only — they won't see this side of the app."));
+    container.appendChild(
+      h(
+        "div",
+        { class: "auth-help" },
+        "The team passphrase is shared by all BeDeveloped internal team members. Client accounts you invite later will log in with their email only — they won't see this side of the app.",
+      ),
+    );
 
     return container;
   }
@@ -1031,31 +1207,59 @@
     const container = h("div");
 
     const tabs = h("div", { class: "auth-tabs" }, [
-      h("button", {
-        class: state.authTab === "client" ? "active" : "",
-        onclick: () => { state.authTab = "client"; state.authError = ""; render(); }
-      }, "Client"),
-      h("button", {
-        class: state.authTab === "internal" ? "active" : "",
-        onclick: () => { state.authTab = "internal"; state.authError = ""; render(); }
-      }, "Internal team")
+      h(
+        "button",
+        {
+          class: state.authTab === "client" ? "active" : "",
+          onclick: () => {
+            state.authTab = "client";
+            state.authError = "";
+            render();
+          },
+        },
+        "Client",
+      ),
+      h(
+        "button",
+        {
+          class: state.authTab === "internal" ? "active" : "",
+          onclick: () => {
+            state.authTab = "internal";
+            state.authError = "";
+            render();
+          },
+        },
+        "Internal team",
+      ),
     ]);
     container.appendChild(tabs);
 
     if (state.authTab === "client") {
       container.appendChild(h("h2", { class: "auth-heading" }, "Client sign-in"));
-      container.appendChild(h("p", { class: "auth-sub" },
-        "Sign in with the email your BeDeveloped contact used to invite you, your company passphrase, and your personal password."));
+      container.appendChild(
+        h(
+          "p",
+          { class: "auth-sub" },
+          "Sign in with the email your BeDeveloped contact used to invite you, your company passphrase, and your personal password.",
+        ),
+      );
 
-      const email   = h("input", { type: "email",    placeholder: "you@company.com" });
-      const team    = h("input", { type: "password", placeholder: "Company passphrase (shared)" });
-      const pass    = h("input", { type: "password", placeholder: "Your password" });
-      const passConfirm = h("input", { type: "password", placeholder: "Confirm password (first sign-in only)", style: "display:none;" });
-      const errBox  = h("div");
+      const email = h("input", { type: "email", placeholder: "you@company.com" });
+      const team = h("input", { type: "password", placeholder: "Company passphrase (shared)" });
+      const pass = h("input", { type: "password", placeholder: "Your password" });
+      const passConfirm = h("input", {
+        type: "password",
+        placeholder: "Confirm password (first sign-in only)",
+        style: "display:none;",
+      });
+      const errBox = h("div");
       if (state.authError) errBox.appendChild(h("div", { class: "auth-error" }, state.authError));
 
-      const hint = h("div", { class: "auth-help", style: "margin-top:0; padding-top:0; border:0;" },
-        "First time signing in? Fill in your email + company passphrase, then set a password below. It'll be remembered next time.");
+      const hint = h(
+        "div",
+        { class: "auth-help", style: "margin-top:0; padding-top:0; border:0;" },
+        "First time signing in? Fill in your email + company passphrase, then set a password below. It'll be remembered next time.",
+      );
 
       // Show/hide the confirm field based on whether the entered email belongs to a fresh user
       const updateFirstRunUI = () => {
@@ -1071,68 +1275,97 @@
         state.authError = "";
         const u = findUserByEmail(email.value);
         if (!u || u.role !== "client") {
-          state.authError = "We don't have a client account for that email. Ask your BeDeveloped contact to invite you.";
-          render(); return;
+          state.authError =
+            "We don't have a client account for that email. Ask your BeDeveloped contact to invite you.";
+          render();
+          return;
         }
         if (!u.orgId) {
-          state.authError = "Your client account isn't linked to an organisation yet. Contact BeDeveloped.";
-          render(); return;
+          state.authError =
+            "Your client account isn't linked to an organisation yet. Contact BeDeveloped.";
+          render();
+          return;
         }
         if (!orgHasClientPassphrase(u.orgId)) {
-          state.authError = "Your organisation hasn't finished sign-in setup yet. Contact your BeDeveloped lead.";
-          render(); return;
+          state.authError =
+            "Your organisation hasn't finished sign-in setup yet. Contact your BeDeveloped lead.";
+          render();
+          return;
         }
         const okTeam = await verifyOrgClientPassphrase(u.orgId, team.value);
         if (!okTeam) {
-          state.authError = "Company passphrase didn't match. Ask your BeDeveloped contact for the current one.";
-          render(); return;
+          state.authError =
+            "Company passphrase didn't match. Ask your BeDeveloped contact for the current one.";
+          render();
+          return;
         }
         if (!u.passwordHash) {
           // First sign-in — password in "pass" field is a new password being set.
           if (pass.value.length < 4) {
             state.authError = "Choose a password of at least 4 characters.";
-            render(); return;
+            render();
+            return;
           }
           if (pass.value !== passConfirm.value) {
             state.authError = "Password and confirmation don't match.";
-            render(); return;
+            render();
+            return;
           }
           await setUserPassword(u.id, pass.value);
         } else {
           const okPass = await verifyUserPassword(u.id, pass.value);
           if (!okPass) {
-            state.authError = "Password didn't match. Contact your BeDeveloped lead if you've forgotten it.";
-            render(); return;
+            state.authError =
+              "Password didn't match. Contact your BeDeveloped lead if you've forgotten it.";
+            render();
+            return;
           }
         }
         signIn(u.id);
         state.route = "dashboard";
         render();
       };
-      [email, team, pass, passConfirm].forEach(el =>
-        el.addEventListener("keydown", e => { if (e.key === "Enter") doClientLogin(); })
+      [email, team, pass, passConfirm].forEach((el) =>
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") doClientLogin();
+        }),
       );
 
-      [["Email", email], ["Company passphrase", team], ["Password", pass]].forEach(([lbl, input]) => {
-        container.appendChild(h("div", { class: "auth-field" }, [
-          h("label", {}, lbl),
-          input
-        ]));
+      [
+        ["Email", email],
+        ["Company passphrase", team],
+        ["Password", pass],
+      ].forEach(([lbl, input]) => {
+        container.appendChild(h("div", { class: "auth-field" }, [h("label", {}, lbl), input]));
       });
-      container.appendChild(h("div", { class: "auth-field", style: "margin-top:-6px;" }, [passConfirm]));
+      container.appendChild(
+        h("div", { class: "auth-field", style: "margin-top:-6px;" }, [passConfirm]),
+      );
       container.appendChild(hint);
       container.appendChild(errBox);
-      container.appendChild(h("button", { class: "auth-submit", onclick: doClientLogin }, "Sign in"));
+      container.appendChild(
+        h("button", { class: "auth-submit", onclick: doClientLogin }, "Sign in"),
+      );
 
-      container.appendChild(h("div", { class: "auth-help" },
-        "Clients only see their own company's data. If your email or passphrase isn't working, ask your BeDeveloped contact."));
+      container.appendChild(
+        h(
+          "div",
+          { class: "auth-help" },
+          "Clients only see their own company's data. If your email or passphrase isn't working, ask your BeDeveloped contact.",
+        ),
+      );
     } else {
       container.appendChild(h("h2", { class: "auth-heading" }, "Internal sign-in"));
-      container.appendChild(h("p", { class: "auth-sub" },
-        "BeDeveloped team members. Enter your work email and the team password."));
+      container.appendChild(
+        h(
+          "p",
+          { class: "auth-sub" },
+          "BeDeveloped team members. Enter your work email and the team password.",
+        ),
+      );
 
-      const email = h("input", { type: "email",    placeholder: "you@bedeveloped.com" });
-      const pass  = h("input", { type: "password", placeholder: "Team password" });
+      const email = h("input", { type: "email", placeholder: "you@bedeveloped.com" });
+      const pass = h("input", { type: "password", placeholder: "Team password" });
       const errBox = h("div");
       if (state.authError) errBox.appendChild(h("div", { class: "auth-error" }, state.authError));
 
@@ -1140,17 +1373,20 @@
         state.authError = "";
         if (!isAllowedInternalEmail(email.value)) {
           state.authError = "That email isn't on the internal allowlist. Contact Luke to be added.";
-          render(); return;
+          render();
+          return;
         }
         const ok = await verifyInternalPassword(pass.value);
         if (!ok) {
           state.authError = "Password didn't match. Ask another team member for the current one.";
-          render(); return;
+          render();
+          return;
         }
         let u = findUserByEmail(email.value);
         if (u && u.role !== "internal") {
           state.authError = "That email is registered as a client.";
-          render(); return;
+          render();
+          return;
         }
         if (!u) {
           u = {
@@ -1158,7 +1394,7 @@
             email: email.value.trim().toLowerCase(),
             name: email.value.split("@")[0],
             role: "internal",
-            createdAt: iso()
+            createdAt: iso(),
           };
           upsertUser(u);
         }
@@ -1166,20 +1402,31 @@
         state.route = "dashboard";
         render();
       };
-      pass.addEventListener("keydown", e => { if (e.key === "Enter") doInternalLogin(); });
-      email.addEventListener("keydown", e => { if (e.key === "Enter") doInternalLogin(); });
+      pass.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") doInternalLogin();
+      });
+      email.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") doInternalLogin();
+      });
 
-      [["Email", email], ["Team password", pass]].forEach(([lbl, input]) => {
-        container.appendChild(h("div", { class: "auth-field" }, [
-          h("label", {}, lbl),
-          input
-        ]));
+      [
+        ["Email", email],
+        ["Team password", pass],
+      ].forEach(([lbl, input]) => {
+        container.appendChild(h("div", { class: "auth-field" }, [h("label", {}, lbl), input]));
       });
       container.appendChild(errBox);
-      container.appendChild(h("button", { class: "auth-submit", onclick: doInternalLogin }, "Sign in"));
+      container.appendChild(
+        h("button", { class: "auth-submit", onclick: doInternalLogin }, "Sign in"),
+      );
 
-      container.appendChild(h("div", { class: "auth-help" },
-        "Access is limited to the BeDeveloped internal team. You can invite clients after signing in."));
+      container.appendChild(
+        h(
+          "div",
+          { class: "auth-help" },
+          "Access is limited to the BeDeveloped internal team. You can invite clients after signing in.",
+        ),
+      );
     }
 
     return container;
@@ -1192,22 +1439,33 @@
     if (user.role === "client") {
       return h("div", { class: "card", style: "text-align:center; padding:48px;" }, [
         h("h2", { style: "margin-top:0;" }, "No organisation assigned"),
-        h("p", { style: "color: var(--ink-3); max-width:480px; margin: 0 auto;" },
-          "Your client account isn't linked to an organisation yet. Please contact your BeDeveloped team lead to finish setup.")
+        h(
+          "p",
+          { style: "color: var(--ink-3); max-width:480px; margin: 0 auto;" },
+          "Your client account isn't linked to an organisation yet. Please contact your BeDeveloped team lead to finish setup.",
+        ),
       ]);
     }
     return h("div", { class: "card", style: "text-align:center; padding:48px;" }, [
       h("h2", { style: "margin-top:0; font-size: 28px;" }, "Create your first client engagement"),
-      h("p", { style: "color: var(--ink-3); max-width: 520px; margin: 0 auto 20px;" },
-        "Start by adding an organisation. Then you can invite their team to complete The Base Layers diagnostic."),
-      h("button", {
-        class: "btn",
-        onclick: () => promptText("New organisation", "e.g. Acme Ltd", (name) => {
-          const org = createOrg(name);
-          state.orgId = org.id;
-          render();
-        })
-      }, "+ Create organisation")
+      h(
+        "p",
+        { style: "color: var(--ink-3); max-width: 520px; margin: 0 auto 20px;" },
+        "Start by adding an organisation. Then you can invite their team to complete The Base Layers diagnostic.",
+      ),
+      h(
+        "button",
+        {
+          class: "btn",
+          onclick: () =>
+            promptText("New organisation", "e.g. Acme Ltd", (name) => {
+              const org = createOrg(name);
+              state.orgId = org.id;
+              render();
+            }),
+        },
+        "+ Create organisation",
+      ),
     ]);
   }
 
@@ -1223,40 +1481,66 @@
     const prevRound = prevRoundId ? roundById(org, prevRoundId) : null;
 
     const respondents = respondentsForRound(org, org.currentRoundId);
-    const respUsers = respondents.map(id => findUser(id)).filter(Boolean);
+    const respUsers = respondents.map((id) => findUser(id)).filter(Boolean);
 
     // Internal-only: alert banner for unread client chat messages across all orgs
     if (user.role === "internal") {
       const unreadChat = unreadChatTotal(user);
       if (unreadChat > 0) {
-        frag.appendChild(h("div", {
-          style: "display:flex; align-items:center; gap:14px; padding:12px 16px; margin-bottom:16px; background: var(--red-bg); border:1px solid var(--red); border-radius: 10px;"
-        }, [
-          h("div", {
-            style: "min-width:32px; height:32px; border-radius:50%; background: var(--red); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;"
-          }, String(unreadChat)),
-          h("div", { style: "flex:1; color: var(--ink);" }, [
-            h("div", { style: "font-weight:600;" },
-              `${unreadChat} unread client message${unreadChat === 1 ? "" : "s"}`),
-            h("div", { style: "font-size:12.5px; color: var(--ink-3);" },
-              "Across every client channel - click through to respond.")
-          ]),
-          h("button", {
-            class: "btn sm",
-            onclick: () => setRoute("chat")
-          }, "Open chat")
-        ]));
+        frag.appendChild(
+          h(
+            "div",
+            {
+              style:
+                "display:flex; align-items:center; gap:14px; padding:12px 16px; margin-bottom:16px; background: var(--red-bg); border:1px solid var(--red); border-radius: 10px;",
+            },
+            [
+              h(
+                "div",
+                {
+                  style:
+                    "min-width:32px; height:32px; border-radius:50%; background: var(--red); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;",
+                },
+                String(unreadChat),
+              ),
+              h("div", { style: "flex:1; color: var(--ink);" }, [
+                h(
+                  "div",
+                  { style: "font-weight:600;" },
+                  `${unreadChat} unread client message${unreadChat === 1 ? "" : "s"}`,
+                ),
+                h(
+                  "div",
+                  { style: "font-size:12.5px; color: var(--ink-3);" },
+                  "Across every client channel - click through to respond.",
+                ),
+              ]),
+              h(
+                "button",
+                {
+                  class: "btn sm",
+                  onclick: () => setRoute("chat"),
+                },
+                "Open chat",
+              ),
+            ],
+          ),
+        );
       }
     }
 
     // Heading
     frag.appendChild(h("h1", { class: "view-title" }, org.name));
 
-    frag.appendChild(h("p", { class: "view-sub" },
-      summary.scoredCount === 0
-        ? "No diagnostics completed yet. Start scoring a pillar to see The Base Layers view."
-        : `Scored ${summary.scoredCount} of ${DATA.pillars.length} pillars. Overall health ${summary.avg ?? "—"} / 100.`
-    ));
+    frag.appendChild(
+      h(
+        "p",
+        { class: "view-sub" },
+        summary.scoredCount === 0
+          ? "No diagnostics completed yet. Start scoring a pillar to see The Base Layers view."
+          : `Scored ${summary.scoredCount} of ${DATA.pillars.length} pillars. Overall health ${summary.avg ?? "—"} / 100.`,
+      ),
+    );
 
     // Round bar
     frag.appendChild(renderRoundBar(user, org, currentRound, prevRound, respUsers));
@@ -1277,11 +1561,11 @@
     sumCard.appendChild(h("h3", {}, "Health summary"));
     const grid = h("div", { class: "summary-grid" }, [
       summaryCell("Overall", summary.avg !== null ? `${summary.avg}` : "—", "overall"),
-      summaryCell("Red",   summary.red,   "red"),
+      summaryCell("Red", summary.red, "red"),
       summaryCell("Amber", summary.amber, "amber"),
       summaryCell("Green", summary.green, "green"),
       summaryCell("Not scored", summary.gray, "gray"),
-      summaryCell("Pillars", `${summary.scoredCount}/${DATA.pillars.length}`, "count")
+      summaryCell("Pillars", `${summary.scoredCount}/${DATA.pillars.length}`, "count"),
     ]);
     sumCard.appendChild(grid);
 
@@ -1289,14 +1573,21 @@
       const tc = h("div", { class: "top-constraints" });
       tc.appendChild(h("h3", {}, "Top constraints"));
       const ol = h("ol");
-      constraints.forEach(p => {
+      constraints.forEach((p) => {
         const s = pillarScore(org, p.id);
         const li = h("li", {}, [
-          h("a", {
-            href: "#",
-            onclick: (e) => { e.preventDefault(); setRoute("pillar:" + p.id); }
-          }, p.name),
-          ` — ${s}/100`
+          h(
+            "a",
+            {
+              href: "#",
+              onclick: (e) => {
+                e.preventDefault();
+                setRoute("pillar:" + p.id);
+              },
+            },
+            p.name,
+          ),
+          ` — ${s}/100`,
         ]);
         ol.appendChild(li);
       });
@@ -1307,22 +1598,33 @@
     frag.appendChild(dashTop);
 
     // Tiles (accordion — click to expand in place)
-    const tilesHeader = h("div", { style: "display:flex; justify-content:space-between; align-items:baseline; margin-top:28px; margin-bottom:10px;" }, [
-      h("h2", { style: "margin:0;" }, "The ten pillars"),
-      h("button", {
-        class: "btn ghost sm",
-        style: "border-color:var(--line); color:var(--ink-3);",
-        onclick: () => {
-          if (state.expandedPillars.size === DATA.pillars.length) state.expandedPillars.clear();
-          else DATA.pillars.forEach(p => state.expandedPillars.add(p.id));
-          render();
-        }
-      }, state.expandedPillars.size === DATA.pillars.length ? "Collapse all" : "Expand all")
-    ]);
+    const tilesHeader = h(
+      "div",
+      {
+        style:
+          "display:flex; justify-content:space-between; align-items:baseline; margin-top:28px; margin-bottom:10px;",
+      },
+      [
+        h("h2", { style: "margin:0;" }, "The ten pillars"),
+        h(
+          "button",
+          {
+            class: "btn ghost sm",
+            style: "border-color:var(--line); color:var(--ink-3);",
+            onclick: () => {
+              if (state.expandedPillars.size === DATA.pillars.length) state.expandedPillars.clear();
+              else DATA.pillars.forEach((p) => state.expandedPillars.add(p.id));
+              render();
+            },
+          },
+          state.expandedPillars.size === DATA.pillars.length ? "Collapse all" : "Expand all",
+        ),
+      ],
+    );
     frag.appendChild(tilesHeader);
 
     const tiles = h("div", { class: "tiles" });
-    DATA.pillars.forEach(p => {
+    DATA.pillars.forEach((p) => {
       const s = pillarScore(org, p.id);
       const prevS = prevRoundId ? pillarScoreForRound(org, prevRoundId, p.id) : null;
       const status = pillarStatus(s);
@@ -1336,7 +1638,7 @@
           if (isOpen) state.expandedPillars.delete(p.id);
           else state.expandedPillars.add(p.id);
           render();
-        }
+        },
       });
       tile.appendChild(h("div", { class: "num" }, `PILLAR ${p.id}`));
       tile.appendChild(h("div", { class: "name" }, p.name));
@@ -1352,25 +1654,33 @@
         const d = s - prevS;
         const cls = d > 0 ? "delta-up" : d < 0 ? "delta-down" : "delta-same";
         const arrow = d > 0 ? "▲" : d < 0 ? "▼" : "=";
-        scoreWrap.appendChild(h("span", { class: cls, style: "font-size:12px;" },
-          `${arrow} ${Math.abs(d)}`));
+        scoreWrap.appendChild(
+          h("span", { class: cls, style: "font-size:12px;" }, `${arrow} ${Math.abs(d)}`),
+        );
       }
       foot.appendChild(scoreWrap);
 
       const rightFoot = h("div", { style: "display:flex; align-items:center; gap:8px;" });
-      rightFoot.appendChild(h("span", { class: `badge ${status}` },
-        statusLabel(status, done, total)));
-      rightFoot.appendChild(h("button", {
-        class: "tile-toggle",
-        "aria-label": isOpen ? "Collapse pillar" : "Expand pillar",
-        title: isOpen ? "Collapse" : "Expand",
-        onclick: (e) => {
-          e.stopPropagation();
-          if (isOpen) state.expandedPillars.delete(p.id);
-          else state.expandedPillars.add(p.id);
-          render();
-        }
-      }, "▾"));
+      rightFoot.appendChild(
+        h("span", { class: `badge ${status}` }, statusLabel(status, done, total)),
+      );
+      rightFoot.appendChild(
+        h(
+          "button",
+          {
+            class: "tile-toggle",
+            "aria-label": isOpen ? "Collapse pillar" : "Expand pillar",
+            title: isOpen ? "Collapse" : "Expand",
+            onclick: (e) => {
+              e.stopPropagation();
+              if (isOpen) state.expandedPillars.delete(p.id);
+              else state.expandedPillars.add(p.id);
+              render();
+            },
+          },
+          "▾",
+        ),
+      );
       foot.appendChild(rightFoot);
       tile.appendChild(foot);
 
@@ -1378,16 +1688,27 @@
       if (isOpen) {
         const exp = h("div", { class: "tile-expansion", onclick: (e) => e.stopPropagation() });
         exp.appendChild(h("p", { class: "exp-desc" }, p.dashDescription || p.overview));
-        exp.appendChild(h("div", { class: "exp-achieve" }, [
-          h("span", { class: "exp-achieve-label" }, "What we're trying to achieve "),
-          h("span", {}, p.dashAchieve || "")
-        ]));
-        exp.appendChild(h("div", { class: "exp-actions" }, [
-          h("button", {
-            class: "btn sm secondary",
-            onclick: (e) => { e.stopPropagation(); setRoute("pillar:" + p.id); }
-          }, "Open full diagnostic →")
-        ]));
+        exp.appendChild(
+          h("div", { class: "exp-achieve" }, [
+            h("span", { class: "exp-achieve-label" }, "What we're trying to achieve "),
+            h("span", {}, p.dashAchieve || ""),
+          ]),
+        );
+        exp.appendChild(
+          h("div", { class: "exp-actions" }, [
+            h(
+              "button",
+              {
+                class: "btn sm secondary",
+                onclick: (e) => {
+                  e.stopPropagation();
+                  setRoute("pillar:" + p.id);
+                },
+              },
+              "Open full diagnostic →",
+            ),
+          ]),
+        );
         tile.appendChild(exp);
       }
 
@@ -1413,7 +1734,7 @@
       "Improved execution speed by eliminating ambiguity, duplication and rework",
       "Scalable processes that do not rely on individual heroics or a handful of relationships",
       "Commercial decision-making supported by data and insight, not instinct alone",
-      "Governance structures that maintain discipline and quality as the organisation scales"
+      "Governance structures that maintain discipline and quality as the organisation scales",
     ];
     const isOpen = state.expandedPillars.has("opex");
     const tile = h("div", {
@@ -1422,35 +1743,51 @@
         if (isOpen) state.expandedPillars.delete("opex");
         else state.expandedPillars.add("opex");
         render();
-      }
+      },
     });
     tile.appendChild(h("div", { class: "num" }, "PERFORMANCE LAYER"));
     tile.appendChild(h("div", { class: "name" }, "Operational Excellence"));
     if (!isOpen) {
-      tile.appendChild(h("div", { class: "tag" },
-        "Underpins the ten pillars to ensure clarity and coaching is developed, not just strategy and theory. Ensures early-stage sales is implemented, adopted and sustained, not treated as a one-off initiative or leadership push."));
+      tile.appendChild(
+        h(
+          "div",
+          { class: "tag" },
+          "Underpins the ten pillars to ensure clarity and coaching is developed, not just strategy and theory. Ensures early-stage sales is implemented, adopted and sustained, not treated as a one-off initiative or leadership push.",
+        ),
+      );
     }
 
     const foot = h("div", { class: "foot", style: "justify-content: flex-end;" });
-    foot.appendChild(h("button", {
-      class: "tile-toggle",
-      "aria-label": isOpen ? "Collapse" : "Expand",
-      title: isOpen ? "Collapse" : "Expand",
-      onclick: (e) => {
-        e.stopPropagation();
-        if (isOpen) state.expandedPillars.delete("opex");
-        else state.expandedPillars.add("opex");
-        render();
-      }
-    }, "▾"));
+    foot.appendChild(
+      h(
+        "button",
+        {
+          class: "tile-toggle",
+          "aria-label": isOpen ? "Collapse" : "Expand",
+          title: isOpen ? "Collapse" : "Expand",
+          onclick: (e) => {
+            e.stopPropagation();
+            if (isOpen) state.expandedPillars.delete("opex");
+            else state.expandedPillars.add("opex");
+            render();
+          },
+        },
+        "▾",
+      ),
+    );
     tile.appendChild(foot);
 
     if (isOpen) {
       const exp = h("div", { class: "tile-expansion", onclick: (e) => e.stopPropagation() });
-      exp.appendChild(h("p", { class: "exp-desc" },
-        "Underpins the ten pillars to ensure clarity and coaching is developed, not just strategy and theory. Ensures early-stage sales is implemented, adopted and sustained, not treated as a one-off initiative or leadership push."));
+      exp.appendChild(
+        h(
+          "p",
+          { class: "exp-desc" },
+          "Underpins the ten pillars to ensure clarity and coaching is developed, not just strategy and theory. Ensures early-stage sales is implemented, adopted and sustained, not treated as a one-off initiative or leadership push.",
+        ),
+      );
       const ul = h("ul", { class: "opex-list" });
-      points.forEach(p => ul.appendChild(h("li", {}, p)));
+      points.forEach((p) => ul.appendChild(h("li", {}, p)));
       exp.appendChild(ul);
       tile.appendChild(exp);
     }
@@ -1459,11 +1796,12 @@
 
   function answerSummaryForPillar(org, pillarId) {
     const byUser = (org.responses || {})[org.currentRoundId] || {};
-    let done = 0, total = 0;
-    Object.values(byUser).forEach(perPillar => {
+    let done = 0,
+      total = 0;
+    Object.values(byUser).forEach((perPillar) => {
       const qs = (perPillar || {})[pillarId] || {};
-      total += DATA.pillars.find(p => p.id === pillarId).diagnostics.length;
-      done  += Object.values(qs).filter(r => Number.isFinite(r.score)).length;
+      total += DATA.pillars.find((p) => p.id === pillarId).diagnostics.length;
+      done += Object.values(qs).filter((r) => Number.isFinite(r.score)).length;
     });
     return { done, total };
   }
@@ -1472,47 +1810,70 @@
     const bar = h("div", { class: "round-bar" });
     const label = h("div", { class: "round-label" });
 
-    label.appendChild(h("span", { class: "round-pill" }, currentRound ? currentRound.label : "Round 1"));
-    label.appendChild(h("span", { class: "round-meta" },
-      `started ${formatDate(currentRound?.createdAt)}`));
+    label.appendChild(
+      h("span", { class: "round-pill" }, currentRound ? currentRound.label : "Round 1"),
+    );
+    label.appendChild(
+      h("span", { class: "round-meta" }, `started ${formatDate(currentRound?.createdAt)}`),
+    );
 
     if (respUsers.length) {
-      const stack = h("span", { class: "respondent-stack", style: "display:inline-flex; margin-left:10px;" });
-      respUsers.slice(0, 5).forEach(u => {
-        stack.appendChild(h("span", { class: "avatar", title: u.name || u.email },
-          initials(u.name || u.email)));
+      const stack = h("span", {
+        class: "respondent-stack",
+        style: "display:inline-flex; margin-left:10px;",
+      });
+      respUsers.slice(0, 5).forEach((u) => {
+        stack.appendChild(
+          h("span", { class: "avatar", title: u.name || u.email }, initials(u.name || u.email)),
+        );
       });
       label.appendChild(stack);
-      label.appendChild(h("span", { class: "respondents-chip" },
-        `${respUsers.length} respondent${respUsers.length === 1 ? "" : "s"}`));
+      label.appendChild(
+        h(
+          "span",
+          { class: "respondents-chip" },
+          `${respUsers.length} respondent${respUsers.length === 1 ? "" : "s"}`,
+        ),
+      );
     } else {
       label.appendChild(h("span", { class: "respondents-chip" }, "No respondents yet"));
     }
 
     if (prevRound) {
-      label.appendChild(h("span", { class: "round-meta", style: "margin-left:10px;" },
-        `· previous: ${prevRound.label}`));
+      label.appendChild(
+        h(
+          "span",
+          { class: "round-meta", style: "margin-left:10px;" },
+          `· previous: ${prevRound.label}`,
+        ),
+      );
     }
 
     bar.appendChild(label);
 
     const actions = h("div", { class: "round-bar-actions" });
     if (!isClientView(user)) {
-      actions.appendChild(h("button", {
-        class: "btn secondary",
-        onclick: () => {
-          confirmDialog(
-            "Start new assessment round?",
-            `This locks in "${currentRound?.label || "the current round"}" as a historic snapshot and opens a fresh round so the team can retake the diagnostic. Progress against the previous round will appear on the dashboard.`,
-            () => {
-              const org2 = loadOrg(org.id);
-              startNewRound(org2);
-              render();
+      actions.appendChild(
+        h(
+          "button",
+          {
+            class: "btn secondary",
+            onclick: () => {
+              confirmDialog(
+                "Start new assessment round?",
+                `This locks in "${currentRound?.label || "the current round"}" as a historic snapshot and opens a fresh round so the team can retake the diagnostic. Progress against the previous round will appear on the dashboard.`,
+                () => {
+                  const org2 = loadOrg(org.id);
+                  startNewRound(org2);
+                  render();
+                },
+                "Start new round",
+              );
             },
-            "Start new round"
-          );
-        }
-      }, "+ Start new round"));
+          },
+          "+ Start new round",
+        ),
+      );
     }
     bar.appendChild(actions);
     return bar;
@@ -1521,7 +1882,7 @@
   function summaryCell(label, value, cls) {
     return h("div", { class: `summary-cell ${cls}` }, [
       h("div", { class: "label" }, label),
-      h("div", { class: "value" }, String(value ?? "—"))
+      h("div", { class: "value" }, String(value ?? "—")),
     ]);
   }
 
@@ -1531,16 +1892,19 @@
   }
 
   function drawRadar(org, prevRoundId) {
-    if (!window.Chart) { setTimeout(() => drawRadar(org, prevRoundId), 120); return; }
+    if (!window.Chart) {
+      setTimeout(() => drawRadar(org, prevRoundId), 120);
+      return;
+    }
     const canvas = $("#radar");
     if (!canvas) return;
 
-    const labels = DATA.pillars.map(p => p.shortName || p.name);
-    const curr = DATA.pillars.map(p => pillarScore(org, p.id) ?? 0);
+    const labels = DATA.pillars.map((p) => p.shortName || p.name);
+    const curr = DATA.pillars.map((p) => pillarScore(org, p.id) ?? 0);
 
     const datasets = [];
     if (prevRoundId) {
-      const prev = DATA.pillars.map(p => pillarScoreForRound(org, prevRoundId, p.id) ?? 0);
+      const prev = DATA.pillars.map((p) => pillarScoreForRound(org, prevRoundId, p.id) ?? 0);
       datasets.push({
         label: "Previous",
         data: prev,
@@ -1550,7 +1914,7 @@
         borderWidth: 1.5,
         borderDash: [4, 4],
         pointRadius: 2,
-        pointBackgroundColor: "#ED7D31"
+        pointBackgroundColor: "#ED7D31",
       });
     }
     datasets.push({
@@ -1561,7 +1925,7 @@
       borderColor: "rgba(87,158,192,1)",
       borderWidth: 2.5,
       pointRadius: 3,
-      pointBackgroundColor: "#579EC0"
+      pointBackgroundColor: "#579EC0",
     });
 
     state.chart = new Chart(canvas.getContext("2d"), {
@@ -1572,19 +1936,24 @@
         maintainAspectRatio: false,
         plugins: {
           legend: { display: !!prevRoundId, position: "bottom", labels: { font: { size: 11 } } },
-          tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.r}/100` } }
+          tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.r}/100` } },
         },
         scales: {
           r: {
             suggestedMin: 0,
             suggestedMax: 100,
-            ticks: { stepSize: 20, color: "#8a94a7", backdropColor: "rgba(0,0,0,0)", font: { size: 10 } },
+            ticks: {
+              stepSize: 20,
+              color: "#8a94a7",
+              backdropColor: "rgba(0,0,0,0)",
+              font: { size: 10 },
+            },
             grid: { color: "#e3e6ee" },
             angleLines: { color: "#e3e6ee" },
-            pointLabels: { font: { size: 11, family: "Inter" }, color: "#303849" }
-          }
-        }
-      }
+            pointLabels: { font: { size: 11, family: "Inter" }, color: "#303849" },
+          },
+        },
+      },
     });
   }
 
@@ -1594,59 +1963,90 @@
   function renderDiagnosticIndex(user, org) {
     const frag = h("div");
     frag.appendChild(h("h1", { class: "view-title" }, "Diagnostic"));
-    frag.appendChild(h("p", { class: "view-sub" },
-      isClientView(user)
-        ? "Score each pillar honestly against the diagnostic questions. Your responses join the team view."
-        : "Score each pillar against its diagnostic questions."));
+    frag.appendChild(
+      h(
+        "p",
+        { class: "view-sub" },
+        isClientView(user)
+          ? "Score each pillar honestly against the diagnostic questions. Your responses join the team view."
+          : "Score each pillar against its diagnostic questions.",
+      ),
+    );
 
     // Show current user's own completion if client/internal preview
     if (isClientView(user)) {
       const pct = userCompletionPct(org, org.currentRoundId, user.id);
-      frag.appendChild(h("div", {
-        style: "background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px 18px; margin-bottom:16px; display:flex; gap:14px; align-items:center;"
-      }, [
-        h("span", { class: "avatar" }, initials(user.name || user.email)),
-        h("div", { style: "flex:1;" }, [
-          h("div", { style: "font-weight:600;" }, "Your progress"),
-          h("div", { style: "color: var(--ink-3); font-size: 12px;" },
-            `${pct}% of ${DATA.pillars.length * DATA.pillars[0].diagnostics.length} questions answered`)
-        ]),
-        h("div", {
-          style: "height:8px; width:180px; background:var(--line); border-radius:999px; overflow:hidden;"
-        }, h("span", {
-          style: `display:block; height:100%; width:${pct}%; background:var(--brand);`
-        }))
-      ]));
+      frag.appendChild(
+        h(
+          "div",
+          {
+            style:
+              "background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px 18px; margin-bottom:16px; display:flex; gap:14px; align-items:center;",
+          },
+          [
+            h("span", { class: "avatar" }, initials(user.name || user.email)),
+            h("div", { style: "flex:1;" }, [
+              h("div", { style: "font-weight:600;" }, "Your progress"),
+              h(
+                "div",
+                { style: "color: var(--ink-3); font-size: 12px;" },
+                `${pct}% of ${DATA.pillars.length * DATA.pillars[0].diagnostics.length} questions answered`,
+              ),
+            ]),
+            h(
+              "div",
+              {
+                style:
+                  "height:8px; width:180px; background:var(--line); border-radius:999px; overflow:hidden;",
+              },
+              h("span", {
+                style: `display:block; height:100%; width:${pct}%; background:var(--brand);`,
+              }),
+            ),
+          ],
+        ),
+      );
     }
 
     const tiles = h("div", { class: "tiles" });
-    DATA.pillars.forEach(p => {
+    DATA.pillars.forEach((p) => {
       const s = pillarScore(org, p.id);
       const status = pillarStatus(s);
       const unread = unreadCountForPillar(org, p.id, user);
 
       // For the current user's answered state
+      // eslint-disable-next-line no-useless-assignment -- Phase 4: tighten loop control flow (initial value never read before reassignment). See runbooks/phase-4-cleanup-ledger.md
       let userDone = 0;
-      const userResp = (((org.responses || {})[org.currentRoundId] || {})[user.id] || {})[p.id] || {};
-      userDone = Object.values(userResp).filter(r => Number.isFinite(r.score)).length;
+      const userResp =
+        (((org.responses || {})[org.currentRoundId] || {})[user.id] || {})[p.id] || {};
+      userDone = Object.values(userResp).filter((r) => Number.isFinite(r.score)).length;
       const total = p.diagnostics.length;
 
       const tile = h("div", {
         class: "tile",
-        onclick: () => setRoute("pillar:" + p.id)
+        onclick: () => setRoute("pillar:" + p.id),
       });
       tile.appendChild(h("div", { class: "num" }, `PILLAR ${p.id}`));
       tile.appendChild(h("div", { class: "name" }, p.name));
-      tile.appendChild(h("div", { class: "tag" },
-        isClientView(user)
-          ? `${userDone}/${total} of your answers · team score ${s !== null ? s + "/100" : "—"}`
-          : `${userDone}/${total} of your answers · team score ${s !== null ? s + "/100" : "—"}`
-      ));
+      tile.appendChild(
+        h(
+          "div",
+          { class: "tag" },
+          isClientView(user)
+            ? `${userDone}/${total} of your answers · team score ${s !== null ? s + "/100" : "—"}`
+            : `${userDone}/${total} of your answers · team score ${s !== null ? s + "/100" : "—"}`,
+        ),
+      );
       const foot = h("div", { class: "foot" });
       foot.appendChild(h("div", { class: "score" }, s !== null ? `${s}` : "—"));
       const badgeWrap = h("div", { style: "display:flex; gap:6px; align-items:center;" });
-      if (unread > 0) badgeWrap.appendChild(h("span", { class: "count-badge", title: "Unread comments" }, unread));
-      badgeWrap.appendChild(h("span", { class: `badge ${status}` }, statusLabel(status, userDone, total)));
+      if (unread > 0)
+        badgeWrap.appendChild(
+          h("span", { class: "count-badge", title: "Unread comments" }, unread),
+        );
+      badgeWrap.appendChild(
+        h("span", { class: `badge ${status}` }, statusLabel(status, userDone, total)),
+      );
       foot.appendChild(badgeWrap);
       tile.appendChild(foot);
       tiles.appendChild(tile);
@@ -1659,7 +2059,7 @@
   // PILLAR DETAIL
   // ================================================================
   function renderPillar(user, org, pillarId) {
-    const p = DATA.pillars.find(x => x.id === pillarId);
+    const p = DATA.pillars.find((x) => x.id === pillarId);
     if (!p) return h("div", {}, "Pillar not found.");
 
     // mark comments read on load
@@ -1672,40 +2072,54 @@
     const frag = h("div");
 
     // Header
-    frag.appendChild(h("div", { class: "pillar-header" }, [
-      h("div", {}, [
-        h("button", {
-          class: "back",
-          onclick: () => setRoute("diagnostic")
-        }, "← Back to diagnostic"),
-        h("div", { class: "pillar-pill" }, `PILLAR ${p.id}`),
-        h("h1", { class: "view-title", style: "margin-top:2px;" }, p.name),
-        h("p", { class: "view-sub", style: "max-width:720px;" }, p.tagline)
+    frag.appendChild(
+      h("div", { class: "pillar-header" }, [
+        h("div", {}, [
+          h(
+            "button",
+            {
+              class: "back",
+              onclick: () => setRoute("diagnostic"),
+            },
+            "← Back to diagnostic",
+          ),
+          h("div", { class: "pillar-pill" }, `PILLAR ${p.id}`),
+          h("h1", { class: "view-title", style: "margin-top:2px;" }, p.name),
+          h("p", { class: "view-sub", style: "max-width:720px;" }, p.tagline),
+        ]),
+        h("span", { class: `badge ${status}` }, s !== null ? `${s}/100 team` : "Not scored"),
       ]),
-      h("span", { class: `badge ${status}` }, s !== null ? `${s}/100 team` : "Not scored")
-    ]));
+    );
 
     // Overview card
-    frag.appendChild(h("div", { class: "card", style: "margin-bottom:20px;" }, [
-      h("p", {}, p.overview)
-    ]));
+    frag.appendChild(
+      h("div", { class: "card", style: "margin-bottom:20px;" }, [h("p", {}, p.overview)]),
+    );
 
     const grid = h("div", { class: "pillar-grid" });
 
     // Left: diagnostic questions (user's own)
     const left = h("div");
-    left.appendChild(h("h3", {}, isClient ? "Your responses" : "Diagnostic questions (your responses)"));
+    left.appendChild(
+      h("h3", {}, isClient ? "Your responses" : "Diagnostic questions (your responses)"),
+    );
     p.diagnostics.forEach((q, idx) => {
       left.appendChild(renderQuestion(user, org, p, idx, q));
     });
 
     // Complete button - returns to the diagnostic landing
-    left.appendChild(h("div", { style: "margin-top:20px; display:flex; justify-content:flex-end;" }, [
-      h("button", {
-        class: "btn",
-        onclick: () => setRoute("diagnostic")
-      }, "Complete")
-    ]));
+    left.appendChild(
+      h("div", { style: "margin-top:20px; display:flex; justify-content:flex-end;" }, [
+        h(
+          "button",
+          {
+            class: "btn",
+            onclick: () => setRoute("diagnostic"),
+          },
+          "Complete",
+        ),
+      ]),
+    );
 
     // Team average (if more than self-has-answered)
     const teamPanel = renderTeamResponses(user, org, p);
@@ -1718,40 +2132,81 @@
     right.appendChild(renderScoreBlock(org, p));
     right.appendChild(sidePanel("Objectives", p.objectives));
     right.appendChild(sidePanel("Components", p.components));
-    right.appendChild(sidePanel("Outcomes",   p.outcomes));
+    right.appendChild(sidePanel("Outcomes", p.outcomes));
     if (!isClient) right.appendChild(sidePanel("What we do (internal)", p.whatWeDo, true));
 
     // Pillar-specific actions
     const filteredActions = (org.actions || [])
-      .filter(a => a.pillarId === p.id)
-      .filter(a => !isClient || !a.internal);
-    const openActions = filteredActions.filter(a => !a.done);
-    const completedActions = filteredActions.filter(a => a.done);
+      .filter((a) => a.pillarId === p.id)
+      .filter((a) => !isClient || !a.internal);
+    const openActions = filteredActions.filter((a) => !a.done);
+    const completedActions = filteredActions.filter((a) => a.done);
 
-    const actionsPanel = h("div", { class: "side-panel" }, [
-      h("div", { style: "display:flex; justify-content:space-between; align-items:center;" }, [
-        h("h3", { style: "margin:0;" }, "Actions"),
-        h("button", {
-          class: "btn sm",
-          onclick: () => promptText("New action", "e.g. Validate ICP with closed-won data",
-            (title) => { addAction(user.id, p.id, title); render(); })
-        }, "+ Add")
-      ]),
-      filteredActions.length === 0
-        ? h("p", { style: "color: var(--ink-3); font-size:13px; margin-top:10px;" }, "No actions yet.")
-        : openActions.length === 0
-          ? h("p", { style: "color: var(--ink-3); font-size:13px; margin-top:10px;" }, "No open actions.")
-          : h("ul", {}, openActions.map(a => h("li", {}, a.title))),
-      completedActions.length
-        ? h("div", { style: "margin-top:14px; padding-top:10px; border-top: 1px solid var(--line);" }, [
-            h("div", {
-              style: "font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color: var(--ink-3); margin-bottom:6px;"
-            }, `Completed (${completedActions.length})`),
-            h("ul", { style: "margin:0;" }, completedActions.map(a =>
-              h("li", { style: "text-decoration:line-through; color: var(--ink-4);" }, a.title)))
-          ])
-        : null
-    ].filter(Boolean));
+    const actionsPanel = h(
+      "div",
+      { class: "side-panel" },
+      [
+        h("div", { style: "display:flex; justify-content:space-between; align-items:center;" }, [
+          h("h3", { style: "margin:0;" }, "Actions"),
+          h(
+            "button",
+            {
+              class: "btn sm",
+              onclick: () =>
+                promptText("New action", "e.g. Validate ICP with closed-won data", (title) => {
+                  addAction(user.id, p.id, title);
+                  render();
+                }),
+            },
+            "+ Add",
+          ),
+        ]),
+        filteredActions.length === 0
+          ? h(
+              "p",
+              { style: "color: var(--ink-3); font-size:13px; margin-top:10px;" },
+              "No actions yet.",
+            )
+          : openActions.length === 0
+            ? h(
+                "p",
+                { style: "color: var(--ink-3); font-size:13px; margin-top:10px;" },
+                "No open actions.",
+              )
+            : h(
+                "ul",
+                {},
+                openActions.map((a) => h("li", {}, a.title)),
+              ),
+        completedActions.length
+          ? h(
+              "div",
+              { style: "margin-top:14px; padding-top:10px; border-top: 1px solid var(--line);" },
+              [
+                h(
+                  "div",
+                  {
+                    style:
+                      "font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color: var(--ink-3); margin-bottom:6px;",
+                  },
+                  `Completed (${completedActions.length})`,
+                ),
+                h(
+                  "ul",
+                  { style: "margin:0;" },
+                  completedActions.map((a) =>
+                    h(
+                      "li",
+                      { style: "text-decoration:line-through; color: var(--ink-4);" },
+                      a.title,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : null,
+      ].filter(Boolean),
+    );
     right.appendChild(actionsPanel);
 
     grid.appendChild(right);
@@ -1761,34 +2216,47 @@
 
   function renderQuestion(user, org, p, idx, qEntry) {
     const meta = questionMeta(qEntry);
-    const resp = (((((org.responses || {})[org.currentRoundId] || {})[user.id] || {})[p.id] || {})[idx]) || {};
+    const resp =
+      ((((org.responses || {})[org.currentRoundId] || {})[user.id] || {})[p.id] || {})[idx] || {};
     const card = h("div", { class: "q-card" });
     card.appendChild(h("div", { class: "q-text" }, `${idx + 1}. ${meta.text}`));
 
     // Anchor row
-    card.appendChild(h("div", {
-      style: "display:flex; justify-content:space-between; font-size:11px; color:var(--ink-3); margin-bottom:6px; letter-spacing:0.04em;"
-    }, [
-      h("span", {}, `1 - ${meta.anchors.low}`),
-      h("span", {}, `${meta.scale} - ${meta.anchors.high}`)
-    ]));
+    card.appendChild(
+      h(
+        "div",
+        {
+          style:
+            "display:flex; justify-content:space-between; font-size:11px; color:var(--ink-3); margin-bottom:6px; letter-spacing:0.04em;",
+        },
+        [
+          h("span", {}, `1 - ${meta.anchors.low}`),
+          h("span", {}, `${meta.scale} - ${meta.anchors.high}`),
+        ],
+      ),
+    );
 
     // Buttons
     const scaleClass = meta.scale === 10 ? "likert likert-10" : "likert likert-" + meta.scale;
     const likert = h("div", { class: scaleClass });
     // Clamp any stale responses to this question's scale so old data doesn't get stuck selected out-of-range.
-    const selectedScore = (resp.score >= 1 && resp.score <= meta.scale) ? resp.score : null;
+    const selectedScore = resp.score >= 1 && resp.score <= meta.scale ? resp.score : null;
     for (let n = 1; n <= meta.scale; n++) {
-      const btn = h("button", {
-        class: selectedScore === n ? "sel" : "",
-        title: (meta.labels && meta.labels[n]) || DATA.scoreLabels[n] || String(n),
-        onclick: () => { setResponse(user, org, p.id, idx, { score: n }); render(); }
-      }, [
-        h("span", { class: "n" }, String(n)),
-        (meta.labels && meta.labels[n])
-          ? h("span", { class: "t" }, meta.labels[n])
-          : null
-      ].filter(Boolean));
+      const btn = h(
+        "button",
+        {
+          class: selectedScore === n ? "sel" : "",
+          title: (meta.labels && meta.labels[n]) || DATA.scoreLabels[n] || String(n),
+          onclick: () => {
+            setResponse(user, org, p.id, idx, { score: n });
+            render();
+          },
+        },
+        [
+          h("span", { class: "n" }, String(n)),
+          meta.labels && meta.labels[n] ? h("span", { class: "t" }, meta.labels[n]) : null,
+        ].filter(Boolean),
+      );
       likert.appendChild(btn);
     }
     card.appendChild(likert);
@@ -1796,33 +2264,50 @@
   }
 
   function renderTeamResponses(user, org, p) {
-    const byUser = ((org.responses || {})[org.currentRoundId] || {});
+    const byUser = (org.responses || {})[org.currentRoundId] || {};
     const users = Object.keys(byUser);
     if (users.length <= 1) return null;
 
     const panel = h("div", { class: "card", style: "margin-top:16px;" });
-    panel.appendChild(h("h3", { style: "margin-top:0;" },
-      `Team responses (${users.length} respondents)`));
+    panel.appendChild(
+      h("h3", { style: "margin-top:0;" }, `Team responses (${users.length} respondents)`),
+    );
 
     p.diagnostics.forEach((q, idx) => {
       const meta = questionMeta(q);
       const row = h("div", { style: "padding: 10px 0; border-top: 1px solid var(--line);" });
-      row.appendChild(h("div", { style: "font-size:13px; font-weight:500; margin-bottom:6px;" }, `Q${idx + 1}. ${meta.text}`));
+      row.appendChild(
+        h(
+          "div",
+          { style: "font-size:13px; font-weight:500; margin-bottom:6px;" },
+          `Q${idx + 1}. ${meta.text}`,
+        ),
+      );
       const scores = h("div", { style: "display:flex; flex-wrap:wrap; gap:6px;" });
-      users.forEach(uid => {
+      users.forEach((uid) => {
         const u = findUser(uid);
         const r = ((byUser[uid] || {})[p.id] || {})[idx];
         const score = r?.score;
-        const pill = h("span", {
-          title: (u?.name || u?.email || "respondent") + (score ? ` - ${score}/${meta.scale}` : " - no answer"),
-          style: `display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px; background:var(--surface-muted); border:1px solid var(--line); font-size:11px; color:var(--ink-2);`
-        }, [
-          h("span", {
-            class: "avatar",
-            style: "width:16px; height:16px; font-size:8px;"
-          }, initials(u?.name || u?.email || "")),
-          score ? `${score}/${meta.scale}` : "—"
-        ]);
+        const pill = h(
+          "span",
+          {
+            title:
+              (u?.name || u?.email || "respondent") +
+              (score ? ` - ${score}/${meta.scale}` : " - no answer"),
+            style: `display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px; background:var(--surface-muted); border:1px solid var(--line); font-size:11px; color:var(--ink-2);`,
+          },
+          [
+            h(
+              "span",
+              {
+                class: "avatar",
+                style: "width:16px; height:16px; font-size:8px;",
+              },
+              initials(u?.name || u?.email || ""),
+            ),
+            score ? `${score}/${meta.scale}` : "—",
+          ],
+        );
         scores.appendChild(pill);
       });
       row.appendChild(scores);
@@ -1838,25 +2323,36 @@
     const block = h("div", { class: "side-panel score-block" }, [
       h("div", {}, [
         h("span", { class: "big" }, s !== null ? String(s) : "—"),
-        h("span", { class: "out" }, " / 100")
+        h("span", { class: "out" }, " / 100"),
       ]),
-      h("div", { class: "bar" },
-        h("span", { style: `width:${s ?? 0}%; background:${statusColor(status)};` })),
-      h("div", { style: "color: var(--ink-3); font-size:12px;" },
-        `${done}/${total} team answers`)
+      h(
+        "div",
+        { class: "bar" },
+        h("span", { style: `width:${s ?? 0}%; background:${statusColor(status)};` }),
+      ),
+      h("div", { style: "color: var(--ink-3); font-size:12px;" }, `${done}/${total} team answers`),
     ]);
     return block;
   }
 
   function statusColor(status) {
-    return { red: "var(--red)", amber: "var(--amber)", green: "var(--green)", gray: "var(--line-2)" }[status];
+    return {
+      red: "var(--red)",
+      amber: "var(--amber)",
+      green: "var(--green)",
+      gray: "var(--line-2)",
+    }[status];
   }
 
   function sidePanel(title, items, internal = false) {
     return h("div", { class: "side-panel" }, [
       internal ? h("span", { class: "internal-badge" }, "Internal only") : null,
       h("h3", { style: "margin-top:0;" }, title),
-      h("ul", {}, items.map(x => h("li", {}, x)))
+      h(
+        "ul",
+        {},
+        items.map((x) => h("li", {}, x)),
+      ),
     ]);
   }
 
@@ -1865,7 +2361,8 @@
     o.responses = o.responses || {};
     o.responses[o.currentRoundId] = o.responses[o.currentRoundId] || {};
     o.responses[o.currentRoundId][user.id] = o.responses[o.currentRoundId][user.id] || {};
-    o.responses[o.currentRoundId][user.id][pillarId] = o.responses[o.currentRoundId][user.id][pillarId] || {};
+    o.responses[o.currentRoundId][user.id][pillarId] =
+      o.responses[o.currentRoundId][user.id][pillarId] || {};
     const cur = o.responses[o.currentRoundId][user.id][pillarId][idx] || {};
     o.responses[o.currentRoundId][user.id][pillarId][idx] = Object.assign({}, cur, patch);
     saveOrg(o);
@@ -1874,41 +2371,63 @@
   // ================================================================
   // COMMENTS (Slack-style)
   // ================================================================
+  // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead code or wire up call site. See runbooks/phase-4-cleanup-ledger.md
   function renderComments(user, org, p) {
     const wrap = h("div", { class: "comments" });
     const list = commentsFor(org, p.id, user);
     const lastRead = ((org.readStates || {})[user.id] || {})[p.id];
     const lastReadT = lastRead ? new Date(lastRead).getTime() : 0;
 
-    wrap.appendChild(h("h3", {}, [
-      h("span", {}, `Discussion (${list.length})`),
-      list.length
-        ? h("span", { style: "font-weight:400; font-size:12px; color:var(--ink-3);" }, "Most recent first")
-        : null
-    ]));
+    wrap.appendChild(
+      h("h3", {}, [
+        h("span", {}, `Discussion (${list.length})`),
+        list.length
+          ? h(
+              "span",
+              { style: "font-weight:400; font-size:12px; color:var(--ink-3);" },
+              "Most recent first",
+            )
+          : null,
+      ]),
+    );
 
     const listEl = h("div", { class: "comment-list" });
     if (list.length === 0) {
-      listEl.appendChild(h("p", { style: "color: var(--ink-3); font-size:13px; margin:0;" },
-        "No comments yet. Ask a question or leave a note — BeDeveloped and the team will see it here."));
+      listEl.appendChild(
+        h(
+          "p",
+          { style: "color: var(--ink-3); font-size:13px; margin:0;" },
+          "No comments yet. Ask a question or leave a note — BeDeveloped and the team will see it here.",
+        ),
+      );
     } else {
-      list.slice().reverse().forEach(c => {
-        const author = findUser(c.authorId);
-        const isSelf = c.authorId === user.id;
-        const isNew = !isSelf && new Date(c.createdAt).getTime() > lastReadT;
-        const row = h("div", { class: "comment" + (isNew ? " unread" : "") });
-        row.appendChild(h("span", { class: "avatar" + (author?.role === "internal" ? " internal" : "") },
-          initials(author?.name || author?.email || "?")));
-        const body = h("div");
-        body.appendChild(h("div", { class: "head" }, [
-          h("span", { class: "name" }, author?.name || author?.email || "Unknown"),
-          h("span", { class: "when" }, formatWhen(c.createdAt)),
-          c.internal ? h("span", { class: "tag-internal" }, "Internal") : null
-        ]));
-        body.appendChild(h("div", { class: "body" }, c.text));
-        row.appendChild(body);
-        listEl.appendChild(row);
-      });
+      list
+        .slice()
+        .reverse()
+        .forEach((c) => {
+          const author = findUser(c.authorId);
+          const isSelf = c.authorId === user.id;
+          const isNew = !isSelf && new Date(c.createdAt).getTime() > lastReadT;
+          const row = h("div", { class: "comment" + (isNew ? " unread" : "") });
+          row.appendChild(
+            h(
+              "span",
+              { class: "avatar" + (author?.role === "internal" ? " internal" : "") },
+              initials(author?.name || author?.email || "?"),
+            ),
+          );
+          const body = h("div");
+          body.appendChild(
+            h("div", { class: "head" }, [
+              h("span", { class: "name" }, author?.name || author?.email || "Unknown"),
+              h("span", { class: "when" }, formatWhen(c.createdAt)),
+              c.internal ? h("span", { class: "tag-internal" }, "Internal") : null,
+            ]),
+          );
+          body.appendChild(h("div", { class: "body" }, c.text));
+          row.appendChild(body);
+          listEl.appendChild(row);
+        });
     }
     wrap.appendChild(listEl);
 
@@ -1917,7 +2436,7 @@
     const ta = h("textarea", {
       placeholder: isClientView(user)
         ? "Ask a question or leave a comment for the BeDeveloped team…"
-        : "Reply to the client, or leave a note for your team…"
+        : "Reply to the client, or leave a note for your team…",
     });
     const optsCol = h("div", { class: "opts" });
     let internalOnly = false;
@@ -1925,23 +2444,27 @@
       const lbl = h("label", {}, [
         h("input", {
           type: "checkbox",
-          onchange: (e) => internalOnly = e.target.checked
+          onchange: (e) => (internalOnly = e.target.checked),
         }),
-        h("span", {}, "Internal only")
+        h("span", {}, "Internal only"),
       ]);
       optsCol.appendChild(lbl);
     }
-    const post = h("button", {
-      class: "btn",
-      onclick: () => {
-        const text = ta.value.trim();
-        if (!text) return;
-        const o = loadOrg(org.id);
-        addComment(o, p.id, user.id, text, internalOnly);
-        ta.value = "";
-        render();
-      }
-    }, "Post");
+    const post = h(
+      "button",
+      {
+        class: "btn",
+        onclick: () => {
+          const text = ta.value.trim();
+          if (!text) return;
+          const o = loadOrg(org.id);
+          addComment(o, p.id, user.id, text, internalOnly);
+          ta.value = "";
+          render();
+        },
+      },
+      "Post",
+    );
     optsCol.appendChild(post);
 
     composer.appendChild(ta);
@@ -1960,8 +2483,15 @@
     const o = loadOrg(orgMeta.id);
     o.actions = o.actions || [];
     o.actions.unshift({
-      id: uid("act_"), pillarId, title, owner, due,
-      done: false, internal, createdAt: iso(), createdBy
+      id: uid("act_"),
+      pillarId,
+      title,
+      owner,
+      due,
+      done: false,
+      internal,
+      createdAt: iso(),
+      createdBy,
     });
     saveOrg(o);
   }
@@ -1969,14 +2499,14 @@
     const user = currentUser();
     const orgMeta = activeOrgForUser(user);
     const o = loadOrg(orgMeta.id);
-    o.actions = (o.actions || []).map(a => a.id === id ? Object.assign({}, a, patch) : a);
+    o.actions = (o.actions || []).map((a) => (a.id === id ? Object.assign({}, a, patch) : a));
     saveOrg(o);
   }
   function deleteAction(id) {
     const user = currentUser();
     const orgMeta = activeOrgForUser(user);
     const o = loadOrg(orgMeta.id);
-    o.actions = (o.actions || []).filter(a => a.id !== id);
+    o.actions = (o.actions || []).filter((a) => a.id !== id);
     saveOrg(o);
   }
 
@@ -1984,52 +2514,83 @@
     const isClient = isClientView(user);
     const frag = h("div");
     frag.appendChild(h("h1", { class: "view-title" }, "Action plan"));
-    frag.appendChild(h("p", { class: "view-sub" }, "Cross-pillar action tracker. Assign owners, set due dates, mark complete."));
+    frag.appendChild(
+      h(
+        "p",
+        { class: "view-sub" },
+        "Cross-pillar action tracker. Assign owners, set due dates, mark complete.",
+      ),
+    );
 
-    const all = (org.actions || []).filter(a => !isClient || !a.internal);
-    const toolbar = h("div", { style: "display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;" }, [
-      h("div", {}, `${all.length} total · ${all.filter(a => a.done).length} complete`),
-      h("button", { class: "btn", onclick: () => openActionModal(user) }, "+ New action")
-    ]);
+    const all = (org.actions || []).filter((a) => !isClient || !a.internal);
+    const toolbar = h(
+      "div",
+      {
+        style:
+          "display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;",
+      },
+      [
+        h("div", {}, `${all.length} total · ${all.filter((a) => a.done).length} complete`),
+        h("button", { class: "btn", onclick: () => openActionModal(user) }, "+ New action"),
+      ],
+    );
     frag.appendChild(toolbar);
 
     if (!all.length) {
-      frag.appendChild(h("div", { class: "empty" },
-        "No actions yet. Add one from here or from any pillar detail page."));
+      frag.appendChild(
+        h(
+          "div",
+          { class: "empty" },
+          "No actions yet. Add one from here or from any pillar detail page.",
+        ),
+      );
       return frag;
     }
 
-    const openActions = all.filter(a => !a.done);
-    const completedActions = all.filter(a => a.done);
-    const headerRow = () => h("div", { class: "action-row" }, [
-      h("div", {}, "✓"),
-      h("div", {}, "Action"),
-      h("div", {}, "Pillar"),
-      h("div", {}, "Owner"),
-      h("div", {}, "Due"),
-      h("div", {}, "")
-    ]);
+    const openActions = all.filter((a) => !a.done);
+    const completedActions = all.filter((a) => a.done);
+    const headerRow = () =>
+      h("div", { class: "action-row" }, [
+        h("div", {}, "✓"),
+        h("div", {}, "Action"),
+        h("div", {}, "Pillar"),
+        h("div", {}, "Owner"),
+        h("div", {}, "Due"),
+        h("div", {}, ""),
+      ]);
 
     // Open actions
     const openTable = h("div", { class: "actions-table" });
     openTable.appendChild(headerRow());
     if (openActions.length === 0) {
-      openTable.appendChild(h("div", {
-        style: "padding:14px 16px; color: var(--ink-3); font-size:13px;"
-      }, "No open actions."));
+      openTable.appendChild(
+        h(
+          "div",
+          {
+            style: "padding:14px 16px; color: var(--ink-3); font-size:13px;",
+          },
+          "No open actions.",
+        ),
+      );
     } else {
-      openActions.forEach(a => openTable.appendChild(renderActionRow(a)));
+      openActions.forEach((a) => openTable.appendChild(renderActionRow(a)));
     }
     frag.appendChild(openTable);
 
     // Completed actions, in their own section
     if (completedActions.length) {
-      frag.appendChild(h("h2", {
-        style: "margin-top:28px; margin-bottom:10px;"
-      }, `Completed (${completedActions.length})`));
+      frag.appendChild(
+        h(
+          "h2",
+          {
+            style: "margin-top:28px; margin-bottom:10px;",
+          },
+          `Completed (${completedActions.length})`,
+        ),
+      );
       const doneTable = h("div", { class: "actions-table" });
       doneTable.appendChild(headerRow());
-      completedActions.forEach(a => doneTable.appendChild(renderActionRow(a)));
+      completedActions.forEach((a) => doneTable.appendChild(renderActionRow(a)));
       frag.appendChild(doneTable);
     }
 
@@ -2037,28 +2598,47 @@
   }
 
   function renderActionRow(a) {
-    const p = DATA.pillars.find(x => x.id === a.pillarId);
+    const p = DATA.pillars.find((x) => x.id === a.pillarId);
     const todayIso = new Date().toISOString().slice(0, 10);
     const isOverdue = !a.done && !!a.due && a.due < todayIso;
-    const row = h("div", { class: `action-row ${a.done ? "done" : ""} ${isOverdue ? "overdue" : ""}` });
+    const row = h("div", {
+      class: `action-row ${a.done ? "done" : ""} ${isOverdue ? "overdue" : ""}`,
+    });
 
     const chk = h("input", { type: "checkbox" });
     chk.checked = !!a.done;
-    chk.addEventListener("change", () => { updateAction(a.id, { done: chk.checked }); render(); });
+    chk.addEventListener("change", () => {
+      updateAction(a.id, { done: chk.checked });
+      render();
+    });
     row.appendChild(chk);
 
     const title = h("input", { type: "text", class: "a-title", value: a.title });
     title.addEventListener("blur", () => updateAction(a.id, { title: title.value }));
     row.appendChild(title);
 
-    row.appendChild(h("div", {}, [
-      h("a", {
-        href: "#",
-        onclick: (e) => { e.preventDefault(); setRoute("pillar:" + a.pillarId); }
-      }, p ? p.name : "—")
-    ]));
+    row.appendChild(
+      h("div", {}, [
+        h(
+          "a",
+          {
+            href: "#",
+            onclick: (e) => {
+              e.preventDefault();
+              setRoute("pillar:" + a.pillarId);
+            },
+          },
+          p ? p.name : "—",
+        ),
+      ]),
+    );
 
-    const owner = h("input", { type: "text", class: "a-owner", placeholder: "Owner", value: a.owner || "" });
+    const owner = h("input", {
+      type: "text",
+      class: "a-owner",
+      placeholder: "Owner",
+      value: a.owner || "",
+    });
     owner.addEventListener("blur", () => updateAction(a.id, { owner: owner.value }));
     row.appendChild(owner);
 
@@ -2066,33 +2646,55 @@
     const due = h("input", { type: "date", class: "a-due", value: a.due || "" });
     due.addEventListener("change", () => updateAction(a.id, { due: due.value }));
     dueWrap.appendChild(due);
-    if (isOverdue) dueWrap.appendChild(h("span", { class: "overdue-tag", title: "Due date has passed" }, "Overdue"));
+    if (isOverdue)
+      dueWrap.appendChild(
+        h("span", { class: "overdue-tag", title: "Due date has passed" }, "Overdue"),
+      );
     row.appendChild(dueWrap);
 
-    const del = h("button", {
-      class: "btn ghost sm",
-      style: "border-color: var(--line);",
-      onclick: () => confirmDialog("Delete action?", "This cannot be undone.",
-        () => { deleteAction(a.id); render(); }, "Delete")
-    }, "×");
+    const del = h(
+      "button",
+      {
+        class: "btn ghost sm",
+        style: "border-color: var(--line);",
+        onclick: () =>
+          confirmDialog(
+            "Delete action?",
+            "This cannot be undone.",
+            () => {
+              deleteAction(a.id);
+              render();
+            },
+            "Delete",
+          ),
+      },
+      "×",
+    );
     row.appendChild(del);
     return row;
   }
 
   function openActionModal(user) {
     const title = h("input", { type: "text", placeholder: "Action description" });
-    const select = h("select", { style: "width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; font:inherit;" });
-    DATA.pillars.forEach(p => {
+    const select = h("select", {
+      style:
+        "width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; font:inherit;",
+    });
+    DATA.pillars.forEach((p) => {
       const o = document.createElement("option");
       o.value = p.id;
       o.textContent = `${p.id}. ${p.name}`;
       select.appendChild(o);
     });
     const internalWrap = !isClientView(user)
-      ? h("label", { style: "display:flex; gap:6px; align-items:center; font-size:13px; margin-top:10px;" }, [
-          h("input", { type: "checkbox", id: "actInternal" }),
-          "Internal only (hidden from client view)"
-        ])
+      ? h(
+          "label",
+          { style: "display:flex; gap:6px; align-items:center; font-size:13px; margin-top:10px;" },
+          [
+            h("input", { type: "checkbox", id: "actInternal" }),
+            "Internal only (hidden from client view)",
+          ],
+        )
       : null;
 
     const m = modal([
@@ -2103,18 +2705,22 @@
       internalWrap,
       h("div", { class: "row" }, [
         h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-        h("button", {
-          class: "btn",
-          onclick: () => {
-            const t = title.value.trim();
-            if (!t) return;
-            const internal = internalWrap ? internalWrap.querySelector("input").checked : false;
-            addAction(user.id, Number(select.value), t, { internal });
-            m.close();
-            render();
-          }
-        }, "Add")
-      ])
+        h(
+          "button",
+          {
+            class: "btn",
+            onclick: () => {
+              const t = title.value.trim();
+              if (!t) return;
+              const internal = internalWrap ? internalWrap.querySelector("input").checked : false;
+              addAction(user.id, Number(select.value), t, { internal });
+              m.close();
+              render();
+            },
+          },
+          "Add",
+        ),
+      ]),
     ]);
     setTimeout(() => title.focus(), 10);
   }
@@ -2125,8 +2731,13 @@
   function renderEngagement(user, org) {
     const frag = h("div");
     frag.appendChild(h("h1", { class: "view-title" }, "Engagement lifecycle"));
-    frag.appendChild(h("p", { class: "view-sub" },
-      "Every BeDeveloped engagement runs through four stages. Track progress and readiness to move on."));
+    frag.appendChild(
+      h(
+        "p",
+        { class: "view-sub" },
+        "Every BeDeveloped engagement runs through four stages. Track progress and readiness to move on.",
+      ),
+    );
 
     const current = org.engagement?.currentStageId || "diagnosed";
     const stages = h("div", { class: "stages" });
@@ -2138,7 +2749,7 @@
       const isActive = current === s.id;
 
       const cardAttrs = {
-        class: `stage-card ${isActive ? "active" : ""} ${readOnly ? "read-only" : ""}`
+        class: `stage-card ${isActive ? "active" : ""} ${readOnly ? "read-only" : ""}`,
       };
       if (!readOnly) {
         cardAttrs.onclick = (ev) => {
@@ -2153,13 +2764,17 @@
         h("div", { class: "name" }, s.name),
         h("div", { class: "sum" }, s.summary),
         h("div", { class: "progress" }, h("span", { style: `width:${pct}%;` })),
-        h("div", { style: "font-size:11px; color:var(--ink-3); margin-top:4px;" }, `${checkedCount}/${s.checklist.length} complete`)
+        h(
+          "div",
+          { style: "font-size:11px; color:var(--ink-3); margin-top:4px;" },
+          `${checkedCount}/${s.checklist.length} complete`,
+        ),
       ]);
       stages.appendChild(card);
     });
     frag.appendChild(stages);
 
-    const stage = DATA.engagementStages.find(s => s.id === current);
+    const stage = DATA.engagementStages.find((s) => s.id === current);
     const checklist = h("div", { class: "checklist" });
     checklist.appendChild(h("h3", { style: "margin-top:0;" }, `${stage.name} — checklist`));
     stage.checklist.forEach((item, idx) => {
@@ -2229,33 +2844,92 @@
     const frag = h("div");
     const summary = orgSummary(org);
     const constraints = topConstraints(org, 3);
-    const stage = DATA.engagementStages.find(s => s.id === (org.engagement?.currentStageId || "diagnosed"));
+    // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead binding or wire up render. See runbooks/phase-4-cleanup-ledger.md
+    const stage = DATA.engagementStages.find(
+      (s) => s.id === (org.engagement?.currentStageId || "diagnosed"),
+    );
     const isClient = isClientView(user);
     const round = roundById(org, org.currentRoundId);
     const prevRoundId = previousRoundId(org);
 
-    frag.appendChild(h("div", { class: "report-toolbar" }, [
-      h("button", { class: "btn secondary", onclick: () => window.print() }, "Print / save PDF"),
-      !isClient ? h("button", { class: "btn secondary", title: "Full backup of all orgs, users and responses. Internal only - not a client report.", onclick: exportData }, "Export backup (JSON)") : null
-    ].filter(Boolean)));
+    frag.appendChild(
+      h(
+        "div",
+        { class: "report-toolbar" },
+        [
+          h(
+            "button",
+            { class: "btn secondary", onclick: () => window.print() },
+            "Print / save PDF",
+          ),
+          !isClient
+            ? h(
+                "button",
+                {
+                  class: "btn secondary",
+                  title:
+                    "Full backup of all orgs, users and responses. Internal only - not a client report.",
+                  onclick: exportData,
+                },
+                "Export backup (JSON)",
+              )
+            : null,
+        ].filter(Boolean),
+      ),
+    );
 
     const r = h("div", { class: "report" });
     r.appendChild(h("h1", {}, `The Base Layers diagnostic - ${org.name}`));
-    r.appendChild(h("div", { class: "sub" },
-      `${isClient ? "Client view" : "Internal view"} · ${round?.label || "Current round"} · Generated ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`));
+    r.appendChild(
+      h(
+        "div",
+        { class: "sub" },
+        `${isClient ? "Client view" : "Internal view"} · ${round?.label || "Current round"} · Generated ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`,
+      ),
+    );
 
     // Intro block
     const intro = h("div", { class: "report-intro card", style: "margin:18px 0 24px;" });
-    intro.appendChild(h("h2", { style: "margin-top:0;" }, "Thank you for participating in The Base Layers Sales Assessment."));
-    intro.appendChild(h("p", {}, "Your results will provide valuable insights into your current business development processes and help you streamline your operations."));
-    intro.appendChild(h("p", {}, "We have assessed your performance from The Base Layers sales framework that covers 10 core strategic pillars:"));
+    intro.appendChild(
+      h(
+        "h2",
+        { style: "margin-top:0;" },
+        "Thank you for participating in The Base Layers Sales Assessment.",
+      ),
+    );
+    intro.appendChild(
+      h(
+        "p",
+        {},
+        "Your results will provide valuable insights into your current business development processes and help you streamline your operations.",
+      ),
+    );
+    intro.appendChild(
+      h(
+        "p",
+        {},
+        "We have assessed your performance from The Base Layers sales framework that covers 10 core strategic pillars:",
+      ),
+    );
     const pillarList = h("ol", { style: "font-size:14px; color:var(--ink-2);" });
-    DATA.pillars.forEach(p => {
+    DATA.pillars.forEach((p) => {
       pillarList.appendChild(h("li", {}, p.name));
     });
     intro.appendChild(pillarList);
-    intro.appendChild(h("p", {}, "Below, you will find a snapshot of your results. We encourage you to read through your development areas and capture any questions you have for Luke & George to improve your business development strategy."));
-    intro.appendChild(h("p", {}, "This assessment will be a guide to start improving your early-stage sales process, by embedding a fully structured implementation roadmap."));
+    intro.appendChild(
+      h(
+        "p",
+        {},
+        "Below, you will find a snapshot of your results. We encourage you to read through your development areas and capture any questions you have for Luke & George to improve your business development strategy.",
+      ),
+    );
+    intro.appendChild(
+      h(
+        "p",
+        {},
+        "This assessment will be a guide to start improving your early-stage sales process, by embedding a fully structured implementation roadmap.",
+      ),
+    );
     r.appendChild(intro);
 
     // Snapshot grid: donut + key metrics side-by-side
@@ -2263,8 +2937,13 @@
 
     const chartCard = h("div", { class: "card", style: "min-height:320px;" });
     chartCard.appendChild(h("h3", { style: "margin-top:0;" }, "Results at a glance"));
-    chartCard.appendChild(h("p", { style: "color:var(--ink-3); font-size:12.5px; margin:-4px 0 10px;" },
-      "Each slice is one pillar. Colours show where you're strong (green), developing (amber), or need focus (red)."));
+    chartCard.appendChild(
+      h(
+        "p",
+        { style: "color:var(--ink-3); font-size:12.5px; margin:-4px 0 10px;" },
+        "Each slice is one pillar. Colours show where you're strong (green), developing (amber), or need focus (red).",
+      ),
+    );
     const canvasWrap = h("div", { style: "position:relative; height:240px;" });
     const canvas = h("canvas", { id: "reportDonut" });
     canvasWrap.appendChild(canvas);
@@ -2276,17 +2955,25 @@
     [
       ["Overall health", summary.avg !== null ? `${summary.avg} / 100` : "Not yet scored"],
       ["Pillars scored", `${summary.scoredCount} of ${DATA.pillars.length}`],
-      ["Status mix", `${summary.green} green · ${summary.amber} amber · ${summary.red} red · ${summary.gray} not scored`],
-      ["Respondents", String(respondentsForRound(org, org.currentRoundId).length)]
+      [
+        "Status mix",
+        `${summary.green} green · ${summary.amber} amber · ${summary.red} red · ${summary.gray} not scored`,
+      ],
+      ["Respondents", String(respondentsForRound(org, org.currentRoundId).length)],
     ].forEach(([label, val]) => metricsCard.appendChild(reportRow(label, val)));
     if (constraints.length) {
-      metricsCard.appendChild(reportRow("Top constraints",
-        h("div", { style: "display:flex; flex-direction:column; gap:4px;" },
-          constraints.map((p, i) =>
-            h("div", {}, `${i + 1}. ${p.name} (${pillarScore(org, p.id)}/100)`)
-          )
-        )
-      ));
+      metricsCard.appendChild(
+        reportRow(
+          "Top constraints",
+          h(
+            "div",
+            { style: "display:flex; flex-direction:column; gap:4px;" },
+            constraints.map((p, i) =>
+              h("div", {}, `${i + 1}. ${p.name} (${pillarScore(org, p.id)}/100)`),
+            ),
+          ),
+        ),
+      );
     }
     snap.appendChild(metricsCard);
     r.appendChild(snap);
@@ -2297,7 +2984,7 @@
     // Pillar detail
     const rp = h("div", { class: "r-pillars" });
     rp.appendChild(h("h2", { style: "margin-top:28px;" }, "Pillar detail"));
-    DATA.pillars.forEach(p => {
+    DATA.pillars.forEach((p) => {
       const s = pillarScore(org, p.id);
       const prevS = prevRoundId ? pillarScoreForRound(org, prevRoundId, p.id) : null;
       const status = pillarStatus(s);
@@ -2308,43 +2995,70 @@
       const header = h("header", {}, [
         h("span", { class: "name" }, `${p.id}. ${p.name}`),
         h("span", { class: "meta" }, [
-          h("span", {
-            style: `display:inline-block; padding:2px 10px; border-radius:999px; background:${bandColor(s)}; color:#fff; font-weight:600; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; margin-right:8px;`
-          }, band),
+          h(
+            "span",
+            {
+              style: `display:inline-block; padding:2px 10px; border-radius:999px; background:${bandColor(s)}; color:#fff; font-weight:600; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; margin-right:8px;`,
+            },
+            band,
+          ),
           s !== null ? `${s}/100` : "—",
           prevS !== null ? ` (was ${prevS})` : "",
           " · ",
-          h("span", { class: `badge ${status}` }, statusLabel(status, done, total))
-        ])
+          h("span", { class: `badge ${status}` }, statusLabel(status, done, total)),
+        ]),
       ]);
       block.appendChild(header);
 
       // Richer pillar definition
       block.appendChild(h("p", { class: "r-def" }, p.dashDescription || p.overview || p.tagline));
       if (p.dashAchieve) {
-        block.appendChild(h("p", { class: "r-achieve" }, [
-          h("strong", {}, "What good looks like: "),
-          p.dashAchieve
-        ]));
+        block.appendChild(
+          h("p", { class: "r-achieve" }, [
+            h("strong", {}, "What good looks like: "),
+            p.dashAchieve,
+          ]),
+        );
       }
 
       // Score band statement
-      block.appendChild(h("div", {
-        class: "r-band",
-        style: `border-left:3px solid ${bandColor(s)}; padding:10px 12px; background:var(--surface-muted); margin-top:10px; font-size:13.5px;`
-      }, bandStatement(p.name, s)));
+      block.appendChild(
+        h(
+          "div",
+          {
+            class: "r-band",
+            style: `border-left:3px solid ${bandColor(s)}; padding:10px 12px; background:var(--surface-muted); margin-top:10px; font-size:13.5px;`,
+          },
+          bandStatement(p.name, s),
+        ),
+      );
 
-      const actions = (org.actions || []).filter(a => a.pillarId === p.id && (!isClient || !a.internal));
+      const actions = (org.actions || []).filter(
+        (a) => a.pillarId === p.id && (!isClient || !a.internal),
+      );
       if (actions.length) {
-        block.appendChild(h("div", { style: "margin-top:10px; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-3);" }, "Actions"));
+        block.appendChild(
+          h(
+            "div",
+            {
+              style:
+                "margin-top:10px; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-3);",
+            },
+            "Actions",
+          ),
+        );
         const ul = h("ul", { style: "margin:4px 0 0; padding-left:18px; font-size:13px;" });
-        actions.forEach(a => ul.appendChild(h("li", {
-          style: a.done ? "text-decoration:line-through; color:var(--ink-4);" : ""
-        }, [
-          a.title,
-          a.owner ? ` · ${a.owner}` : "",
-          a.due ? ` · due ${a.due}` : ""
-        ])));
+        actions.forEach((a) =>
+          ul.appendChild(
+            h(
+              "li",
+              {
+                style: a.done ? "text-decoration:line-through; color:var(--ink-4);" : "",
+              },
+              [a.title, a.owner ? ` · ${a.owner}` : "", a.due ? ` · due ${a.due}` : ""],
+            ),
+          ),
+        );
         block.appendChild(ul);
       }
       rp.appendChild(block);
@@ -2355,24 +3069,32 @@
   }
 
   function drawReportDonut(org) {
-    if (!window.Chart) { setTimeout(() => drawReportDonut(org), 120); return; }
+    if (!window.Chart) {
+      setTimeout(() => drawReportDonut(org), 120);
+      return;
+    }
     const canvas = $("#reportDonut");
     if (!canvas) return;
-    if (state.reportChart) { try { state.reportChart.destroy(); } catch {} }
+    if (state.reportChart) {
+      try {
+        state.reportChart.destroy();
+        // eslint-disable-next-line no-empty -- Phase 4: replace with explicit ignore + comment. See runbooks/phase-4-cleanup-ledger.md
+      } catch {}
+    }
 
     const labels = [];
     const data = [];
     const colors = [];
     const statusPalette = {
-      red:   "#C0392B",
+      red: "#C0392B",
       amber: "#D98E00",
       green: "#2F8A4F",
-      gray:  "#CFD3D8"
+      gray: "#CFD3D8",
     };
-    DATA.pillars.forEach(p => {
+    DATA.pillars.forEach((p) => {
       const s = pillarScore(org, p.id);
       labels.push(`${p.id}. ${p.shortName || p.name}`);
-      data.push(10);   // equal slices
+      data.push(10); // equal slices
       colors.push(statusPalette[pillarStatus(s)] || statusPalette.gray);
     });
 
@@ -2380,7 +3102,7 @@
       type: "doughnut",
       data: {
         labels,
-        datasets: [{ data, backgroundColor: colors, borderColor: "#fff", borderWidth: 2 }]
+        datasets: [{ data, backgroundColor: colors, borderColor: "#fff", borderWidth: 2 }],
       },
       options: {
         responsive: true,
@@ -2394,19 +3116,16 @@
                 const p = DATA.pillars[ctx.dataIndex];
                 const s = pillarScore(org, p.id);
                 return `${p.name}: ${s !== null ? s + "/100 (" + bandLabel(s) + ")" : "Not scored"}`;
-              }
-            }
-          }
-        }
-      }
+              },
+            },
+          },
+        },
+      },
     });
   }
 
   function reportRow(label, value) {
-    return h("div", { class: "row" }, [
-      h("div", { class: "label" }, label),
-      h("div", {}, value)
-    ]);
+    return h("div", { class: "row" }, [h("div", { class: "label" }, label), h("div", {}, value)]);
   }
 
   // ================================================================
@@ -2415,57 +3134,92 @@
   function renderAdmin(user) {
     const frag = h("div");
     frag.appendChild(h("h1", { class: "view-title" }, "Admin"));
-    frag.appendChild(h("p", { class: "view-sub" },
-      "Manage organisations and client accounts. Client accounts see only their own organisation."));
+    frag.appendChild(
+      h(
+        "p",
+        { class: "view-sub" },
+        "Manage organisations and client accounts. Client accounts see only their own organisation.",
+      ),
+    );
 
     // Organisations
     frag.appendChild(h("h2", {}, "Organisations"));
     const orgs = loadOrgMetas();
     const orgCard = h("div", { class: "card" });
 
-    const orgBar = h("div", { style: "display:flex; justify-content:flex-end; margin-bottom:12px;" }, [
-      h("button", {
-        class: "btn",
-        onclick: () => promptText("New organisation", "e.g. Acme Ltd", (name) => {
-          const o = createOrg(name);
-          state.orgId = o.id;
-          render();
-        })
-      }, "+ New organisation")
-    ]);
+    const orgBar = h(
+      "div",
+      { style: "display:flex; justify-content:flex-end; margin-bottom:12px;" },
+      [
+        h(
+          "button",
+          {
+            class: "btn",
+            onclick: () =>
+              promptText("New organisation", "e.g. Acme Ltd", (name) => {
+                const o = createOrg(name);
+                state.orgId = o.id;
+                render();
+              }),
+          },
+          "+ New organisation",
+        ),
+      ],
+    );
     orgCard.appendChild(orgBar);
 
     if (!orgs.length) {
       orgCard.appendChild(h("p", { style: "color: var(--ink-3);" }, "None yet."));
     } else {
       const table = h("div");
-      orgs.forEach(m => {
+      orgs.forEach((m) => {
         const o = loadOrg(m.id);
-        const clients = loadUsers().filter(u => u.role === "client" && u.orgId === m.id);
+        const clients = loadUsers().filter((u) => u.role === "client" && u.orgId === m.id);
         const currentTier = orgTier(o);
-        const row = h("div", { style: "display:grid; grid-template-columns: 1.5fr 1fr 1fr auto; gap:12px; align-items:center; padding:12px 0; border-top:1px solid var(--line);" });
-        row.appendChild(h("div", {}, [
-          h("div", { style: "display:flex; align-items:center; gap:8px;" }, [
-            h("span", { style: "font-weight:600;" }, m.name),
-            h("span", {
-              style: `display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; background: ${currentTier === "performance" ? "var(--ink)" : "var(--brand-tint)"}; color: ${currentTier === "performance" ? "#fff" : "var(--brand)"};`
-            }, currentTier === "performance" ? "Performance" : "Transformation")
+        const row = h("div", {
+          style:
+            "display:grid; grid-template-columns: 1.5fr 1fr 1fr auto; gap:12px; align-items:center; padding:12px 0; border-top:1px solid var(--line);",
+        });
+        row.appendChild(
+          h("div", {}, [
+            h("div", { style: "display:flex; align-items:center; gap:8px;" }, [
+              h("span", { style: "font-weight:600;" }, m.name),
+              h(
+                "span",
+                {
+                  style: `display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; background: ${currentTier === "performance" ? "var(--ink)" : "var(--brand-tint)"}; color: ${currentTier === "performance" ? "#fff" : "var(--brand)"};`,
+                },
+                currentTier === "performance" ? "Performance" : "Transformation",
+              ),
+            ]),
+            h(
+              "div",
+              { style: "color:var(--ink-3); font-size:12px; margin-top:4px;" },
+              `${o?.rounds?.length || 0} round(s) · ${respondentsForRound(o, o.currentRoundId).length} respondents`,
+            ),
           ]),
-          h("div", { style: "color:var(--ink-3); font-size:12px; margin-top:4px;" },
-            `${(o?.rounds?.length || 0)} round(s) · ${respondentsForRound(o, o.currentRoundId).length} respondents`)
-        ]));
+        );
         const hasPass = !!(o && o.clientPassphraseHash);
-        row.appendChild(h("div", {}, [
-          h("div", {}, `${clients.length} client user${clients.length === 1 ? "" : "s"}`),
-          h("div", { style: `font-size:11px; margin-top:2px; color: ${hasPass ? "var(--green)" : "var(--amber)"};` },
-            hasPass ? "✓ passphrase set" : "⚠ no passphrase")
-        ]));
+        row.appendChild(
+          h("div", {}, [
+            h("div", {}, `${clients.length} client user${clients.length === 1 ? "" : "s"}`),
+            h(
+              "div",
+              {
+                style: `font-size:11px; margin-top:2px; color: ${hasPass ? "var(--green)" : "var(--amber)"};`,
+              },
+              hasPass ? "✓ passphrase set" : "⚠ no passphrase",
+            ),
+          ]),
+        );
         row.appendChild(h("div", {}, formatDate(o?.createdAt)));
         const tierSelect = h("select", {
-          title: "Tier determines roadmap cadence. Performance = 4 quarters. Transformation = 12 months.",
-          style: "padding:5px 8px; border:1px solid var(--line); border-radius:6px; font:inherit; font-size:12px; background:#fff; cursor:pointer;"
+          title:
+            "Tier determines roadmap cadence. Performance = 4 quarters. Transformation = 12 months.",
+          style:
+            "padding:5px 8px; border:1px solid var(--line); border-radius:6px; font:inherit; font-size:12px; background:#fff; cursor:pointer;",
         });
-        ["performance", "transformation"].forEach(v => {
+        ["performance", "transformation"].forEach((v) => {
           const opt = document.createElement("option");
           opt.value = v;
           opt.textContent = v === "performance" ? "Performance" : "Transformation";
@@ -2479,23 +3233,47 @@
           saveOrg(fresh);
           render();
         });
-        row.appendChild(h("div", { style: "display:flex; gap:6px; align-items:center;" }, [
-          tierSelect,
-          h("button", {
-            class: "btn secondary sm",
-            onclick: () => { state.orgId = m.id; setRoute("dashboard"); }
-          }, "Open"),
-          h("button", {
-            class: "btn ghost sm",
-            onclick: () => openSetOrgPassphrase(m.id, m.name)
-          }, hasPass ? "Change passphrase" : "Set passphrase"),
-          h("button", {
-            class: "btn ghost sm danger",
-            onclick: () => confirmDialog("Delete organisation?",
-              `This deletes ${m.name}, all its diagnostic data, and any client accounts linked to it. Cannot be undone.`,
-              () => { deleteOrg(m.id); render(); }, "Delete")
-          }, "Delete")
-        ]));
+        row.appendChild(
+          h("div", { style: "display:flex; gap:6px; align-items:center;" }, [
+            tierSelect,
+            h(
+              "button",
+              {
+                class: "btn secondary sm",
+                onclick: () => {
+                  state.orgId = m.id;
+                  setRoute("dashboard");
+                },
+              },
+              "Open",
+            ),
+            h(
+              "button",
+              {
+                class: "btn ghost sm",
+                onclick: () => openSetOrgPassphrase(m.id, m.name),
+              },
+              hasPass ? "Change passphrase" : "Set passphrase",
+            ),
+            h(
+              "button",
+              {
+                class: "btn ghost sm danger",
+                onclick: () =>
+                  confirmDialog(
+                    "Delete organisation?",
+                    `This deletes ${m.name}, all its diagnostic data, and any client accounts linked to it. Cannot be undone.`,
+                    () => {
+                      deleteOrg(m.id);
+                      render();
+                    },
+                    "Delete",
+                  ),
+              },
+              "Delete",
+            ),
+          ]),
+        );
         table.appendChild(row);
       });
       orgCard.appendChild(table);
@@ -2504,58 +3282,118 @@
 
     // Client users
     frag.appendChild(h("h2", {}, "Client accounts"));
-    const allClients = loadUsers().filter(u => u.role === "client");
+    const allClients = loadUsers().filter((u) => u.role === "client");
     const usersCard = h("div", { class: "card" });
 
-    const userBar = h("div", { style: "display:flex; justify-content:flex-end; margin-bottom:12px;" }, [
-      h("button", {
-        class: "btn",
-        onclick: () => openInviteClientModal()
-      }, "+ Invite client")
-    ]);
+    const userBar = h(
+      "div",
+      { style: "display:flex; justify-content:flex-end; margin-bottom:12px;" },
+      [
+        h(
+          "button",
+          {
+            class: "btn",
+            onclick: () => openInviteClientModal(),
+          },
+          "+ Invite client",
+        ),
+      ],
+    );
     usersCard.appendChild(userBar);
 
     if (!allClients.length) {
-      usersCard.appendChild(h("p", { style: "color: var(--ink-3);" }, "No client users yet. Invite someone to let them log in."));
+      usersCard.appendChild(
+        h(
+          "p",
+          { style: "color: var(--ink-3);" },
+          "No client users yet. Invite someone to let them log in.",
+        ),
+      );
     } else {
       const table = h("div");
-      table.appendChild(h("div", {
-        style: "display:grid; grid-template-columns: 1fr 1.5fr 1fr auto; gap:12px; padding:8px 0; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-3);"
-      }, [
-        h("div", {}, "Name"),
-        h("div", {}, "Email"),
-        h("div", {}, "Organisation"),
-        h("div", {}, "")
-      ]));
-      allClients.forEach(u => {
-        const o = u.orgId ? loadOrgMetas().find(m => m.id === u.orgId) : null;
+      table.appendChild(
+        h(
+          "div",
+          {
+            style:
+              "display:grid; grid-template-columns: 1fr 1.5fr 1fr auto; gap:12px; padding:8px 0; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-3);",
+          },
+          [
+            h("div", {}, "Name"),
+            h("div", {}, "Email"),
+            h("div", {}, "Organisation"),
+            h("div", {}, ""),
+          ],
+        ),
+      );
+      allClients.forEach((u) => {
+        const o = u.orgId ? loadOrgMetas().find((m) => m.id === u.orgId) : null;
         const row = h("div", {
-          style: "display:grid; grid-template-columns: 1fr 1.5fr 1fr auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); font-size:13.5px;"
+          style:
+            "display:grid; grid-template-columns: 1fr 1.5fr 1fr auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); font-size:13.5px;",
         });
         row.appendChild(h("div", {}, u.name || "—"));
-        row.appendChild(h("div", {}, [
-          h("div", {}, u.email),
-          h("div", { style: `font-size:11px; margin-top:2px; color: ${u.passwordHash ? "var(--green)" : "var(--ink-3)"};` },
-            u.passwordHash ? "password set" : "awaiting first sign-in")
-        ]));
+        row.appendChild(
+          h("div", {}, [
+            h("div", {}, u.email),
+            h(
+              "div",
+              {
+                style: `font-size:11px; margin-top:2px; color: ${u.passwordHash ? "var(--green)" : "var(--ink-3)"};`,
+              },
+              u.passwordHash ? "password set" : "awaiting first sign-in",
+            ),
+          ]),
+        );
         row.appendChild(h("div", {}, o ? o.name : "— (unassigned)"));
-        row.appendChild(h("div", { style: "display:flex; gap:6px;" }, [
-          u.passwordHash ? h("button", {
-            class: "btn ghost sm",
-            onclick: () => confirmDialog("Reset password?",
-              `${u.email} will be asked to set a new password the next time they sign in.`,
-              () => {
-                const fresh = findUser(u.id);
-                if (fresh) { delete fresh.passwordHash; upsertUser(fresh); render(); }
-              }, "Reset")
-          }, "Reset password") : null,
-          h("button", {
-            class: "btn ghost sm danger",
-            onclick: () => confirmDialog("Remove client access?",
-              `${u.email} will no longer be able to sign in. Their responses from past rounds will remain in the data.`,
-              () => { deleteUser(u.id); render(); }, "Remove")
-          }, "Remove")
-        ].filter(Boolean)));
+        row.appendChild(
+          h(
+            "div",
+            { style: "display:flex; gap:6px;" },
+            [
+              u.passwordHash
+                ? h(
+                    "button",
+                    {
+                      class: "btn ghost sm",
+                      onclick: () =>
+                        confirmDialog(
+                          "Reset password?",
+                          `${u.email} will be asked to set a new password the next time they sign in.`,
+                          () => {
+                            const fresh = findUser(u.id);
+                            if (fresh) {
+                              delete fresh.passwordHash;
+                              upsertUser(fresh);
+                              render();
+                            }
+                          },
+                          "Reset",
+                        ),
+                    },
+                    "Reset password",
+                  )
+                : null,
+              h(
+                "button",
+                {
+                  class: "btn ghost sm danger",
+                  onclick: () =>
+                    confirmDialog(
+                      "Remove client access?",
+                      `${u.email} will no longer be able to sign in. Their responses from past rounds will remain in the data.`,
+                      () => {
+                        deleteUser(u.id);
+                        render();
+                      },
+                      "Remove",
+                    ),
+                },
+                "Remove",
+              ),
+            ].filter(Boolean),
+          ),
+        );
         table.appendChild(row);
       });
       usersCard.appendChild(table);
@@ -2564,27 +3402,47 @@
 
     // Internal team
     frag.appendChild(h("h2", {}, "Internal team"));
-    const internals = loadUsers().filter(u => u.role === "internal");
+    const internals = loadUsers().filter((u) => u.role === "internal");
     const intCard = h("div", { class: "card" });
     if (!internals.length) {
       intCard.appendChild(h("p", { style: "color: var(--ink-3);" }, "None."));
     } else {
-      internals.forEach(u => {
-        intCard.appendChild(h("div", {
-          style: "display:flex; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); font-size:13.5px;"
-        }, [
-          h("span", { class: "avatar internal" }, initials(u.name || u.email)),
-          h("div", { style: "flex:1;" }, [
-            h("div", { style: "font-weight:600;" }, u.name || u.email),
-            h("div", { style: "color:var(--ink-3); font-size:12px;" }, u.email)
-          ]),
-          u.id !== user.id ? h("button", {
-            class: "btn ghost sm danger",
-            onclick: () => confirmDialog("Remove team member?",
-              `${u.email} will no longer be able to sign in with internal access.`,
-              () => { deleteUser(u.id); render(); }, "Remove")
-          }, "Remove") : h("span", { style: "font-size:11px; color:var(--ink-3);" }, "you")
-        ]));
+      internals.forEach((u) => {
+        intCard.appendChild(
+          h(
+            "div",
+            {
+              style:
+                "display:flex; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); font-size:13.5px;",
+            },
+            [
+              h("span", { class: "avatar internal" }, initials(u.name || u.email)),
+              h("div", { style: "flex:1;" }, [
+                h("div", { style: "font-weight:600;" }, u.name || u.email),
+                h("div", { style: "color:var(--ink-3); font-size:12px;" }, u.email),
+              ]),
+              u.id !== user.id
+                ? h(
+                    "button",
+                    {
+                      class: "btn ghost sm danger",
+                      onclick: () =>
+                        confirmDialog(
+                          "Remove team member?",
+                          `${u.email} will no longer be able to sign in with internal access.`,
+                          () => {
+                            deleteUser(u.id);
+                            render();
+                          },
+                          "Remove",
+                        ),
+                    },
+                    "Remove",
+                  )
+                : h("span", { style: "font-size:11px; color:var(--ink-3);" }, "you"),
+            ],
+          ),
+        );
       });
     }
     frag.appendChild(intCard);
@@ -2592,10 +3450,20 @@
     // Settings
     frag.appendChild(h("h2", {}, "Settings"));
     const settingsCard = h("div", { class: "card" });
-    settingsCard.appendChild(h("p", { style: "color:var(--ink-2); font-size:13px; margin-top:0;" },
-      "Internal sign-in is restricted to a fixed allowlist of emails with a shared team password, configured in the app source. To add a team member or rotate the password, edit the repo."));
-    settingsCard.appendChild(h("div", { style: "font-size:12.5px; color:var(--ink-3);" },
-      "Allowed emails: " + INTERNAL_ALLOWED_EMAILS.join(", ")));
+    settingsCard.appendChild(
+      h(
+        "p",
+        { style: "color:var(--ink-2); font-size:13px; margin-top:0;" },
+        "Internal sign-in is restricted to a fixed allowlist of emails with a shared team password, configured in the app source. To add a team member or rotate the password, edit the repo.",
+      ),
+    );
+    settingsCard.appendChild(
+      h(
+        "div",
+        { style: "font-size:12.5px; color:var(--ink-3);" },
+        "Allowed emails: " + INTERNAL_ALLOWED_EMAILS.join(", "),
+      ),
+    );
     frag.appendChild(settingsCard);
 
     return frag;
@@ -2606,7 +3474,9 @@
   // localStorage is the working cache; Firestore is the source of truth
   // across devices. Pushes are debounced; pulls happen once on app boot.
   // ================================================================
-  function fbReady() { return !!(window.FB && window.FB.currentUser); }
+  function fbReady() {
+    return !!(window.FB && window.FB.currentUser);
+  }
 
   const cloudSaveTimers = {};
   function cloudPushOrg(org) {
@@ -2660,7 +3530,7 @@
     try {
       const { db, firestore } = window.FB;
       const snap = await firestore.getDocs(firestore.collection(db, "orgs"));
-      return snap.docs.map(d => d.data());
+      return snap.docs.map((d) => d.data());
     } catch (e) {
       console.error("Cloud fetch orgs failed:", e);
       return null;
@@ -2672,7 +3542,7 @@
     try {
       const { db, firestore } = window.FB;
       const snap = await firestore.getDocs(firestore.collection(db, "users"));
-      return snap.docs.map(d => d.data());
+      return snap.docs.map((d) => d.data());
     } catch (e) {
       console.error("Cloud fetch users failed:", e);
       return null;
@@ -2685,36 +3555,37 @@
   // wipe local data on a network blip.
   async function syncFromCloud() {
     if (!fbReady()) return;
-    const [cloudOrgs, cloudUsers] = await Promise.all([
-      cloudFetchAllOrgs(),
-      cloudFetchAllUsers()
-    ]);
+    const [cloudOrgs, cloudUsers] = await Promise.all([cloudFetchAllOrgs(), cloudFetchAllUsers()]);
     if (cloudOrgs === null || cloudUsers === null) return;
 
     // ---- Orgs ----
     const localMetas = jget(K.orgs, []);
-    const cloudOrgIds = new Set(cloudOrgs.map(o => o.id));
-    localMetas.forEach(meta => {
+    const cloudOrgIds = new Set(cloudOrgs.map((o) => o.id));
+    localMetas.forEach((meta) => {
       if (!cloudOrgIds.has(meta.id)) {
         const local = jget(K.org(meta.id), null);
         if (local) cloudPushOrg(local);
       }
     });
-    cloudOrgs.forEach(o => { if (o && o.id) jset(K.org(o.id), o); });
-    const newMetas = cloudOrgs
-      .filter(o => o && o.id)
-      .map(o => ({ id: o.id, name: o.name }));
-    localMetas.forEach(m => { if (!cloudOrgIds.has(m.id)) newMetas.push(m); });
+    cloudOrgs.forEach((o) => {
+      if (o && o.id) jset(K.org(o.id), o);
+    });
+    const newMetas = cloudOrgs.filter((o) => o && o.id).map((o) => ({ id: o.id, name: o.name }));
+    localMetas.forEach((m) => {
+      if (!cloudOrgIds.has(m.id)) newMetas.push(m);
+    });
     jset(K.orgs, newMetas);
 
     // ---- Users ----
     const localUsers = jget(K.users, []);
-    const cloudUserIds = new Set(cloudUsers.map(u => u.id));
-    localUsers.forEach(u => {
+    const cloudUserIds = new Set(cloudUsers.map((u) => u.id));
+    localUsers.forEach((u) => {
       if (!cloudUserIds.has(u.id)) cloudPushUser(u);
     });
     const merged = [...cloudUsers];
-    localUsers.forEach(u => { if (!cloudUserIds.has(u.id)) merged.push(u); });
+    localUsers.forEach((u) => {
+      if (!cloudUserIds.has(u.id)) merged.push(u);
+    });
     jset(K.users, merged);
 
     // Re-render so the UI reflects synced data
@@ -2736,13 +3607,26 @@
   function renderDocuments(user, org) {
     const frag = h("div");
     frag.appendChild(h("h1", { class: "view-title" }, "Documents"));
-    frag.appendChild(h("p", { class: "view-sub" },
-      org ? `Shared with ${org.name}. Everyone in this organisation can see documents unless marked private.` : "Select an organisation to see its documents."));
+    frag.appendChild(
+      h(
+        "p",
+        { class: "view-sub" },
+        org
+          ? `Shared with ${org.name}. Everyone in this organisation can see documents unless marked private.`
+          : "Select an organisation to see its documents.",
+      ),
+    );
 
     if (!org) return frag;
 
     if (!fbReady()) {
-      frag.appendChild(h("div", { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" }, "Connecting to shared storage…"));
+      frag.appendChild(
+        h(
+          "div",
+          { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" },
+          "Connecting to shared storage…",
+        ),
+      );
       return frag;
     }
 
@@ -2779,7 +3663,7 @@
           downloadURL: url,
           visibility: privateChk.checked ? "private" : "org",
           allowedUserIds: privateChk.checked ? [user.id] : [],
-          createdAt: firestore.serverTimestamp()
+          createdAt: firestore.serverTimestamp(),
         });
         progressBar.textContent = `✓ Uploaded ${file.name}`;
         privateChk.checked = false;
@@ -2794,14 +3678,19 @@
       e.target.value = "";
     });
 
-    uploadCard.appendChild(h("div", { style: "display:flex; gap:12px; align-items:center; flex-wrap:wrap;" }, [
-      h("button", { class: "btn", onclick: () => fileInput.click() }, "+ Upload file"),
-      fileInput,
-      h("label", { style: "display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-2);" }, [
-        privateChk,
-        h("span", {}, "Private (only I can see it)")
-      ])
-    ]));
+    uploadCard.appendChild(
+      h("div", { style: "display:flex; gap:12px; align-items:center; flex-wrap:wrap;" }, [
+        h("button", { class: "btn", onclick: () => fileInput.click() }, "+ Upload file"),
+        fileInput,
+        h(
+          "label",
+          {
+            style: "display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-2);",
+          },
+          [privateChk, h("span", {}, "Private (only I can see it)")],
+        ),
+      ]),
+    );
     uploadCard.appendChild(progressBar);
     frag.appendChild(uploadCard);
 
@@ -2815,61 +3704,96 @@
 
     const q = firestore.query(
       firestore.collection(db, "documents"),
-      firestore.where("orgId", "==", org.id)
+      firestore.where("orgId", "==", org.id),
     );
-    firestore.onSnapshot(q, (snap) => {
-      const docs = [];
-      snap.forEach((d) => docs.push({ id: d.id, ...d.data() }));
-      docs.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+    firestore.onSnapshot(
+      q,
+      (snap) => {
+        const docs = [];
+        snap.forEach((d) => docs.push({ id: d.id, ...d.data() }));
+        docs.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
 
-      const isInternal = user.role === "internal";
-      const visible = docs.filter(d => {
-        if (d.visibility !== "private") return true;
-        if (isInternal) return true;
-        return (d.allowedUserIds || []).includes(user.id);
-      });
-
-      listBody.innerHTML = "";
-      if (!visible.length) {
-        listBody.appendChild(h("p", { style: "color:var(--ink-3);" }, "No files yet."));
-        return;
-      }
-      visible.forEach(d => {
-        const row = h("div", {
-          style: "display:grid; grid-template-columns: 1.5fr 1fr 1fr auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); font-size:13.5px;"
+        const isInternal = user.role === "internal";
+        const visible = docs.filter((d) => {
+          if (d.visibility !== "private") return true;
+          if (isInternal) return true;
+          return (d.allowedUserIds || []).includes(user.id);
         });
-        row.appendChild(h("div", {}, [
-          h("div", { style: "font-weight:600;" }, d.filename),
-          h("div", { style: "font-size:11px; color:var(--ink-3);" },
-            formatBytes(d.size) + (d.visibility === "private" ? " · private" : ""))
-        ]));
-        row.appendChild(h("div", {}, d.uploaderName || d.uploaderEmail || "—"));
-        row.appendChild(h("div", {}, d.createdAt?.toDate?.().toLocaleString?.() || ""));
-        const canDelete = isInternal || d.uploaderId === user.id;
-        const actions = h("div", { style: "display:flex; gap:6px;" }, [
-          h("a", {
-            class: "btn secondary sm",
-            href: d.downloadURL,
-            target: "_blank",
-            rel: "noopener"
-          }, "Download"),
-          canDelete ? h("button", {
-            class: "btn ghost sm danger",
-            onclick: () => confirmDialog("Delete file?", `Remove "${d.filename}" for everyone in ${org.name}? This cannot be undone.`, async () => {
-              try {
-                await storageOps.deleteObject(storageOps.ref(storage, d.storagePath));
-              } catch (e) { /* file may already be gone */ }
-              await firestore.deleteDoc(firestore.doc(db, "documents", d.id));
-            }, "Delete")
-          }, "Delete") : null
-        ].filter(Boolean));
-        row.appendChild(actions);
-        listBody.appendChild(row);
-      });
-    }, (err) => {
-      listBody.innerHTML = "";
-      listBody.appendChild(h("p", { style: "color:var(--red);" }, "Couldn't load documents: " + err.message));
-    });
+
+        listBody.innerHTML = "";
+        if (!visible.length) {
+          listBody.appendChild(h("p", { style: "color:var(--ink-3);" }, "No files yet."));
+          return;
+        }
+        visible.forEach((d) => {
+          const row = h("div", {
+            style:
+              "display:grid; grid-template-columns: 1.5fr 1fr 1fr auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); font-size:13.5px;",
+          });
+          row.appendChild(
+            h("div", {}, [
+              h("div", { style: "font-weight:600;" }, d.filename),
+              h(
+                "div",
+                { style: "font-size:11px; color:var(--ink-3);" },
+                formatBytes(d.size) + (d.visibility === "private" ? " · private" : ""),
+              ),
+            ]),
+          );
+          row.appendChild(h("div", {}, d.uploaderName || d.uploaderEmail || "—"));
+          row.appendChild(h("div", {}, d.createdAt?.toDate?.().toLocaleString?.() || ""));
+          const canDelete = isInternal || d.uploaderId === user.id;
+          const actions = h(
+            "div",
+            { style: "display:flex; gap:6px;" },
+            [
+              h(
+                "a",
+                {
+                  class: "btn secondary sm",
+                  href: d.downloadURL,
+                  target: "_blank",
+                  rel: "noopener",
+                },
+                "Download",
+              ),
+              canDelete
+                ? h(
+                    "button",
+                    {
+                      class: "btn ghost sm danger",
+                      onclick: () =>
+                        confirmDialog(
+                          "Delete file?",
+                          `Remove "${d.filename}" for everyone in ${org.name}? This cannot be undone.`,
+                          async () => {
+                            try {
+                              await storageOps.deleteObject(storageOps.ref(storage, d.storagePath));
+                              // eslint-disable-next-line no-unused-vars -- Phase 4: replace with central error logger (Phase 9 observability). See runbooks/phase-4-cleanup-ledger.md
+                            } catch (e) {
+                              /* file may already be gone */
+                            }
+                            await firestore.deleteDoc(firestore.doc(db, "documents", d.id));
+                          },
+                          "Delete",
+                        ),
+                    },
+                    "Delete",
+                  )
+                : null,
+            ].filter(Boolean),
+          );
+          row.appendChild(actions);
+          listBody.appendChild(row);
+        });
+      },
+      (err) => {
+        listBody.innerHTML = "";
+        listBody.appendChild(
+          h("p", { style: "color:var(--red);" }, "Couldn't load documents: " + err.message),
+        );
+      },
+    );
 
     return frag;
   }
@@ -2880,13 +3804,26 @@
   function renderChat(user, org) {
     const frag = h("div");
     frag.appendChild(h("h1", { class: "view-title" }, "Chat"));
-    frag.appendChild(h("p", { class: "view-sub", style: "margin-bottom:4px;" },
-      org ? `Team channel for ${org.name}. Everyone in this organisation + BeDeveloped can post and read.` : "Select an organisation to open its channel."));
+    frag.appendChild(
+      h(
+        "p",
+        { class: "view-sub", style: "margin-bottom:4px;" },
+        org
+          ? `Team channel for ${org.name}. Everyone in this organisation + BeDeveloped can post and read.`
+          : "Select an organisation to open its channel.",
+      ),
+    );
     if (org) {
-      frag.appendChild(h("p", {
-        class: "view-sub",
-        style: "margin-top:0; color: var(--ink-3); font-style: italic; font-size: 13px;"
-      }, "The team will aim to respond within 24hrs."));
+      frag.appendChild(
+        h(
+          "p",
+          {
+            class: "view-sub",
+            style: "margin-top:0; color: var(--ink-3); font-style: italic; font-size: 13px;",
+          },
+          "The team will aim to respond within 24hrs.",
+        ),
+      );
     }
 
     if (!org) return frag;
@@ -2895,25 +3832,37 @@
     markChatReadFor(user.id, org.id);
 
     if (!fbReady()) {
-      frag.appendChild(h("div", { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" }, "Connecting to chat…"));
+      frag.appendChild(
+        h(
+          "div",
+          { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" },
+          "Connecting to chat…",
+        ),
+      );
       return frag;
     }
 
     const { db, firestore } = window.FB;
 
-    const card = h("div", { class: "card", style: "padding:0; display:flex; flex-direction:column; height: calc(100vh - 260px); min-height:480px;" });
+    const card = h("div", {
+      class: "card",
+      style:
+        "padding:0; display:flex; flex-direction:column; height: calc(100vh - 260px); min-height:480px;",
+    });
 
     // Search
     const searchInput = h("input", {
       type: "search",
       placeholder: "Search messages…",
-      style: "width:100%; padding:10px 14px; border:0; border-bottom:1px solid var(--line); font:inherit; font-size:14px; background:transparent;"
+      style:
+        "width:100%; padding:10px 14px; border:0; border-bottom:1px solid var(--line); font:inherit; font-size:14px; background:transparent;",
     });
     card.appendChild(searchInput);
 
     // Message list
     const list = h("div", {
-      style: "flex:1; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:10px;"
+      style:
+        "flex:1; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:10px;",
     });
     list.appendChild(h("p", { style: "color:var(--ink-3); text-align:center;" }, "Loading…"));
     card.appendChild(list);
@@ -2922,13 +3871,19 @@
     const textInput = h("input", {
       type: "text",
       placeholder: "Type a message…",
-      style: "flex:1; padding:10px 14px; border:1px solid var(--line-2); border-radius:8px; font:inherit; font-size:14px;"
+      style:
+        "flex:1; padding:10px 14px; border:1px solid var(--line-2); border-radius:8px; font:inherit; font-size:14px;",
     });
     const sendBtn = h("button", { class: "btn" }, "Send");
 
-    const composer = h("div", {
-      style: "display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--line); background:var(--surface-muted);"
-    }, [textInput, sendBtn]);
+    const composer = h(
+      "div",
+      {
+        style:
+          "display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--line); background:var(--surface-muted);",
+      },
+      [textInput, sendBtn],
+    );
     card.appendChild(composer);
     frag.appendChild(card);
 
@@ -2936,43 +3891,65 @@
     const renderList = () => {
       const term = (searchInput.value || "").trim().toLowerCase();
       const filtered = term
-        ? allMessages.filter(m => (m.text || "").toLowerCase().includes(term) || (m.authorName || "").toLowerCase().includes(term))
+        ? allMessages.filter(
+            (m) =>
+              (m.text || "").toLowerCase().includes(term) ||
+              (m.authorName || "").toLowerCase().includes(term),
+          )
         : allMessages;
       list.innerHTML = "";
       if (!filtered.length) {
-        list.appendChild(h("p", { style: "color:var(--ink-3); text-align:center;" },
-          term ? "No messages match." : "No messages yet — start the conversation."));
+        list.appendChild(
+          h(
+            "p",
+            { style: "color:var(--ink-3); text-align:center;" },
+            term ? "No messages match." : "No messages yet — start the conversation.",
+          ),
+        );
         return;
       }
-      filtered.forEach(m => {
+      filtered.forEach((m) => {
         const isSelf = m.authorId === user.id;
         const isInternalAuthor = m.authorRole === "internal";
         const bg = isInternalAuthor ? "var(--ink)" : "var(--brand)";
         const ts = m.createdAt?.toDate?.().toLocaleString?.() || "";
         const who = firstNameFromAuthor(m);
         const canDelete = isSelf || !isClientView(user);
-        const bubble = h("div", {
-          class: "chat-bubble",
-          style: `align-self:${isSelf ? "flex-end" : "flex-start"}; background:${bg}; border-color:${bg};`
-        }, [
-          h("div", { class: "chat-bubble-meta" }, `${who} · ${ts}`),
-          h("div", { class: "chat-bubble-text" }, m.text)
-        ]);
+        const bubble = h(
+          "div",
+          {
+            class: "chat-bubble",
+            style: `align-self:${isSelf ? "flex-end" : "flex-start"}; background:${bg}; border-color:${bg};`,
+          },
+          [
+            h("div", { class: "chat-bubble-meta" }, `${who} · ${ts}`),
+            h("div", { class: "chat-bubble-text" }, m.text),
+          ],
+        );
         if (canDelete) {
-          const del = h("button", {
-            class: "chat-bubble-del",
-            title: "Delete",
-            onclick: (e) => {
-              e.stopPropagation();
-              confirmDialog("Delete message?", "This cannot be undone.", async () => {
-                try {
-                  await firestore.deleteDoc(firestore.doc(db, "messages", m.id));
-                } catch (err) {
-                  alert("Couldn't delete: " + (err.message || err));
-                }
-              }, "Delete");
-            }
-          }, "×");
+          const del = h(
+            "button",
+            {
+              class: "chat-bubble-del",
+              title: "Delete",
+              onclick: (e) => {
+                e.stopPropagation();
+                confirmDialog(
+                  "Delete message?",
+                  "This cannot be undone.",
+                  async () => {
+                    try {
+                      await firestore.deleteDoc(firestore.doc(db, "messages", m.id));
+                    } catch (err) {
+                      alert("Couldn't delete: " + (err.message || err));
+                    }
+                  },
+                  "Delete",
+                );
+              },
+            },
+            "×",
+          );
           bubble.appendChild(del);
         }
         list.appendChild(bubble);
@@ -2994,7 +3971,7 @@
           authorEmail: user.email,
           authorRole: user.role,
           text,
-          createdAt: firestore.serverTimestamp()
+          createdAt: firestore.serverTimestamp(),
         });
       } catch (e) {
         textInput.value = text;
@@ -3004,24 +3981,33 @@
 
     sendBtn.addEventListener("click", send);
     textInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        send();
+      }
     });
 
     const q = firestore.query(
       firestore.collection(db, "messages"),
-      firestore.where("orgId", "==", org.id)
+      firestore.where("orgId", "==", org.id),
     );
-    firestore.onSnapshot(q, (snap) => {
-      allMessages = [];
-      snap.forEach((d) => allMessages.push({ id: d.id, ...d.data() }));
-      allMessages.sort((a, b) =>
-        (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0)
-      );
-      renderList();
-    }, (err) => {
-      list.innerHTML = "";
-      list.appendChild(h("p", { style: "color:var(--red);" }, "Couldn't load chat: " + err.message));
-    });
+    firestore.onSnapshot(
+      q,
+      (snap) => {
+        allMessages = [];
+        snap.forEach((d) => allMessages.push({ id: d.id, ...d.data() }));
+        allMessages.sort(
+          (a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0),
+        );
+        renderList();
+      },
+      (err) => {
+        list.innerHTML = "";
+        list.appendChild(
+          h("p", { style: "color:var(--red);" }, "Couldn't load chat: " + err.message),
+        );
+      },
+    );
 
     setTimeout(() => textInput.focus(), 50);
     return frag;
@@ -3030,17 +4016,25 @@
   // ================================================================
   // ROADMAP (Firestore — internal edits, clients read-only)
   // ================================================================
-  function orgTier(org) { return org?.tier === "performance" ? "performance" : "transformation"; }
-  function periodCount(org) { return orgTier(org) === "performance" ? 4 : 12; }
-  function periodLabelPrefix(org) { return orgTier(org) === "performance" ? "Quarter" : "Month"; }
-  function periodsField(org) { return orgTier(org) === "performance" ? "quarters" : "months"; }
+  function orgTier(org) {
+    return org?.tier === "performance" ? "performance" : "transformation";
+  }
+  function periodCount(org) {
+    return orgTier(org) === "performance" ? 4 : 12;
+  }
+  function periodLabelPrefix(org) {
+    return orgTier(org) === "performance" ? "Quarter" : "Month";
+  }
+  function periodsField(org) {
+    return orgTier(org) === "performance" ? "quarters" : "months";
+  }
 
   function emptyRoadmap(orgId, tier) {
     const count = tier === "performance" ? 4 : 12;
     return {
       orgId,
       periods: Array.from({ length: count }, () => ({ pillarIds: [], outcomes: [] })),
-      updatedAt: null
+      updatedAt: null,
     };
   }
 
@@ -3050,14 +4044,25 @@
     const tier = orgTier(org);
     const periodCadence = tier === "performance" ? "4-quarter" : "12-month";
     const periodLabelLower = tier === "performance" ? "quarter" : "month";
-    frag.appendChild(h("p", { class: "view-sub" },
-      org
-        ? `${periodCadence} delivery plan for ${org.name}. ${user.role === "internal" ? `Drag pillars into a ${periodLabelLower} and add outcomes.` : "Your BeDeveloped team will update this as the engagement progresses."}`
-        : "Select an organisation to see its plan."));
+    frag.appendChild(
+      h(
+        "p",
+        { class: "view-sub" },
+        org
+          ? `${periodCadence} delivery plan for ${org.name}. ${user.role === "internal" ? `Drag pillars into a ${periodLabelLower} and add outcomes.` : "Your BeDeveloped team will update this as the engagement progresses."}`
+          : "Select an organisation to see its plan.",
+      ),
+    );
     if (!org) return frag;
 
     if (!fbReady()) {
-      frag.appendChild(h("div", { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" }, "Connecting to shared storage…"));
+      frag.appendChild(
+        h(
+          "div",
+          { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" },
+          "Connecting to shared storage…",
+        ),
+      );
       return frag;
     }
 
@@ -3065,19 +4070,45 @@
     const canEdit = user.role === "internal";
     const docRef = firestore.doc(db, "roadmaps", org.id);
 
-    const layout = h("div", { class: "roadmap-layout", style: "display:grid; grid-template-columns: 1fr 260px; gap:18px; align-items:start;" });
+    const layout = h("div", {
+      class: "roadmap-layout",
+      style: "display:grid; grid-template-columns: 1fr 260px; gap:18px; align-items:start;",
+    });
     const periodsCol = h("div", { style: "display:flex; flex-direction:column; gap:10px;" });
-    const palette = h("div", { class: "card roadmap-palette", style: "position:sticky; top:18px; padding:14px;" });
+    const palette = h("div", {
+      class: "card roadmap-palette",
+      style: "position:sticky; top:18px; padding:14px;",
+    });
 
     // Pillar palette
-    palette.appendChild(h("div", { style: "font-family: var(--font-display); letter-spacing:0.08em; color: var(--brand); font-size:12px; margin-bottom:8px;" }, "PILLARS"));
-    palette.appendChild(h("p", { style: "font-size:11.5px; color:var(--ink-3); margin:0 0 10px; line-height:1.4;" },
-      canEdit ? `Drag any pillar into a ${periodLabelLower}. A pillar can appear in more than one ${periodLabelLower}.` : `Pillars assigned to each ${periodLabelLower} appear below.`));
-    DATA.pillars.forEach(p => {
-      const chip = h("div", {
-        "data-pillar": p.id,
-        style: `padding:6px 10px; margin-bottom:6px; border:1px solid var(--line-2); border-radius:999px; background:var(--brand-tint); color:var(--brand-ink); font-size:12px; ${canEdit ? "cursor:grab;" : ""}`
-      }, `${p.id}. ${p.shortName || p.name}`);
+    palette.appendChild(
+      h(
+        "div",
+        {
+          style:
+            "font-family: var(--font-display); letter-spacing:0.08em; color: var(--brand); font-size:12px; margin-bottom:8px;",
+        },
+        "PILLARS",
+      ),
+    );
+    palette.appendChild(
+      h(
+        "p",
+        { style: "font-size:11.5px; color:var(--ink-3); margin:0 0 10px; line-height:1.4;" },
+        canEdit
+          ? `Drag any pillar into a ${periodLabelLower}. A pillar can appear in more than one ${periodLabelLower}.`
+          : `Pillars assigned to each ${periodLabelLower} appear below.`,
+      ),
+    );
+    DATA.pillars.forEach((p) => {
+      const chip = h(
+        "div",
+        {
+          "data-pillar": p.id,
+          style: `padding:6px 10px; margin-bottom:6px; border:1px solid var(--line-2); border-radius:999px; background:var(--brand-tint); color:var(--brand-ink); font-size:12px; ${canEdit ? "cursor:grab;" : ""}`,
+        },
+        `${p.id}. ${p.shortName || p.name}`,
+      );
       if (canEdit) {
         chip.setAttribute("draggable", "true");
         chip.addEventListener("dragstart", (e) => {
@@ -3095,11 +4126,15 @@
     const save = async (next) => {
       localData = next;
       try {
-        await firestore.setDoc(docRef, {
-          orgId: org.id,
-          [persistField]: next.periods,
-          updatedAt: firestore.serverTimestamp()
-        }, { merge: true });
+        await firestore.setDoc(
+          docRef,
+          {
+            orgId: org.id,
+            [persistField]: next.periods,
+            updatedAt: firestore.serverTimestamp(),
+          },
+          { merge: true },
+        );
       } catch (e) {
         alert("Couldn't save roadmap: " + (e.message || e));
       }
@@ -3109,42 +4144,89 @@
       periodsCol.innerHTML = "";
       localData.periods.forEach((m, idx) => {
         const card = h("div", { class: "card", style: "padding:14px;" });
-        card.appendChild(h("div", { style: "display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;" }, [
-          h("div", { style: "font-family: var(--font-display); font-size:18px; letter-spacing:0.02em; color: var(--ink);" }, `${periodLabel} ${idx + 1}`),
-          h("div", { style: "font-size:11px; color:var(--ink-3);" }, `${(m.pillarIds || []).length} pillar${(m.pillarIds || []).length === 1 ? "" : "s"} · ${(m.outcomes || []).length} outcome${(m.outcomes || []).length === 1 ? "" : "s"}`)
-        ]));
+        card.appendChild(
+          h(
+            "div",
+            {
+              style:
+                "display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;",
+            },
+            [
+              h(
+                "div",
+                {
+                  style:
+                    "font-family: var(--font-display); font-size:18px; letter-spacing:0.02em; color: var(--ink);",
+                },
+                `${periodLabel} ${idx + 1}`,
+              ),
+              h(
+                "div",
+                { style: "font-size:11px; color:var(--ink-3);" },
+                `${(m.pillarIds || []).length} pillar${(m.pillarIds || []).length === 1 ? "" : "s"} · ${(m.outcomes || []).length} outcome${(m.outcomes || []).length === 1 ? "" : "s"}`,
+              ),
+            ],
+          ),
+        );
 
         // Pillars drop zone
         const drop = h("div", {
-          style: `min-height:42px; padding:8px; border:1px dashed var(--line-2); border-radius:8px; display:flex; flex-wrap:wrap; gap:6px; background:var(--surface-muted); margin-bottom:10px;`
+          style: `min-height:42px; padding:8px; border:1px dashed var(--line-2); border-radius:8px; display:flex; flex-wrap:wrap; gap:6px; background:var(--surface-muted); margin-bottom:10px;`,
         });
         if (!(m.pillarIds || []).length) {
-          drop.appendChild(h("span", { style: "font-size:12px; color:var(--ink-4);" },
-            canEdit ? "Drag pillars here" : "No pillars assigned yet"));
+          drop.appendChild(
+            h(
+              "span",
+              { style: "font-size:12px; color:var(--ink-4);" },
+              canEdit ? "Drag pillars here" : "No pillars assigned yet",
+            ),
+          );
         }
-        (m.pillarIds || []).forEach(pid => {
-          const p = DATA.pillars.find(pp => pp.id === pid);
+        (m.pillarIds || []).forEach((pid) => {
+          const p = DATA.pillars.find((pp) => pp.id === pid);
           if (!p) return;
-          const chip = h("span", {
-            style: "display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--brand); color:#fff; font-size:12px;"
-          }, [
-            h("span", {}, `${p.id}. ${p.shortName || p.name}`),
-            canEdit ? h("button", {
-              style: "border:0; background:transparent; color:#fff; cursor:pointer; padding:0 0 0 4px; font-size:13px; line-height:1;",
-              onclick: () => {
-                const next = { ...localData, periods: localData.periods.map((mm, i) =>
-                  i === idx ? { ...mm, pillarIds: (mm.pillarIds || []).filter(x => x !== pid) } : mm
-                ) };
-                save(next);
-                renderPeriods();
-              }
-            }, "×") : null
-          ].filter(Boolean));
+          const chip = h(
+            "span",
+            {
+              style:
+                "display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--brand); color:#fff; font-size:12px;",
+            },
+            [
+              h("span", {}, `${p.id}. ${p.shortName || p.name}`),
+              canEdit
+                ? h(
+                    "button",
+                    {
+                      style:
+                        "border:0; background:transparent; color:#fff; cursor:pointer; padding:0 0 0 4px; font-size:13px; line-height:1;",
+                      onclick: () => {
+                        const next = {
+                          ...localData,
+                          periods: localData.periods.map((mm, i) =>
+                            i === idx
+                              ? { ...mm, pillarIds: (mm.pillarIds || []).filter((x) => x !== pid) }
+                              : mm,
+                          ),
+                        };
+                        save(next);
+                        renderPeriods();
+                      },
+                    },
+                    "×",
+                  )
+                : null,
+            ].filter(Boolean),
+          );
           drop.appendChild(chip);
         });
         if (canEdit) {
-          drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.style.background = "var(--brand-tint)"; });
-          drop.addEventListener("dragleave", () => { drop.style.background = "var(--surface-muted)"; });
+          drop.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            drop.style.background = "var(--brand-tint)";
+          });
+          drop.addEventListener("dragleave", () => {
+            drop.style.background = "var(--surface-muted)";
+          });
           drop.addEventListener("drop", (e) => {
             e.preventDefault();
             drop.style.background = "var(--surface-muted)";
@@ -3152,9 +4234,12 @@
             if (!pid) return;
             const current = localData.periods[idx]?.pillarIds || [];
             if (current.includes(pid)) return;
-            const next = { ...localData, periods: localData.periods.map((mm, i) =>
-              i === idx ? { ...mm, pillarIds: [...current, pid] } : mm
-            ) };
+            const next = {
+              ...localData,
+              periods: localData.periods.map((mm, i) =>
+                i === idx ? { ...mm, pillarIds: [...current, pid] } : mm,
+              ),
+            };
             save(next);
             renderPeriods();
           });
@@ -3162,22 +4247,45 @@
         card.appendChild(drop);
 
         // Outcomes
-        card.appendChild(h("div", { style: "font-size:11px; letter-spacing:0.08em; color:var(--ink-3); text-transform:uppercase; margin-bottom:6px;" }, "Outcomes"));
-        const outList = h("div", { style: "display:flex; flex-direction:column; gap:4px; margin-bottom:8px;" });
+        card.appendChild(
+          h(
+            "div",
+            {
+              style:
+                "font-size:11px; letter-spacing:0.08em; color:var(--ink-3); text-transform:uppercase; margin-bottom:6px;",
+            },
+            "Outcomes",
+          ),
+        );
+        const outList = h("div", {
+          style: "display:flex; flex-direction:column; gap:4px; margin-bottom:8px;",
+        });
         if (!(m.outcomes || []).length) {
-          outList.appendChild(h("div", { style: "font-size:12px; color:var(--ink-4);" }, "None yet."));
+          outList.appendChild(
+            h("div", { style: "font-size:12px; color:var(--ink-4);" }, "None yet."),
+          );
         }
-        (m.outcomes || []).forEach(o => {
-          const row = h("div", { style: "display:flex; align-items:center; gap:8px; font-size:13px;" });
+        (m.outcomes || []).forEach((o) => {
+          const row = h("div", {
+            style: "display:flex; align-items:center; gap:8px; font-size:13px;",
+          });
           const check = h("input", { type: "checkbox" });
           check.checked = !!o.done;
           if (canEdit) {
             check.addEventListener("change", () => {
-              const next = { ...localData, periods: localData.periods.map((mm, i) =>
-                i === idx ? { ...mm, outcomes: (mm.outcomes || []).map(oo =>
-                  oo.id === o.id ? { ...oo, done: check.checked } : oo
-                ) } : mm
-              ) };
+              const next = {
+                ...localData,
+                periods: localData.periods.map((mm, i) =>
+                  i === idx
+                    ? {
+                        ...mm,
+                        outcomes: (mm.outcomes || []).map((oo) =>
+                          oo.id === o.id ? { ...oo, done: check.checked } : oo,
+                        ),
+                      }
+                    : mm,
+                ),
+              };
               save(next);
               renderPeriods();
             });
@@ -3187,17 +4295,28 @@
           row.appendChild(check);
           row.appendChild(h("span", { style: "flex:1;" }, o.text));
           if (canEdit) {
-            row.appendChild(h("button", {
-              class: "btn ghost sm danger",
-              style: "padding:2px 8px; font-size:11px;",
-              onclick: () => {
-                const next = { ...localData, periods: localData.periods.map((mm, i) =>
-                  i === idx ? { ...mm, outcomes: (mm.outcomes || []).filter(oo => oo.id !== o.id) } : mm
-                ) };
-                save(next);
-                renderPeriods();
-              }
-            }, "Remove"));
+            row.appendChild(
+              h(
+                "button",
+                {
+                  class: "btn ghost sm danger",
+                  style: "padding:2px 8px; font-size:11px;",
+                  onclick: () => {
+                    const next = {
+                      ...localData,
+                      periods: localData.periods.map((mm, i) =>
+                        i === idx
+                          ? { ...mm, outcomes: (mm.outcomes || []).filter((oo) => oo.id !== o.id) }
+                          : mm,
+                      ),
+                    };
+                    save(next);
+                    renderPeriods();
+                  },
+                },
+                "Remove",
+              ),
+            );
           }
           outList.appendChild(row);
         });
@@ -3207,37 +4326,55 @@
           const input = h("input", {
             type: "text",
             placeholder: "Add outcome (e.g. Pipeline forecasting in place)",
-            style: "flex:1; padding:6px 10px; border:1px solid var(--line-2); border-radius:6px; font:inherit; font-size:13px;"
+            style:
+              "flex:1; padding:6px 10px; border:1px solid var(--line-2); border-radius:6px; font:inherit; font-size:13px;",
           });
           const addBtn = h("button", { class: "btn sm" }, "Add");
-          const pasteBtn = h("button", { class: "btn sm secondary", title: "Paste a list — one outcome per line" }, "Paste multiple");
+          const pasteBtn = h(
+            "button",
+            { class: "btn sm secondary", title: "Paste a list — one outcome per line" },
+            "Paste multiple",
+          );
           const addOutcome = () => {
             const text = input.value.trim();
             if (!text) return;
             input.value = "";
             const o = { id: uid("out_"), text, done: false };
-            const next = { ...localData, periods: localData.periods.map((mm, i) =>
-              i === idx ? { ...mm, outcomes: [...(mm.outcomes || []), o] } : mm
-            ) };
+            const next = {
+              ...localData,
+              periods: localData.periods.map((mm, i) =>
+                i === idx ? { ...mm, outcomes: [...(mm.outcomes || []), o] } : mm,
+              ),
+            };
             save(next);
             renderPeriods();
           };
           const addManyOutcomes = (lines) => {
             const clean = lines
-              .map(s => s.replace(/^\s*[-•*\d.\)]+\s*/, "").trim())
+              // eslint-disable-next-line no-useless-escape -- Phase 4: clean up regex (\\) is unnecessary in char class). See runbooks/phase-4-cleanup-ledger.md
+              .map((s) => s.replace(/^\s*[-•*\d.\)]+\s*/, "").trim())
               .filter(Boolean);
             if (!clean.length) return;
-            const newOutcomes = clean.map(text => ({ id: uid("out_"), text, done: false }));
-            const next = { ...localData, periods: localData.periods.map((mm, i) =>
-              i === idx ? { ...mm, outcomes: [...(mm.outcomes || []), ...newOutcomes] } : mm
-            ) };
+            const newOutcomes = clean.map((text) => ({ id: uid("out_"), text, done: false }));
+            const next = {
+              ...localData,
+              periods: localData.periods.map((mm, i) =>
+                i === idx ? { ...mm, outcomes: [...(mm.outcomes || []), ...newOutcomes] } : mm,
+              ),
+            };
             save(next);
             renderPeriods();
           };
           addBtn.addEventListener("click", addOutcome);
-          input.addEventListener("keydown", (e) => { if (e.key === "Enter") addOutcome(); });
-          pasteBtn.addEventListener("click", () => openBulkOutcomeModal(`${periodLabel} ${idx + 1}`, addManyOutcomes));
-          card.appendChild(h("div", { style: "display:flex; gap:6px;" }, [input, addBtn, pasteBtn]));
+          input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") addOutcome();
+          });
+          pasteBtn.addEventListener("click", () =>
+            openBulkOutcomeModal(`${periodLabel} ${idx + 1}`, addManyOutcomes),
+          );
+          card.appendChild(
+            h("div", { style: "display:flex; gap:6px;" }, [input, addBtn, pasteBtn]),
+          );
         }
 
         periodsCol.appendChild(card);
@@ -3251,49 +4388,66 @@
     // Initial paint + live updates
     renderPeriods();
     const expectedLen = periodCount(org);
-    firestore.onSnapshot(docRef, (snap) => {
-      if (snap.exists()) {
-        const d = snap.data();
-        const loaded = Array.isArray(d[persistField]) && d[persistField].length === expectedLen
-          ? d[persistField]
-          : emptyRoadmap(org.id, tier).periods;
-        localData = { orgId: org.id, periods: loaded, updatedAt: d.updatedAt || null };
-      } else {
-        localData = emptyRoadmap(org.id, tier);
-      }
-      renderPeriods();
-    }, (err) => console.error("Roadmap snapshot error:", err));
+    firestore.onSnapshot(
+      docRef,
+      (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          const loaded =
+            Array.isArray(d[persistField]) && d[persistField].length === expectedLen
+              ? d[persistField]
+              : emptyRoadmap(org.id, tier).periods;
+          localData = { orgId: org.id, periods: loaded, updatedAt: d.updatedAt || null };
+        } else {
+          localData = emptyRoadmap(org.id, tier);
+        }
+        renderPeriods();
+      },
+      (err) => console.error("Roadmap snapshot error:", err),
+    );
 
     return frag;
   }
 
   function openBulkOutcomeModal(periodLabel, onAdd) {
     const ta = h("textarea", {
-      placeholder: "Paste outcomes, one per line. Lines starting with -, •, *, or a number are cleaned up.\n\nExample:\n- Pipeline forecasting in place\n- Weekly revenue review running\n- Proposal template standardised",
-      style: "width:100%; min-height:220px; padding:12px; border:1px solid var(--line); border-radius:8px; font:13px/1.5 var(--font-sans, inherit); resize:vertical;"
+      placeholder:
+        "Paste outcomes, one per line. Lines starting with -, •, *, or a number are cleaned up.\n\nExample:\n- Pipeline forecasting in place\n- Weekly revenue review running\n- Proposal template standardised",
+      style:
+        "width:100%; min-height:220px; padding:12px; border:1px solid var(--line); border-radius:8px; font:13px/1.5 var(--font-sans, inherit); resize:vertical;",
     });
     const countLbl = h("div", { style: "font-size:12px; color:var(--ink-3);" }, "0 outcomes");
     ta.addEventListener("input", () => {
-      const n = ta.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean).length;
+      const n = ta.value
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean).length;
       countLbl.textContent = `${n} outcome${n === 1 ? "" : "s"}`;
     });
     const m = modal([
       h("h3", {}, `Paste multiple outcomes - ${periodLabel}`),
-      h("p", { style: "color:var(--ink-3); font-size:13px; margin-top:0;" },
-        "One outcome per line. Bullet markers and numbering are stripped automatically."),
+      h(
+        "p",
+        { style: "color:var(--ink-3); font-size:13px; margin-top:0;" },
+        "One outcome per line. Bullet markers and numbering are stripped automatically.",
+      ),
       ta,
       countLbl,
       h("div", { class: "row" }, [
         h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-        h("button", {
-          class: "btn",
-          onclick: () => {
-            const lines = ta.value.split(/\r?\n/);
-            onAdd(lines);
-            m.close();
-          }
-        }, "Add all")
-      ])
+        h(
+          "button",
+          {
+            class: "btn",
+            onclick: () => {
+              const lines = ta.value.split(/\r?\n/);
+              onAdd(lines);
+              m.close();
+            },
+          },
+          "Add all",
+        ),
+      ]),
     ]);
     setTimeout(() => ta.focus(), 10);
   }
@@ -3302,44 +4456,79 @@
   window.addEventListener("firebase-ready", () => {
     ensureChatSubscription(currentUser());
     syncFromCloud();
-    if (state.route === "documents" || state.route === "chat" || state.route === "roadmap" || state.route === "funnel") render();
+    if (
+      state.route === "documents" ||
+      state.route === "chat" ||
+      state.route === "roadmap" ||
+      state.route === "funnel"
+    )
+      render();
   });
 
   // ================================================================
   // FUNNEL (Firestore - shared per org, everyone can edit)
   // ================================================================
   const FUNNEL_METRICS = [
-    { key: "leads",              label: "Leads" },
-    { key: "mqls",               label: "MQL's" },
-    { key: "leadToMql",          label: "Lead > MQL %",                  type: "percent", num: "mqls",          den: "leads" },
-    { key: "sqls",               label: "SQL's" },
-    { key: "mqlToSql",           label: "MQL > SQL %",                   type: "percent", num: "sqls",          den: "mqls" },
-    { key: "proposalsSent",      label: "Proposals sent" },
-    { key: "sqlToProposal",      label: "SQL > Proposal %",              type: "percent", num: "proposalsSent", den: "sqls" },
-    { key: "qualifiedOutOur",    label: "Qualified out (Our decision)" },
-    { key: "qualifiedOutTheir",  label: "Qualified out (Their decision)" },
-    { key: "closedWon",          label: "Closed Won" },
-    { key: "conversion",         label: "Conversion %",                   type: "percent", num: "closedWon",     denKeys: ["sqls", "qualifiedOutTheir"] }
+    { key: "leads", label: "Leads" },
+    { key: "mqls", label: "MQL's" },
+    { key: "leadToMql", label: "Lead > MQL %", type: "percent", num: "mqls", den: "leads" },
+    { key: "sqls", label: "SQL's" },
+    { key: "mqlToSql", label: "MQL > SQL %", type: "percent", num: "sqls", den: "mqls" },
+    { key: "proposalsSent", label: "Proposals sent" },
+    {
+      key: "sqlToProposal",
+      label: "SQL > Proposal %",
+      type: "percent",
+      num: "proposalsSent",
+      den: "sqls",
+    },
+    { key: "qualifiedOutOur", label: "Qualified out (Our decision)" },
+    { key: "qualifiedOutTheir", label: "Qualified out (Their decision)" },
+    { key: "closedWon", label: "Closed Won" },
+    {
+      key: "conversion",
+      label: "Conversion %",
+      type: "percent",
+      num: "closedWon",
+      denKeys: ["sqls", "qualifiedOutTheir"],
+    },
   ];
   const FUNNEL_QUARTERS = ["Q1", "Q2", "Q3", "Q4"];
   const FUNNEL_YEARS = [2026, 2027];
 
   function renderFunnel(user, org) {
     const frag = h("div");
-    frag.appendChild(h("button", {
-      class: "back",
-      style: "margin-bottom: 6px;",
-      onclick: () => setRoute("dashboard")
-    }, "← Back to dashboard"));
+    frag.appendChild(
+      h(
+        "button",
+        {
+          class: "back",
+          style: "margin-bottom: 6px;",
+          onclick: () => setRoute("dashboard"),
+        },
+        "← Back to dashboard",
+      ),
+    );
     frag.appendChild(h("h1", { class: "view-title" }, "Funnel"));
-    frag.appendChild(h("p", { class: "view-sub" },
-      org
-        ? `Early-stage sales funnel for ${org.name}. Numbers are shared with your team in real time. Percentages calculate automatically.`
-        : "Select an organisation to see its funnel."));
+    frag.appendChild(
+      h(
+        "p",
+        { class: "view-sub" },
+        org
+          ? `Early-stage sales funnel for ${org.name}. Numbers are shared with your team in real time. Percentages calculate automatically.`
+          : "Select an organisation to see its funnel.",
+      ),
+    );
     if (!org) return frag;
 
     if (!fbReady()) {
-      frag.appendChild(h("div", { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" }, "Connecting to shared storage…"));
+      frag.appendChild(
+        h(
+          "div",
+          { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" },
+          "Connecting to shared storage…",
+        ),
+      );
       return frag;
     }
 
@@ -3347,9 +4536,11 @@
     const docRef = firestore.doc(db, "funnels", org.id);
 
     const localData = { years: {} };
-    FUNNEL_YEARS.forEach(y => {
+    FUNNEL_YEARS.forEach((y) => {
       localData.years[y] = {};
-      FUNNEL_QUARTERS.forEach(q => { localData.years[y][q] = {}; });
+      FUNNEL_QUARTERS.forEach((q) => {
+        localData.years[y][q] = {};
+      });
     });
     let localKpis = [];
 
@@ -3362,22 +4553,27 @@
     const kpiHeader = h("div", { class: "kpi-section-header" }, [
       h("div", {}, [
         h("h2", { class: "kpi-section-title" }, "KPIs"),
-        h("p", { class: "kpi-section-sub" },
-          "Track the metrics that matter for this client. Both teams can edit.")
-      ])
+        h(
+          "p",
+          { class: "kpi-section-sub" },
+          "Track the metrics that matter for this client. Both teams can edit.",
+        ),
+      ]),
     ]);
     const kpiAddBtn = h("button", { class: "btn" }, "+ New KPI");
     kpiHeader.appendChild(kpiAddBtn);
     kpiCard.appendChild(kpiHeader);
 
     const kpiTable = h("div", { class: "kpi-table" });
-    kpiTable.appendChild(h("div", { class: "kpi-row kpi-head" }, [
-      h("div", {}, "KPI"),
-      h("div", {}, "Target"),
-      h("div", {}, "Current"),
-      h("div", {}, "Notes"),
-      h("div", {}, "")
-    ]));
+    kpiTable.appendChild(
+      h("div", { class: "kpi-row kpi-head" }, [
+        h("div", {}, "KPI"),
+        h("div", {}, "Target"),
+        h("div", {}, "Current"),
+        h("div", {}, "Notes"),
+        h("div", {}, ""),
+      ]),
+    );
     const kpiList = h("div", { class: "kpi-list" });
     kpiTable.appendChild(kpiList);
     kpiCard.appendChild(kpiTable);
@@ -3390,11 +4586,15 @@
     const flushKpiSave = async () => {
       kpiStatus.textContent = "Saving…";
       try {
-        await firestore.setDoc(docRef, {
-          orgId: org.id,
-          kpis: localKpis,
-          updatedAt: firestore.serverTimestamp()
-        }, { merge: true });
+        await firestore.setDoc(
+          docRef,
+          {
+            orgId: org.id,
+            kpis: localKpis,
+            updatedAt: firestore.serverTimestamp(),
+          },
+          { merge: true },
+        );
         const t = new Date();
         const hh = String(t.getHours()).padStart(2, "0");
         const mm = String(t.getMinutes()).padStart(2, "0");
@@ -3415,16 +4615,19 @@
     const renderKpiRows = () => {
       kpiList.innerHTML = "";
       if (!localKpis.length) {
-        kpiList.appendChild(h("div", { class: "kpi-empty" },
-          "No KPIs yet. Click + New KPI to add one."));
+        kpiList.appendChild(
+          h("div", { class: "kpi-empty" }, "No KPIs yet. Click + New KPI to add one."),
+        );
         return;
       }
-      localKpis.forEach(k => {
+      localKpis.forEach((k) => {
         const row = h("div", { class: "kpi-row" });
         const mkInput = (field, placeholder) => {
           const inp = h("input", {
-            type: "text", class: "kpi-input",
-            placeholder, value: k[field] || ""
+            type: "text",
+            class: "kpi-input",
+            placeholder,
+            value: k[field] || "",
           });
           inp.addEventListener("input", () => {
             k[field] = inp.value;
@@ -3436,14 +4639,25 @@
         row.appendChild(mkInput("target", "Target"));
         row.appendChild(mkInput("current", "Current"));
         row.appendChild(mkInput("notes", "Notes"));
-        const del = h("button", {
-          class: "btn ghost sm", style: "border-color: var(--line);",
-          onclick: () => confirmDialog("Delete KPI?", "This cannot be undone.", () => {
-            localKpis = localKpis.filter(x => x.id !== k.id);
-            renderKpiRows();
-            queueKpiSave();
-          }, "Delete")
-        }, "×");
+        const del = h(
+          "button",
+          {
+            class: "btn ghost sm",
+            style: "border-color: var(--line);",
+            onclick: () =>
+              confirmDialog(
+                "Delete KPI?",
+                "This cannot be undone.",
+                () => {
+                  localKpis = localKpis.filter((x) => x.id !== k.id);
+                  renderKpiRows();
+                  queueKpiSave();
+                },
+                "Delete",
+              ),
+          },
+          "×",
+        );
         row.appendChild(del);
         kpiList.appendChild(row);
       });
@@ -3478,7 +4692,7 @@
     };
 
     const updatePctCells = (year, q) => {
-      FUNNEL_METRICS.forEach(m => {
+      FUNNEL_METRICS.forEach((m) => {
         if (m.type !== "percent") return;
         const cell = pctCells[`${year}.${q}.${m.key}`];
         if (!cell) return;
@@ -3488,12 +4702,12 @@
     };
 
     const updateAvgCells = (year) => {
-      FUNNEL_METRICS.forEach(m => {
+      FUNNEL_METRICS.forEach((m) => {
         const cell = avgCells[`${year}.${m.key}`];
         if (!cell) return;
         if (m.type === "percent") {
           const pcts = [];
-          FUNNEL_QUARTERS.forEach(q => {
+          FUNNEL_QUARTERS.forEach((q) => {
             const data = (localData.years[year] && localData.years[year][q]) || {};
             const num = Number(data[m.num]);
             const den = denTotal(m, data);
@@ -3501,21 +4715,27 @@
               pcts.push((num / den) * 100);
             }
           });
-          if (!pcts.length) { cell.textContent = "-"; return; }
+          if (!pcts.length) {
+            cell.textContent = "-";
+            return;
+          }
           const avg = pcts.reduce((a, b) => a + b, 0) / pcts.length;
           cell.textContent = `${avg.toFixed(1)}%`;
         } else {
           const vals = [];
-          FUNNEL_QUARTERS.forEach(q => {
+          FUNNEL_QUARTERS.forEach((q) => {
             const data = (localData.years[year] && localData.years[year][q]) || {};
             const v = data[m.key];
             if (v === null || v === undefined || v === "") return;
             const n = Number(v);
             if (!Number.isNaN(n)) vals.push(n);
           });
-          if (!vals.length) { cell.textContent = "-"; return; }
+          if (!vals.length) {
+            cell.textContent = "-";
+            return;
+          }
           const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-          const allInt = vals.every(v => Number.isInteger(v));
+          const allInt = vals.every((v) => Number.isInteger(v));
           cell.textContent = allInt ? Math.round(avg).toString() : avg.toFixed(1);
         }
       });
@@ -3527,11 +4747,15 @@
     const flushSave = async () => {
       saveStatus.textContent = "Saving…";
       try {
-        await firestore.setDoc(docRef, {
-          orgId: org.id,
-          years: localData.years,
-          updatedAt: firestore.serverTimestamp()
-        }, { merge: true });
+        await firestore.setDoc(
+          docRef,
+          {
+            orgId: org.id,
+            years: localData.years,
+            updatedAt: firestore.serverTimestamp(),
+          },
+          { merge: true },
+        );
         const t = new Date();
         const hh = String(t.getHours()).padStart(2, "0");
         const mm = String(t.getMinutes()).padStart(2, "0");
@@ -3556,19 +4780,21 @@
       const wrap = h("div", { class: "funnel-table-wrap" });
       const table = h("table", { class: "funnel-table" });
       const thead = h("thead");
-      thead.appendChild(h("tr", {}, [
-        h("th", { class: "funnel-metric-head" }, "Metric"),
-        ...FUNNEL_QUARTERS.map(q => h("th", {}, q)),
-        h("th", { class: "funnel-avg-head" }, "Avg")
-      ]));
+      thead.appendChild(
+        h("tr", {}, [
+          h("th", { class: "funnel-metric-head" }, "Metric"),
+          ...FUNNEL_QUARTERS.map((q) => h("th", {}, q)),
+          h("th", { class: "funnel-avg-head" }, "Avg"),
+        ]),
+      );
       table.appendChild(thead);
 
       const tbody = h("tbody");
-      FUNNEL_METRICS.forEach(m => {
+      FUNNEL_METRICS.forEach((m) => {
         const isPct = m.type === "percent";
         const row = h("tr", { class: isPct ? "funnel-row-pct" : "" });
         row.appendChild(h("td", { class: "funnel-metric-label" }, m.label));
-        FUNNEL_QUARTERS.forEach(q => {
+        FUNNEL_QUARTERS.forEach((q) => {
           const td = h("td");
           if (isPct) {
             const cell = h("span", { class: "funnel-pct" }, "-");
@@ -3581,7 +4807,7 @@
               step: "1",
               inputmode: "numeric",
               class: "funnel-input",
-              placeholder: "0"
+              placeholder: "0",
             });
             inputs[`${year}.${q}.${m.key}`] = inp;
             const commit = () => {
@@ -3592,7 +4818,9 @@
             };
             inp.addEventListener("input", commit);
             inp.addEventListener("blur", commit);
-            inp.addEventListener("keydown", (e) => { if (e.key === "Enter") inp.blur(); });
+            inp.addEventListener("keydown", (e) => {
+              if (e.key === "Enter") inp.blur();
+            });
             td.appendChild(inp);
           }
           row.appendChild(td);
@@ -3616,10 +4844,12 @@
     FUNNEL_YEARS.forEach((year, idx) => {
       const details = h("details", { class: "funnel-year" });
       if (idx === 0) details.setAttribute("open", "");
-      details.appendChild(h("summary", { class: "funnel-year-summary" }, [
-        h("span", { class: "funnel-year-label" }, String(year)),
-        h("span", { class: "funnel-year-hint" }, "Click to toggle")
-      ]));
+      details.appendChild(
+        h("summary", { class: "funnel-year-summary" }, [
+          h("span", { class: "funnel-year-label" }, String(year)),
+          h("span", { class: "funnel-year-hint" }, "Click to toggle"),
+        ]),
+      );
       details.appendChild(buildYearTable(year));
       funnelTablesCol.appendChild(details);
     });
@@ -3629,9 +4859,12 @@
     const dl = h("dl", { class: "funnel-glossary-list" });
     [
       ["Lead", "Un-qualified. i.e. engaged with content but yet to be qualified to your ICP."],
-      ["MQL",  "Qualified lead generated from marketing, fits ICP."],
-      ["SQL",  "Sales Qualified lead. The point the sales conversation has happened and the sales team deem it an opportunity."],
-      ["%",    "Shows the conversion results."]
+      ["MQL", "Qualified lead generated from marketing, fits ICP."],
+      [
+        "SQL",
+        "Sales Qualified lead. The point the sales conversation has happened and the sales team deem it an opportunity.",
+      ],
+      ["%", "Shows the conversion results."],
     ].forEach(([term, def]) => {
       dl.appendChild(h("dt", { class: "funnel-glossary-term" }, term));
       dl.appendChild(h("dd", { class: "funnel-glossary-def" }, def));
@@ -3651,16 +4884,16 @@
     frag.appendChild(h("div", { class: "funnel-save-row" }, [saveStatus, saveBtn]));
 
     const applySnapshot = () => {
-      FUNNEL_YEARS.forEach(y => {
-        FUNNEL_QUARTERS.forEach(q => {
+      FUNNEL_YEARS.forEach((y) => {
+        FUNNEL_QUARTERS.forEach((q) => {
           const data = (localData.years[y] && localData.years[y][q]) || {};
-          FUNNEL_METRICS.forEach(m => {
+          FUNNEL_METRICS.forEach((m) => {
             if (m.type === "percent") return;
             const inp = inputs[`${y}.${q}.${m.key}`];
             if (!inp) return;
             if (document.activeElement === inp) return;
             const v = data[m.key];
-            inp.value = (v === null || v === undefined || Number.isNaN(v)) ? "" : String(v);
+            inp.value = v === null || v === undefined || Number.isNaN(v) ? "" : String(v);
           });
           updatePctCells(y, q);
         });
@@ -3668,40 +4901,53 @@
       });
     };
 
-    firestore.onSnapshot(docRef, (snap) => {
-      const d = snap.exists() ? snap.data() : null;
-      const years = (d && d.years) || {};
-      FUNNEL_YEARS.forEach(y => {
-        if (!localData.years[y]) localData.years[y] = {};
-        FUNNEL_QUARTERS.forEach(q => {
-          localData.years[y][q] = (years[y] && years[y][q]) || (years[String(y)] && years[String(y)][q]) || {};
+    firestore.onSnapshot(
+      docRef,
+      (snap) => {
+        const d = snap.exists() ? snap.data() : null;
+        const years = (d && d.years) || {};
+        FUNNEL_YEARS.forEach((y) => {
+          if (!localData.years[y]) localData.years[y] = {};
+          FUNNEL_QUARTERS.forEach((q) => {
+            localData.years[y][q] =
+              (years[y] && years[y][q]) || (years[String(y)] && years[String(y)][q]) || {};
+          });
         });
-      });
-      applySnapshot();
-      // KPIs - skip while user is mid-edit so we don't clobber typing
-      if (!kpiSaveTimer) {
-        const remoteKpis = (d && Array.isArray(d.kpis)) ? d.kpis : [];
-        const focusedRow = document.activeElement && document.activeElement.closest && document.activeElement.closest(".kpi-row");
-        if (!focusedRow) {
-          localKpis = remoteKpis.map(k => ({
-            id: k.id || uid("kpi_"),
-            name: k.name || "",
-            target: k.target || "",
-            current: k.current || "",
-            notes: k.notes || ""
-          }));
-          renderKpiRows();
+        applySnapshot();
+        // KPIs - skip while user is mid-edit so we don't clobber typing
+        if (!kpiSaveTimer) {
+          const remoteKpis = d && Array.isArray(d.kpis) ? d.kpis : [];
+          const focusedRow =
+            document.activeElement &&
+            document.activeElement.closest &&
+            document.activeElement.closest(".kpi-row");
+          if (!focusedRow) {
+            localKpis = remoteKpis.map((k) => ({
+              id: k.id || uid("kpi_"),
+              name: k.name || "",
+              target: k.target || "",
+              current: k.current || "",
+              notes: k.notes || "",
+            }));
+            renderKpiRows();
+          }
         }
-      }
-    }, (err) => console.error("Funnel snapshot error:", err));
+      },
+      (err) => console.error("Funnel snapshot error:", err),
+    );
 
     // ---------- Comments section ----------
     const commentsCard = h("section", { class: "comments-section" });
-    commentsCard.appendChild(h("div", { class: "comments-section-header" }, [
-      h("h2", { class: "comments-section-title" }, "Comments"),
-      h("p", { class: "comments-section-sub" },
-        "Discuss the funnel - questions, observations, follow-ups. Visible to your team and BeDeveloped.")
-    ]));
+    commentsCard.appendChild(
+      h("div", { class: "comments-section-header" }, [
+        h("h2", { class: "comments-section-title" }, "Comments"),
+        h(
+          "p",
+          { class: "comments-section-sub" },
+          "Discuss the funnel - questions, observations, follow-ups. Visible to your team and BeDeveloped.",
+        ),
+      ]),
+    );
 
     const commentsList = h("div", { class: "comments-list" });
     commentsList.appendChild(h("p", { class: "comments-empty" }, "Loading…"));
@@ -3710,48 +4956,65 @@
     const commentInput = h("textarea", {
       class: "comments-input",
       placeholder: "Add a comment…",
-      rows: "1"
+      rows: "1",
     });
     const commentSendBtn = h("button", { class: "btn" }, "Send");
-    commentsCard.appendChild(h("div", { class: "comments-composer" }, [commentInput, commentSendBtn]));
+    commentsCard.appendChild(
+      h("div", { class: "comments-composer" }, [commentInput, commentSendBtn]),
+    );
     frag.appendChild(commentsCard);
 
     let allComments = [];
     const renderComments = () => {
       commentsList.innerHTML = "";
       if (!allComments.length) {
-        commentsList.appendChild(h("p", { class: "comments-empty" }, "No comments yet — start the conversation."));
+        commentsList.appendChild(
+          h("p", { class: "comments-empty" }, "No comments yet — start the conversation."),
+        );
         return;
       }
-      allComments.forEach(m => {
+      allComments.forEach((m) => {
         const isSelf = m.authorId === user.id;
         const isInternalAuthor = m.authorRole === "internal";
         const bg = isInternalAuthor ? "var(--ink)" : "var(--brand)";
         const ts = m.createdAt?.toDate?.().toLocaleString?.() || "";
         const who = firstNameFromAuthor(m);
         const canDelete = isSelf || !isClientView(user);
-        const bubble = h("div", {
-          class: "comment-bubble",
-          style: `align-self:${isSelf ? "flex-end" : "flex-start"}; background:${bg}; border-color:${bg};`
-        }, [
-          h("div", { class: "comment-meta" }, `${who} · ${ts}`),
-          h("div", { class: "comment-text" }, m.text)
-        ]);
+        const bubble = h(
+          "div",
+          {
+            class: "comment-bubble",
+            style: `align-self:${isSelf ? "flex-end" : "flex-start"}; background:${bg}; border-color:${bg};`,
+          },
+          [
+            h("div", { class: "comment-meta" }, `${who} · ${ts}`),
+            h("div", { class: "comment-text" }, m.text),
+          ],
+        );
         if (canDelete) {
-          const del = h("button", {
-            class: "comment-bubble-del",
-            title: "Delete",
-            onclick: (e) => {
-              e.stopPropagation();
-              confirmDialog("Delete comment?", "This cannot be undone.", async () => {
-                try {
-                  await firestore.deleteDoc(firestore.doc(db, "funnelComments", m.id));
-                } catch (err) {
-                  alert("Couldn't delete: " + (err.message || err));
-                }
-              }, "Delete");
-            }
-          }, "×");
+          const del = h(
+            "button",
+            {
+              class: "comment-bubble-del",
+              title: "Delete",
+              onclick: (e) => {
+                e.stopPropagation();
+                confirmDialog(
+                  "Delete comment?",
+                  "This cannot be undone.",
+                  async () => {
+                    try {
+                      await firestore.deleteDoc(firestore.doc(db, "funnelComments", m.id));
+                    } catch (err) {
+                      alert("Couldn't delete: " + (err.message || err));
+                    }
+                  },
+                  "Delete",
+                );
+              },
+            },
+            "×",
+          );
           bubble.appendChild(del);
         }
         commentsList.appendChild(bubble);
@@ -3771,7 +5034,7 @@
           authorEmail: user.email,
           authorRole: user.role,
           text,
-          createdAt: firestore.serverTimestamp()
+          createdAt: firestore.serverTimestamp(),
         });
       } catch (e) {
         commentInput.value = text;
@@ -3780,32 +5043,46 @@
     };
     commentSendBtn.addEventListener("click", sendComment);
     commentInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendComment(); }
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendComment();
+      }
     });
 
     const commentsQ = firestore.query(
       firestore.collection(db, "funnelComments"),
-      firestore.where("orgId", "==", org.id)
+      firestore.where("orgId", "==", org.id),
     );
-    firestore.onSnapshot(commentsQ, (snap) => {
-      allComments = [];
-      snap.forEach(d => allComments.push({ id: d.id, ...d.data() }));
-      allComments.sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
-      renderComments();
-    }, (err) => {
-      commentsList.innerHTML = "";
-      commentsList.appendChild(h("p", { style: "color:var(--red);" }, "Couldn't load comments: " + err.message));
-    });
+    firestore.onSnapshot(
+      commentsQ,
+      (snap) => {
+        allComments = [];
+        snap.forEach((d) => allComments.push({ id: d.id, ...d.data() }));
+        allComments.sort(
+          (a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0),
+        );
+        renderComments();
+      },
+      (err) => {
+        commentsList.innerHTML = "";
+        commentsList.appendChild(
+          h("p", { style: "color:var(--red);" }, "Couldn't load comments: " + err.message),
+        );
+      },
+    );
 
     return frag;
   }
 
   function openInviteClientModal() {
-    const name  = h("input", { type: "text",  placeholder: "Client contact name" });
+    const name = h("input", { type: "text", placeholder: "Client contact name" });
     const email = h("input", { type: "email", placeholder: "client@company.com" });
-    const select = h("select", { style: "width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; font:inherit;" });
+    const select = h("select", {
+      style:
+        "width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; font:inherit;",
+    });
     const orgs = loadOrgMetas();
-    orgs.forEach(o => {
+    orgs.forEach((o) => {
       const opt = document.createElement("option");
       opt.value = o.id;
       opt.textContent = o.name;
@@ -3815,59 +5092,78 @@
 
     const m = modal([
       h("h3", {}, "Invite a client"),
-      h("p", { style: "color: var(--ink-3); font-size: 13px; margin-top:0;" },
-        "They'll sign in with their email + the company passphrase you set, then create their own password on first login."),
+      h(
+        "p",
+        { style: "color: var(--ink-3); font-size: 13px; margin-top:0;" },
+        "They'll sign in with their email + the company passphrase you set, then create their own password on first login.",
+      ),
       h("div", { style: "display:flex; gap:10px; flex-direction:column;" }, [
         h("div", {}, [
           h("label", { style: "font-size:12px; color:var(--ink-2); font-weight:600;" }, "Name"),
-          name
+          name,
         ]),
         h("div", {}, [
           h("label", { style: "font-size:12px; color:var(--ink-2); font-weight:600;" }, "Email"),
-          email
+          email,
         ]),
         h("div", {}, [
-          h("label", { style: "font-size:12px; color:var(--ink-2); font-weight:600;" }, "Organisation"),
-          select
-        ])
+          h(
+            "label",
+            { style: "font-size:12px; color:var(--ink-2); font-weight:600;" },
+            "Organisation",
+          ),
+          select,
+        ]),
       ]),
       errBox,
       h("div", { class: "row" }, [
         h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-        h("button", {
-          class: "btn",
-          onclick: () => {
-            errBox.innerHTML = "";
-            const em = (email.value || "").trim().toLowerCase();
-            if (!em || !em.includes("@")) {
-              errBox.appendChild(h("div", { class: "auth-error" }, "Enter a valid email."));
-              return;
-            }
-            if (findUserByEmail(em)) {
-              errBox.appendChild(h("div", { class: "auth-error" }, "A user with that email already exists."));
-              return;
-            }
-            if (!orgs.length) {
-              errBox.appendChild(h("div", { class: "auth-error" }, "Create an organisation first."));
-              return;
-            }
-            const user = {
-              id: uid("u_"),
-              email: em,
-              name: (name.value || "").trim(),
-              role: "client",
-              orgId: select.value,
-              createdAt: iso()
-            };
-            upsertUser(user);
-            const chosenOrg = loadOrgMetas().find(o => o.id === select.value);
-            const chosenOrgFull = loadOrg(select.value);
-            m.close();
-            render();
-            openInviteInstructionsModal(user, chosenOrg, !!(chosenOrgFull && chosenOrgFull.clientPassphraseHash));
-          }
-        }, "Create account")
-      ])
+        h(
+          "button",
+          {
+            class: "btn",
+            onclick: () => {
+              errBox.innerHTML = "";
+              const em = (email.value || "").trim().toLowerCase();
+              if (!em || !em.includes("@")) {
+                errBox.appendChild(h("div", { class: "auth-error" }, "Enter a valid email."));
+                return;
+              }
+              if (findUserByEmail(em)) {
+                errBox.appendChild(
+                  h("div", { class: "auth-error" }, "A user with that email already exists."),
+                );
+                return;
+              }
+              if (!orgs.length) {
+                errBox.appendChild(
+                  h("div", { class: "auth-error" }, "Create an organisation first."),
+                );
+                return;
+              }
+              const user = {
+                id: uid("u_"),
+                email: em,
+                name: (name.value || "").trim(),
+                role: "client",
+                orgId: select.value,
+                createdAt: iso(),
+              };
+              upsertUser(user);
+              const chosenOrg = loadOrgMetas().find((o) => o.id === select.value);
+              const chosenOrgFull = loadOrg(select.value);
+              m.close();
+              render();
+              openInviteInstructionsModal(
+                user,
+                chosenOrg,
+                !!(chosenOrgFull && chosenOrgFull.clientPassphraseHash),
+              );
+            },
+          },
+          "Create account",
+        ),
+      ]),
     ]);
     setTimeout(() => name.focus(), 10);
   }
@@ -3876,8 +5172,7 @@
     const signInUrl = "https://baselayers.bedeveloped.com";
     const firstName = (client.name || "").split(" ")[0] || "there";
     const emailSubject = `Your ${org?.name ? org.name + " " : ""}account on The Base Layers`;
-    const emailBody =
-`Hi ${firstName},
+    const emailBody = `Hi ${firstName},
 
 You've been set up with access to The Base Layers diagnostic${org?.name ? ` for ${org.name}` : ""}.
 
@@ -3893,37 +5188,68 @@ Any questions, just let me know.`;
 
     const textArea = h("textarea", {
       readonly: "",
-      style: "width:100%; min-height:190px; padding:12px; border:1px solid var(--line); border-radius:8px; font:13px/1.5 var(--font-sans, inherit); resize:vertical;"
+      style:
+        "width:100%; min-height:190px; padding:12px; border:1px solid var(--line); border-radius:8px; font:13px/1.5 var(--font-sans, inherit); resize:vertical;",
     });
     textArea.value = emailBody;
 
     const copyBtn = h("button", { class: "btn secondary" }, "Copy text");
     copyBtn.onclick = async () => {
-      try { await navigator.clipboard.writeText(emailBody); copyBtn.textContent = "Copied ✓"; }
-      catch { textArea.select(); document.execCommand && document.execCommand("copy"); copyBtn.textContent = "Copied ✓"; }
-      setTimeout(() => { copyBtn.textContent = "Copy text"; }, 1800);
+      try {
+        await navigator.clipboard.writeText(emailBody);
+        copyBtn.textContent = "Copied ✓";
+      } catch {
+        textArea.select();
+        document.execCommand && document.execCommand("copy");
+        copyBtn.textContent = "Copied ✓";
+      }
+      setTimeout(() => {
+        copyBtn.textContent = "Copy text";
+      }, 1800);
     };
 
-    const m = modal([
-      h("h3", {}, "Client account created"),
-      h("p", { style: "color: var(--ink-2); font-size:13.5px; margin-top:0;" },
-        `${client.email} can now sign in. There's no automatic email - send them the details below. You'll also need to share the company passphrase for ${org?.name || "their organisation"} separately.`),
-      !hasPassphrase ? h("div", {
-        style: "background: var(--amber-bg, #FFF4E0); border:1px solid var(--amber); color: var(--ink-2); padding:10px 12px; border-radius:8px; font-size:12.5px; margin-bottom:10px;"
-      }, `⚠ ${org?.name || "This organisation"} doesn't have a company passphrase set yet. Set one from the Admin page before the client tries to sign in.`) : null,
-      h("label", { style: "font-size:12px; color:var(--ink-3); display:block; margin-bottom:4px;" }, "Suggested message"),
-      textArea,
-      h("div", { class: "row" }, [
-        h("button", { class: "btn secondary", onclick: () => m.close() }, "Done"),
-        copyBtn,
-        h("a", {
-          class: "btn",
-          href: mailto,
-          style: "text-decoration:none; display:inline-flex; align-items:center;",
-          onclick: () => { setTimeout(() => m.close(), 100); }
-        }, "Open in email")
-      ])
-    ].filter(Boolean));
+    const m = modal(
+      [
+        h("h3", {}, "Client account created"),
+        h(
+          "p",
+          { style: "color: var(--ink-2); font-size:13.5px; margin-top:0;" },
+          `${client.email} can now sign in. There's no automatic email - send them the details below. You'll also need to share the company passphrase for ${org?.name || "their organisation"} separately.`,
+        ),
+        !hasPassphrase
+          ? h(
+              "div",
+              {
+                style:
+                  "background: var(--amber-bg, #FFF4E0); border:1px solid var(--amber); color: var(--ink-2); padding:10px 12px; border-radius:8px; font-size:12.5px; margin-bottom:10px;",
+              },
+              `⚠ ${org?.name || "This organisation"} doesn't have a company passphrase set yet. Set one from the Admin page before the client tries to sign in.`,
+            )
+          : null,
+        h(
+          "label",
+          { style: "font-size:12px; color:var(--ink-3); display:block; margin-bottom:4px;" },
+          "Suggested message",
+        ),
+        textArea,
+        h("div", { class: "row" }, [
+          h("button", { class: "btn secondary", onclick: () => m.close() }, "Done"),
+          copyBtn,
+          h(
+            "a",
+            {
+              class: "btn",
+              href: mailto,
+              style: "text-decoration:none; display:inline-flex; align-items:center;",
+              onclick: () => {
+                setTimeout(() => m.close(), 100);
+              },
+            },
+            "Open in email",
+          ),
+        ]),
+      ].filter(Boolean),
+    );
   }
 
   function openChangePasswordModal(user) {
@@ -3933,25 +5259,43 @@ Any questions, just let me know.`;
     const errBox = h("div");
     const m = modal([
       h("h3", {}, "Change password"),
-      h("p", { style: "color:var(--ink-3); font-size:13px; margin-top:0;" },
-        "Enter your current password, then choose a new one. You'll use the new password next time you sign in."),
+      h(
+        "p",
+        { style: "color:var(--ink-3); font-size:13px; margin-top:0;" },
+        "Enter your current password, then choose a new one. You'll use the new password next time you sign in.",
+      ),
       h("div", { style: "display:flex; flex-direction:column; gap:10px;" }, [cur, nw, confirmPw]),
       errBox,
       h("div", { class: "row" }, [
         h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-        h("button", {
-          class: "btn",
-          onclick: async () => {
-            errBox.innerHTML = "";
-            const ok = await verifyUserPassword(user.id, cur.value);
-            if (!ok) { errBox.appendChild(h("div", { class: "auth-error" }, "Current password is wrong.")); return; }
-            if ((nw.value || "").length < 6) { errBox.appendChild(h("div", { class: "auth-error" }, "New password must be at least 6 characters.")); return; }
-            if (nw.value !== confirmPw.value) { errBox.appendChild(h("div", { class: "auth-error" }, "New passwords don't match.")); return; }
-            await setUserPassword(user.id, nw.value);
-            m.close();
-          }
-        }, "Update password")
-      ])
+        h(
+          "button",
+          {
+            class: "btn",
+            onclick: async () => {
+              errBox.innerHTML = "";
+              const ok = await verifyUserPassword(user.id, cur.value);
+              if (!ok) {
+                errBox.appendChild(h("div", { class: "auth-error" }, "Current password is wrong."));
+                return;
+              }
+              if ((nw.value || "").length < 6) {
+                errBox.appendChild(
+                  h("div", { class: "auth-error" }, "New password must be at least 6 characters."),
+                );
+                return;
+              }
+              if (nw.value !== confirmPw.value) {
+                errBox.appendChild(h("div", { class: "auth-error" }, "New passwords don't match."));
+                return;
+              }
+              await setUserPassword(user.id, nw.value);
+              m.close();
+            },
+          },
+          "Update password",
+        ),
+      ]),
     ]);
     setTimeout(() => cur.focus(), 10);
   }
@@ -3959,36 +5303,57 @@ Any questions, just let me know.`;
   function openSetOrgPassphrase(orgId, orgName) {
     const org = loadOrg(orgId);
     const existing = !!(org && org.clientPassphraseHash);
-    const nw = h("input", { type: "password", placeholder: "New company passphrase (min 4 chars)" });
+    const nw = h("input", {
+      type: "password",
+      placeholder: "New company passphrase (min 4 chars)",
+    });
     const confirm = h("input", { type: "password", placeholder: "Confirm passphrase" });
     const errBox = h("div");
     const m = modal([
       h("h3", {}, (existing ? "Change" : "Set") + " passphrase — " + orgName),
-      h("p", { style: "color: var(--ink-3); font-size: 13px; margin-top:0;" },
-        "Share this with the client team. They'll type it alongside their email and personal password when they sign in. If you change it, tell everyone at " + orgName + " the new one."),
+      h(
+        "p",
+        { style: "color: var(--ink-3); font-size: 13px; margin-top:0;" },
+        "Share this with the client team. They'll type it alongside their email and personal password when they sign in. If you change it, tell everyone at " +
+          orgName +
+          " the new one.",
+      ),
       h("div", { style: "display:flex; flex-direction:column; gap:10px;" }, [nw, confirm]),
       errBox,
       h("div", { class: "row" }, [
         h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-        h("button", {
-          class: "btn",
-          onclick: async () => {
-            errBox.innerHTML = "";
-            if (nw.value.length < 4) { errBox.appendChild(h("div", { class: "auth-error" }, "Passphrase must be at least 4 characters.")); return; }
-            if (nw.value !== confirm.value) { errBox.appendChild(h("div", { class: "auth-error" }, "Passphrases don't match.")); return; }
-            await setOrgClientPassphrase(orgId, nw.value);
-            m.close();
-            render();
-          }
-        }, existing ? "Update" : "Save")
-      ])
+        h(
+          "button",
+          {
+            class: "btn",
+            onclick: async () => {
+              errBox.innerHTML = "";
+              if (nw.value.length < 4) {
+                errBox.appendChild(
+                  h("div", { class: "auth-error" }, "Passphrase must be at least 4 characters."),
+                );
+                return;
+              }
+              if (nw.value !== confirm.value) {
+                errBox.appendChild(h("div", { class: "auth-error" }, "Passphrases don't match."));
+                return;
+              }
+              await setOrgClientPassphrase(orgId, nw.value);
+              m.close();
+              render();
+            },
+          },
+          existing ? "Update" : "Save",
+        ),
+      ]),
     ]);
     setTimeout(() => nw.focus(), 10);
   }
 
+  // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead code or wire up call site. See runbooks/phase-4-cleanup-ledger.md
   function openChangePassphrase() {
     const cur = h("input", { type: "password", placeholder: "Current passphrase" });
-    const nw  = h("input", { type: "password", placeholder: "New passphrase (min 4 chars)" });
+    const nw = h("input", { type: "password", placeholder: "New passphrase (min 4 chars)" });
     const errBox = h("div");
     const m = modal([
       h("h3", {}, "Change team passphrase"),
@@ -3996,18 +5361,34 @@ Any questions, just let me know.`;
       errBox,
       h("div", { class: "row" }, [
         h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-        h("button", {
-          class: "btn",
-          onclick: async () => {
-            errBox.innerHTML = "";
-            const ok = await verifyInternalPassphrase(cur.value);
-            if (!ok) { errBox.appendChild(h("div", { class: "auth-error" }, "Current passphrase wrong.")); return; }
-            if (nw.value.length < 4) { errBox.appendChild(h("div", { class: "auth-error" }, "New passphrase must be at least 4 characters.")); return; }
-            await setInternalPassphrase(nw.value);
-            m.close();
-          }
-        }, "Update")
-      ])
+        h(
+          "button",
+          {
+            class: "btn",
+            onclick: async () => {
+              errBox.innerHTML = "";
+              const ok = await verifyInternalPassphrase(cur.value);
+              if (!ok) {
+                errBox.appendChild(h("div", { class: "auth-error" }, "Current passphrase wrong."));
+                return;
+              }
+              if (nw.value.length < 4) {
+                errBox.appendChild(
+                  h(
+                    "div",
+                    { class: "auth-error" },
+                    "New passphrase must be at least 4 characters.",
+                  ),
+                );
+                return;
+              }
+              await setInternalPassphrase(nw.value);
+              m.close();
+            },
+          },
+          "Update",
+        ),
+      ]),
     ]);
     setTimeout(() => cur.focus(), 10);
   }
@@ -4021,7 +5402,9 @@ Any questions, just let me know.`;
       version: "v2",
       users: loadUsers(),
       settings: loadSettings(),
-      orgs: loadOrgMetas().map(m => loadOrg(m.id)).filter(Boolean)
+      orgs: loadOrgMetas()
+        .map((m) => loadOrg(m.id))
+        .filter(Boolean),
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -4039,15 +5422,15 @@ Any questions, just let me know.`;
         const data = JSON.parse(reader.result);
         if (data.users) {
           saveUsers(data.users);
-          data.users.forEach(u => cloudPushUser(u));
+          data.users.forEach((u) => cloudPushUser(u));
         }
         if (data.settings) saveSettings(data.settings);
         if (Array.isArray(data.orgs)) {
-          data.orgs.forEach(org => {
+          data.orgs.forEach((org) => {
             if (!org.id || !org.name) return;
             saveOrg(org);
             const metas = loadOrgMetas();
-            if (!metas.find(o => o.id === org.id)) {
+            if (!metas.find((o) => o.id === org.id)) {
               metas.push({ id: org.id, name: org.name });
               saveOrgMetas(metas);
             }
@@ -4070,7 +5453,7 @@ Any questions, just let me know.`;
   function clearOldScaleResponsesIfNeeded() {
     const s = loadSettings();
     if (s.scaleV2Cleared) return;
-    loadOrgMetas().forEach(m => {
+    loadOrgMetas().forEach((m) => {
       const org = loadOrg(m.id);
       if (!org) return;
       org.responses = {};

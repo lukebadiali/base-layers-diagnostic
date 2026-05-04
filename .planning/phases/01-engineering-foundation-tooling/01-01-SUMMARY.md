@@ -15,7 +15,20 @@ provides:
   - augmented .gitignore (15 entries, original 5 preserved + 10 build/env artefacts appended)
   - node_modules/ populated and correctly excluded from git
   - husky 9 prepare hook wired (`husky || true` per Pitfall H)
-affects: [01-02-vite-config, 01-03-eslint-prettier-tsconfig, 01-04-husky-lintstaged, 01-05-ci-dependabot, 01-06-runbooks-security-md, 02-test-suite, 03-hosting-cutover, 04-modular-split, 05-rules-migration, 06-auth-mfa, 07-cloud-functions]
+affects:
+  [
+    01-02-vite-config,
+    01-03-eslint-prettier-tsconfig,
+    01-04-husky-lintstaged,
+    01-05-ci-dependabot,
+    01-06-runbooks-security-md,
+    02-test-suite,
+    03-hosting-cutover,
+    04-modular-split,
+    05-rules-migration,
+    06-auth-mfa,
+    07-cloud-functions,
+  ]
 
 # Tech tracking
 tech-stack:
@@ -148,6 +161,7 @@ None — no external service configuration required for Wave 0. Wave 5 (Plan 01-
 ## Next Phase Readiness
 
 **Wave 1 unblocked.** The `package.json` + populated `node_modules/` substrate is in place for:
+
 - Plan 01-02 (vite.config.js + tsconfig.json) — imports from `vite`, `vitest`, `typescript`, `happy-dom` are resolvable.
 - Plan 01-03 (eslint.config.js + .prettierrc.json) — imports from `eslint`, `@eslint/js`, `eslint-plugin-no-unsanitized`, `eslint-plugin-security`, `prettier` are resolvable.
 - Plan 01-04 (husky + lint-staged + gitleaks) — `husky` binary present, `lint-staged` ready to wire into `.husky/pre-commit`.
@@ -176,6 +190,7 @@ No new threat surface introduced beyond what the plan's threat model already cov
 - All 8 plan-level success criteria — VERIFIED via the plan's `<verification>` block
 
 ---
-*Phase: 01-engineering-foundation-tooling*
-*Plan: 01 (Wave 0 — Package Foundation)*
-*Completed: 2026-05-04*
+
+_Phase: 01-engineering-foundation-tooling_
+_Plan: 01 (Wave 0 — Package Foundation)_
+_Completed: 2026-05-04_

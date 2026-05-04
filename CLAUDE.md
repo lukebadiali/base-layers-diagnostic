@@ -62,4 +62,4 @@ Violating any of these breaks the milestone:
 
 ---
 
-*Initialized: 2026-05-03 (project setup via `/gsd-new-project`).*
+_Initialized: 2026-05-03 (project setup via `/gsd-new-project`)._

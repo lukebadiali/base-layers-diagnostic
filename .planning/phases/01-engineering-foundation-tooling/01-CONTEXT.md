@@ -9,6 +9,7 @@
 Stand up the engineering foundation that makes every downstream phase testable, dependency-monitored, lint-enforced, and CI-gated. Concretely: `package.json` + Vite 8 build pipeline + Vitest 4 + ESLint 10 (flat config) + Prettier + TypeScript-as-typecheck (via `// @ts-check`) + GitHub Actions CI + Dependabot + Socket.dev + OSV-Scanner + gitleaks (pre-commit + CI) + initial `SECURITY.md` skeleton.
 
 **Explicitly NOT in this phase** (owned elsewhere):
+
 - Hosting cutover from GitHub Pages to Firebase Hosting → Phase 3
 - Modular split of `app.js` IIFE → Phase 4 (gated by Phase 2 test fence — Pitfall 9)
 - Any `firebase.json` / Firestore Rules / Storage Rules → Phase 3 / Phase 5
@@ -35,7 +36,7 @@ The tooling lands. Nothing user-visible changes in production.
 
 ### Coexistence with un-split `app.js` (the "loud-vs-quiet" call)
 
-- **D-05:** **Quiet, time-bounded debt.** The 4,103-line IIFE is *not* refactored in Phase 1; tooling adapts to it via explicit, narrowly-scoped overrides that make the debt visible and trace to the Phase 4 follow-up.
+- **D-05:** **Quiet, time-bounded debt.** The 4,103-line IIFE is _not_ refactored in Phase 1; tooling adapts to it via explicit, narrowly-scoped overrides that make the debt visible and trace to the Phase 4 follow-up.
 - **D-06:** ESLint flat-config (`eslint.config.js`) uses `files` + `ignores` overrides:
   - Danger rules — `no-unsanitized/method`, `no-unsanitized/property`, `security/detect-pseudo-random-bytes` — fire as `error` on **all** source files.
   - For each existing violation in `app.js` / `firebase-init.js` / `data/pillars.js`, add a per-line `// eslint-disable-next-line <rule> -- Phase 4: replace with crypto.randomUUID() / replaceChildren()` comment. No file-level disables, no blanket excludes.
@@ -106,16 +107,19 @@ The tooling lands. Nothing user-visible changes in production.
 - **D-31:** Vitest config inline in `vite.config.js` per STACK.md (one config file, two consumers). `environment: "happy-dom"`, `coverage: { provider: "v8", reportsDirectory: "coverage", reporter: ["text", "html"] }`. Coverage threshold is **not** set in Phase 1 (it'd block CI on the smoke test); set in Phase 2 once real tests exist.
 
 ### Folded Todos
+
 None — no todo backlog cross-referenced for this phase. (`STATE.md` "Outstanding Todos" all reference later phases.)
 
 </decisions>
 
 <canonical_refs>
+
 ## Canonical References
 
 **Downstream agents MUST read these before planning or implementing.**
 
 ### Project Context
+
 - `.planning/PROJECT.md` — Active milestone, locked decisions, constraints, Out-of-Scope list
 - `.planning/REQUIREMENTS.md` §"Tooling & Build (TOOL)" — TOOL-01..12 acceptance criteria + traceability
 - `.planning/REQUIREMENTS.md` §"Documentation Pack (DOC)" — DOC-10 incremental requirement
@@ -124,6 +128,7 @@ None — no todo backlog cross-referenced for this phase. (`STATE.md` "Outstandi
 - `CLAUDE.md` — Project conventions, locked decisions, sequencing non-negotiables, source-layout target
 
 ### Stack & Tooling Specifics
+
 - `.planning/research/STACK.md` — **PRIMARY VERSION REFERENCE.** Every package version pinned + verified against npm registry on 2026-05-03.
   - §"TL;DR — what to install" — exact `npm install` invocations
   - §"Build setup — Vite for vanilla-JS SPA" — `vite.config.js` skeleton
@@ -134,16 +139,19 @@ None — no todo backlog cross-referenced for this phase. (`STATE.md` "Outstandi
 - `.planning/research/SUMMARY.md` §"Compliance Mapping Cheat-Sheet" — framework citations to drop into `SECURITY.md` skeleton sections (OWASP ASVS V14.2 / V14.4, ISO 27001 A.10.1 / A.12.6 / A.14.2.5, SOC2 CC6.1 / CC8.1)
 
 ### Codebase Map (analysis dated 2026-05-03)
+
 - `.planning/codebase/STACK.md` — current state of stack (no `package.json`, CDN scripts with no SRI, hand-bumped `?v=46`)
 - `.planning/codebase/STRUCTURE.md` — current file layout (root: `app.js`, `firebase-init.js`, `data/pillars.js`, `index.html`, `styles.css`, `assets/`)
-- `.planning/codebase/CONCERNS.md` §"Test Coverage Gaps", §"Dependency Hygiene", §"Build Tooling" — Phase 1 closes the *substrate* for many of these (gives Phase 2 something to test through, gives the modular split a fence)
+- `.planning/codebase/CONCERNS.md` §"Test Coverage Gaps", §"Dependency Hygiene", §"Build Tooling" — Phase 1 closes the _substrate_ for many of these (gives Phase 2 something to test through, gives the modular split a fence)
 - `.planning/codebase/CONVENTIONS.md` — coding style observations to preserve in Prettier/ESLint config
 
 ### Audit Framework
+
 - `SECURITY_AUDIT.md` (project root) §A03 (CI/CD), §10.2 (Supply Chain) — checklist items closed by Phase 1
 - `SECURITY_AUDIT.md` §0(4) — "no weakening of controls to make tests/features pass" — applies to lint rule severity calls
 
 ### Compliance Citations (for `SECURITY.md` skeleton)
+
 - OWASP ASVS L2 v5.0 — sections V14.2 (dependencies), V14.4 (HTTP headers), V14.7 (build pipeline), V7.1 (logging — stub)
 - ISO/IEC 27001:2022 Annex A — A.10.1 (cryptography), A.12.6 (technical vulnerability management), A.14.2.5 (secure system engineering principles)
 - SOC 2 CC8.1 (change management) — CI/CD as evidence trail
@@ -152,24 +160,29 @@ None — no todo backlog cross-referenced for this phase. (`STATE.md` "Outstandi
 </canonical_refs>
 
 <code_context>
+
 ## Existing Code Insights
 
 ### Reusable Assets
+
 - **`firebase-init.js`** is already an ES module (`<script type="module">`) — Vite can use it as an additional entry without rewriting. The other two scripts (`data/pillars.js`, `app.js`) currently load as classic scripts; Vite tree-shaking only helps once they're modules, but Phase 1 doesn't change that — Phase 4 does.
 - **`data/pillars.js`** is a leaf data module — small, no Firebase imports — likely the easiest "first JSDoc-typed file" if any new file gets added in Phase 1.
 
 ### Established Patterns
+
 - **No build tooling today.** Project is greenfield from a tooling perspective — no legacy webpack/rollup/parcel config to migrate from. Phase 1 introduces tooling without contending with existing config.
 - **Conventional Commits already used** (verified via recent commits — `docs:`, `chore:`, `feat:`). ESLint commit-message linting (`commitlint`) **not** in Phase 1 scope (TOOL-01..12 doesn't include it; husky pre-commit only handles staged-file lint + gitleaks). Add to backlog if useful later.
 - **Project structure is flat** (no `src/` directory). Vite default config assumes flat structure works; Phase 4's modular split introduces `firebase/`, `data/`, `domain/`, `auth/`, `cloud/`, `views/`, `ui/`, `observability/` directories per ARCHITECTURE.md §"Target source layout". Phase 1 must not pre-create these.
 
 ### Integration Points
+
 - **`index.html` `<script>` tags** — Phase 1's `vite.config.js` references `index.html` as the entry but does **not** rewrite it (D-14). Researcher confirms the exact mechanism for "Vite-aware build without changing the deployed file".
 - **`CNAME = baselayers.bedeveloped.com`** — owned by GitHub Pages today. Phase 1 leaves it alone. Phase 3 migrates the DNS pointing.
 - **`.gitignore`** is minimal (5 lines: `.DS_Store`, `.vscode/`, `.idea/`, `*.log`, `node_modules/`). Phase 1 adds: `dist/`, `coverage/`, `.env`, `.env.*` (with `!.env.example`), `.firebase/` (for later phases), `*.tsbuildinfo`.
 - **`.claude/launch.json`** likely references dev port 5178 per STACK.md. Researcher verifies; if so, Vite `server.port: 5178` keeps existing dev workflow intact.
 
 ### Quick-Win Bandwidth (deferred to Phase 4)
+
 The lint config Phase 1 stands up will fire on ~30 `Math.random()` call sites + ~17 `innerHTML =` clears + 1 `html:` escape hatch + 7 `alert()` sites + every inline `style="..."`. **None of these are fixed in Phase 1** — Phase 4 owns CODE-01..13. Phase 1 just makes them visible (via the per-line disables in D-06) and time-bound (via the cleanup ledger D-08).
 
 </code_context>
@@ -199,7 +212,7 @@ The lint config Phase 1 stands up will fire on ~30 `Math.random()` call sites + 
 
 ---
 
-*Phase: 01-engineering-foundation-tooling*
-*Context gathered: 2026-05-03*
+_Phase: 01-engineering-foundation-tooling_
+_Context gathered: 2026-05-03_
 </content>
 </invoke>

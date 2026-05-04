@@ -8,15 +8,18 @@ export default defineConfig({
     rollupOptions: {
       input: { main: "index.html" },
       output: {
-        manualChunks: {
-          firebase: [
-            "firebase/app",
-            "firebase/auth",
-            "firebase/firestore",
-            "firebase/storage",
-            "firebase/app-check",
-          ],
-          chart: ["chart.js"],
+        // manualChunks: function form required by Vite 8 / Rolldown (object
+        // form throws "manualChunks is not a function" at build time — Rule 3
+        // fix while preserving load-bearing intent: split firebase + chart
+        // into named chunks).
+        manualChunks: (id) => {
+          if (id.includes("node_modules/firebase") || id.includes("node_modules/@firebase")) {
+            return "firebase";
+          }
+          if (id.includes("node_modules/chart.js")) {
+            return "chart";
+          }
+          return undefined;
         },
       },
     },

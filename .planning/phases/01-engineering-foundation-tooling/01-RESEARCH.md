@@ -7,6 +7,7 @@
 ---
 
 <user_constraints>
+
 ## User Constraints (from CONTEXT.md)
 
 ### Locked Decisions
@@ -38,7 +39,7 @@ All 31 decisions D-01..D-31 in `01-CONTEXT.md` are locked. Key decisions relevan
 - **D-23:** OIDC runbook documented (`runbooks/firebase-oidc-bootstrap.md`); NOT provisioned in Phase 1.
 - **D-24:** `SECURITY.md` skeleton with three populated sections: Build & Supply Chain, Dependency Monitoring, Secret Scanning. Stub sections for everything else.
 - **D-25:** Each plan task that closes a SECURITY.md claim commits the SECURITY.md edit atomically.
-- **D-26:** ESLint with `no-restricted-syntax` (Math.random) + `no-restricted-imports` (firebase/* paths, soft warn in Phase 1).
+- **D-26:** ESLint with `no-restricted-syntax` (Math.random) + `no-restricted-imports` (firebase/\* paths, soft warn in Phase 1).
 - **D-27:** `.prettierrc.json`: `printWidth: 100, semi: true, singleQuote: false, trailingComma: "all"`.
 - **D-28:** `tsconfig.json` per STACK.md exactly.
 - **D-29:** `types/` directory for ambient declarations.
@@ -63,26 +64,28 @@ All 31 decisions D-01..D-31 in `01-CONTEXT.md` are locked. Key decisions relevan
 - Auto-merge for Dependabot patch updates
 - `functions/` workspace skeleton (Phase 7)
 - OSV-Scanner hard fail (post-30-days re-evaluation)
-</user_constraints>
+  </user_constraints>
 
 <phase_requirements>
+
 ## Phase Requirements
 
-| ID | Description | Research Support |
-|----|-------------|------------------|
-| TOOL-01 | `package.json` declaring all production + dev dependencies | Standard Stack section; Installation sequence |
-| TOOL-02 | Vite 8 build pipeline produces hashed-filename bundles | Resolved Open Question 1; Architecture Patterns |
-| TOOL-03 | Firebase JS SDK self-hosted via Vite bundle (firebase@12.12.1) | Standard Stack; coexistence strategy |
-| TOOL-04 | Chart.js self-hosted via Vite bundle (chart.js@4.5.1) | Standard Stack; coexistence strategy |
-| TOOL-05 | ESLint 10 flat config + security plugins blocks Math.random/innerHTML regressions | Implementation Strategy; Code Examples |
-| TOOL-06 | Prettier configured repo-wide | Implementation Strategy |
-| TOOL-07 | TypeScript-as-typecheck via --allowJs --checkJs --strict | Implementation Strategy |
-| TOOL-08 | GitHub Actions CI on every PR: lint + typecheck + Vitest + npm audit + OSV-Scanner + build | Resolved Open Question 7; CI skeleton |
-| TOOL-09 | Third-party Actions pinned to SHA; CI uses OIDC for Firebase auth (documentation only in Phase 1) | Resolved Open Question 4; CI skeleton |
-| TOOL-10 | Dependabot for npm + github-actions, weekly cadence | Implementation Strategy; Dependabot skeleton |
-| TOOL-11 | Socket.dev GitHub App installed | Implementation Strategy (UI step; documented in runbook) |
-| TOOL-12 | gitleaks pre-commit + CI | Resolved Open Question 6; husky skeleton |
-| DOC-10 | Incremental SECURITY.md skeleton with three populated sections | Compliance Mapping; SECURITY.md Skeleton |
+| ID      | Description                                                                                       | Research Support                                         |
+| ------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| TOOL-01 | `package.json` declaring all production + dev dependencies                                        | Standard Stack section; Installation sequence            |
+| TOOL-02 | Vite 8 build pipeline produces hashed-filename bundles                                            | Resolved Open Question 1; Architecture Patterns          |
+| TOOL-03 | Firebase JS SDK self-hosted via Vite bundle (firebase@12.12.1)                                    | Standard Stack; coexistence strategy                     |
+| TOOL-04 | Chart.js self-hosted via Vite bundle (chart.js@4.5.1)                                             | Standard Stack; coexistence strategy                     |
+| TOOL-05 | ESLint 10 flat config + security plugins blocks Math.random/innerHTML regressions                 | Implementation Strategy; Code Examples                   |
+| TOOL-06 | Prettier configured repo-wide                                                                     | Implementation Strategy                                  |
+| TOOL-07 | TypeScript-as-typecheck via --allowJs --checkJs --strict                                          | Implementation Strategy                                  |
+| TOOL-08 | GitHub Actions CI on every PR: lint + typecheck + Vitest + npm audit + OSV-Scanner + build        | Resolved Open Question 7; CI skeleton                    |
+| TOOL-09 | Third-party Actions pinned to SHA; CI uses OIDC for Firebase auth (documentation only in Phase 1) | Resolved Open Question 4; CI skeleton                    |
+| TOOL-10 | Dependabot for npm + github-actions, weekly cadence                                               | Implementation Strategy; Dependabot skeleton             |
+| TOOL-11 | Socket.dev GitHub App installed                                                                   | Implementation Strategy (UI step; documented in runbook) |
+| TOOL-12 | gitleaks pre-commit + CI                                                                          | Resolved Open Question 6; husky skeleton                 |
+| DOC-10  | Incremental SECURITY.md skeleton with three populated sections                                    | Compliance Mapping; SECURITY.md Skeleton                 |
+
 </phase_requirements>
 
 ---
@@ -99,15 +102,15 @@ Phase 1 stands up an entirely new engineering foundation on a repo that currentl
 
 ## Architectural Responsibility Map
 
-| Capability | Primary Tier | Secondary Tier | Rationale |
-|------------|-------------|----------------|-----------|
-| Dependency management | Developer workstation | CI (npm ci) | package.json declares; CI enforces reproducibility |
-| Static analysis (lint/typecheck) | CI (required gate) | Pre-commit (fast feedback) | Gate on CI is authoritative; pre-commit is convenience |
-| Secret scanning | Pre-commit (gitleaks) | CI (gitleaks detect) | Pre-commit stops secrets ever reaching repo; CI is backstop |
-| Build verification | CI | Local (npm run build) | CI is the authoritative "dist/ is valid" signal |
-| Dependency monitoring | GitHub (Dependabot + Socket.dev) | CI (OSV-Scanner + npm audit) | Automated ongoing monitoring; CI provides per-PR point-in-time |
-| Branch protection | GitHub API (one-shot runbook) | — | Platform-enforced; not in-repo config |
-| OIDC trust config | GCP (documented only) | — | Phase 3 provisions; Phase 1 documents the runbook |
+| Capability                       | Primary Tier                     | Secondary Tier               | Rationale                                                      |
+| -------------------------------- | -------------------------------- | ---------------------------- | -------------------------------------------------------------- |
+| Dependency management            | Developer workstation            | CI (npm ci)                  | package.json declares; CI enforces reproducibility             |
+| Static analysis (lint/typecheck) | CI (required gate)               | Pre-commit (fast feedback)   | Gate on CI is authoritative; pre-commit is convenience         |
+| Secret scanning                  | Pre-commit (gitleaks)            | CI (gitleaks detect)         | Pre-commit stops secrets ever reaching repo; CI is backstop    |
+| Build verification               | CI                               | Local (npm run build)        | CI is the authoritative "dist/ is valid" signal                |
+| Dependency monitoring            | GitHub (Dependabot + Socket.dev) | CI (OSV-Scanner + npm audit) | Automated ongoing monitoring; CI provides per-PR point-in-time |
+| Branch protection                | GitHub API (one-shot runbook)    | —                            | Platform-enforced; not in-repo config                          |
+| OIDC trust config                | GCP (documented only)            | —                            | Phase 3 provisions; Phase 1 documents the runbook              |
 
 ---
 
@@ -117,31 +120,31 @@ All versions verified against the npm registry on 2026-05-03. These are locked b
 
 ### Core (production deps)
 
-| Library | Version | Purpose | Why Standard |
-|---------|---------|---------|--------------|
-| firebase | 12.12.1 | Firebase JS SDK — installed as npm dep now; runtime still served from CDN until Phase 4 | Upgrade from 10.13.0; closes H4 SRI gap once Vite bundles it; tree-shakable modular API |
-| chart.js | 4.5.1 | Radar + donut charts | Drop-in upgrade from 4.4.1 in CDN; same tree-shakable API |
-| dompurify | 3.4.2 | HTML sanitiser — installed now; used in Phase 4 | Trail-of-Bits-audited; installed early so bundle-size budget is accurate from day one |
-| @sentry/browser | 10.51.0 | Error sink — installed now; initialised in Phase 9 | Installed early per D-04 so Phase 9 has no extra npm install PR |
+| Library         | Version | Purpose                                                                                 | Why Standard                                                                            |
+| --------------- | ------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| firebase        | 12.12.1 | Firebase JS SDK — installed as npm dep now; runtime still served from CDN until Phase 4 | Upgrade from 10.13.0; closes H4 SRI gap once Vite bundles it; tree-shakable modular API |
+| chart.js        | 4.5.1   | Radar + donut charts                                                                    | Drop-in upgrade from 4.4.1 in CDN; same tree-shakable API                               |
+| dompurify       | 3.4.2   | HTML sanitiser — installed now; used in Phase 4                                         | Trail-of-Bits-audited; installed early so bundle-size budget is accurate from day one   |
+| @sentry/browser | 10.51.0 | Error sink — installed now; initialised in Phase 9                                      | Installed early per D-04 so Phase 9 has no extra npm install PR                         |
 
 ### Build / test (devDeps)
 
-| Library | Version | Purpose | Notes |
-|---------|---------|---------|-------|
-| vite | 8.0.10 | Build pipeline + dev server | Requires Node 20.19+ / 22.12+ — confirmed compatible with D-02 Node 22 |
-| vitest | 4.1.5 | Test runner | Shares vite.config.js; same Rollup version line as Vite 8 |
-| @vitest/coverage-v8 | 4.1.5 | Coverage provider | Paired with Vitest at same version |
-| happy-dom | 20.9.0 | DOM environment for Vitest | Faster than jsdom; Vitest first-class support |
-| typescript | 6.0.3 | JSDoc typecheck (--allowJs --checkJs --noEmit) | No .ts files; typecheck only |
-| eslint | 10.3.0 | Static analysis | Flat config (eslint.config.js); no legacy .eslintrc |
-| @eslint/js | 10.0.1 | ESLint recommended rules | Peer of eslint@10; provides `recommended` config object |
-| eslint-plugin-no-unsanitized | 4.1.5 | Catches innerHTML/outerHTML/insertAdjacentHTML | Closes M2 + C4 regression prevention |
-| eslint-plugin-security | 4.0.0 | Catches Math.random, eval, unsafe regex | Closes H5 regression prevention |
-| prettier | 3.8.3 | Code formatting | Zero-config; wired into lint-staged |
-| @firebase/rules-unit-testing | 5.0.0 | Firestore/Storage Rules tests against emulator | Installed now; used in Phase 5 |
-| firebase-tools | 15.16.0 | Firebase CLI; emulator suite | Pinned in devDeps so CI and local use same version |
-| husky | 9.1.7 | Git hook manager (config-as-files, no `husky install`) | Latest; see Open Question 8 |
-| lint-staged | 16.4.0 | Runs linters on staged files only | Latest; paired with husky 9 |
+| Library                      | Version | Purpose                                                | Notes                                                                  |
+| ---------------------------- | ------- | ------------------------------------------------------ | ---------------------------------------------------------------------- |
+| vite                         | 8.0.10  | Build pipeline + dev server                            | Requires Node 20.19+ / 22.12+ — confirmed compatible with D-02 Node 22 |
+| vitest                       | 4.1.5   | Test runner                                            | Shares vite.config.js; same Rollup version line as Vite 8              |
+| @vitest/coverage-v8          | 4.1.5   | Coverage provider                                      | Paired with Vitest at same version                                     |
+| happy-dom                    | 20.9.0  | DOM environment for Vitest                             | Faster than jsdom; Vitest first-class support                          |
+| typescript                   | 6.0.3   | JSDoc typecheck (--allowJs --checkJs --noEmit)         | No .ts files; typecheck only                                           |
+| eslint                       | 10.3.0  | Static analysis                                        | Flat config (eslint.config.js); no legacy .eslintrc                    |
+| @eslint/js                   | 10.0.1  | ESLint recommended rules                               | Peer of eslint@10; provides `recommended` config object                |
+| eslint-plugin-no-unsanitized | 4.1.5   | Catches innerHTML/outerHTML/insertAdjacentHTML         | Closes M2 + C4 regression prevention                                   |
+| eslint-plugin-security       | 4.0.0   | Catches Math.random, eval, unsafe regex                | Closes H5 regression prevention                                        |
+| prettier                     | 3.8.3   | Code formatting                                        | Zero-config; wired into lint-staged                                    |
+| @firebase/rules-unit-testing | 5.0.0   | Firestore/Storage Rules tests against emulator         | Installed now; used in Phase 5                                         |
+| firebase-tools               | 15.16.0 | Firebase CLI; emulator suite                           | Pinned in devDeps so CI and local use same version                     |
+| husky                        | 9.1.7   | Git hook manager (config-as-files, no `husky install`) | Latest; see Open Question 8                                            |
+| lint-staged                  | 16.4.0  | Runs linters on staged files only                      | Latest; paired with husky 9                                            |
 
 **Version verification:** All versions above confirmed via `npm view <pkg>@<version> version` on 2026-05-03. [VERIFIED: npm registry]
 
@@ -249,6 +252,7 @@ base-layers-diagnostic/
 **Files:** `package.json`, `.gitignore` (augmented)
 
 `package.json` must declare:
+
 - `"type": "module"` — required for Vite 8 ESM config files and flat ESLint config
 - `"engines": { "node": ">=22.0.0" }` — enforces D-02 Node 22
 - `"scripts"` block (see below)
@@ -262,29 +266,27 @@ base-layers-diagnostic/
   "type": "module",
   "engines": { "node": ">=22.0.0" },
   "scripts": {
-    "dev":        "vite",
-    "build":      "vite build",
-    "preview":    "vite preview",
-    "lint":       "eslint . --max-warnings=0",
-    "lint:fix":   "eslint . --fix",
-    "typecheck":  "tsc --noEmit",
-    "test":       "vitest run",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "format":     "prettier --write .",
+    "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare":    "husky"
+    "prepare": "husky"
   },
   "lint-staged": {
-    "*.js": [
-      "eslint --fix --max-warnings=0",
-      "prettier --write"
-    ]
+    "*.js": ["eslint --fix --max-warnings=0", "prettier --write"]
   }
 }
 ```
 
 **`.gitignore` additions** (append to existing 5-line file):
+
 ```
 dist/
 coverage/
@@ -333,7 +335,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5178,  // matches .claude/launch.json (verified — serves on 5178)
+    port: 5178, // matches .claude/launch.json (verified — serves on 5178)
   },
   test: {
     environment: "happy-dom",
@@ -424,22 +426,29 @@ export default [
       "no-restricted-syntax": [
         "error",
         {
-          "selector": "CallExpression[callee.object.name='Math'][callee.property.name='random']",
-          "message": "Use crypto.randomUUID() instead. Phase 4: replace all call sites. See runbooks/phase-4-cleanup-ledger.md"
-        }
+          selector: "CallExpression[callee.object.name='Math'][callee.property.name='random']",
+          message:
+            "Use crypto.randomUUID() instead. Phase 4: replace all call sites. See runbooks/phase-4-cleanup-ledger.md",
+        },
       ],
 
       // Block direct firebase/* imports outside firebase/ adapter (soft warn in Phase 1)
       "no-restricted-imports": [
         "warn",
         {
-          "patterns": [
+          patterns: [
             {
-              "group": ["firebase/firestore", "firebase/storage", "firebase/auth", "firebase/app-check"],
-              "message": "Import Firebase services only through the firebase/ adapter module. This will harden to 'error' in Phase 4."
-            }
-          ]
-        }
+              group: [
+                "firebase/firestore",
+                "firebase/storage",
+                "firebase/auth",
+                "firebase/app-check",
+              ],
+              message:
+                "Import Firebase services only through the firebase/ adapter module. This will harden to 'error' in Phase 4.",
+            },
+          ],
+        },
       ],
     },
   },
@@ -447,6 +456,7 @@ export default [
 ```
 
 **Critical:** When `eslint . --max-warnings=0` is run against the current `app.js`, it will fail on every existing violation. The plan task for TOOL-05 must:
+
 1. Run `eslint app.js --format=json > /tmp/violations.json` to enumerate all existing violations.
 2. Add per-line `// eslint-disable-next-line <rule> -- Phase 4: <description>` on each.
 3. Commit both the violations (with disables) and the ledger entry in `runbooks/phase-4-cleanup-ledger.md`.
@@ -472,6 +482,7 @@ npx gitleaks protect --staged --config .gitleaks.toml
 No `husky install` call needed. The `prepare` script handles it. The `.husky/pre-commit` file must be executable — set with `chmod +x .husky/pre-commit` (or git will handle it on Unix; on Windows the file is always executable via git).
 
 **To initialise husky after `npm install`:**
+
 ```bash
 npm install   # triggers prepare → husky (creates .husky/ dir if not exists)
 ```
@@ -511,6 +522,7 @@ regexes = [
 ```
 
 **Note on gitleaks local install:** gitleaks is a binary (not on npm — confirmed 2026-05-03). The `npx gitleaks` invocation in the pre-commit hook requires the binary to be in PATH. Document in `CONTRIBUTING.md`:
+
 - Windows: `scoop install gitleaks`
 - macOS: `brew install gitleaks`
 - The CI step uses `google/osv-scanner-action` pattern — for gitleaks in CI, use `gitleaks/gitleaks-action@v2` (pinned to SHA).
@@ -541,8 +553,8 @@ jobs:
     name: Install
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af  # v4.1.0
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
           node-version: "22"
           cache: "npm"
@@ -604,7 +616,7 @@ jobs:
       # Soft fail: OSV-Scanner (broader advisory DB)
       - name: OSV-Scanner
         id: osv-scanner
-        uses: google/osv-scanner-action/osv-scanner-action@63b7cb9cb68a3d7c42c88dd68a0fc7c47c8e1d98  # v1.8.5
+        uses: google/osv-scanner-action/osv-scanner-action@63b7cb9cb68a3d7c42c88dd68a0fc7c47c8e1d98 # v1.8.5
         continue-on-error: true
         with:
           scan-args: |-
@@ -613,7 +625,7 @@ jobs:
             .
       # CI gitleaks scan (backstop for devs who skip local hook)
       - name: gitleaks detect
-        uses: gitleaks/gitleaks-action@9b35a74e8a32c63099bdc5d0f14fcc4b2ea3d07f  # v2.3.6
+        uses: gitleaks/gitleaks-action@9b35a74e8a32c63099bdc5d0f14fcc4b2ea3d07f # v2.3.6
         with:
           config-path: .gitleaks.toml
 
@@ -629,7 +641,7 @@ jobs:
           cache: "npm"
       - run: npm ci
       - run: npm run build
-      - uses: actions/upload-artifact@65c4c4a1ddee5b72f98dc3e02f09a3e8b4ef87dc  # v4.6.0
+      - uses: actions/upload-artifact@65c4c4a1ddee5b72f98dc3e02f09a3e8b4ef87dc # v4.6.0
         with:
           name: dist
           path: dist/
@@ -637,6 +649,7 @@ jobs:
 ```
 
 **Important notes on Action SHAs:**
+
 - The SHAs above are illustrative placeholders. The executor MUST replace them with actual current SHAs from `github.com/actions/checkout/releases`, `github.com/actions/setup-node/releases`, etc. before committing.
 - Dependabot's `github-actions` ecosystem (declared in `dependabot.yml`) will then keep them updated weekly.
 - The `google/osv-scanner-action` SHA must be retrieved from `github.com/google/osv-scanner-action/releases`.
@@ -785,6 +798,7 @@ The only subtle risk: if the typecheck (`tsc --noEmit --allowJs --checkJs`) were
 > Phase 3: Run these commands before wiring the deploy job.
 
 ## Prerequisites
+
 - `gcloud` CLI authenticated as project owner
 - Firebase project ID: bedeveloped-base-layers
 - GitHub repo: AssumeAIhugh/base-layers-diagnostic
@@ -834,10 +848,11 @@ The only subtle risk: if the typecheck (`tsc --noEmit --allowJs --checkJs`) were
         service_account: 'github-actions-deploy@bedeveloped-base-layers.iam.gserviceaccount.com'
 
     - uses: google-github-actions/setup-gcloud@<SHA>
-    
+
     - run: firebase deploy --only hosting --project bedeveloped-base-layers
 
 ## Notes
+
 - Replace <PROJECT_NUMBER> with output of `gcloud projects describe bedeveloped-base-layers --format='value(projectNumber)'`
 - No long-lived service account JSON key stored in GitHub Secrets
 - Token is scoped to this exact repo; forks cannot request a token
@@ -862,6 +877,7 @@ The only subtle risk: if the typecheck (`tsc --noEmit --allowJs --checkJs`) were
 > referencing them). This is a one-shot operation. Re-run to update settings.
 
 ## Prerequisites
+
 - `gh` CLI authenticated as a repo admin
 - First CI run must have completed successfully (creates the check names)
 
@@ -888,6 +904,7 @@ The only subtle risk: if the typecheck (`tsc --noEmit --allowJs --checkJs`) were
     gh api repos/AssumeAIhugh/base-layers-diagnostic/branches/main/protection | jq .
 
 ## Evidence screenshot
+
 Save a screenshot of `https://github.com/AssumeAIhugh/base-layers-diagnostic/settings/branches`
 to `docs/evidence/branch-protection-screenshot.png` (for DOC-09 evidence pack).
 ```
@@ -907,6 +924,7 @@ regex = '''(?i)(password|hash|secret|key|token|credential)[^=\n]{0,20}[=:]\s*["\
 ```
 
 **Rationale:** The original C2 finding was `INTERNAL_PASSWORD_HASH = "6110f27c9c91658c3489285abd5c45ffe5c1aa99c7f3f37d23e32834566e7fce"`. The regex matches:
+
 - A context word (password, hash, secret, key, token, credential) — reduces false positives from random 64-char hex in things like Firebase App Check tokens (which don't have a `password`/`secret` label beside them)
 - Up to 20 chars before the `=` or `:` assignment
 - Optional whitespace and optional quote characters
@@ -915,6 +933,7 @@ regex = '''(?i)(password|hash|secret|key|token|credential)[^=\n]{0,20}[=:]\s*["\
 **Allowlist paths** (`tests/`, `runbooks/`) let test fixtures include known-good hex for regression testing.
 
 **Known false positives to verify after first run:**
+
 - Firebase API keys are not 64-char hex (they are base64 or alphanumeric, typically 39 chars) — should not trigger
 - Storage bucket names — not 64-char hex
 - Firestore document IDs (20-char alphanumeric) — not 64-char hex
@@ -933,7 +952,7 @@ Run `gitleaks detect --source . --config .gitleaks.toml --verbose` on first setu
 - name: OSV-Scanner
   id: osv-scanner
   uses: google/osv-scanner-action/osv-scanner-action@<SHA>
-  continue-on-error: true   # D-20: soft fail in Phase 1
+  continue-on-error: true # D-20: soft fail in Phase 1
   with:
     scan-args: |-
       --recursive
@@ -980,34 +999,34 @@ This section maps each TOOL-XX requirement to a testable assertion. These assert
 
 ### Test Framework
 
-| Property | Value |
-|----------|-------|
-| Framework | Vitest 4.1.5 |
-| Config file | Inline in `vite.config.js` |
-| Quick run command | `npm test` |
-| Full suite command | `npm test -- --coverage` |
+| Property           | Value                      |
+| ------------------ | -------------------------- |
+| Framework          | Vitest 4.1.5               |
+| Config file        | Inline in `vite.config.js` |
+| Quick run command  | `npm test`                 |
+| Full suite command | `npm test -- --coverage`   |
 
 ### Phase Requirements → Test Map
 
-| Req ID | Behavior | Test Type | Automated Command | Notes |
-|--------|----------|-----------|-------------------|-------|
-| TOOL-01 | `package.json` exists with correct deps | Manual verify | `node -e "require('./package.json')"` | No unit test needed — file presence + `npm ci` success is evidence |
-| TOOL-02 | Vite build produces hashed-filename bundles | CI build + smoke | `npm run build && ls dist/assets/*.js` | Filename contains content hash if Vite config is correct |
-| TOOL-03 | firebase@12.12.1 in node_modules | npm verify | `npm list firebase` | `npm ci` reproducibility test |
-| TOOL-04 | chart.js@4.5.1 in node_modules | npm verify | `npm list chart.js` | Same as above |
-| TOOL-05 | ESLint blocks Math.random() in new code | Unit (lint) | `echo 'Math.random()' > /tmp/test.js && npx eslint /tmp/test.js && echo "SHOULD HAVE FAILED"` | Should exit non-zero |
-| TOOL-05 | ESLint blocks innerHTML= in new code | Unit (lint) | `echo 'el.innerHTML = x' > /tmp/test.js && npx eslint /tmp/test.js && echo "SHOULD HAVE FAILED"` | Should exit non-zero |
-| TOOL-05 | `npm run lint` passes on committed codebase | CI lint | `npm run lint` in CI (green) | Per-line disables must be in place first |
-| TOOL-06 | Prettier configured | Manual | `npm run format:check` (no diff) | |
-| TOOL-07 | Typecheck runs without error | CI typecheck | `npm run typecheck` | `// @ts-nocheck` on app.js must be in place |
-| TOOL-07 | A JSDoc type mismatch in a new file is caught | Unit (typecheck) | Create `types/test-type-check.js` with a deliberate mismatch, run `tsc --noEmit`, verify exit code 1, delete file | Manual verification during Wave 1 |
-| TOOL-08 | CI workflow runs and all jobs green | CI | Push to PR branch, observe all 5 jobs pass | First successful run also creates status check names for branch protection |
-| TOOL-09 | All Actions pinned to SHA (not tag) | Code review | `grep -E "uses: .+@v[0-9]" .github/workflows/ci.yml` should return empty | SHA must match `uses: owner/repo@<40-char-sha>` pattern |
-| TOOL-10 | Dependabot config valid YAML | Syntax check | `npx js-yaml .github/dependabot.yml` | |
-| TOOL-11 | Socket.dev installed | Manual evidence | Screenshot of https://github.com/AssumeAIhugh/base-layers-diagnostic showing Socket.dev check on a PR | For DOC-09 evidence pack |
-| TOOL-12 | gitleaks blocks a commit with INTERNAL_PASSWORD_HASH shape | Manual | `echo 'const HASH = "6110f27c9c91658c3489285abd5c45ffe5c1aa99c7f3f37d23e32834566e7fce"' > /tmp/leak.js && git add /tmp/leak.js && git commit -m "test"` — should be blocked by pre-commit hook | Clean up with `git restore --staged` |
-| TOOL-12 | gitleaks CI step catches secrets in PR | CI | Inject a test secret in a branch, push, observe gitleaks job fail | Verify during Wave 3 integration testing |
-| DOC-10 | SECURITY.md skeleton exists with three populated sections | Manual | `cat SECURITY.md` — sections "Build & Supply Chain", "Dependency Monitoring", "Secret Scanning" must exist with framework citations | |
+| Req ID  | Behavior                                                   | Test Type        | Automated Command                                                                                                                                                                              | Notes                                                                      |
+| ------- | ---------------------------------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| TOOL-01 | `package.json` exists with correct deps                    | Manual verify    | `node -e "require('./package.json')"`                                                                                                                                                          | No unit test needed — file presence + `npm ci` success is evidence         |
+| TOOL-02 | Vite build produces hashed-filename bundles                | CI build + smoke | `npm run build && ls dist/assets/*.js`                                                                                                                                                         | Filename contains content hash if Vite config is correct                   |
+| TOOL-03 | firebase@12.12.1 in node_modules                           | npm verify       | `npm list firebase`                                                                                                                                                                            | `npm ci` reproducibility test                                              |
+| TOOL-04 | chart.js@4.5.1 in node_modules                             | npm verify       | `npm list chart.js`                                                                                                                                                                            | Same as above                                                              |
+| TOOL-05 | ESLint blocks Math.random() in new code                    | Unit (lint)      | `echo 'Math.random()' > /tmp/test.js && npx eslint /tmp/test.js && echo "SHOULD HAVE FAILED"`                                                                                                  | Should exit non-zero                                                       |
+| TOOL-05 | ESLint blocks innerHTML= in new code                       | Unit (lint)      | `echo 'el.innerHTML = x' > /tmp/test.js && npx eslint /tmp/test.js && echo "SHOULD HAVE FAILED"`                                                                                               | Should exit non-zero                                                       |
+| TOOL-05 | `npm run lint` passes on committed codebase                | CI lint          | `npm run lint` in CI (green)                                                                                                                                                                   | Per-line disables must be in place first                                   |
+| TOOL-06 | Prettier configured                                        | Manual           | `npm run format:check` (no diff)                                                                                                                                                               |                                                                            |
+| TOOL-07 | Typecheck runs without error                               | CI typecheck     | `npm run typecheck`                                                                                                                                                                            | `// @ts-nocheck` on app.js must be in place                                |
+| TOOL-07 | A JSDoc type mismatch in a new file is caught              | Unit (typecheck) | Create `types/test-type-check.js` with a deliberate mismatch, run `tsc --noEmit`, verify exit code 1, delete file                                                                              | Manual verification during Wave 1                                          |
+| TOOL-08 | CI workflow runs and all jobs green                        | CI               | Push to PR branch, observe all 5 jobs pass                                                                                                                                                     | First successful run also creates status check names for branch protection |
+| TOOL-09 | All Actions pinned to SHA (not tag)                        | Code review      | `grep -E "uses: .+@v[0-9]" .github/workflows/ci.yml` should return empty                                                                                                                       | SHA must match `uses: owner/repo@<40-char-sha>` pattern                    |
+| TOOL-10 | Dependabot config valid YAML                               | Syntax check     | `npx js-yaml .github/dependabot.yml`                                                                                                                                                           |                                                                            |
+| TOOL-11 | Socket.dev installed                                       | Manual evidence  | Screenshot of https://github.com/AssumeAIhugh/base-layers-diagnostic showing Socket.dev check on a PR                                                                                          | For DOC-09 evidence pack                                                   |
+| TOOL-12 | gitleaks blocks a commit with INTERNAL_PASSWORD_HASH shape | Manual           | `echo 'const HASH = "6110f27c9c91658c3489285abd5c45ffe5c1aa99c7f3f37d23e32834566e7fce"' > /tmp/leak.js && git add /tmp/leak.js && git commit -m "test"` — should be blocked by pre-commit hook | Clean up with `git restore --staged`                                       |
+| TOOL-12 | gitleaks CI step catches secrets in PR                     | CI               | Inject a test secret in a branch, push, observe gitleaks job fail                                                                                                                              | Verify during Wave 3 integration testing                                   |
+| DOC-10  | SECURITY.md skeleton exists with three populated sections  | Manual           | `cat SECURITY.md` — sections "Build & Supply Chain", "Dependency Monitoring", "Secret Scanning" must exist with framework citations                                                            |                                                                            |
 
 ### Wave 0 Gaps
 
@@ -1087,12 +1106,14 @@ export default [
 **What goes wrong:** The `lint-staged` config runs `eslint --fix --max-warnings=0` on staged files. If a file has any warning (not error), `--max-warnings=0` treats it as a failure and blocks the commit — even though the warning might be expected (e.g., the soft `no-restricted-imports` warn rule on existing firebase imports).
 
 **Prevention:** Keep `no-restricted-imports` as `"warn"` in the ESLint config (D-26 explicitly says "soft (warn) in Phase 1"). But `--max-warnings=0` means even one warning blocks. Two options:
+
 1. Change pre-commit lint-staged to `eslint --fix` (without `--max-warnings`) and only use `--max-warnings=0` in CI. This is the recommended approach — pre-commit provides fast feedback, CI is the authoritative gate.
 2. Or keep `--max-warnings=0` everywhere but change `no-restricted-imports` to `"error"` (hardens faster, but D-26 says warn in Phase 1).
 
 **Recommendation:** Pre-commit uses `eslint --fix` (no `--max-warnings`). CI `lint` job uses `eslint . --max-warnings=0`. This separates "developer fast-fix" from "authoritative gate".
 
 **lint-staged config update:**
+
 ```json
 "lint-staged": {
   "*.js": [
@@ -1187,6 +1208,7 @@ Wave 0 (package.json + npm install)
 ### Atomic commit requirement (D-25)
 
 Each plan task that closes a SECURITY.md claim must commit the SECURITY.md edit in the same commit. Concretely:
+
 - "Add Dependabot config" commit must also include the "§ Dependency Monitoring" section addition to `SECURITY.md`.
 - "Add gitleaks config + pre-commit hook" commit must also include the "§ Secret Scanning" section addition to `SECURITY.md`.
 - "Add Vite build pipeline" commit must also include the "§ Build & Supply Chain" section addition to `SECURITY.md`.
@@ -1214,6 +1236,7 @@ Third-party scripts load from `node_modules` — no runtime CDN dependency.
 to Firebase Hosting — SRI `integrity=` attributes are then generated by Vite for all bundles.
 
 **Framework citations:**
+
 - OWASP ASVS L2 V14.4.2 — all client-side resources are served from a controlled origin
 - OWASP ASVS L2 V14.2.1 — all components kept up to date; Dependabot automates monitoring
 - ISO/IEC 27001:2022 A.8.25 — secure development life cycle
@@ -1227,6 +1250,7 @@ to Firebase Hosting — SRI `integrity=` attributes are then generated by Vite f
 ## Dependency Monitoring
 
 **Controls:**
+
 - **Dependabot** monitors `npm` (root) + `npm` (`functions/`) + `github-actions` ecosystems.
   Weekly cadence. All PRs require human review before merge (no auto-merge).
 - **Socket.dev GitHub App** provides behavioural malicious-package detection (install-time
@@ -1237,6 +1261,7 @@ to Firebase Hosting — SRI `integrity=` attributes are then generated by Vite f
   production dep vulnerabilities cannot merge.
 
 **Framework citations:**
+
 - OWASP ASVS L2 V14.2.1 — components up to date and free from known vulnerabilities
 - ISO/IEC 27001:2022 A.8.8 — management of technical vulnerabilities
 - ISO/IEC 27001:2022 A.12.6.1 — management of technical vulnerabilities (ISO 2013 mapping)
@@ -1250,6 +1275,7 @@ to Firebase Hosting — SRI `integrity=` attributes are then generated by Vite f
 ## Secret Scanning
 
 **Controls:**
+
 - **gitleaks pre-commit hook** scans staged files before every commit. Blocks commits
   containing secrets matching default ruleset plus a custom rule (see below).
 - **gitleaks CI step** (`gitleaks/gitleaks-action`) runs on every push as a backstop for
@@ -1260,6 +1286,7 @@ to Firebase Hosting — SRI `integrity=` attributes are then generated by Vite f
   previously committed in `app.js`). Config: `.gitleaks.toml`.
 
 **Framework citations:**
+
 - OWASP ASVS L2 V14.2.3 — application, server, and framework components without unnecessary features, files, documentation
 - ISO/IEC 27001:2022 A.10.1 — use of cryptographic controls (ensures secrets remain secret)
 - SOC 2 CC6.1 — logical and physical access controls (credentials cannot be committed to repo)
@@ -1268,21 +1295,21 @@ to Firebase Hosting — SRI `integrity=` attributes are then generated by Vite f
 
 ### Compliance Mapping per TOOL-XX
 
-| Req | OWASP ASVS L2 | ISO 27001:2022 | SOC 2 CC | GDPR Art. |
-|-----|---------------|----------------|----------|-----------|
-| TOOL-01 | V14.2.1 | A.8.25, A.8.28 | CC8.1 | — |
-| TOOL-02 | V14.4.2 | A.8.25, A.8.28 | CC8.1 | — |
-| TOOL-03 | V14.2.1, V14.4.2 | A.8.28 | CC8.1 | — |
-| TOOL-04 | V14.2.1, V14.4.2 | A.8.28 | CC8.1 | — |
-| TOOL-05 | V5.3.3 (XSS), V6.3.1 (CSPRNG) | A.8.28, A.14.2.5 | CC6.6 | 32(1)(b) |
-| TOOL-06 | V14.2 (code quality) | A.8.28 | CC8.1 | — |
-| TOOL-07 | V14.2, V14.3 | A.8.28, A.8.29 | CC8.1 | — |
-| TOOL-08 | V14.2.2, V14.3.2 | A.8.29, A.8.31 | CC8.1 | 32(1)(d) |
-| TOOL-09 | V14.2.2 | A.8.25, A.14.2.2 | CC8.1 | — |
-| TOOL-10 | V14.2.1 | A.8.8 | CC8.1 | 32(1)(d) |
-| TOOL-11 | V14.2.1 | A.8.8 | CC8.1 | — |
-| TOOL-12 | V14.2.3 | A.10.1 | CC6.1 | 32(1)(a) |
-| DOC-10 | V14.2 (evidence) | A.5.36, A.5.37 | CC2.3, CC8.1 | 32(1)(d) |
+| Req     | OWASP ASVS L2                 | ISO 27001:2022   | SOC 2 CC     | GDPR Art. |
+| ------- | ----------------------------- | ---------------- | ------------ | --------- |
+| TOOL-01 | V14.2.1                       | A.8.25, A.8.28   | CC8.1        | —         |
+| TOOL-02 | V14.4.2                       | A.8.25, A.8.28   | CC8.1        | —         |
+| TOOL-03 | V14.2.1, V14.4.2              | A.8.28           | CC8.1        | —         |
+| TOOL-04 | V14.2.1, V14.4.2              | A.8.28           | CC8.1        | —         |
+| TOOL-05 | V5.3.3 (XSS), V6.3.1 (CSPRNG) | A.8.28, A.14.2.5 | CC6.6        | 32(1)(b)  |
+| TOOL-06 | V14.2 (code quality)          | A.8.28           | CC8.1        | —         |
+| TOOL-07 | V14.2, V14.3                  | A.8.28, A.8.29   | CC8.1        | —         |
+| TOOL-08 | V14.2.2, V14.3.2              | A.8.29, A.8.31   | CC8.1        | 32(1)(d)  |
+| TOOL-09 | V14.2.2                       | A.8.25, A.14.2.2 | CC8.1        | —         |
+| TOOL-10 | V14.2.1                       | A.8.8            | CC8.1        | 32(1)(d)  |
+| TOOL-11 | V14.2.1                       | A.8.8            | CC8.1        | —         |
+| TOOL-12 | V14.2.3                       | A.10.1           | CC6.1        | 32(1)(a)  |
+| DOC-10  | V14.2 (evidence)              | A.5.36, A.5.37   | CC2.3, CC8.1 | 32(1)(d)  |
 
 **Note on ISO 27001:2022 version vs. ISO 27001:2013:** The compliance citations above reference ISO 27001:2022 Annex A control numbers (e.g., A.8.8 instead of A.12.6.1 from the 2013 version). The 2022 revision reorganised the Annex A controls. Use 2022 references throughout `SECURITY.md` for current-standard credibility. [CITED: ISO 27001:2022 Annex A published structure]
 
@@ -1296,58 +1323,58 @@ Complete list for planner `file_modified` frontmatter:
 
 ### New files
 
-| File | Purpose |
-|------|---------|
-| `package.json` | Declares all deps; defines npm scripts; lint-staged config; engines constraint |
-| `vite.config.js` | Vite build pipeline + dev server port 5178 + Vitest config inline |
-| `tsconfig.json` | TypeScript-as-typecheck config (--allowJs --checkJs --noEmit --strict) |
-| `eslint.config.js` | ESLint 10 flat config — security plugins + danger rules + per-file overrides |
-| `.prettierrc.json` | Prettier formatting config |
-| `.husky/pre-commit` | Git pre-commit hook — lint-staged + gitleaks protect |
-| `.gitleaks.toml` | gitleaks config — default rules + SHA-256-hex custom rule |
-| `.github/workflows/ci.yml` | GitHub Actions CI workflow (lint, typecheck, test, audit, build) |
-| `.github/dependabot.yml` | Dependabot config — npm root, npm functions/ (forward), github-actions |
-| `tests/smoke.test.js` | Single arithmetic smoke test — prevents "no tests found" warning |
-| `types/globals.d.ts` | Ambient declarations for Vite-injected globals + legacy window globals |
-| `runbooks/branch-protection-bootstrap.md` | One-shot `gh api` payload for branch protection |
-| `runbooks/firebase-oidc-bootstrap.md` | GCP commands for OIDC workload-identity config (Phase 3 executes) |
-| `runbooks/socket-bootstrap.md` | Socket.dev GitHub App install steps + evidence screenshot instructions |
-| `runbooks/phase-4-cleanup-ledger.md` | Ledger of all eslint-disable-next-line and @ts-nocheck introduced in Phase 1 |
-| `SECURITY.md` | Evidence trail skeleton — 3 populated sections + stub TOC for later phases |
-| `CONTRIBUTING.md` | gitleaks local install instructions (scoop/brew) + dev setup |
+| File                                      | Purpose                                                                        |
+| ----------------------------------------- | ------------------------------------------------------------------------------ |
+| `package.json`                            | Declares all deps; defines npm scripts; lint-staged config; engines constraint |
+| `vite.config.js`                          | Vite build pipeline + dev server port 5178 + Vitest config inline              |
+| `tsconfig.json`                           | TypeScript-as-typecheck config (--allowJs --checkJs --noEmit --strict)         |
+| `eslint.config.js`                        | ESLint 10 flat config — security plugins + danger rules + per-file overrides   |
+| `.prettierrc.json`                        | Prettier formatting config                                                     |
+| `.husky/pre-commit`                       | Git pre-commit hook — lint-staged + gitleaks protect                           |
+| `.gitleaks.toml`                          | gitleaks config — default rules + SHA-256-hex custom rule                      |
+| `.github/workflows/ci.yml`                | GitHub Actions CI workflow (lint, typecheck, test, audit, build)               |
+| `.github/dependabot.yml`                  | Dependabot config — npm root, npm functions/ (forward), github-actions         |
+| `tests/smoke.test.js`                     | Single arithmetic smoke test — prevents "no tests found" warning               |
+| `types/globals.d.ts`                      | Ambient declarations for Vite-injected globals + legacy window globals         |
+| `runbooks/branch-protection-bootstrap.md` | One-shot `gh api` payload for branch protection                                |
+| `runbooks/firebase-oidc-bootstrap.md`     | GCP commands for OIDC workload-identity config (Phase 3 executes)              |
+| `runbooks/socket-bootstrap.md`            | Socket.dev GitHub App install steps + evidence screenshot instructions         |
+| `runbooks/phase-4-cleanup-ledger.md`      | Ledger of all eslint-disable-next-line and @ts-nocheck introduced in Phase 1   |
+| `SECURITY.md`                             | Evidence trail skeleton — 3 populated sections + stub TOC for later phases     |
+| `CONTRIBUTING.md`                         | gitleaks local install instructions (scoop/brew) + dev setup                   |
 
 ### Modified files
 
-| File | Change |
-|------|--------|
-| `app.js` | Line 1: add `// @ts-nocheck -- Phase 4: remove after modular split`; per-line `// eslint-disable-next-line` on each existing violation with Phase 4 remediation note |
-| `firebase-init.js` | If typecheck generates errors: add `// @ts-nocheck -- Phase 4: remove after CDN import replacement` (only if needed) |
-| `data/pillars.js` | If typecheck generates errors: add `// @ts-nocheck -- Phase 4: add @ts-check + JSDoc` (only if needed) |
-| `.gitignore` | Append: `dist/`, `coverage/`, `.env`, `.env.*`, `!.env.example`, `.firebase/`, `*.tsbuildinfo`, `firestore-debug.log`, `firebase-debug.log` |
+| File               | Change                                                                                                                                                               |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app.js`           | Line 1: add `// @ts-nocheck -- Phase 4: remove after modular split`; per-line `// eslint-disable-next-line` on each existing violation with Phase 4 remediation note |
+| `firebase-init.js` | If typecheck generates errors: add `// @ts-nocheck -- Phase 4: remove after CDN import replacement` (only if needed)                                                 |
+| `data/pillars.js`  | If typecheck generates errors: add `// @ts-nocheck -- Phase 4: add @ts-check + JSDoc` (only if needed)                                                               |
+| `.gitignore`       | Append: `dist/`, `coverage/`, `.env`, `.env.*`, `!.env.example`, `.firebase/`, `*.tsbuildinfo`, `firestore-debug.log`, `firebase-debug.log`                          |
 
 ---
 
 ## State of the Art
 
-| Old Approach | Current Approach | Notes |
-|--------------|------------------|-------|
-| husky `husky install` in `prepare` | `"prepare": "husky || true"` (no-arg) | husky 9 completely dropped the `install` subcommand |
-| ESLint `.eslintrc.js` with `extends:` | `eslint.config.js` flat array | ESLint 10 defaults to flat config; legacy config requires `ESLINT_USE_FLAT_CONFIG=false` |
-| OSV-Scanner via `npx osv-scanner@latest` | `google/osv-scanner-action` GitHub Action | OSV-Scanner binary is not on npm; use the Action |
-| Dependabot auto-merge for patches | Auto-merge disabled | Compliance posture requires human review on every dep bump |
-| `actions/checkout@v4` (tag) | `actions/checkout@<SHA>` | TOOL-09 requires SHA pinning, not tag |
+| Old Approach                             | Current Approach                          | Notes                                                                                    |
+| ---------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------- | --------------- | --------------------------------------------------- |
+| husky `husky install` in `prepare`       | `"prepare": "husky                        |                                                                                          | true"` (no-arg) | husky 9 completely dropped the `install` subcommand |
+| ESLint `.eslintrc.js` with `extends:`    | `eslint.config.js` flat array             | ESLint 10 defaults to flat config; legacy config requires `ESLINT_USE_FLAT_CONFIG=false` |
+| OSV-Scanner via `npx osv-scanner@latest` | `google/osv-scanner-action` GitHub Action | OSV-Scanner binary is not on npm; use the Action                                         |
+| Dependabot auto-merge for patches        | Auto-merge disabled                       | Compliance posture requires human review on every dep bump                               |
+| `actions/checkout@v4` (tag)              | `actions/checkout@<SHA>`                  | TOOL-09 requires SHA pinning, not tag                                                    |
 
 ---
 
 ## Assumptions Log
 
-| # | Claim | Section | Risk if Wrong |
-|---|-------|---------|---------------|
-| A1 | Vite 8 leaves external CDN `<script>` URLs unchanged in `dist/index.html` | OQ-1, vite.config.js | If Vite 8 attempts to fetch/inline CDN scripts, build fails; mitigation: use `build.rollupOptions.external` to explicitly exclude them |
-| A2 | The dual-load (firebase 10.13.0 CDN + firebase 12.12.1 npm) is benign in Phase 1 because nothing imports from npm | OQ-3 | If any existing code path accidentally resolves the npm package instead of window.FB (unlikely given IIFE globals pattern), there could be version confusion |
-| A3 | gitleaks SHA-256-hex custom regex has no false positives on the existing repo | OQ-6 | If false positives block legitimate commits, adjust `secretGroup` or add specific allowlist entries |
-| A4 | `google/osv-scanner-action` SHA in ci.yml is for a current stable release | OQ-7 | Placeholder SHA in this doc must be replaced with actual verified SHA before committing |
-| A5 | Action SHAs in ci.yml are illustrative | Implementation Strategy (ci.yml) | CRITICAL: executor MUST replace all Action SHAs with verified current values before committing |
+| #   | Claim                                                                                                             | Section                          | Risk if Wrong                                                                                                                                                |
+| --- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A1  | Vite 8 leaves external CDN `<script>` URLs unchanged in `dist/index.html`                                         | OQ-1, vite.config.js             | If Vite 8 attempts to fetch/inline CDN scripts, build fails; mitigation: use `build.rollupOptions.external` to explicitly exclude them                       |
+| A2  | The dual-load (firebase 10.13.0 CDN + firebase 12.12.1 npm) is benign in Phase 1 because nothing imports from npm | OQ-3                             | If any existing code path accidentally resolves the npm package instead of window.FB (unlikely given IIFE globals pattern), there could be version confusion |
+| A3  | gitleaks SHA-256-hex custom regex has no false positives on the existing repo                                     | OQ-6                             | If false positives block legitimate commits, adjust `secretGroup` or add specific allowlist entries                                                          |
+| A4  | `google/osv-scanner-action` SHA in ci.yml is for a current stable release                                         | OQ-7                             | Placeholder SHA in this doc must be replaced with actual verified SHA before committing                                                                      |
+| A5  | Action SHAs in ci.yml are illustrative                                                                            | Implementation Strategy (ci.yml) | CRITICAL: executor MUST replace all Action SHAs with verified current values before committing                                                               |
 
 ---
 
@@ -1372,14 +1399,14 @@ Complete list for planner `file_modified` frontmatter:
 
 ## Environment Availability
 
-| Dependency | Required By | Available | Version | Fallback |
-|------------|------------|-----------|---------|----------|
-| Node.js | All npm scripts, Vite 8 | To verify | Must be >=22.0.0 per D-02 | Install Node 22 LTS from nodejs.org |
-| npm | Package management | Yes (bundled with Node) | Any version | — |
-| git | Husky hooks | Yes | Any recent version | — |
-| gh CLI | Branch protection runbook | To verify | Any version ≥2.x | Install from cli.github.com |
-| gitleaks binary | Pre-commit hook | To verify | Any recent version | Defer local hook; CI gitleaks action is the backstop |
-| GitHub repository access | CI, Dependabot, Socket.dev | Yes (repo exists per git status) | — | — |
+| Dependency               | Required By                | Available                        | Version                   | Fallback                                             |
+| ------------------------ | -------------------------- | -------------------------------- | ------------------------- | ---------------------------------------------------- |
+| Node.js                  | All npm scripts, Vite 8    | To verify                        | Must be >=22.0.0 per D-02 | Install Node 22 LTS from nodejs.org                  |
+| npm                      | Package management         | Yes (bundled with Node)          | Any version               | —                                                    |
+| git                      | Husky hooks                | Yes                              | Any recent version        | —                                                    |
+| gh CLI                   | Branch protection runbook  | To verify                        | Any version ≥2.x          | Install from cli.github.com                          |
+| gitleaks binary          | Pre-commit hook            | To verify                        | Any recent version        | Defer local hook; CI gitleaks action is the backstop |
+| GitHub repository access | CI, Dependabot, Socket.dev | Yes (repo exists per git status) | —                         | —                                                    |
 
 **gitleaks binary note:** The pre-commit hook runs `npx gitleaks` which will fail if gitleaks is not installed locally. This is non-blocking for CI (the Action handles it there). Developers who skip local install are caught by CI. Document this clearly in `CONTRIBUTING.md`.
 
@@ -1388,6 +1415,7 @@ Complete list for planner `file_modified` frontmatter:
 ## Sources
 
 ### Primary (HIGH confidence — verified in this session)
+
 - `npm registry` — All versions verified via `npm view <pkg>@<version> version` on 2026-05-03 [VERIFIED]
 - `.planning/research/STACK.md` — Primary version reference; all decisions locked by D-01 [VERIFIED: read directly]
 - `.planning/phases/01-engineering-foundation-tooling/01-CONTEXT.md` — All 31 locked decisions [VERIFIED: read directly]
@@ -1399,6 +1427,7 @@ Complete list for planner `file_modified` frontmatter:
 - Firebase OIDC / Workload Identity Federation docs [CITED: https://firebase.google.com/docs/hosting/github-integration]
 
 ### Secondary (MEDIUM confidence)
+
 - OWASP ASVS 5.0 section references — matched against SECURITY_AUDIT.md citations [CITED: SECURITY_AUDIT.md which cites ASVS 5.0]
 - ISO 27001:2022 Annex A control numbers — 2022 reorganisation vs 2013 [ASSUMED: control number mappings derived from training knowledge; verify against official ISO 27001:2022 publication if a compliance reviewer challenges specific section IDs]
 
@@ -1407,6 +1436,7 @@ Complete list for planner `file_modified` frontmatter:
 ## Metadata
 
 **Confidence breakdown:**
+
 - Standard stack: HIGH — all versions npm-registry verified
 - Architecture: HIGH — locked by 31 decisions in CONTEXT.md; no ambiguity
 - Config shapes: HIGH — derived from official docs and STACK.md verified skeletons

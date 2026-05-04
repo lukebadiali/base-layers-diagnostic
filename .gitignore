@@ -3,3 +3,13 @@
 .idea/
 *.log
 node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+.firebase/
+*.tsbuildinfo
+firestore-debug.log
+firebase-debug.log
+.firebaserc

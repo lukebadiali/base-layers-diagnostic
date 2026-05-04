@@ -1,0 +1,37 @@
+# .gitleaks.toml
+title = "Base Layers Diagnostic — gitleaks config"
+
+[extend]
+# Extend the default gitleaks ruleset (covers AWS keys, GitHub tokens, generic API patterns, etc.)
+useDefault = true
+
+[[rules]]
+id = "sha256-hex-literal-regression"
+description = "SHA-256 hex literal (64 chars) in source — regression check for C2 INTERNAL_PASSWORD_HASH pattern"
+regex = '''(?i)(password|hash|secret|key|token|credential)[^=\n]{0,20}[=:]\s*["\']?[a-f0-9]{64}["\']?'''
+secretGroup = 0
+tags = ["custom", "c2-regression"]
+severity = "CRITICAL"
+
+[allowlist]
+description = "Allow legitimate hex strings in test fixtures, runbooks, and project planning docs"
+paths = [
+  "tests/",
+  "runbooks/",
+  # GSD planning + research docs legitimately quote C2-shape hashes when documenting the
+  # custom regression rule itself (PLAN.md, RESEARCH.md, VALIDATION.md, CONCERNS.md cite
+  # the prior INTERNAL_PASSWORD_HASH value to anchor the rule's intent). Allowlisting the
+  # whole .planning/ tree avoids future churn each time a phase document references a
+  # secret-shape literal in a code block.
+  ".planning/",
+]
+regexes = [
+  # Vitest snapshot hex is fine (e.g., expect(hash).toBe("...") in regression tests)
+  '''expect\([^)]+\)\.toBe\(["\'][a-f0-9]{64}["\']''',
+  # Firebase web SDK apiKey — public per Firebase docs (project identifier, not a secret;
+  # security is enforced by Firestore Rules in Phase 5). Pattern matches AIzaSy + 33 chars
+  # of [A-Za-z0-9_-] which is the documented Firebase web apiKey shape. gitleaks applies
+  # allowlist regexes against the matched Secret; the trailing optional quote keeps the
+  # match tolerant of how the gcp-api-key rule captures the trailing context character.
+  '''AIzaSy[A-Za-z0-9_-]{33}["\']?''',
+]

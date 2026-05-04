@@ -24,7 +24,7 @@ Trying to merge (e.g.) Phase 5 with Phase 6, or Phase 1 with Phase 2, violates o
 
 ## Phases
 
-- [ ] **Phase 1: Engineering Foundation (Tooling)** — `package.json` + Vite + Vitest + ESLint + TypeScript-as-typecheck + GitHub Actions CI + Dependabot + gitleaks land; everything downstream becomes testable, dependency-monitored, and CI-gated.
+- [x] **Phase 1: Engineering Foundation (Tooling)** — `package.json` + Vite + Vitest + ESLint + TypeScript-as-typecheck + GitHub Actions CI + Dependabot + gitleaks land; everything downstream becomes testable, dependency-monitored, and CI-gated.
 - [ ] **Phase 2: Test Suite Foundation (Tests-First)** — Vitest unit suite covers every data-integrity helper (scoring, completion, migration, unread, sync, auth state machine) against the current inline `app.js` to serve as the regression baseline for the modular split.
 - [ ] **Phase 3: Hosting Cutover + Baseline Security Headers** — Production cuts over from GitHub Pages to Firebase Hosting; baseline security headers (HSTS, X-CTO, Referrer-Policy, Permissions-Policy, COOP/COEP) enforced; CSP rolled out in `Content-Security-Policy-Report-Only` mode with a `csp-violations` Cloud Function endpoint.
 - [ ] **Phase 4: Modular Split + Quick Wins (Pure-Refactor Phase)** — `app.js` IIFE splits into `firebase/` + `data/` + `domain/` + `auth/` + `cloud/` + `views/` + `ui/` + `observability/` modules with lint-enforced dependency rules; quick-wins land (`crypto.randomUUID()`, delete `html:`, `replaceChildren()`, inline-style sweep, toast helper, client-side upload validation).
@@ -58,7 +58,7 @@ Trying to merge (e.g.) Phase 5 with Phase 6, or Phase 1 with Phase 2, violates o
 - [x] 01-03-PLAN.md — Wave 2: .husky/pre-commit + .gitleaks.toml (TOOL-12)
 - [x] 01-04-PLAN.md — Wave 3: .github/workflows/ci.yml with SHA-pinned Actions + first green CI checkpoint (TOOL-08, TOOL-09)
 - [x] 01-05-PLAN.md — Wave 4: .github/dependabot.yml (TOOL-10)
-- [ ] 01-06-PLAN.md — Wave 5: smoke test + 4 runbooks + CONTRIBUTING.md + SECURITY.md + Socket.dev install + branch-protection bootstrap (TOOL-08, TOOL-09, TOOL-11, DOC-10)
+- [x] 01-06-PLAN.md — Wave 5: smoke test + 4 runbooks + CONTRIBUTING.md + SECURITY.md + Socket.dev install + branch-protection bootstrap (TOOL-08, TOOL-09, TOOL-11, DOC-10)
 
 ### Phase 2: Test Suite Foundation (Tests-First)
 **Goal**: A regression baseline exists for every data-integrity path that the modular split (Phase 4) and downstream phases will touch — so behavioural drift becomes visible before it becomes user-visible.

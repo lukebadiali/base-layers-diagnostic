@@ -78,20 +78,22 @@ Client diagnostic data must remain confidential, intact, and recoverable — and
 - **Platform migration to Vercel + Supabase** — explicitly considered. Decision: stay on Firebase. Translating `SECURITY_AUDIT.md`'s Vercel/Supabase guidance to Firebase is the lighter lift than migrating; Firebase has parity for every control we need (Auth, Rules, App Check, Cloud Functions, Storage Rules).
 - **Native mobile apps** — out of scope for this milestone; web-only.
 - **New diagnostic features** (more pillars, new visualisations, new collaboration tools) — not allowed during the hardening pass. Adding features mid-hardening invalidates the audit narrative ("the version we secured is the version we shipped").
-- **Compliance certification** (SOC2 audit, ISO27001 certification) — out of scope. The bar is *credible* — could honestly say "on track for" — not certified. Certification is a separate workstream involving auditors, policies, and ongoing operational evidence.
+- **Compliance certification** (SOC2 audit, ISO27001 certification) — out of scope. The bar is _credible_ — could honestly say "on track for" — not certified. Certification is a separate workstream involving auditors, policies, and ongoing operational evidence.
 - **Backwards compatibility for existing localStorage sessions / shared passwords** — not in use right now (no active engagements), so we have freedom to do clean cutover migrations rather than maintain a backwards-compatible window.
 - **Replacing `mailto:` invite flow with transactional email** — likely valuable but defer. The invite UX works; the security gap is in auth, not email delivery. Revisit after hardening.
 
 ## Context
 
 **Project state at start of milestone:**
+
 - Live at `baselayers.bedeveloped.com` (GitHub Pages, deployed from `main`).
 - Currently between active client engagements — no live users to disrupt during this milestone.
 - Codebase map exists at `.planning/codebase/` (analysis dated 2026-05-03), covering ARCHITECTURE / STACK / STRUCTURE / INTEGRATIONS / CONVENTIONS / TESTING / CONCERNS.
-- `SECURITY_AUDIT.md` (project root, untracked) is a generic OWASP / NCSC / ASVS / Supabase / Vercel audit playbook — being used as a *framework* for this milestone, not a script. Vercel/Supabase-specific sections need translating to Firebase equivalents.
+- `SECURITY_AUDIT.md` (project root, untracked) is a generic OWASP / NCSC / ASVS / Supabase / Vercel audit playbook — being used as a _framework_ for this milestone, not a script. Vercel/Supabase-specific sections need translating to Firebase equivalents.
 - `CONCERNS.md` enumerates 4 CRITICAL, 8 HIGH, 9 MEDIUM, and 5 LOW findings against this codebase, plus a "Missing Critical Features" list (audit log, soft-delete, rate limiting, backup automation) and a "Recommended Fix Order" the roadmapper should treat as a starting point.
 
 **Tech environment:**
+
 - Vanilla JavaScript (ES2017+), no transpiler, no build step today.
 - Single-file IIFE: `app.js` is 4,103 lines / ~169 KB.
 - Backend: Firebase (Anonymous Auth + Firestore + Storage), project `bedeveloped-base-layers`.
@@ -100,6 +102,7 @@ Client diagnostic data must remain confidential, intact, and recoverable — and
 - No `package.json`, no test suite, no CI — these are added during this milestone.
 
 **Audience:**
+
 - Primary: BeDeveloped consultants (Luke, George — currently the only "internal" users) running diagnostic engagements.
 - Secondary: Client organisations being diagnosed — currently see a scoped client view.
 - New audience this milestone unlocks: prospects' IT / risk reviewers — who must be able to read a SECURITY.md, get a vendor-questionnaire response, and conclude "credible".
@@ -115,25 +118,26 @@ Commercial pressure — a prospect / client is asking about security and complia
 - **Compliance — credible, not certified**: Aim for controls that map honestly onto SOC2 Common Criteria / ISO27001 Annex A / GDPR Art. 32 / OWASP ASVS L2. Certification itself is out of scope. — Decided 2026-05-03; balances commercial pressure against milestone size.
 - **Audit framework — `SECURITY_AUDIT.md`**: Use as framework, translate Vercel/Supabase-specific sections to Firebase. — Decided 2026-05-03; produces an auditable trail back to a published checklist.
 - **Security — no weakening of controls to make tests/features pass**: Per `SECURITY_AUDIT.md` §0(4) — if a test fails because a new control is doing its job, fix the test, not the control.
-- **Data — protect existing production data**: The Firebase project has live data from prior engagements. Migration logic must preserve it (responses, comments, actions, plans, funnel data) even though *users* aren't currently active. — Reduces blast radius of mistakes during the auth-replacement and Rules-deployment phases.
+- **Data — protect existing production data**: The Firebase project has live data from prior engagements. Migration logic must preserve it (responses, comments, actions, plans, funnel data) even though _users_ aren't currently active. — Reduces blast radius of mistakes during the auth-replacement and Rules-deployment phases.
 
 ## Key Decisions
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Stay on Firebase, do not migrate to Vercel + Supabase | Avoids a parallel migration project on top of the security work; Firebase has parity for all controls needed; existing data + integrations stay. | — Pending (verify at milestone end) |
-| Modular split of `app.js`, no framework rewrite | Auditors care about controls not framework; rewrite + harden in same milestone doubles risk and dilutes the audit narrative. | — Pending |
-| Add `package.json` + Vite + Vitest + GitHub Actions CI | Unlocks tests, SRI for third-party bundles, dependency monitoring, hashed cache-busting — all on every vendor questionnaire. | — Pending |
-| Use `SECURITY_AUDIT.md` as audit framework, translate Vercel/Supabase sections to Firebase | Produces an auditable trail back to a published checklist; lighter lift than rejecting the doc and starting from scratch. | — Pending |
-| Compliance bar = "credible / on track for SOC2 + ISO + GDPR", not certified | Certification is a separate workstream involving auditors and ongoing evidence; this milestone produces the technical foundation it would build on. | — Pending |
-| No backwards-compatibility window for existing localStorage sessions / shared passwords | App not in active use; clean cutover migrations are simpler, more defensible, and lower risk. | — Pending |
-| Treat the "Recommended Fix Order" in `CONCERNS.md` as the starting point for phase ordering | The map's author already reasoned about leverage (rules first, then auth, then tooling, then backlog); roadmapper should adopt unless it has a strong reason not to. | — Pending |
+| Decision                                                                                    | Rationale                                                                                                                                                            | Outcome                             |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Stay on Firebase, do not migrate to Vercel + Supabase                                       | Avoids a parallel migration project on top of the security work; Firebase has parity for all controls needed; existing data + integrations stay.                     | — Pending (verify at milestone end) |
+| Modular split of `app.js`, no framework rewrite                                             | Auditors care about controls not framework; rewrite + harden in same milestone doubles risk and dilutes the audit narrative.                                         | — Pending                           |
+| Add `package.json` + Vite + Vitest + GitHub Actions CI                                      | Unlocks tests, SRI for third-party bundles, dependency monitoring, hashed cache-busting — all on every vendor questionnaire.                                         | — Pending                           |
+| Use `SECURITY_AUDIT.md` as audit framework, translate Vercel/Supabase sections to Firebase  | Produces an auditable trail back to a published checklist; lighter lift than rejecting the doc and starting from scratch.                                            | — Pending                           |
+| Compliance bar = "credible / on track for SOC2 + ISO + GDPR", not certified                 | Certification is a separate workstream involving auditors and ongoing evidence; this milestone produces the technical foundation it would build on.                  | — Pending                           |
+| No backwards-compatibility window for existing localStorage sessions / shared passwords     | App not in active use; clean cutover migrations are simpler, more defensible, and lower risk.                                                                        | — Pending                           |
+| Treat the "Recommended Fix Order" in `CONCERNS.md` as the starting point for phase ordering | The map's author already reasoned about leverage (rules first, then auth, then tooling, then backlog); roadmapper should adopt unless it has a strong reason not to. | — Pending                           |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 **After each phase transition** (via `/gsd-transition`):
+
 1. Requirements invalidated? → Move to Out of Scope with reason
 2. Requirements validated? → Move to Validated with phase reference
 3. New requirements emerged? → Add to Active
@@ -141,10 +145,12 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? → Update if drifted
 
 **After each milestone** (via `/gsd-complete-milestone`):
+
 1. Full review of all sections
 2. Core Value check — still the right priority?
 3. Audit Out of Scope — reasons still valid?
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-03 after initialization*
+
+_Last updated: 2026-05-03 after initialization_

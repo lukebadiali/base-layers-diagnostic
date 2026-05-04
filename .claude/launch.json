@@ -4,7 +4,9 @@
     {
       "name": "base-layers-static",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["/Users/lukebadiali/Documents/BeDeveloped/BeDeveloped/AI Projects/base-layers-app/.claude/serve.py"],
+      "runtimeArgs": [
+        "/Users/lukebadiali/Documents/BeDeveloped/BeDeveloped/AI Projects/base-layers-app/.claude/serve.py"
+      ],
       "port": 5178
     }
   ]

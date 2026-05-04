@@ -1,0 +1,19 @@
+# Prettier ignore — see .gitignore for git-level ignores
+# Keep this file in sync with prettier scope decisions.
+
+# Build artefacts
+dist/
+coverage/
+node_modules/
+
+# Lockfile (npm owns the formatting)
+package-lock.json
+
+# Orchestrator-owned files (modified outside the prettier sweep by the
+# GSD workflow; format ownership lives with the orchestrator, not the
+# parallel-executor agents).
+.planning/STATE.md
+.planning/ROADMAP.md
+
+# Tracked but generated assets
+*.tsbuildinfo

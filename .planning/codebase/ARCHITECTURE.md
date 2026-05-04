@@ -7,6 +7,7 @@
 **Overall:** Single-page, single-IIFE vanilla-JS web app with imperative DOM rendering, `localStorage` as the working cache and Firestore as the cross-device source of truth.
 
 **Key Characteristics:**
+
 - One closure, one render. The whole app lives inside a single IIFE in `app.js` (line 11: `(function () { "use strict"; ...`). All state, helpers and view functions are private to that closure; nothing is exported.
 - Imperative `render()` re-mount. There is no virtual DOM, no diffing, no component framework. Each `render()` call clears `#app` (`app.js` line 700: `app.innerHTML = ""`), rebuilds the entire shell and current route via the `h(tag, attrs, children)` helper (`app.js` lines 610-626) and reattaches event listeners.
 - Role-driven view gating. Two real roles (`internal`, `client`) plus an "internal-as-client preview" mode (`app.js` lines 595-605, `effectiveRole` / `isClientView`). Most render paths branch on these flags rather than living in separate component files.
@@ -16,6 +17,7 @@
 ## Layers
 
 **Bootstrap layer:**
+
 - Purpose: Static page boot, third-party SDK load, Firebase auth handshake.
 - Location: `index.html`, `firebase-init.js`.
 - Contains: Script tags for Chart.js (CDN, deferred), `firebase-init.js` (ES module), `data/pillars.js` (global assignment), `app.js` (deferred).
@@ -23,6 +25,7 @@
 - Used by: `app.js` (consumes `window.FB`, `window.BASE_LAYERS`, `window.Chart`).
 
 **Data / domain layer:**
+
 - Purpose: Static framework content (the ten pillars, principles, engagement stages, score labels).
 - Location: `data/pillars.js`.
 - Contains: A single global `window.BASE_LAYERS` object (`data/pillars.js` line 4) with `principles[]`, `engagementStages[]`, `scoreLabels{}`, `pillars[]`. Each pillar carries `id`, `name`, `shortName`, `tagline`, `dashDescription`, `dashAchieve`, `overview`, `components[]`, `objectives[]`, `diagnostics[]`, `whatWeDo[]`, `outcomes[]`.
@@ -30,6 +33,7 @@
 - Used by: All scoring, render and report functions in `app.js` via `const DATA = window.BASE_LAYERS` (line 14).
 
 **Storage / persistence layer:**
+
 - Purpose: Local cache + cloud mirror for users, orgs, sessions and settings.
 - Location: `app.js` lines 17-141 (`localStorage`-backed CRUD), lines 2602-2720 (Firestore mirror + boot pull).
 - Contains: Storage key map `K` (line 18), JSON helpers `jget`/`jset` (lines 73-77), and namespaced loaders/savers: `loadUsers`/`saveUsers`/`upsertUser`/`deleteUser`, `loadOrgMetas`/`saveOrgMetas`, `loadOrg`/`saveOrg`/`createOrg`/`deleteOrg`, plus debounced `cloudPush*`/`cloudDelete*` and `cloudFetchAllOrgs`/`cloudFetchAllUsers`/`syncFromCloud`.
@@ -37,6 +41,7 @@
 - Used by: Auth, render, mutation helpers (`setResponse`, `addAction`, `addComment`, etc.).
 
 **Domain / scoring layer:**
+
 - Purpose: Stateless calculations over org responses.
 - Location: `app.js` lines 167-313.
 - Contains: `questionMeta` (line 170), `deriveAnchors` (line 188), `pillarScoreForRound` (line 206), `pillarScore` / `pillarStatus` (lines 224-233), `respondentsForRound`, `answeredCount`, `userCompletionPct`, `orgSummary`, `topConstraints`, plus comments helpers (`addComment`, `commentsFor`, `unreadCountForPillar`, `markPillarRead`).
@@ -44,6 +49,7 @@
 - Used by: All view functions that show numbers, badges or progress.
 
 **Auth / session layer:**
+
 - Purpose: Sign-in, sign-out, role gating, password hashing.
 - Location: `app.js` lines 322-486.
 - Contains: `currentSession`, `currentUser`, `signIn`, `signOut`; SHA-256 helper `hashString` (line 414); `setInternalPassphrase` / `verifyInternalPassphrase`; the hard-coded `INTERNAL_ALLOWED_EMAILS` allowlist + `INTERNAL_PASSWORD_HASH` (lines 443-444); `setOrgClientPassphrase` / `verifyOrgClientPassphrase`; per-user `setUserPassword` / `verifyUserPassword`; chat unread tracking helpers (lines 336-405).
@@ -51,6 +57,7 @@
 - Used by: `renderSignInForm` (line 1028), top-level `render()` gate (line 705).
 
 **View / presentation layer:**
+
 - Purpose: All UI. Pure DOM-building functions named `render*`.
 - Location: `app.js` lines 691-3800. Each major route owns one `renderX` function:
   - `renderTopbar` (line 756), `renderFooter` (line 914)
@@ -71,6 +78,7 @@
 - Used by: `render()` -> `renderRoute()` (lines 694-751).
 
 **Sync / cloud feature layer:**
+
 - Purpose: Real-time multi-user features that bypass `localStorage`.
 - Location: `app.js` lines 2722-2876 (Documents), 2878-3026 (Chat), 3028-3267 (Roadmap), 3325-3800 (Funnel + Funnel comments + KPIs).
 - Contains: Per-feature Firestore subscriptions using `onSnapshot`. Documents -> `documents` collection; Chat -> `messages` collection (also subscribed app-wide via `startChatSubscription` for unread badges); Roadmap -> `roadmaps/{orgId}` document; Funnel -> `funnels/{orgId}` document; Funnel comments -> `funnelComments` collection.
@@ -115,6 +123,7 @@
 3. `renderChat` (line 2878) opens its own per-org `onSnapshot` to drive the in-page list and composer, and uses `markChatReadFor` on render to clear the unread state for that org (line 2893).
 
 **State management:**
+
 - Global mutable singleton `state` (lines 564-577): `mode`, `route`, `orgId`, `pillarId`, `chart`, `userMenuOpen`, `authTab`, `authError`, `expandedPillars` (Set), `chatMessages`, `chatSubscription`, `chatSubscribedFor`. Survives across renders, lost on reload (except `mode` and `session` which are mirrored to `localStorage`).
 - Per-feature local-component state lives inside the closure of each render function (e.g. `localData`, `localKpis`, `inputs`, `pctCells` in `renderFunnel` at lines 3347-3357).
 - Domain state is read from `localStorage` on demand. There is no in-memory copy of orgs/users.
@@ -122,35 +131,42 @@
 ## Key Abstractions
 
 **`h(tag, attrs, children)` DOM builder:**
+
 - Purpose: One-call element construction. Handles `class`, `html`, `on*` listeners, boolean attributes, primitive/Node children.
 - Examples: `app.js` line 610, used everywhere (e.g. line 632 in `modal`, line 1276 in dashboard summary grid).
 - Pattern: Hyperscript-style. Replaces JSX/templates without a build step.
 
 **`render()` global re-mount:**
+
 - Purpose: Single source of truth for paints. Anything that changes data calls `render()`.
 - Examples: `app.js` line 694; called from `setRoute` (line 686), every mutation handler, every modal close, every Firestore snapshot.
 - Pattern: Wholesale replace `#app` contents. No diffing, no keys.
 
 **Org JSON tree:**
+
 - Purpose: Canonical per-org payload. One JSON document per org, in `localStorage` and in Firestore at `orgs/{id}`.
 - Examples: Created in `createOrg` (line 120), read via `loadOrg` (line 106), persisted via `saveOrg` (line 107). Shape: `{ id, name, createdAt, currentRoundId, rounds[], responses{roundId:{userId:{pillarId:{idx:{score, note}}}}}, internalNotes{}, actions[], engagement{currentStageId, stageChecks{}}, comments{pillarId:[]}, readStates{userId:{pillarId:iso}}, tier?, clientPassphraseHash? }`.
 - Pattern: Document-oriented, denormalised. Everything an org owns lives in one blob.
 
 **User record:**
+
 - Purpose: One JSON per user, persisted in `localStorage` (`baselayers:users` array) and mirrored to Firestore `users/{id}`.
 - Examples: `findUser` (line 86), `upsertUser` (line 91). Shape: `{ id, email, name, role: "internal"|"client", orgId?, createdAt, passwordHash?, internalPassphrase? }`.
 
 **Routes (string switch):**
+
 - Purpose: View selection. No router library.
 - Examples: `state.route` (line 566) defaults to `"dashboard"`; values include `"dashboard"`, `"diagnostic"`, `"pillar:N"` (composite), `"actions"`, `"engagement"`, `"report"`, `"documents"`, `"chat"`, `"roadmap"`, `"funnel"`, `"admin"`. Set by `setRoute(route)` (line 686). Dispatched by `renderRoute` (line 729).
 - Pattern: No URL hash, no History API. Refreshing the page resets to `"dashboard"`.
 
 **Modal helpers:**
+
 - Purpose: Reusable dialogs without a component layer.
 - Examples: `modal(content)` (line 629), `promptText` (line 652), `confirmDialog` (line 674). Mounts into `#modalRoot` (declared in `index.html` line 20).
 - Pattern: Returns a `{ close }` handle. Click outside closes.
 
 **Firestore listener pattern:**
+
 - Purpose: Live data for collaborative features.
 - Examples: `startChatSubscription` (line 377), `renderChat` listener (line 3012), `renderRoadmap` listener (search `onSnapshot` in `renderRoadmap`), `renderFunnel` listener, `renderDocuments` listener (`firestore.collection(db, "documents")` line 2815).
 - Pattern: Subscription stored on `state` or on a closure variable; manually torn down in `stopChatSubscription` (line 372). Per-render listeners are not always cleaned up (re-renders can stack subscriptions — see CONCERNS).
@@ -158,31 +174,37 @@
 ## Entry Points
 
 **`<div id="app">` mount point:**
+
 - Location: `index.html` line 17.
 - Triggers: `init()` -> `render()`.
 - Responsibilities: Hosts the entire UI tree. Cleared and rebuilt on every `render()`.
 
 **`<div id="modalRoot">` modal host:**
+
 - Location: `index.html` line 20.
 - Triggers: `modal()` (line 629).
 - Responsibilities: Holds dialogs above the app shell. Toggled by adding/removing the `hidden` class.
 
 **`firebase-init.js` (module entry):**
+
 - Location: `firebase-init.js` line 1.
 - Triggers: Loaded as a module from `index.html` line 22.
 - Responsibilities: Initialise Firebase, expose `window.FB`, kick off anonymous sign-in, fire `firebase-ready` event when `onAuthStateChanged` resolves.
 
 **`data/pillars.js` (data entry):**
+
 - Location: `data/pillars.js` line 4.
 - Triggers: Plain `<script>` tag in `index.html` line 23.
 - Responsibilities: Assigns `window.BASE_LAYERS` for `app.js` to consume.
 
 **`app.js` IIFE entry:**
+
 - Location: `app.js` line 11; bootstrap `init()` at line 4084; auto-start at lines 4098-4102 (DOMContentLoaded or immediate).
 - Triggers: `<script src="app.js?v=46" defer>` in `index.html` line 24.
 - Responsibilities: Define all helpers, run migrations, render the initial view.
 
 **Auth event entry:**
+
 - Location: `firebase-init.js` lines 44-50 (`onAuthStateChanged`).
 - Triggers: Anonymous sign-in completion.
 - Responsibilities: Sets `window.FB.currentUser`, resolves `window.FB.ready`, dispatches `firebase-ready`. Cloud-dependent code (`fbReady()` in `app.js` line 2607) gates on this.
@@ -192,6 +214,7 @@
 **Strategy:** Defensive `try/catch` around all cloud calls; user-visible errors via `alert()` for blocking failures and inline status text for non-blocking ones. No central error reporting.
 
 **Patterns:**
+
 - Cloud writes wrap in `try { ... } catch (e) { console.error(...) }` and silently fail to keep the local-first UX responsive (see `cloudPushOrg` line 2614, `cloudPushUser` line 2627).
 - `syncFromCloud` (line 2684) explicitly bails if either fetch returns null so a network blip never wipes local data (comment lines 2682-2683).
 - Per-feature listeners pass an error callback to `onSnapshot` that either logs (`startChatSubscription` line 397) or replaces the list with a red error message (`renderChat` line 3019).
@@ -215,4 +238,4 @@
 
 ---
 
-*Architecture analysis: 2026-05-03*
+_Architecture analysis: 2026-05-03_

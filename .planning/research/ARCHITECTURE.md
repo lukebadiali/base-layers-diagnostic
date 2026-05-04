@@ -133,26 +133,26 @@ These are non-negotiable inputs (decided in `PROJECT.md`) that constrained every
 
 ### Component responsibilities (target)
 
-| Component | Responsibility | Implementation |
-|-----------|----------------|----------------|
-| `firebase/` (adapter) | Sole import surface for the Firebase SDK. Exposes typed helpers; everything else imports from this folder, never `firebase/*` directly. | One module per SDK area: `firebase/app.js`, `auth.js`, `db.js`, `storage.js`, `functions.js`, `check.js`. Initialises App + App Check first. |
-| `auth.js` | Sign-in / sign-out / claims read / MFA enrolment / token refresh on role change. Single source of truth for "who is the user, what role, what orgId." | Wraps Firebase Auth Email/Password + multi-factor (TOTP). Reads `idTokenResult.claims` for `role` / `orgId`. |
-| `data/` (per-collection wrappers) | Typed CRUD per Firestore collection (`orgs`, `users`, `responses`, `comments`, `actions`, `documents`, `messages`, `roadmaps`, `funnels`, `funnelComments`). Owns its own listener lifecycle. | One file per collection. Exports `subscribe*()` returning unsubscribe; `add*()` / `update*()` / `softDelete*()` callable. |
-| `domain/` | Pure functions over the domain types: scoring, banding, completion %, top-constraints. Zero Firebase imports. | `domain/scoring.js`, `domain/comments.js`, `domain/migration.js`. Trivially unit-testable. |
-| `cloud-fns.js` | Client wrappers around callable Cloud Functions. Adds App Check token, retries on 429. | Thin: `httpsCallable(functions, "auditWrite")(payload)` style. |
-| `views/*.js` | One file per route. Each exports `renderX(user, org, deps)` returning a DOM node. | `dashboard.js`, `diagnostic.js`, `pillar.js`, `actions.js`, `engagement.js`, `report.js`, `documents.js`, `chat.js`, `roadmap.js`, `funnel.js`, `admin.js`, `auth.js` (sign-in / first-run / MFA enrol). |
-| `ui.js` | DOM helpers (`h`, `modal`, `promptText`, `confirmDialog`, `toast`). No business logic. The `html:` escape hatch in `h()` is **deleted** (CONCERNS C4). | Pure DOM. |
-| `chrome.js` | Topbar + footer. | Imports auth + view registry. |
-| `router.js` | Route switch. Optionally adds History API for share-able URLs (out of scope this milestone — keep string switch). | One `setRoute` / `render` pair, same as today. |
-| `state.js` | In-memory singleton. **Loses the role of "auth source of truth"** — that moves to Firebase Auth claims. | Smaller than today. |
-| `observability/sentry.js` | Init Sentry once on boot; expose `captureError(err, context)` and `addBreadcrumb({category, message, data})`. | Sentry browser SDK. |
-| `telemetry/audit.js` | Client-side helper that emits an audit event to the `auditWrite` Cloud Function. Used for: sign-in, sign-out, role change, deletes, exports, MFA enrol, password change. | Calls `cloud-fns.js`. Treats failures as best-effort + Sentry breadcrumb. |
-| Cloud Functions (TS, 2nd gen) | The trusted server: claim-setting on signup, audit-log writing, soft-delete + restore, rate limiting, daily backup, GDPR export/erase. | See §3. |
-| Firestore + Storage Rules | The actual authorization boundary. Read `request.auth.token.role` / `request.auth.token.orgId` for scope. | See §4. |
-| App Check | Binds the deployed web app to legitimate clients. | reCAPTCHA Enterprise provider. |
-| Firebase Hosting | Replaces GitHub Pages. Serves the static bundle and sets CSP / HSTS / X-Content-Type-Options / Referrer-Policy / Permissions-Policy via `firebase.json` headers. | See §6. |
-| Cloud Logging + BigQuery sink | Audit log of last resort: GCP Admin Activity Logs (always on, can't be disabled or edited). | Set up a sink to a dedicated BigQuery dataset for retention + queryability. See §5. |
-| Sentry (or equivalent) | Centralised error sink for browser + Functions. | See §7. |
+| Component                         | Responsibility                                                                                                                                                                                | Implementation                                                                                                                                                                                           |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `firebase/` (adapter)             | Sole import surface for the Firebase SDK. Exposes typed helpers; everything else imports from this folder, never `firebase/*` directly.                                                       | One module per SDK area: `firebase/app.js`, `auth.js`, `db.js`, `storage.js`, `functions.js`, `check.js`. Initialises App + App Check first.                                                             |
+| `auth.js`                         | Sign-in / sign-out / claims read / MFA enrolment / token refresh on role change. Single source of truth for "who is the user, what role, what orgId."                                         | Wraps Firebase Auth Email/Password + multi-factor (TOTP). Reads `idTokenResult.claims` for `role` / `orgId`.                                                                                             |
+| `data/` (per-collection wrappers) | Typed CRUD per Firestore collection (`orgs`, `users`, `responses`, `comments`, `actions`, `documents`, `messages`, `roadmaps`, `funnels`, `funnelComments`). Owns its own listener lifecycle. | One file per collection. Exports `subscribe*()` returning unsubscribe; `add*()` / `update*()` / `softDelete*()` callable.                                                                                |
+| `domain/`                         | Pure functions over the domain types: scoring, banding, completion %, top-constraints. Zero Firebase imports.                                                                                 | `domain/scoring.js`, `domain/comments.js`, `domain/migration.js`. Trivially unit-testable.                                                                                                               |
+| `cloud-fns.js`                    | Client wrappers around callable Cloud Functions. Adds App Check token, retries on 429.                                                                                                        | Thin: `httpsCallable(functions, "auditWrite")(payload)` style.                                                                                                                                           |
+| `views/*.js`                      | One file per route. Each exports `renderX(user, org, deps)` returning a DOM node.                                                                                                             | `dashboard.js`, `diagnostic.js`, `pillar.js`, `actions.js`, `engagement.js`, `report.js`, `documents.js`, `chat.js`, `roadmap.js`, `funnel.js`, `admin.js`, `auth.js` (sign-in / first-run / MFA enrol). |
+| `ui.js`                           | DOM helpers (`h`, `modal`, `promptText`, `confirmDialog`, `toast`). No business logic. The `html:` escape hatch in `h()` is **deleted** (CONCERNS C4).                                        | Pure DOM.                                                                                                                                                                                                |
+| `chrome.js`                       | Topbar + footer.                                                                                                                                                                              | Imports auth + view registry.                                                                                                                                                                            |
+| `router.js`                       | Route switch. Optionally adds History API for share-able URLs (out of scope this milestone — keep string switch).                                                                             | One `setRoute` / `render` pair, same as today.                                                                                                                                                           |
+| `state.js`                        | In-memory singleton. **Loses the role of "auth source of truth"** — that moves to Firebase Auth claims.                                                                                       | Smaller than today.                                                                                                                                                                                      |
+| `observability/sentry.js`         | Init Sentry once on boot; expose `captureError(err, context)` and `addBreadcrumb({category, message, data})`.                                                                                 | Sentry browser SDK.                                                                                                                                                                                      |
+| `telemetry/audit.js`              | Client-side helper that emits an audit event to the `auditWrite` Cloud Function. Used for: sign-in, sign-out, role change, deletes, exports, MFA enrol, password change.                      | Calls `cloud-fns.js`. Treats failures as best-effort + Sentry breadcrumb.                                                                                                                                |
+| Cloud Functions (TS, 2nd gen)     | The trusted server: claim-setting on signup, audit-log writing, soft-delete + restore, rate limiting, daily backup, GDPR export/erase.                                                        | See §3.                                                                                                                                                                                                  |
+| Firestore + Storage Rules         | The actual authorization boundary. Read `request.auth.token.role` / `request.auth.token.orgId` for scope.                                                                                     | See §4.                                                                                                                                                                                                  |
+| App Check                         | Binds the deployed web app to legitimate clients.                                                                                                                                             | reCAPTCHA Enterprise provider.                                                                                                                                                                           |
+| Firebase Hosting                  | Replaces GitHub Pages. Serves the static bundle and sets CSP / HSTS / X-Content-Type-Options / Referrer-Policy / Permissions-Policy via `firebase.json` headers.                              | See §6.                                                                                                                                                                                                  |
+| Cloud Logging + BigQuery sink     | Audit log of last resort: GCP Admin Activity Logs (always on, can't be disabled or edited).                                                                                                   | Set up a sink to a dedicated BigQuery dataset for retention + queryability. See §5.                                                                                                                      |
+| Sentry (or equivalent)            | Centralised error sink for browser + Functions.                                                                                                                                               | See §7.                                                                                                                                                                                                  |
 
 ---
 
@@ -163,9 +163,9 @@ These are non-negotiable inputs (decided in `PROJECT.md`) that constrained every
 Rationale (HIGH confidence):
 
 1. **Testability.** Vitest can stub `firebase/db.js` to return canned snapshots. Today, every view imports the SDK directly via `window.FB`, so unit-testing a render function requires booting the real SDK.
-2. **Single boot location.** App Check has to initialise *before* any other SDK call uses Firestore/Auth/Storage, otherwise tokens are missing and rules deny. Centralising init in `firebase/app.js` makes that ordering enforceable.
-3. **Future-portability is a side benefit, not the driver.** If you ever did want to swap (Firebase → Supabase, say), the adapter limits the blast radius. But for *this* milestone, the testability win alone justifies it.
-4. **Audit narrative.** "All Firestore writes go through `data/`, which goes through `firebase/db.js`, which adds App Check + retry policy" is a *much* tighter sentence to tell an auditor than "every view file calls the SDK directly."
+2. **Single boot location.** App Check has to initialise _before_ any other SDK call uses Firestore/Auth/Storage, otherwise tokens are missing and rules deny. Centralising init in `firebase/app.js` makes that ordering enforceable.
+3. **Future-portability is a side benefit, not the driver.** If you ever did want to swap (Firebase → Supabase, say), the adapter limits the blast radius. But for _this_ milestone, the testability win alone justifies it.
+4. **Audit narrative.** "All Firestore writes go through `data/`, which goes through `firebase/db.js`, which adds App Check + retry policy" is a _much_ tighter sentence to tell an auditor than "every view file calls the SDK directly."
 
 ### Recommended source layout
 
@@ -279,14 +279,14 @@ vitest.config.js
 
 ### Helpers — where they live
 
-| Helper | Today (`app.js` line) | Target location | Notes |
-|--------|-----------------------|-----------------|-------|
-| `h(tag, attrs, children)` | 610-626 | `src/ui/dom.js` | **Delete the `html:` branch** (C4). |
-| `modal()`, `promptText()`, `confirmDialog()` | 629-684 | `src/ui/modal.js` | Mounts to `#modalRoot`. Add `toast()` here too. |
-| `formatWhen()`, `iso()`, `escapeHtml()` | 33-48 | `src/ui/format.js` | `iso()` becomes "client-clock display only — never compared to server-clock"; the unread-tracking comparator (CONCERNS H7) uses `serverTimestamp()` on both sides. |
-| `firstNameFromAuthor()` | search caller | `src/ui/format.js` | Resolution helper. |
-| `hashString()` (SHA-256) | 414 | **Delete** | Was the password-hash helper for the local allowlist (C2). Firebase Auth handles password hashing. |
-| Storage helpers `jget`/`jset` | 73-77 | `src/state.js` (drastically reduced) | After the migration, `localStorage` is *not* the source of truth for anything. Only used for UI prefs (collapsed pillars, last-route). |
+| Helper                                       | Today (`app.js` line) | Target location                      | Notes                                                                                                                                                              |
+| -------------------------------------------- | --------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `h(tag, attrs, children)`                    | 610-626               | `src/ui/dom.js`                      | **Delete the `html:` branch** (C4).                                                                                                                                |
+| `modal()`, `promptText()`, `confirmDialog()` | 629-684               | `src/ui/modal.js`                    | Mounts to `#modalRoot`. Add `toast()` here too.                                                                                                                    |
+| `formatWhen()`, `iso()`, `escapeHtml()`      | 33-48                 | `src/ui/format.js`                   | `iso()` becomes "client-clock display only — never compared to server-clock"; the unread-tracking comparator (CONCERNS H7) uses `serverTimestamp()` on both sides. |
+| `firstNameFromAuthor()`                      | search caller         | `src/ui/format.js`                   | Resolution helper.                                                                                                                                                 |
+| `hashString()` (SHA-256)                     | 414                   | **Delete**                           | Was the password-hash helper for the local allowlist (C2). Firebase Auth handles password hashing.                                                                 |
+| Storage helpers `jget`/`jset`                | 73-77                 | `src/state.js` (drastically reduced) | After the migration, `localStorage` is _not_ the source of truth for anything. Only used for UI prefs (collapsed pillars, last-route).                             |
 
 ### Module dependency rules (enforce via lint)
 
@@ -317,22 +317,22 @@ The point: a unit test for `domain/scoring.js` needs **zero** Firebase mocks. A 
 
 ### Required Cloud Functions for compliance-credible posture
 
-| Function | Generation | Trigger | Purpose | Notes |
-|----------|------------|---------|---------|-------|
-| `beforeUserCreated` | Auth blocking | New user signup | Look up email in `internalAllowlist/{email}` doc; set custom claims `{role, orgId}` on the user record. Write audit event. Reject creation if email not in allowlist (depending on policy — see §8). | Hard 7s deadline. Keep allowlist read fast (single doc by ID). |
-| `beforeUserSignedIn` | Auth blocking | Each sign-in | Re-evaluate session claims if app permits role escalation between sessions; stamp last-sign-in audit event. | Same 7s deadline. Use sparingly. |
-| `auditWrite` | 2nd gen Callable HTTPS | Client `httpsCallable("auditWrite", payload)` | Validates the caller's claims, normalises the event, writes to `auditLog/{eventId}` (server-controlled UID, not client-supplied). | Rate-limited by per-user token bucket. Idempotency key on payload. |
-| `setClaims` | 2nd gen Callable HTTPS | Admin user calls | Allows internal admins to grant/revoke `role` and `orgId` claims on other users. Writes audit event. Forces target user to refresh ID token next sign-in. | Auth: caller must have `role: "admin"` claim (a sub-role of internal). |
-| `softDelete` | 2nd gen Callable HTTPS | Client | Server-side soft-delete: copies the resource to `softDeleted/{type}/items/{id}`, marks original `deletedAt: serverTimestamp()`, writes audit event. | Restore window 30 days (configurable). Not exposed for orgs without admin claim. |
-| `restoreSoftDeleted` | 2nd gen Callable HTTPS | Admin user calls | Restore from `softDeleted/{type}/items/{id}`. Writes audit event. | Admin-only. |
-| `scheduledPurge` | 2nd gen Scheduler | Daily | Removes `softDeleted/*` records older than retention window. Writes audit summary event. | Cloud Scheduler cron `0 3 * * *`. |
-| `scheduledFirestoreExport` | 2nd gen Scheduler | Daily | Calls Firestore managed export API to dump all collections to a dedicated GCS bucket. | Cloud Scheduler `0 2 * * *`. Bucket has 90-day lifecycle policy + Object Lock for tamper resistance. **Requires Blaze plan.** |
-| `gdprExportUser` | 2nd gen Callable HTTPS | User self-service or admin | Generates a JSON of all data linked to a user (responses, comments, actions, messages they authored, audit events about them). Returns signed URL valid for 24h. Writes audit event. | Output goes to a private Storage bucket; signed URL not the data itself. |
-| `gdprEraseUser` | 2nd gen Callable HTTPS | User self-service or admin | Deletes / pseudonymises user across all collections. Writes audit event. **Requires admin approval if user is `internal`.** | Two-phase: schedule for deletion at +T+30d (in case of mistake) unless admin override "delete now". |
-| `onUserDelete` | 2nd gen Auth event | When a user is deleted | Cleanup: revoke sessions, mirror audit event. | Defence-in-depth. |
-| `onOrgDelete` | 2nd gen Firestore trigger | `orgs/{id}` deleted | Mirrors deletion as audit event from server's perspective even if client `auditWrite` failed. | Defence-in-depth. |
-| `onDocumentDelete` | 2nd gen Storage trigger | Object deleted in `orgs/*/documents/*` | Mirrors as audit event. | Defence-in-depth. |
-| `rateLimitedChatWrite` | 2nd gen Callable HTTPS | Client | Optional: enforce rate limit before chat write; wraps `messages` insert. (Alternative: enforce per-user rate in Rules using `rateLimits/{userId}` doc check, no Function needed for chat — simpler, recommended.) | If implementing Function-based: token-bucket pattern, 30 messages / 60s. |
+| Function                   | Generation                | Trigger                                       | Purpose                                                                                                                                                                                                           | Notes                                                                                                                         |
+| -------------------------- | ------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `beforeUserCreated`        | Auth blocking             | New user signup                               | Look up email in `internalAllowlist/{email}` doc; set custom claims `{role, orgId}` on the user record. Write audit event. Reject creation if email not in allowlist (depending on policy — see §8).              | Hard 7s deadline. Keep allowlist read fast (single doc by ID).                                                                |
+| `beforeUserSignedIn`       | Auth blocking             | Each sign-in                                  | Re-evaluate session claims if app permits role escalation between sessions; stamp last-sign-in audit event.                                                                                                       | Same 7s deadline. Use sparingly.                                                                                              |
+| `auditWrite`               | 2nd gen Callable HTTPS    | Client `httpsCallable("auditWrite", payload)` | Validates the caller's claims, normalises the event, writes to `auditLog/{eventId}` (server-controlled UID, not client-supplied).                                                                                 | Rate-limited by per-user token bucket. Idempotency key on payload.                                                            |
+| `setClaims`                | 2nd gen Callable HTTPS    | Admin user calls                              | Allows internal admins to grant/revoke `role` and `orgId` claims on other users. Writes audit event. Forces target user to refresh ID token next sign-in.                                                         | Auth: caller must have `role: "admin"` claim (a sub-role of internal).                                                        |
+| `softDelete`               | 2nd gen Callable HTTPS    | Client                                        | Server-side soft-delete: copies the resource to `softDeleted/{type}/items/{id}`, marks original `deletedAt: serverTimestamp()`, writes audit event.                                                               | Restore window 30 days (configurable). Not exposed for orgs without admin claim.                                              |
+| `restoreSoftDeleted`       | 2nd gen Callable HTTPS    | Admin user calls                              | Restore from `softDeleted/{type}/items/{id}`. Writes audit event.                                                                                                                                                 | Admin-only.                                                                                                                   |
+| `scheduledPurge`           | 2nd gen Scheduler         | Daily                                         | Removes `softDeleted/*` records older than retention window. Writes audit summary event.                                                                                                                          | Cloud Scheduler cron `0 3 * * *`.                                                                                             |
+| `scheduledFirestoreExport` | 2nd gen Scheduler         | Daily                                         | Calls Firestore managed export API to dump all collections to a dedicated GCS bucket.                                                                                                                             | Cloud Scheduler `0 2 * * *`. Bucket has 90-day lifecycle policy + Object Lock for tamper resistance. **Requires Blaze plan.** |
+| `gdprExportUser`           | 2nd gen Callable HTTPS    | User self-service or admin                    | Generates a JSON of all data linked to a user (responses, comments, actions, messages they authored, audit events about them). Returns signed URL valid for 24h. Writes audit event.                              | Output goes to a private Storage bucket; signed URL not the data itself.                                                      |
+| `gdprEraseUser`            | 2nd gen Callable HTTPS    | User self-service or admin                    | Deletes / pseudonymises user across all collections. Writes audit event. **Requires admin approval if user is `internal`.**                                                                                       | Two-phase: schedule for deletion at +T+30d (in case of mistake) unless admin override "delete now".                           |
+| `onUserDelete`             | 2nd gen Auth event        | When a user is deleted                        | Cleanup: revoke sessions, mirror audit event.                                                                                                                                                                     | Defence-in-depth.                                                                                                             |
+| `onOrgDelete`              | 2nd gen Firestore trigger | `orgs/{id}` deleted                           | Mirrors deletion as audit event from server's perspective even if client `auditWrite` failed.                                                                                                                     | Defence-in-depth.                                                                                                             |
+| `onDocumentDelete`         | 2nd gen Storage trigger   | Object deleted in `orgs/*/documents/*`        | Mirrors as audit event.                                                                                                                                                                                           | Defence-in-depth.                                                                                                             |
+| `rateLimitedChatWrite`     | 2nd gen Callable HTTPS    | Client                                        | Optional: enforce rate limit before chat write; wraps `messages` insert. (Alternative: enforce per-user rate in Rules using `rateLimits/{userId}` doc check, no Function needed for chat — simpler, recommended.) | If implementing Function-based: token-bucket pattern, 30 messages / 60s.                                                      |
 
 ### Cloud Functions structural conventions
 
@@ -340,7 +340,7 @@ The point: a unit test for `domain/scoring.js` needs **zero** Firebase mocks. A 
 - **Shared logic in `shared/`**: claims helpers, audit event constants, retry, error classes.
 - **Idempotency on every callable**: client passes a `clientReqId` (UUID); server stores a marker doc and rejects duplicates within 5 minutes.
 - **Input validation with Zod**: every callable validates its payload against a schema before doing anything. Reject malformed; never "best-effort parse" (mirrors `SECURITY_AUDIT.md` §4 / LLM05).
-- **Authorization re-checked inside the handler.** Don't trust that the caller is who they say they are because the Firebase SDK attached an ID token; *re-read* the claims server-side and assert the operation is allowed for that role + orgId.
+- **Authorization re-checked inside the handler.** Don't trust that the caller is who they say they are because the Firebase SDK attached an ID token; _re-read_ the claims server-side and assert the operation is allowed for that role + orgId.
 - **App Check enforcement on every callable.** Set `enforceAppCheck: true`.
 - **Sentry init at the top of `index.ts`** before any handler imports (Sentry's Firebase Functions integration auto-instruments).
 
@@ -352,7 +352,7 @@ The point: a unit test for `domain/scoring.js` needs **zero** Firebase mocks. A 
 
 Rationale (HIGH confidence — the [Firebase quotas](https://firebase.google.com/docs/firestore/quotas) page is unambiguous about the 1 MiB hard limit and subcollections being uncounted):
 
-The current org doc carries `responses{roundId:{userId:{pillarId:{idx:{score, note}}}}}` plus `comments{}`, `actions[]`, `engagement{}`, `internalNotes{}`, `readStates{}`. Per CONCERNS scaling table, an org with ~5,000 responses + 1,000 comments approaches 1 MiB. That's a *hard* future ceiling; right now you're not at it but the trajectory is bad. Splitting also closes CONCERNS H8 (last-writer-wins on the parent doc — moving children to subcollections eliminates the parent-doc-overwrite class of conflicts).
+The current org doc carries `responses{roundId:{userId:{pillarId:{idx:{score, note}}}}}` plus `comments{}`, `actions[]`, `engagement{}`, `internalNotes{}`, `readStates{}`. Per CONCERNS scaling table, an org with ~5,000 responses + 1,000 comments approaches 1 MiB. That's a _hard_ future ceiling; right now you're not at it but the trajectory is bad. Splitting also closes CONCERNS H8 (last-writer-wins on the parent doc — moving children to subcollections eliminates the parent-doc-overwrite class of conflicts).
 
 ### Target Firestore data model
 
@@ -395,18 +395,18 @@ rateLimits/{uid}/buckets/{windowStart}           # if using rules-based rate lim
 
 ### Subcollection vs separate top-level collection — choosing per resource
 
-| Resource | Pattern | Why |
-|----------|---------|-----|
-| `responses`, `comments`, `actions`, `documents`, `messages`, `readStates` | **Subcollection of org** | All naturally org-scoped; security rules express "must match `request.auth.token.orgId == <segment>`" cleanly; backup/export is hierarchical. |
-| `roadmaps`, `funnels` | Top-level keyed by orgId | Already works; small docs; not worth breaking the existing pattern. |
-| `funnelComments` | Top-level with `orgId` field | Same as today. Could be moved to subcollection in a later sweep. |
-| `auditLog` | **Top-level** | Server-only writes. Querying across orgs (admin reports) is a first-class need. Subcollection-of-org would prevent that. |
-| `softDeleted/{type}/items/{id}` | Two-level top-level | Type segment lets soft-delete restore policies vary per resource type. Server-only writes. |
-| `internalAllowlist` | Top-level keyed by lowercased email | Read by `beforeUserCreated`; admin-only writes. |
+| Resource                                                                  | Pattern                             | Why                                                                                                                                           |
+| ------------------------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `responses`, `comments`, `actions`, `documents`, `messages`, `readStates` | **Subcollection of org**            | All naturally org-scoped; security rules express "must match `request.auth.token.orgId == <segment>`" cleanly; backup/export is hierarchical. |
+| `roadmaps`, `funnels`                                                     | Top-level keyed by orgId            | Already works; small docs; not worth breaking the existing pattern.                                                                           |
+| `funnelComments`                                                          | Top-level with `orgId` field        | Same as today. Could be moved to subcollection in a later sweep.                                                                              |
+| `auditLog`                                                                | **Top-level**                       | Server-only writes. Querying across orgs (admin reports) is a first-class need. Subcollection-of-org would prevent that.                      |
+| `softDeleted/{type}/items/{id}`                                           | Two-level top-level                 | Type segment lets soft-delete restore policies vary per resource type. Server-only writes.                                                    |
+| `internalAllowlist`                                                       | Top-level keyed by lowercased email | Read by `beforeUserCreated`; admin-only writes.                                                                                               |
 
 ### Security Rules complexity — does the split make rules harder?
 
-Slightly, but in a *healthy* way. Subcollection rules are **per-path explicit** (Firestore rules don't cascade — see [Firebase Rules docs](https://firebase.google.com/docs/firestore/security/get-started)), so each resource gets its own block. That's actually clearer than one giant rule covering a deeply nested doc with 5 different read/write semantics inside it. Sketch:
+Slightly, but in a _healthy_ way. Subcollection rules are **per-path explicit** (Firestore rules don't cascade — see [Firebase Rules docs](https://firebase.google.com/docs/firestore/security/get-started)), so each resource gets its own block. That's actually clearer than one giant rule covering a deeply nested doc with 5 different read/write semantics inside it. Sketch:
 
 ```javascript
 rules_version = '2';
@@ -491,7 +491,7 @@ Rationale (HIGH confidence):
 - BigQuery sink gives both queryability ("show me everyone who accessed orgId X in the last 30 days") and retention beyond Cloud Logging's default. Set up:
   - Log sink: routing filter `resource.type=("audited_resource" OR "firestore_database" OR "cloud_function" OR "identitytoolkit_project")` → BigQuery dataset `audit_logs`, partitioned daily, 7-year retention.
 
-> Why **not** roll custom crypto / blockchain anchoring? It's an anti-feature here. The Pangea Firebase extension exists (and works) but adds operational dependency, custom auditor explanation, and a third-party trust point — none of which a SOC2 / ISO27001 reviewer would weight as "essential." Cloud Audit Logs + BigQuery + bucket Object Lock satisfies the *immutable audit trail* control without it.
+> Why **not** roll custom crypto / blockchain anchoring? It's an anti-feature here. The Pangea Firebase extension exists (and works) but adds operational dependency, custom auditor explanation, and a third-party trust point — none of which a SOC2 / ISO27001 reviewer would weight as "essential." Cloud Audit Logs + BigQuery + bucket Object Lock satisfies the _immutable audit trail_ control without it.
 
 ### `auditLog/{eventId}` document schema
 
@@ -550,7 +550,7 @@ The **critical property**: the actor's identity comes from the verified ID token
 
 ### Write path — server-mirror events (defence in depth)
 
-For high-stakes operations, *also* fire from a Firestore trigger so an audit record exists even if the client `auditWrite` call failed:
+For high-stakes operations, _also_ fire from a Firestore trigger so an audit record exists even if the client `auditWrite` call failed:
 
 ```
 [client soft-deletes an org]
@@ -564,20 +564,20 @@ For high-stakes operations, *also* fire from a Firestore trigger so an audit rec
                                 if no primary exists for this {target,within 60s}
 ```
 
-The mirror trigger is the safety net for "what if the client crashed between mutation and `auditWrite`." For *most* events this is overkill; reserve it for org delete, user delete, claims change, document delete.
+The mirror trigger is the safety net for "what if the client crashed between mutation and `auditWrite`." For _most_ events this is overkill; reserve it for org delete, user delete, claims change, document delete.
 
 ### Client- vs server-written events
 
-| Event | Written by client? | Written by server? | Why |
-|-------|--------------------|--------------------|----|
-| Sign-in success | Client (`auditWrite`) | Mirrored by `beforeUserSignedIn` | Client first because it has UA + better breadcrumb context; server mirrors for reliability. |
-| Sign-in failure | Client | — | Client only — server doesn't see failed-password attempts (Firebase Auth doesn't trigger blocking functions for those). Cloud Logging captures these too as a backstop. |
-| MFA enrol | Client | Mirrored from Auth state | — |
-| Role / claims change | — | **Server only** (`setClaims` Function) | Privileged op; never trust client. |
-| Soft-delete | Client → calls server function which writes the event | — | Single source: the Function writes the audit event itself. |
-| Org create / update | Client (callable) | Mirrored by Firestore trigger for safety | — |
-| Document upload | Client (`auditWrite`) | Mirrored by Storage trigger | — |
-| Backup completion | — | **Server only** (scheduled function) | — |
+| Event                | Written by client?                                    | Written by server?                       | Why                                                                                                                                                                     |
+| -------------------- | ----------------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sign-in success      | Client (`auditWrite`)                                 | Mirrored by `beforeUserSignedIn`         | Client first because it has UA + better breadcrumb context; server mirrors for reliability.                                                                             |
+| Sign-in failure      | Client                                                | —                                        | Client only — server doesn't see failed-password attempts (Firebase Auth doesn't trigger blocking functions for those). Cloud Logging captures these too as a backstop. |
+| MFA enrol            | Client                                                | Mirrored from Auth state                 | —                                                                                                                                                                       |
+| Role / claims change | —                                                     | **Server only** (`setClaims` Function)   | Privileged op; never trust client.                                                                                                                                      |
+| Soft-delete          | Client → calls server function which writes the event | —                                        | Single source: the Function writes the audit event itself.                                                                                                              |
+| Org create / update  | Client (callable)                                     | Mirrored by Firestore trigger for safety | —                                                                                                                                                                       |
+| Document upload      | Client (`auditWrite`)                                 | Mirrored by Storage trigger              | —                                                                                                                                                                       |
+| Backup completion    | —                                                     | **Server only** (scheduled function)     | —                                                                                                                                                                       |
 
 ---
 
@@ -588,11 +588,11 @@ The mirror trigger is the safety net for "what if the client crashed between mut
 Rationale (HIGH confidence):
 
 - **GitHub Pages cannot set HTTP headers.** Confirmed: [GitHub Community thread](https://github.com/orgs/community/discussions/157852) and the [Firebase Hosting full-config docs](https://firebase.google.com/docs/hosting/full-config) — Firebase Hosting supports `headers` in `firebase.json`; GitHub Pages does not.
-- **CSP via `<meta http-equiv>` is strictly weaker than HTTP-header CSP.** Some directives (`frame-ancestors`, `report-to`, sandbox in some contexts) are header-only. CONCERNS H4 calls out "no CSP, no security headers" as HIGH; meta-tag CSP closes this *partially*, header CSP closes it properly.
+- **CSP via `<meta http-equiv>` is strictly weaker than HTTP-header CSP.** Some directives (`frame-ancestors`, `report-to`, sandbox in some contexts) are header-only. CONCERNS H4 calls out "no CSP, no security headers" as HIGH; meta-tag CSP closes this _partially_, header CSP closes it properly.
 - **Strict-Transport-Security, Permissions-Policy, X-Content-Type-Options, Referrer-Policy** are header-only and required for OWASP A02 / ASVS L2.
 - **CNAME continuity:** Firebase Hosting supports custom domains. Migration is: in Firebase Console → Hosting → Add custom domain → `baselayers.bedeveloped.com` → it gives you DNS records to set. Update your DNS provider. The current `CNAME` file in the repo (which only matters to GitHub Pages) becomes inert. **Cost: roughly 10 minutes of DNS work** and a 24h TTL wait. SSL certs are auto-provisioned.
 - **Side benefit:** Firebase Hosting's preview channels (`firebase hosting:channel:deploy preview-...`) give per-PR ephemeral URLs that GitHub Pages can't easily produce.
-- **Costs:** Stays on free Spark plan for low-traffic static. *However* — Cloud Functions, scheduled exports, and BigQuery sink require **Blaze plan** (pay-as-you-go). Blaze is required for the rest of the milestone anyway, so Hosting cost is moot.
+- **Costs:** Stays on free Spark plan for low-traffic static. _However_ — Cloud Functions, scheduled exports, and BigQuery sink require **Blaze plan** (pay-as-you-go). Blaze is required for the rest of the milestone anyway, so Hosting cost is moot.
 
 ### `firebase.json` headers section (draft)
 
@@ -605,23 +605,30 @@ Rationale (HIGH confidence):
       {
         "source": "**/*",
         "headers": [
-          { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
+          {
+            "key": "Strict-Transport-Security",
+            "value": "max-age=63072000; includeSubDomains; preload"
+          },
           { "key": "X-Content-Type-Options", "value": "nosniff" },
           { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-          { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" }
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(), microphone=(), geolocation=(), payment=()"
+          }
         ]
       },
       {
         "source": "**/*.html",
         "headers": [
-          { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://firebasestorage.googleapis.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://www.google.com/recaptcha/ https://recaptchaenterprise.googleapis.com https://o*.ingest.sentry.io; frame-src https://www.google.com/recaptcha/; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" }
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://firebasestorage.googleapis.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://www.google.com/recaptcha/ https://recaptchaenterprise.googleapis.com https://o*.ingest.sentry.io; frame-src https://www.google.com/recaptcha/; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+          }
         ]
       },
       {
         "source": "**/*.@(js|css|png|jpg|jpeg|svg|woff|woff2)",
-        "headers": [
-          { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-        ]
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
       }
     ]
   },
@@ -631,7 +638,7 @@ Rationale (HIGH confidence):
 }
 ```
 
-**`unsafe-inline` on style-src** is a temporary tax until CONCERNS M5 (inline `style="..."` in `app.js`) is cleaned up. Once those are moved to CSS classes, drop `unsafe-inline`. Track as a follow-up — it's *not* a blocker for the milestone.
+**`unsafe-inline` on style-src** is a temporary tax until CONCERNS M5 (inline `style="..."` in `app.js`) is cleaned up. Once those are moved to CSS classes, drop `unsafe-inline`. Track as a follow-up — it's _not_ a blocker for the milestone.
 
 > Known footgun: there's a [longstanding firebase-tools issue](https://github.com/firebase/firebase-tools/issues/5999) about `Strict-Transport-Security` being silently overridden in some Hosting configurations. Test the deployed headers with `curl -I https://baselayers.bedeveloped.com/` and `securityheaders.com` after deploy; if HSTS is missing, the workaround is to set it via a redirect rule.
 
@@ -743,19 +750,19 @@ This is a **clean cutover** — PROJECT.md confirms there are no live users to k
 
 ### My recommendation: **adjust to this order**
 
-| # | Phase | Change vs your proposal | Justification |
-|---|-------|--------------------------|---------------|
-| 1 | **Tooling foundation** (Vite + Vitest + GitHub Actions CI + JSDoc types) | Same. | Unlocks tests + SRI + Dependabot. Everything else benefits from being testable. |
-| 2 | **Hosting cutover to Firebase Hosting** *(NEW — moved up)* | Was step 6. | Two reasons: (a) you'll deploy *to* Firebase Hosting from day 1 of CI, so the earlier you switch the fewer extra deploy targets you maintain. (b) the CSP / headers infrastructure is *available* from this point, even if the CSP itself is permissive at first (you tighten it as you delete `unsafe-inline`-requiring code). |
-| 3 | **Modular split of `app.js`** | Same. | Pure refactor with tests in place. **Critical: write Vitest tests for scoring + completion + migration BEFORE you start moving code** (CONCERNS Test Coverage Gaps) so the refactor has a safety net. |
-| 4 | **Firestore data model migration to subcollections** *(NEW — added)* | You didn't list this. | The old data shape is incompatible with proper Rules — you can't easily express "user can only write their own response" when responses are nested 4 levels deep in a single doc. Doing the data split *before* writing Rules makes the Rules dramatically simpler. **Must include a one-shot migration script** that reads existing `orgs/{id}` and explodes the nested fields into the new subcollections, with a feature-flag to keep both shapes readable during cutover (or do clean-cutover since no live users). |
-| 5 | **Real Firebase Auth + custom claims + MFA + `beforeUserCreated`** | Was step 3. Moved after data model split because: (a) the new `users/{uid}` doc shape uses Firebase Auth UID as the document key; (b) `beforeUserCreated` writes claims that the new Rules will rely on. | Includes deleting the hardcoded `INTERNAL_PASSWORD_HASH`. |
-| 6 | **Firestore + Storage Rules + App Check** | Was step 4. | Now you can write Rules that `request.auth.token.role` and `request.auth.token.orgId` correctly because step 5 set them. App Check enforced at the same time. |
-| 7 | **Cloud Functions: audit log + soft-delete + restore + scheduled backup + GDPR + claims admin** | Same. | All the trusted server logic. With Rules in place, Functions can rely on "client can't bypass me to write directly to `auditLog`." |
-| 8 | **Observability + audit-event wiring throughout views** | Was step 8 (last but one). | Now that Functions exist, you can wire `auditWrite` calls from every view that does sensitive ops (sign-in, sign-out, role change, deletes, exports). Sentry init too. |
-| 9 | **Data lifecycle UX**: soft-delete UI in admin, restore UI, GDPR export download UI, retention policy doc | Was step 7. Moved after observability because the audit events are wired first. | Delete buttons now write audit events automatically because step 8 instrumented them. |
-| 10 | **CSP tightening** *(NEW — separated from step 2)* | Was bundled in step 6. | Now you can drop `'unsafe-inline'` from style-src once CONCERNS M5 (inline styles) is fixed. This is the "second sweep" through the CSP. |
-| 11 | **Audit walkthrough**: translate `SECURITY_AUDIT.md` Vercel/Supabase sections to Firebase, run end-to-end, produce `SECURITY_AUDIT_REPORT.md`, fill remaining gaps | Same. | Last because everything else is the input. |
+| #   | Phase                                                                                                                                                              | Change vs your proposal                                                                                                                                                                                  | Justification                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Tooling foundation** (Vite + Vitest + GitHub Actions CI + JSDoc types)                                                                                           | Same.                                                                                                                                                                                                    | Unlocks tests + SRI + Dependabot. Everything else benefits from being testable.                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2   | **Hosting cutover to Firebase Hosting** _(NEW — moved up)_                                                                                                         | Was step 6.                                                                                                                                                                                              | Two reasons: (a) you'll deploy _to_ Firebase Hosting from day 1 of CI, so the earlier you switch the fewer extra deploy targets you maintain. (b) the CSP / headers infrastructure is _available_ from this point, even if the CSP itself is permissive at first (you tighten it as you delete `unsafe-inline`-requiring code).                                                                                                                                                                                         |
+| 3   | **Modular split of `app.js`**                                                                                                                                      | Same.                                                                                                                                                                                                    | Pure refactor with tests in place. **Critical: write Vitest tests for scoring + completion + migration BEFORE you start moving code** (CONCERNS Test Coverage Gaps) so the refactor has a safety net.                                                                                                                                                                                                                                                                                                                   |
+| 4   | **Firestore data model migration to subcollections** _(NEW — added)_                                                                                               | You didn't list this.                                                                                                                                                                                    | The old data shape is incompatible with proper Rules — you can't easily express "user can only write their own response" when responses are nested 4 levels deep in a single doc. Doing the data split _before_ writing Rules makes the Rules dramatically simpler. **Must include a one-shot migration script** that reads existing `orgs/{id}` and explodes the nested fields into the new subcollections, with a feature-flag to keep both shapes readable during cutover (or do clean-cutover since no live users). |
+| 5   | **Real Firebase Auth + custom claims + MFA + `beforeUserCreated`**                                                                                                 | Was step 3. Moved after data model split because: (a) the new `users/{uid}` doc shape uses Firebase Auth UID as the document key; (b) `beforeUserCreated` writes claims that the new Rules will rely on. | Includes deleting the hardcoded `INTERNAL_PASSWORD_HASH`.                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 6   | **Firestore + Storage Rules + App Check**                                                                                                                          | Was step 4.                                                                                                                                                                                              | Now you can write Rules that `request.auth.token.role` and `request.auth.token.orgId` correctly because step 5 set them. App Check enforced at the same time.                                                                                                                                                                                                                                                                                                                                                           |
+| 7   | **Cloud Functions: audit log + soft-delete + restore + scheduled backup + GDPR + claims admin**                                                                    | Same.                                                                                                                                                                                                    | All the trusted server logic. With Rules in place, Functions can rely on "client can't bypass me to write directly to `auditLog`."                                                                                                                                                                                                                                                                                                                                                                                      |
+| 8   | **Observability + audit-event wiring throughout views**                                                                                                            | Was step 8 (last but one).                                                                                                                                                                               | Now that Functions exist, you can wire `auditWrite` calls from every view that does sensitive ops (sign-in, sign-out, role change, deletes, exports). Sentry init too.                                                                                                                                                                                                                                                                                                                                                  |
+| 9   | **Data lifecycle UX**: soft-delete UI in admin, restore UI, GDPR export download UI, retention policy doc                                                          | Was step 7. Moved after observability because the audit events are wired first.                                                                                                                          | Delete buttons now write audit events automatically because step 8 instrumented them.                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 10  | **CSP tightening** _(NEW — separated from step 2)_                                                                                                                 | Was bundled in step 6.                                                                                                                                                                                   | Now you can drop `'unsafe-inline'` from style-src once CONCERNS M5 (inline styles) is fixed. This is the "second sweep" through the CSP.                                                                                                                                                                                                                                                                                                                                                                                |
+| 11  | **Audit walkthrough**: translate `SECURITY_AUDIT.md` Vercel/Supabase sections to Firebase, run end-to-end, produce `SECURITY_AUDIT_REPORT.md`, fill remaining gaps | Same.                                                                                                                                                                                                    | Last because everything else is the input.                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 ### Dependencies (what blocks what)
 
@@ -784,20 +791,20 @@ This is a **clean cutover** — PROJECT.md confirms there are no live users to k
 
 1. **Firestore data model split must happen before Rules.** If you write Rules against the current monolithic doc shape, you'll have to rewrite them when you split. Doing it the other way (split first, Rules second) means you write Rules once.
 2. **`beforeUserCreated` claims setup must happen before Rules can rely on `request.auth.token.role`.** If you ship Rules first and Auth second, you'll have a gap where Rules deny everything because no users have claims yet.
-3. **App Check enforcement must come *after* the deployed app reliably attaches App Check tokens to every request.** Phase: deploy with App Check in *monitoring mode* first (it logs which requests would be denied without enforcing). Watch for a few days. Then turn on enforcement.
-4. **Daily backup function (step 7) requires Blaze plan.** Confirm Blaze is enabled before step 7. Most other Functions need Blaze too, but the *scheduled* ones (Cloud Scheduler) require it explicitly.
+3. **App Check enforcement must come _after_ the deployed app reliably attaches App Check tokens to every request.** Phase: deploy with App Check in _monitoring mode_ first (it logs which requests would be denied without enforcing). Watch for a few days. Then turn on enforcement.
+4. **Daily backup function (step 7) requires Blaze plan.** Confirm Blaze is enabled before step 7. Most other Functions need Blaze too, but the _scheduled_ ones (Cloud Scheduler) require it explicitly.
 5. **The `softDelete` Cloud Function and the soft-delete UX (step 9) must agree on schema.** Bake the schema into `functions/src/shared/audit-events.ts` AND `src/cloud/audit.js` AND the corresponding Rules at the same commit, ideally with a shared types file.
-6. **Migration script for existing data** is part of step 4, not a separate phase. Test it against an emulator copy of production data before running on production. You have no live users right now, so this is risk-free; *future* milestones won't have that luxury.
+6. **Migration script for existing data** is part of step 4, not a separate phase. Test it against an emulator copy of production data before running on production. You have no live users right now, so this is risk-free; _future_ milestones won't have that luxury.
 7. **GDPR export/erasure UX (step 9) requires the audit log (step 7) to be functional** because erase events themselves must be auditable.
 
 ### Phases that are likely to need their own deeper research
 
-| Phase | Why it needs its own research |
-|-------|-------------------------------|
-| 4 (data model migration) | Migration script correctness is high-blast-radius. Should produce its own RESEARCH note that enumerates every field's new home. |
-| 5 (Auth + MFA) | TOTP UX, recovery codes UX, password reset flow, account-enumeration mitigation (CONCERNS L1) — each is its own micro-decision. |
-| 7 (Cloud Functions) | Per-function research: input schema, idempotency strategy, rate-limit thresholds, cold-start tolerance for callable vs background. |
-| 11 (audit walkthrough) | Translating `SECURITY_AUDIT.md` Vercel/Supabase sections into Firebase equivalents is non-trivial; produces `SECURITY.md`. |
+| Phase                    | Why it needs its own research                                                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 4 (data model migration) | Migration script correctness is high-blast-radius. Should produce its own RESEARCH note that enumerates every field's new home.    |
+| 5 (Auth + MFA)           | TOTP UX, recovery codes UX, password reset flow, account-enumeration mitigation (CONCERNS L1) — each is its own micro-decision.    |
+| 7 (Cloud Functions)      | Per-function research: input schema, idempotency strategy, rate-limit thresholds, cold-start tolerance for callable vs background. |
+| 11 (audit walkthrough)   | Translating `SECURITY_AUDIT.md` Vercel/Supabase sections into Firebase equivalents is non-trivial; produces `SECURITY.md`.         |
 
 ### Phases unlikely to need extra research
 
@@ -812,35 +819,36 @@ This is a **clean cutover** — PROJECT.md confirms there are no live users to k
 
 ## 9. Anti-architecture — what NOT to do
 
-The patterns explicitly *not* to adopt:
+The patterns explicitly _not_ to adopt:
 
-| Anti-pattern | Why it's wrong | What to do instead |
-|--------------|----------------|--------------------|
-| Client-only auth (the current state) | Auth bypassable via DevTools localStorage edit. Cannot be a trust boundary. CONCERNS C1. | Firebase Auth + custom claims + Firestore Rules. Server enforces. |
-| Hardcoded password hash in repo | Brute-forceable; world-readable. CONCERNS C2. | Per-user passwords managed by Firebase Auth (Argon2-equivalent server-side hashing). |
-| Custom session tokens (rolling your own JWT) | Rolling crypto is anti-feature; ID tokens already exist. | Use Firebase ID tokens. Force-refresh on claim change. |
-| Mixing client-clock and server-clock timestamps in auth-relevant comparators | Causes silent failures (CONCERNS H7) and breaks audit log ordering. | Always `serverTimestamp()` for anything compared to or stored alongside other server-clock values. Client clock is *only* for "time ago" display. |
-| Separate "internal" and "client" auth mechanisms | Doubles the auth surface area; doubles the audit story. | Unified auth: one Firebase Auth user, one ID token, role differentiated by custom claim. |
-| Shared org passphrase | Identity is a property of a person, not an org. Audit logs become useless ("someone who knew the passphrase did this"). | Per-user accounts within an org. Org membership encoded as `orgId` custom claim. |
-| Trusting client-supplied `orgId` | Mass-assignment / IDOR. | `orgId` from `request.auth.token.orgId` (Rules) or token payload (Functions). Never from client request body. |
-| `localStorage` as source of truth for `role` | Trivially editable. | `localStorage` is UI cache only (collapsed pillars, last-route, draft text). `role` from claims. |
-| Anonymous Firebase Auth in production | Token has no identity, can't drive Rules. CONCERNS M6. | Email/Password + MFA. Drop `signInAnonymously`. |
-| Cloud Functions that trust the caller's claim payload | Caller can lie about their role in callable args. | Re-read claims from `context.auth.token` server-side, never from `data.payload`. |
-| Cloud Functions writing without App Check enforcement | Bypassable from any client. | `enforceAppCheck: true` on every callable. |
-| `service_role`-equivalent (Admin SDK) reachable from client | Catastrophic. (Firebase doesn't have a single equivalent but: never expose service-account credentials in client code.) | Service account only in Functions runtime. Never in browser bundle. |
-| Storing PII in Storage paths or Firestore document IDs | Path leaks via signed URLs and rule paths. | Random IDs (`crypto.randomUUID()`). PII goes in document fields, where Rules can scope. |
-| Audit log writable by clients | Clients can fabricate events or delete incriminating ones. | `auditLog` is writable only by Cloud Functions (Admin SDK), readable only by admins, with `allow write: if false` in Rules for clients. |
-| Global `render()` re-running listener subscriptions on every render | Listener leaks (CONCERNS F3). | Subscriptions live in `data/*.js` keyed by stable inputs (orgId, route); cleaned up in a render-cycle teardown. View files don't open listeners directly. |
-| `innerHTML = ""` for clearing nodes | Indistinguishable from XSS injection in lint rules (CONCERNS M2). | `el.replaceChildren()`. |
-| `alert()` for error UX | Blocking, jarring, unloggable (CONCERNS M3). | `toast(level, message)` + Sentry breadcrumb. |
-| Long-lived secrets in env vars | Secrets in env vars are inert until they leak. | Cloud Functions params (`defineSecret`) for runtime secrets. Functions config API is being decommissioned March 2027 — start on params now. |
-| Single org owner on the Firebase project | Bus factor of 1. | Multiple owners on the GCP project (Luke + George at minimum). |
+| Anti-pattern                                                                 | Why it's wrong                                                                                                          | What to do instead                                                                                                                                        |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client-only auth (the current state)                                         | Auth bypassable via DevTools localStorage edit. Cannot be a trust boundary. CONCERNS C1.                                | Firebase Auth + custom claims + Firestore Rules. Server enforces.                                                                                         |
+| Hardcoded password hash in repo                                              | Brute-forceable; world-readable. CONCERNS C2.                                                                           | Per-user passwords managed by Firebase Auth (Argon2-equivalent server-side hashing).                                                                      |
+| Custom session tokens (rolling your own JWT)                                 | Rolling crypto is anti-feature; ID tokens already exist.                                                                | Use Firebase ID tokens. Force-refresh on claim change.                                                                                                    |
+| Mixing client-clock and server-clock timestamps in auth-relevant comparators | Causes silent failures (CONCERNS H7) and breaks audit log ordering.                                                     | Always `serverTimestamp()` for anything compared to or stored alongside other server-clock values. Client clock is _only_ for "time ago" display.         |
+| Separate "internal" and "client" auth mechanisms                             | Doubles the auth surface area; doubles the audit story.                                                                 | Unified auth: one Firebase Auth user, one ID token, role differentiated by custom claim.                                                                  |
+| Shared org passphrase                                                        | Identity is a property of a person, not an org. Audit logs become useless ("someone who knew the passphrase did this"). | Per-user accounts within an org. Org membership encoded as `orgId` custom claim.                                                                          |
+| Trusting client-supplied `orgId`                                             | Mass-assignment / IDOR.                                                                                                 | `orgId` from `request.auth.token.orgId` (Rules) or token payload (Functions). Never from client request body.                                             |
+| `localStorage` as source of truth for `role`                                 | Trivially editable.                                                                                                     | `localStorage` is UI cache only (collapsed pillars, last-route, draft text). `role` from claims.                                                          |
+| Anonymous Firebase Auth in production                                        | Token has no identity, can't drive Rules. CONCERNS M6.                                                                  | Email/Password + MFA. Drop `signInAnonymously`.                                                                                                           |
+| Cloud Functions that trust the caller's claim payload                        | Caller can lie about their role in callable args.                                                                       | Re-read claims from `context.auth.token` server-side, never from `data.payload`.                                                                          |
+| Cloud Functions writing without App Check enforcement                        | Bypassable from any client.                                                                                             | `enforceAppCheck: true` on every callable.                                                                                                                |
+| `service_role`-equivalent (Admin SDK) reachable from client                  | Catastrophic. (Firebase doesn't have a single equivalent but: never expose service-account credentials in client code.) | Service account only in Functions runtime. Never in browser bundle.                                                                                       |
+| Storing PII in Storage paths or Firestore document IDs                       | Path leaks via signed URLs and rule paths.                                                                              | Random IDs (`crypto.randomUUID()`). PII goes in document fields, where Rules can scope.                                                                   |
+| Audit log writable by clients                                                | Clients can fabricate events or delete incriminating ones.                                                              | `auditLog` is writable only by Cloud Functions (Admin SDK), readable only by admins, with `allow write: if false` in Rules for clients.                   |
+| Global `render()` re-running listener subscriptions on every render          | Listener leaks (CONCERNS F3).                                                                                           | Subscriptions live in `data/*.js` keyed by stable inputs (orgId, route); cleaned up in a render-cycle teardown. View files don't open listeners directly. |
+| `innerHTML = ""` for clearing nodes                                          | Indistinguishable from XSS injection in lint rules (CONCERNS M2).                                                       | `el.replaceChildren()`.                                                                                                                                   |
+| `alert()` for error UX                                                       | Blocking, jarring, unloggable (CONCERNS M3).                                                                            | `toast(level, message)` + Sentry breadcrumb.                                                                                                              |
+| Long-lived secrets in env vars                                               | Secrets in env vars are inert until they leak.                                                                          | Cloud Functions params (`defineSecret`) for runtime secrets. Functions config API is being decommissioned March 2027 — start on params now.               |
+| Single org owner on the Firebase project                                     | Bus factor of 1.                                                                                                        | Multiple owners on the GCP project (Luke + George at minimum).                                                                                            |
 
 ---
 
 ## 10. Sources
 
 **Authoritative (HIGH confidence):**
+
 - [Cloud Functions for Firebase — version comparison (2nd gen vs 1st gen)](https://firebase.google.com/docs/functions/version-comparison)
 - [Cloud Functions — TypeScript guide](https://firebase.google.com/docs/functions/typescript)
 - [Auth blocking triggers (`beforeUserCreated`, `beforeUserSignedIn`)](https://firebase.google.com/docs/functions/auth-blocking-events)
@@ -855,12 +863,14 @@ The patterns explicitly *not* to adopt:
 - [Using module bundlers with Firebase (Vite + tree-shaking)](https://firebase.google.com/docs/web/module-bundling)
 
 **Verified secondary:**
+
 - [Configure custom claims (Identity Platform)](https://docs.cloud.google.com/identity-platform/docs/how-to-configure-custom-claims)
 - [Patterns for security with Firebase: custom claims with Firestore + Cloud Functions (Doug Stevenson, Firebase Developers)](https://medium.com/firebase-developers/patterns-for-security-with-firebase-supercharged-custom-claims-with-firestore-and-cloud-functions-bb8f46b24e11)
 - [Setting Strict-Transport-Security header on Firebase Hosting (known issue)](https://github.com/firebase/firebase-tools/issues/5999)
 - [GitHub Pages — custom HTTP headers not supported](https://github.com/orgs/community/discussions/157852)
 
 **Project context (read first):**
+
 - `.planning/codebase/ARCHITECTURE.md` — current single-IIFE architecture
 - `.planning/codebase/STRUCTURE.md` — current file layout
 - `.planning/codebase/INTEGRATIONS.md` — current Firebase usage
@@ -870,6 +880,6 @@ The patterns explicitly *not* to adopt:
 
 ---
 
-*Architecture research for: BeDeveloped Base Layers — Full Hardening Pass milestone*
-*Researched: 2026-05-03*
-*Author note: this document recommends the **target** state. The phase plan in §8 lays the laddered path from today's IIFE to that state.*
+_Architecture research for: BeDeveloped Base Layers — Full Hardening Pass milestone_
+_Researched: 2026-05-03_
+_Author note: this document recommends the **target** state. The phase plan in §8 lays the laddered path from today's IIFE to that state._

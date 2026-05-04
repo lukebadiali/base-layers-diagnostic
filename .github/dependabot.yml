@@ -1,0 +1,33 @@
+# .github/dependabot.yml
+version: 2
+
+updates:
+  # Root npm packages
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    rebase-strategy: "auto"
+    # Auto-merge is intentionally NOT configured — D-19 compliance posture requires
+    # human review on every dependency bump. Re-evaluate post-milestone-close.
+
+  # functions/ workspace (forward-declared for Phase 7 — Cloud Functions)
+  # Dependabot silently skips ecosystems whose directory does not yet exist.
+  - package-ecosystem: "npm"
+    directory: "/functions"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    rebase-strategy: "auto"
+
+  # GitHub Actions — keeps SHA pins in .github/workflows/ci.yml fresh
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    rebase-strategy: "auto"

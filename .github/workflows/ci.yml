@@ -66,7 +66,11 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     steps:
+      # gitleaks-action needs full history to compute its incremental scan range;
+      # default shallow clone (depth=1) made it fail with "unknown revision".
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "22"

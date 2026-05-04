@@ -54,7 +54,7 @@ Trying to merge (e.g.) Phase 5 with Phase 6, or Phase 1 with Phase 2, violates o
   6. Vite production build outputs hashed-filename bundles in `dist/`, replacing the hand-bumped `?v=46` cache-busting pattern
 **Plans**: 6 plans
 - [x] 01-01-PLAN.md — Wave 0: package.json + npm install + .npmrc + .gitignore augment (TOOL-01, TOOL-03, TOOL-04)
-- [ ] 01-02-PLAN.md — Wave 1: vite.config.js + tsconfig.json + eslint.config.js + .prettierrc.json + types/globals.d.ts (TOOL-02, TOOL-05, TOOL-06, TOOL-07)
+- [x] 01-02-PLAN.md — Wave 1: vite.config.js + tsconfig.json + eslint.config.js + .prettierrc.json + types/globals.d.ts (TOOL-02, TOOL-05, TOOL-06, TOOL-07)
 - [ ] 01-03-PLAN.md — Wave 2: .husky/pre-commit + .gitleaks.toml (TOOL-12)
 - [ ] 01-04-PLAN.md — Wave 3: .github/workflows/ci.yml with SHA-pinned Actions + first green CI checkpoint (TOOL-08, TOOL-09)
 - [ ] 01-05-PLAN.md — Wave 4: .github/dependabot.yml (TOOL-10)

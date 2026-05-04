@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-04T09:31:14.366Z"
+last_updated: "2026-05-04T11:55:00.000Z"
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 6
-  completed_plans: 0
+  completed_plans: 4
   percent: 0
 ---
 
@@ -36,10 +36,10 @@ Phase 01 — engineering-foundation-tooling
 ## Current Position
 
 Phase: 01 (engineering-foundation-tooling) — EXECUTING
-Plan: 1 of 6
+Plan: 5 of 6 (Wave 4 next)
 **Phase:** 1 — Engineering Foundation (Tooling)
-**Plan:** 6 plans created (Waves 0-5), 0/6 executed
-**Status:** Executing Phase 01
+**Plan:** 6 plans created (Waves 0-5), 4/6 executed (Wave 3 checkpoint resolved 2026-05-04 — first green CI run #25317482833)
+**Status:** Executing Phase 01 — Wave 4 (Dependabot) ready
 **Progress:** 0/12 phases complete
 
 ```
@@ -141,18 +141,16 @@ Additional non-negotiables:
 
 ## Session Continuity
 
-**Last session (2026-05-04):** Phase 1 execution started. Waves 0-2 fully complete and merged to `main`:
+**Last session (2026-05-04 — resumed mid-day):** Phase 1 execution continued. Waves 0-3 complete and pushed to `origin/main`. Wave 3 checkpoint resolved.
 
 - Wave 0 (01-01) — `package.json` + lockfile + `.npmrc engine-strict` + `.gitignore`. T-1-01 supply-chain pinning live.
 - Wave 1 (01-02) — Vite 8 + Vitest + tsc strict + ESLint flat (Math.random/innerHTML blocked) + Prettier + `types/globals.d.ts`. 6 deviations all upstream-API-drift fixes. Orchestrator-side fix expanded `.prettierignore` to honour the Phase 4 boundary consistently. T-1-03 mitigated.
 - Wave 2 (01-03) — `.husky/pre-commit` (lint-staged + gitleaks protect) + `.gitleaks.toml` with custom SHA-256-hex-64 rule guarding the C2 regression. Synthetic block test PASSED on both worktree and main. T-1-02 mitigated.
-- Wave 3 (01-04) — CI workflow authored, SHA-pinned (5 Actions resolved 2026-05-04), validated (4 pre-commit gates + js-yaml parse), partial SUMMARY committed. **PAUSED at Task 3 checkpoint.**
+- Wave 3 (01-04) — CI workflow authored, SHA-pinned (5 Actions). After push to `origin/main` (35 commits on first push), CI failed on Audit (gitleaks `unknown revision` from shallow clone) + Test (Vitest exits 1 on no-tests). Two fix commits landed: `de0bb38` `fix(01-04): set fetch-depth: 0 on audit checkout` + `56eee56` `feat(01-06): pull forward smoke test`. CI run [#25317482833](https://github.com/lukebadiali/base-layers-diagnostic/actions/runs/25317482833) GREEN on all six jobs. dist/ artefact verified to contain hashed-filename bundles (`main-BtavOejk.js`). Outcome B (no allowlist commits needed). T-1-04 + T-1-05 mitigated.
 
-**Pause point:** `git push origin main` denied — `AssumeAIhugh` not a collaborator on `lukebadiali/base-layers-diagnostic`. User chose to arrange push access from Luke before continuing (no fork, no alternate remote — single source of truth remains the upstream repo). 18 commits sit on local `main` ahead of `origin/main`. Pre-commit hook is active locally.
-
-**Resume point:** `/gsd-execute-phase 1` once Hugh has push access. Discovery will see Plan 01-04 has a partial SUMMARY but no resolved checkpoint and will re-spawn the executor to drive the push + 5-green CI verification + Wave 4 (Dependabot, autonomous) + Wave 5 (smoke + runbooks + SECURITY.md, second checkpoint for Socket.dev + branch protection + OIDC).
+**Resume point:** `/gsd-execute-phase 1` to continue with Wave 4 (01-05 Dependabot, autonomous) and Wave 5 (01-06 runbooks + CONTRIBUTING + SECURITY.md, two human-action checkpoints: Socket.dev install + branch-protection runbook). Branch protection still deferred until Wave 5 Task 4 per Pitfall A — status-check names are now registered in GitHub's check registry from run #25317482833.
 
 ---
 
 *State initialized: 2026-05-03 after roadmap creation*
-*Last updated: 2026-05-04 — Phase 1 Waves 0-2 complete; Wave 3 paused at push-auth checkpoint (3 of 6 plans done; one mid-flight)*
+*Last updated: 2026-05-04 — Phase 1 Waves 0-3 complete and on origin/main; first green CI run #25317482833 confirms all 5 status-check names registered (Pitfall A precondition satisfied for Wave 5)*

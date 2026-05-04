@@ -9,11 +9,26 @@ node_modules/
 # Lockfile (npm owns the formatting)
 package-lock.json
 
-# Orchestrator-owned files (modified outside the prettier sweep by the
-# GSD workflow; format ownership lives with the orchestrator, not the
-# parallel-executor agents).
-.planning/STATE.md
-.planning/ROADMAP.md
+# GSD process documentation — formatting is irrelevant to source quality
+# and these files are touched by orchestrator + agents, so a prettier sweep
+# would create churn without value.
+.planning/
+
+# Pre-existing legacy code marked for Phase 4 cleanup. These files already
+# carry `// @ts-nocheck` (app.js) and per-line eslint-disables tagged
+# `Phase 4: <action>. See runbooks/phase-4-cleanup-ledger.md`. Reformatting
+# them in Phase 1 would conflict with the modular-split work in Phase 4 and
+# violate sequencing non-negotiable #1 (tests-first before modular split).
+app.js
+firebase-init.js
+data/
+index.html
+styles.css
+
+# External documents that are not BeDeveloped source. Translated into the
+# 12-phase roadmap; preserved verbatim as evidence (Phase 11/12 input).
+SECURITY_AUDIT.md
+CLAUDE.md
 
 # Tracked but generated assets
 *.tsbuildinfo

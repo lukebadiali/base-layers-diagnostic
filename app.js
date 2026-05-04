@@ -1,3 +1,5 @@
+// @ts-nocheck
+// Phase 4: remove after modular split. See runbooks/phase-4-cleanup-ledger.md
 /* ============================================================
    BeDeveloped — Base Layers (v2)
    - Login (internal + client roles)

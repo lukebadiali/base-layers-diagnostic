@@ -1,3 +1,5 @@
+// @ts-nocheck
+// Phase 4: remove after CDN import replacement. See runbooks/phase-4-cleanup-ledger.md
 // Firebase modular SDK v10 — loaded from Google CDN (no build step needed).
 // Exposes `window.FB` for app.js to consume.
 

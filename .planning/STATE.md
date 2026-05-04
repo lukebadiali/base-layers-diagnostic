@@ -141,11 +141,18 @@ Additional non-negotiables:
 
 ## Session Continuity
 
-**Last session:** Phase 1 planned end-to-end. Research resolved 8 open questions from CONTEXT.md (Vite+index.html coexistence — use index.html as direct entry, no dev-index split needed; husky 9 `prepare` script must be `"husky || true"` for CI; OSV-Scanner is NOT on npm — use `google/osv-scanner-action` with `continue-on-error: true`; branch protection MUST run after first green CI to avoid status-check lockout — Pitfall A). Pattern-mapping confirmed greenfield (19/22 files have no in-repo analog). Planner produced 6 PLAN.md files (one per wave); plan-checker verified on first iteration (PASSED across all 12 dimensions: requirement coverage, task completeness, dependency correctness, scope sanity, verification derivation, context compliance, scope-reduction detection, architectural tier compliance, Nyquist Dimension 8, cross-plan data contracts, CLAUDE.md compliance, pattern compliance). VALIDATION.md approved with `nyquist_compliant: true`.
+**Last session (2026-05-04):** Phase 1 execution started. Waves 0-2 fully complete and merged to `main`:
 
-**Resume point:** `/gsd-execute-phase 1` — execute the 6 plans (waves 0→5). Wave 3 and Wave 5 each carry checkpoint tasks (`autonomous: false`) — execution will pause for human verification on first green CI and Socket.dev/branch-protection setup.
+- Wave 0 (01-01) — `package.json` + lockfile + `.npmrc engine-strict` + `.gitignore`. T-1-01 supply-chain pinning live.
+- Wave 1 (01-02) — Vite 8 + Vitest + tsc strict + ESLint flat (Math.random/innerHTML blocked) + Prettier + `types/globals.d.ts`. 6 deviations all upstream-API-drift fixes. Orchestrator-side fix expanded `.prettierignore` to honour the Phase 4 boundary consistently. T-1-03 mitigated.
+- Wave 2 (01-03) — `.husky/pre-commit` (lint-staged + gitleaks protect) + `.gitleaks.toml` with custom SHA-256-hex-64 rule guarding the C2 regression. Synthetic block test PASSED on both worktree and main. T-1-02 mitigated.
+- Wave 3 (01-04) — CI workflow authored, SHA-pinned (5 Actions resolved 2026-05-04), validated (4 pre-commit gates + js-yaml parse), partial SUMMARY committed. **PAUSED at Task 3 checkpoint.**
+
+**Pause point:** `git push origin main` denied — `AssumeAIhugh` not a collaborator on `lukebadiali/base-layers-diagnostic`. User chose to arrange push access from Luke before continuing (no fork, no alternate remote — single source of truth remains the upstream repo). 18 commits sit on local `main` ahead of `origin/main`. Pre-commit hook is active locally.
+
+**Resume point:** `/gsd-execute-phase 1` once Hugh has push access. Discovery will see Plan 01-04 has a partial SUMMARY but no resolved checkpoint and will re-spawn the executor to drive the push + 5-green CI verification + Wave 4 (Dependabot, autonomous) + Wave 5 (smoke + runbooks + SECURITY.md, second checkpoint for Socket.dev + branch protection + OIDC).
 
 ---
 
 *State initialized: 2026-05-03 after roadmap creation*
-*Last updated: 2026-05-03 — Phase 1 planned (6 plans, plan-checker PASSED first iteration)*
+*Last updated: 2026-05-04 — Phase 1 Waves 0-2 complete; Wave 3 paused at push-auth checkpoint (3 of 6 plans done; one mid-flight)*

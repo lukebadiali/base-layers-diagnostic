@@ -251,3 +251,34 @@ _Phase: 01-engineering-foundation-tooling_
 _Plan: 04 (Wave 3 — GitHub Actions CI Workflow)_
 _Status: Tasks 1-2 complete; Task 3 (checkpoint:human-verify) pending user action_
 _Partial SUMMARY committed: 2026-05-04_
+
+## Pause record (2026-05-04)
+
+`git push origin main` returned `Permission denied to AssumeAIhugh` — the
+git user `AssumeAIhugh` is not yet a collaborator on
+`lukebadiali/base-layers-diagnostic`. User chose to pause and arrange push
+access from Luke before proceeding. No fork or alternate remote was used —
+single source of truth remains `origin = lukebadiali/base-layers-diagnostic`.
+
+**Resume condition:** Hugh has push access (collaborator role on
+lukebadiali/base-layers-diagnostic, or write access via the AssumeAI
+team if Luke configures org-level permissions).
+
+**Resume command:** `/gsd-execute-phase 1` — discovery will see Plan 01-04
+has a partial SUMMARY but no `## Resolved Checkpoint` section, and will
+re-spawn the executor to drive the push + 5-green verification + Wave 4.
+
+**Local state at pause:** 18 commits ahead of `origin/main` on branch
+`main` — all of Phase 1 Waves 0-3 plus the merge commits. No local
+uncommitted changes. Pre-commit hook active and tested.
+
+**What still needs human action after push works:**
+1. `git push origin main`
+2. Watch the 5 required jobs go green (`gh run watch` or Actions tab)
+3. If gitleaks-action fails on the pre-existing `app.js:505`
+   `INTERNAL_PASSWORD_HASH` literal: add the historical commit SHA to
+   `.gitleaks.toml [allowlist] commits = [...]` and re-push (Outcome A)
+4. Verify `dist/` artefact contains hashed-filename bundles via
+   `gh run download` (T-1-05 substrate evidence)
+5. Do NOT apply branch protection — Wave 5 owns it (Pitfall A: applying
+   it before all 5 status-check names are registered locks the repo)

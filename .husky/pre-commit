@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+# Wave 2 (Plan 01-03) pre-commit gate. Two layered checks:
+#   1. npx lint-staged                                    -> eslint --fix + prettier --write on staged *.js
+#   2. npx gitleaks protect --staged --config .gitleaks.toml -> (PLAN INTENT — see deviation note below)
+#
+# DEVIATION FROM PLAN LITERAL: The plan body specifies `npx gitleaks protect --staged --config .gitleaks.toml`.
+# Empirically, `npx gitleaks ...` fails with "could not determine executable to run" because gitleaks is NOT
+# an npm package (RESEARCH.md confirms 2026-05-03 — gitleaks ships as a single static binary). Calling the
+# binary directly is the supported install pattern: `scoop install gitleaks` (Windows) / `brew install gitleaks`
+# (macOS) / direct download (Linux) all put `gitleaks` on PATH. CI installs it via `gitleaks/gitleaks-action@v2`
+# in Wave 3 (also putting it on PATH inside the runner). The `gitleaks` invocation below is the working
+# equivalent of the plan-mandated `npx gitleaks` line — same flags, same exit-code contract.
+npx lint-staged
+gitleaks protect --staged --config .gitleaks.toml

@@ -1,3 +1,17 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: executing
+last_updated: "2026-05-04T09:31:14.366Z"
+progress:
+  total_phases: 12
+  completed_phases: 0
+  total_plans: 6
+  completed_plans: 0
+  percent: 0
+---
+
 # State: Base Layers Diagnostic — Hardening Pass
 
 **Initialized:** 2026-05-03
@@ -13,7 +27,7 @@
 Client diagnostic data must remain confidential, intact, and recoverable — and BeDeveloped must be able to honestly answer a prospect's security questionnaire about how that's enforced.
 
 **Current focus:**
-Full Hardening Pass milestone — close all CRITICAL + HIGH `CONCERNS.md` findings, stand up the audit-trail layer, and produce a vendor-questionnaire-ready evidence pack. End state: a production-grade, compliance-credible Firebase platform that maps honestly onto SOC2 CC / ISO 27001:2022 Annex A / GDPR Art. 32 / OWASP ASVS L2.
+Phase 01 — engineering-foundation-tooling
 
 **Compliance bar:** credible, **not** certified. Certification is a separate workstream.
 
@@ -21,9 +35,11 @@ Full Hardening Pass milestone — close all CRITICAL + HIGH `CONCERNS.md` findin
 
 ## Current Position
 
+Phase: 01 (engineering-foundation-tooling) — EXECUTING
+Plan: 1 of 6
 **Phase:** 1 — Engineering Foundation (Tooling)
 **Plan:** 6 plans created (Waves 0-5), 0/6 executed
-**Status:** Ready to execute
+**Status:** Executing Phase 01
 **Progress:** 0/12 phases complete
 
 ```
@@ -41,6 +57,7 @@ Full Hardening Pass milestone — close all CRITICAL + HIGH `CONCERNS.md` findin
 **Source of truth:** `.planning/ROADMAP.md`
 
 **Phase summary:**
+
 1. Engineering Foundation (Tooling) — `package.json` + Vite + Vitest + ESLint + CI lands; everything downstream becomes testable + dependency-monitored
 2. Test Suite Foundation (Tests-First) — regression baseline for the modular split (Pitfall 9 — non-negotiable)
 3. Hosting Cutover + Baseline Security Headers — GitHub Pages → Firebase Hosting; HTTP-header CSP infrastructure available
@@ -113,6 +130,7 @@ These four constraints are load-bearing — violating them breaks the milestone 
 4. **Hosting cutover before any real CSP work.** Phase 3 precedes Phase 10.
 
 Additional non-negotiables:
+
 - Anonymous Auth disabled in Firebase Console as part of Phase 6 (not just unused in code — actually disabled)
 - App Check enforced in stages (7-day soak unenforced, then per-service: Storage → Firestore → Functions)
 - Audit log written from Cloud Functions only — `auditLog` rules `allow write: if false` for clients

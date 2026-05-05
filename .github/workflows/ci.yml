@@ -89,9 +89,13 @@ jobs:
             --recursive
             --format=table
             .
-      # CI gitleaks scan - backstop for devs who skip local pre-commit hook
+      # CI gitleaks scan - backstop for devs who skip local pre-commit hook.
+      # GITHUB_TOKEN is required for pull_request events (gitleaks-action v2.3.x
+      # breaking change — push events work without it but PR events fail).
       - name: gitleaks detect
         uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           config-path: .gitleaks.toml
 

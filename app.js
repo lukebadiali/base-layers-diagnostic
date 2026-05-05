@@ -854,7 +854,7 @@
       ["dashboard", "Dashboard"],
       ["diagnostic", "Diagnostic"],
       ["report", "Report"],
-      ["engagement", "Delivery framework"],
+      ["engagement", "Delivery"],
       ["documents", "Documents"],
       ["chat", "Chat"],
       ["actions", "Actions"],

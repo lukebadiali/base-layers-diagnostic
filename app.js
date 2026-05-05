@@ -854,7 +854,7 @@
       ["dashboard", "Dashboard"],
       ["diagnostic", "Diagnostic"],
       ["report", "Report"],
-      ["engagement", "Engagement"],
+      ["engagement", "Delivery framework"],
       ["documents", "Documents"],
       ["chat", "Chat"],
       ["actions", "Actions"],
@@ -2730,7 +2730,7 @@
   // ================================================================
   function renderEngagement(user, org) {
     const frag = h("div");
-    frag.appendChild(h("h1", { class: "view-title" }, "Engagement lifecycle"));
+    frag.appendChild(h("h1", { class: "view-title" }, "Delivery framework"));
     frag.appendChild(
       h(
         "p",

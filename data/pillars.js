@@ -59,7 +59,7 @@ window.BASE_LAYERS = {
       id: "developed",
       name: "BeDeveloped",
       summary:
-        "Handover. A self-sustaining operating model the client's team can run. Internal owners coached, measurement rhythm installed, exit checkpoints agreed.",
+        "Operational Excellence. A fully embedded, self-sustaining model the team confidently runs. Clear ownership, consistent measurement cadence, and ongoing optimisation built in.",
       checklist: [
         "Internal owners coached to run each pillar",
         "Measurement rhythm running without us",

@@ -1121,7 +1121,7 @@ a:hover {
   color: var(--brand);
   font-size: 12px;
   letter-spacing: 0.08em;
-  font-weight: 600;
+  font-weight: 500;
 }
 .stage-card .name {
   font-family: var(--font-display);

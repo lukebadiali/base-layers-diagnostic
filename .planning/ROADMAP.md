@@ -70,7 +70,13 @@ Trying to merge (e.g.) Phase 5 with Phase 6, or Phase 1 with Phase 2, violates o
   3. Comment unread tracking, chat unread total, and cloud-sync bail-on-error logic each have tests pinning current behaviour (the regression baseline for Pitfall 20 — H7+H8 sequencing)
   4. Snapshot tests of dashboard, diagnostic, and report rendered HTML exist and are stable across runs
   5. Auth state machine tests capture the behaviour of `verifyInternalPassword`, `verifyOrgClientPassphrase`, and `verifyUserPassword` BEFORE Phase 6 replaces them
-**Plans**: TBD
+**Plans**: 6 plans
+- [ ] 02-01-PLAN.md — Wave 0: index.html bridge + tests/setup.js + mocks + auth-password fixture generator + crypto-parity preflight + GH-Pages preview-branch smoke (TEST-01)
+- [ ] 02-02-PLAN.md — Wave 1: extract src/util/{ids,hash}.js + first real tests + delete tests/smoke.test.js + SECURITY.md regression baseline + cleanup-ledger seed (TEST-01, DOC-10)
+- [ ] 02-03-PLAN.md — Wave 2: extract src/domain/{banding,scoring}.js with DI + TEST-02 boundary coverage (TEST-02)
+- [ ] 02-04-PLAN.md — Wave 3: extract src/domain/{completion,unread}.js + TEST-03 + TEST-05 (REGRESSION BASELINE — Pitfall 20 / H7) (TEST-03, TEST-05)
+- [ ] 02-05-PLAN.md — Wave 4: extract src/data/{migration,cloud-sync}.js + src/auth/state-machine.js + TEST-04 idempotency + TEST-06 (REGRESSION BASELINE — H8) + TEST-07 (REGRESSION BASELINE — Phase 6 deletes) (TEST-04, TEST-06, TEST-07)
+- [ ] 02-06-PLAN.md — Wave 5: TEST-10 snapshot tests (dashboard/diagnostic/report) + tiered coverage thresholds (D-15) + CI HTML artefact (D-20) + CONTRIBUTING.md governance (D-17, D-18) + ESLint test→src isolation rule (T-2-03) (TEST-10, DOC-10)
 
 ### Phase 3: Hosting Cutover + Baseline Security Headers
 **Goal**: Production serves from Firebase Hosting with HTTP-header CSP infrastructure available, removing the GitHub-Pages "no headers possible" structural blocker before any CSP work begins.

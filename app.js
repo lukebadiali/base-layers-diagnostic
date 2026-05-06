@@ -10,6 +10,16 @@
    All state in localStorage — no backend required.
    ============================================================ */
 
+// Phase 2 (D-04 supersedes Phase 1 D-14): index.html now loads this file as
+// type="module". Imports below are populated by Waves 1-4 — do NOT add wrappers
+// here in this plan, only the scaffold comment.
+//
+// Waves that populate this block:
+//   Wave 1 (Plan 02-02): src/util/ids.js, src/util/hash.js
+//   Wave 2 (Plan 02-03): src/domain/banding.js, src/domain/scoring.js
+//   Wave 3 (Plan 02-04): src/domain/completion.js, src/domain/unread.js
+//   Wave 4 (Plan 02-05): src/data/migration.js, src/data/cloud-sync.js, src/auth/state-machine.js
+
 (function () {
   "use strict";
 

@@ -29,6 +29,8 @@ export default defineConfig({
   },
   test: {
     environment: "happy-dom",
+    setupFiles: ["./tests/setup.js"],
+    globals: false,
     coverage: {
       provider: "v8",
       reportsDirectory: "coverage",

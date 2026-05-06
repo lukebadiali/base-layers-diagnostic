@@ -52,6 +52,7 @@ import {
   migrateV1IfNeeded as _migrateV1IfNeeded,
   clearOldScaleResponsesIfNeeded as _clearOldScaleResponsesIfNeeded,
 } from "./src/data/migration.js";
+import { syncFromCloud as _syncFromCloud } from "./src/data/cloud-sync.js";
 
 (function () {
   "use strict";
@@ -276,6 +277,10 @@ import {
   });
   const clearOldScaleResponsesIfNeeded = () => _clearOldScaleResponsesIfNeeded({
     loadSettings, saveSettings, loadOrgMetas, loadOrg, saveOrg,
+  });
+  const syncFromCloud = () => _syncFromCloud({
+    fbReady, cloudFetchAllOrgs, cloudFetchAllUsers, cloudPushOrg, cloudPushUser,
+    jget, jset, K, render,
   });
 
   // Phase 2 (D-05): userCompletionPct + orgSummary extracted to src/domain/completion.js — wrappers above.
@@ -3385,48 +3390,8 @@ import {
     }
   }
 
-  // Bootstrap: pull cloud orgs/users into local cache. Anything that exists
-  // locally but not in cloud (e.g. a brand-new install) gets pushed up.
-  // Cloud wins on overlap. Bails silently if either fetch errors so we never
-  // wipe local data on a network blip.
-  async function syncFromCloud() {
-    if (!fbReady()) return;
-    const [cloudOrgs, cloudUsers] = await Promise.all([cloudFetchAllOrgs(), cloudFetchAllUsers()]);
-    if (cloudOrgs === null || cloudUsers === null) return;
-
-    // ---- Orgs ----
-    const localMetas = jget(K.orgs, []);
-    const cloudOrgIds = new Set(cloudOrgs.map((o) => o.id));
-    localMetas.forEach((meta) => {
-      if (!cloudOrgIds.has(meta.id)) {
-        const local = jget(K.org(meta.id), null);
-        if (local) cloudPushOrg(local);
-      }
-    });
-    cloudOrgs.forEach((o) => {
-      if (o && o.id) jset(K.org(o.id), o);
-    });
-    const newMetas = cloudOrgs.filter((o) => o && o.id).map((o) => ({ id: o.id, name: o.name }));
-    localMetas.forEach((m) => {
-      if (!cloudOrgIds.has(m.id)) newMetas.push(m);
-    });
-    jset(K.orgs, newMetas);
-
-    // ---- Users ----
-    const localUsers = jget(K.users, []);
-    const cloudUserIds = new Set(cloudUsers.map((u) => u.id));
-    localUsers.forEach((u) => {
-      if (!cloudUserIds.has(u.id)) cloudPushUser(u);
-    });
-    const merged = [...cloudUsers];
-    localUsers.forEach((u) => {
-      if (!cloudUserIds.has(u.id)) merged.push(u);
-    });
-    jset(K.users, merged);
-
-    // Re-render so the UI reflects synced data
-    if (typeof render === "function") render();
-  }
+  // Phase 2 (D-05): syncFromCloud extracted to src/data/cloud-sync.js — wrapper above.
+  // Pitfall 20 / H8 entanglement preserved as REGRESSION BASELINE in tests/data/cloud-sync.test.js.
 
   // ================================================================
   // DOCUMENTS (Firebase Storage + Firestore)

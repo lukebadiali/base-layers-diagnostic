@@ -6,7 +6,7 @@ import security from "eslint-plugin-security";
 export default [
   // Global ignores — these dirs are never linted
   {
-    ignores: ["dist/", "coverage/", "node_modules/", "functions/lib/"],
+    ignores: ["dist/", "coverage/", "node_modules/", "functions/"],
   },
 
   // Base recommended rules for all JS files
@@ -121,6 +121,20 @@ export default [
           ],
         },
       ],
+    },
+  },
+
+  // Tests run under Node (vitest); declare Node globals so schema tests like
+  // tests/firebase-config.test.js (which calls process.cwd()) lint clean.
+  {
+    files: ["tests/**/*.js"],
+    languageOptions: {
+      globals: {
+        process: "readonly",
+        Buffer: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+      },
     },
   },
 

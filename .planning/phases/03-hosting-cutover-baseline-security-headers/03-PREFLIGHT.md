@@ -385,4 +385,82 @@ https://identitytoolkit.googleapis.com https://securetoken.googleapis.com
 
 ---
 
+## Cutover Log
+
+**Owned by:** Plan 03-05 — operator-deferred. The skeleton below is authored by 03-05 (Wave 4) so the operator has a single record-keeping target on cutover day. Each `PENDING-USER` value is filled in by the operator after executing `runbooks/hosting-cutover.md`.
+
+**How to fill in:** see `runbooks/hosting-cutover.md` §Cutover Steps Step 9 (success path) or §DNS Revert Procedure Step R4 (rollback path).
+
+```
+cutover_date: PENDING-USER
+  # Format: YYYY-MM-DD HH:MM TZ. Set to the moment GitHub Pages was disabled
+  # in repo settings (Step 8 of the runbook), which is the moment the 14-day
+  # rollback window opens per D-03.
+
+cutover_complete: PENDING-USER
+  # Values: yes | rolled-back
+  # 'yes'  -> cutover steps 1-10 completed; live traffic now served by Firebase.
+  # 'rolled-back' -> §DNS Revert Procedure was executed; live traffic returned
+  #                  to GitHub Pages. Must also fill rollback_reason and
+  #                  rollback_completed_at.
+
+cutover_observed_headers: PENDING-USER
+  # Verbatim output of `curl -sI https://baselayers.bedeveloped.com` from
+  # Step 6. Multi-line YAML literal block. Should contain HTTP/2 200 plus
+  # the 9 security headers (HSTS / X-Content-Type-Options / Referrer-Policy /
+  # Permissions-Policy / COOP / COEP / CORP / Reporting-Endpoints /
+  # Content-Security-Policy-Report-Only).
+
+securityheaders_rating: PENDING-USER
+  # Values: A+ | A | A- | B | C | D | E | F
+  # From https://securityheaders.com/?q=baselayers.bedeveloped.com&followRedirects=on
+  # at Step 7. Phase 3 success criterion HOST-08 requires >= A.
+
+ssl_provisioned_at: PENDING-USER
+  # Format: YYYY-MM-DD HH:MM TZ. Set to the moment Step 5's curl loop first
+  # showed HTTP/2 200 (with no certificate warning). Useful for capacity
+  # planning future cutovers; also feeds the Phase 11 PRIVACY.md narrative.
+
+synthetic_csp_e2e_seen_in_cloud_logging: PENDING-USER
+  # Values: yes | no
+  # The post-cutover smoke from Step 6 produced (or did not produce) a Cloud
+  # Logging entry with jsonPayload.report.blockedUri ==
+  # "https://post-cutover.example/blocked.js". Required to be 'yes' for FN-10
+  # success criterion closure.
+
+post_cutover_smoke_blockedUri: PENDING-USER
+  # Verbatim value used in the Step 6 smoke. Default per the runbook is
+  # https://post-cutover.example/blocked.js. Operator may use any value as
+  # long as it is unique enough to filter in Cloud Logging without collisions.
+
+# --- Rollback-only fields (only fill in if cutover_complete: rolled-back) ---
+
+rollback_reason: PENDING-USER
+  # Freeform. Examples: "header X missing on live response", "function
+  # rewrite returned index.html for /api/csp-violations", "SSL provisioning
+  # exceeded 24h window", "registrar UI rejected A record format".
+
+rollback_completed_at: PENDING-USER
+  # Format: YYYY-MM-DD HH:MM TZ. Set to the moment §DNS Revert Procedure
+  # Step R3 confirmed the bare GitHub Pages header set was live again.
+
+# --- Optional ---
+
+notes: PENDING-USER
+  # Freeform. Anything that didn't fit the structured fields above. Useful
+  # for "SSL took 90 minutes (faster than D-02's 24h worst case)" or
+  # "registrar required NS switch from dns-parking.com to BasicDNS first
+  # which added an hour".
+```
+
+### Reading guide for downstream plans
+
+- **03-06-PLAN.md (cleanup ledger):** reads `cutover_date` to compute the day-14 calendar trigger. If `cutover_complete: rolled-back`, the cleanup ledger row is added with status "deferred — cutover not yet successful".
+- **Phase 11 PRIVACY.md (DOC-09):** reads `ssl_provisioned_at` and `cutover_observed_headers` for the evidence pack.
+- **Phase 11 SECURITY.md verification:** reads `securityheaders_rating` to confirm HOST-08 closure on the live domain.
+- **/gsd-verify-work 3:** reads `cutover_complete` to gate Phase 3 verification. If `PENDING-USER` or `rolled-back`, Phase 3 verification cannot pass HOST-01 / HOST-02 / HOST-08.
+
+---
+
 *Pre-flight gathered: 2026-05-06 by Plan 03-01.*
+*Cutover Log skeleton appended: 2026-05-06 by Plan 03-05 (Wave 4).*

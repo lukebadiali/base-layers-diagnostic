@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-04T17:18:00.000Z"
+last_updated: "2026-05-06T09:14:00.000Z"
 progress:
   total_phases: 12
   completed_phases: 1
@@ -48,7 +48,7 @@ Plan: 6 of 6 (all waves landed)
  ✓  .  .  .  .  .  .  .  .  .  .  .
 ```
 
-**Next action:** `/gsd-verify-work 1` to formally close Phase 1, then `/gsd-plan-phase 2` to begin Test Suite Foundation
+**Next action:** `/gsd-plan-phase 2` to create the executable plan for Test Suite Foundation (CONTEXT.md gathered 2026-05-06)
 
 ---
 
@@ -150,7 +150,9 @@ Additional non-negotiables:
 
 **Resume point:** `/gsd-execute-phase 1` to continue with Wave 4 (01-05 Dependabot, autonomous) and Wave 5 (01-06 runbooks + CONTRIBUTING + SECURITY.md, two human-action checkpoints: Socket.dev install + branch-protection runbook). Branch protection still deferred until Wave 5 Task 4 per Pitfall A — status-check names are now registered in GitHub's check registry from run #25317482833.
 
+**This session (2026-05-06):** Phase 2 context gathered via `/gsd-discuss-phase 2`. 20 implementation decisions captured (D-01..D-21) across four gray areas: IIFE test-access strategy (mini-strangler-fig leaf extraction per Pitfall 9 step 2 — extract scoring/banding/completion/migration/unread/cloud-sync/auth helpers into src/domain/, src/data/, src/auth/, src/util/ with ESM bridge via `<script type="module">`); snapshot strategy (TEST-10) (toMatchFileSnapshot one-html-per-view + comprehensive clock/UUID/Math.random seeding + Chart.js stub); mocking & fixtures (tests/mocks/firebase.js reusable factory + real crypto.subtle.digest with known-password fixtures + flat tests/fixtures/ layout); coverage threshold + CI strictness (tiered per-directory thresholds — domain/util 100%, auth 95%, data 90%; hard CI fail on test/coverage/snapshot/typecheck miss; soft <30s local / <90s CI runtime target). Supersedes Phase 1 D-14 (index.html unchanged) — Phase 2 D-04 explicitly rewrites the script tag to type="module". Artefacts at `.planning/phases/02-test-suite-foundation/02-CONTEXT.md` + `02-DISCUSSION-LOG.md`.
+
 ---
 
 *State initialized: 2026-05-03 after roadmap creation*
-*Last updated: 2026-05-04 — Phase 1 Waves 0-3 complete and on origin/main; first green CI run #25317482833 confirms all 5 status-check names registered (Pitfall A precondition satisfied for Wave 5)*
+*Last updated: 2026-05-06 — Phase 2 CONTEXT.md gathered; ready for /gsd-plan-phase 2*

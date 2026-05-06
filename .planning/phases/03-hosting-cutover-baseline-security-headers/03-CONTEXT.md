@@ -259,6 +259,34 @@ Cut production from GitHub Pages → Firebase Hosting at `baselayers.bedeveloped
 
 </deferred>
 
+<preflight_addendum>
+## Pre-Flight Addendum (Wave 1)
+
+**Source:** `03-PREFLIGHT.md` (produced 2026-05-06 by Plan 03-01).
+**Convention:** This section records any divergence from CONTEXT.md decisions discovered during Wave 1 verification. Downstream plans (03-02..03-05) consume `03-PREFLIGHT.md` as the canonical record; this section is a short pointer + decision-impact summary so agents reading CONTEXT.md alone do not miss it.
+
+### D-06 (Firestore region: europe-west2)
+
+- **Status:** PENDING-USER. The gcloud auth token in the Phase-3 worktree environment expired and could not be refreshed non-interactively, so `gcloud firestore databases describe` was not run by Claude. The verification command and decision rules are recorded in `03-PREFLIGHT.md` `## Firestore Region`.
+- **Impact on D-06:** **None for Phase 3 deploy.** D-06 pins the `csp-violations` Cloud Function to `europe-west2` regardless of Firestore region — the function does not call Firestore (it logs to Cloud Logging per D-10a). If the verified Firestore region turns out to be non-EU, the divergence is recorded back into this section by the operator after `gcloud auth login`, and Phase 6 / Phase 11 PRIVACY.md re-open the residency conversation. **D-06 is locked; do not mutate.**
+
+### D-09 (frame-src auth popup origin)
+
+- **Status:** RESOLVED, **no divergence**. The auth domain `bedeveloped-base-layers.firebaseapp.com` is verified in-source at `firebase-init.js` line 39 and `.planning/codebase/INTEGRATIONS.md` line 11. D-09's `frame-src https://bedeveloped-base-layers.firebaseapp.com` directive ships verbatim.
+- **Tangential D-09 finding:** When Phase 6 lands real Auth, the popup helper at `https://apis.google.com` will need to be added to `script-src`. This is **not** a Phase 3 concern — Phase 3 ships Report-Only CSP and the popup is not loaded until Phase 6. Recorded for Phase 6 planner.
+
+### Other significant divergence found in Wave 1 (not D-06/D-09 but downstream-blocking)
+
+- **`dist/index.html` is NOT fully self-hosted.** RESEARCH.md §Summary lines 79-82 stated the Vite build self-hosts Google Fonts and Chart.js. The actual `dist/index.html` after `npm run build` retains:
+  - `https://fonts.googleapis.com/css2?...` `<link rel="stylesheet">` (line 11 of dist/index.html)
+  - `https://fonts.gstatic.com` preconnect (line 9)
+  - `https://cdn.jsdelivr.net/npm/chart.js@4.4.1/.../chart.umd.min.js` `<script>` (line 14)
+- **Reason:** Chart.js is consumed via `window.Chart` (UMD CDN), not as an ES module import; Google Fonts is loaded via `<link rel="stylesheet">` which Vite does not rewrite. The CDN→npm migration is documented in source as a Phase 4 task (`firebase-init.js` line 2 comment).
+- **Impact on D-07 (CSP directive list):** 03-02-PLAN.md MUST add `https://cdn.jsdelivr.net` to `script-src`, `https://fonts.googleapis.com` to `style-src`, and `https://fonts.gstatic.com` to `font-src` for the Phase-3-only deploy. Phase 4 (CDN→npm) removes these. Document the temporary additions in SECURITY.md per D-15 with a clear cleanup-ledger entry.
+- **Impact on D-07 (connect-src list):** Add `https://securetoken.google.com` (it is referenced in the SDK 12.12.1 source but the `*.googleapis.com` wildcard in D-07's connect-src does NOT cover the `.google.com` host). All other SDK origins are covered by D-07's existing wildcard or explicit entries.
+
+</preflight_addendum>
+
 <addendum>
 ## Decision Refinements (post-research)
 

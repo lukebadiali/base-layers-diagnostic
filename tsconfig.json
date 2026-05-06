@@ -19,6 +19,8 @@
     "functions/lib",
     "coverage",
     "vite.config.js",
-    "eslint.config.js"
+    "eslint.config.js",
+    "tests/fixtures/_generators",
+    "tests/crypto-parity.test.js"
   ]
 }

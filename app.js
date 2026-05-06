@@ -10,6 +10,51 @@
    All state in localStorage — no backend required.
    ============================================================ */
 
+// Phase 2 (D-04 supersedes Phase 1 D-14): index.html now loads this file as
+// type="module". Imports below are populated by Waves 1-4.
+//
+// Waves that populate this block:
+//   Wave 1 (Plan 02-02): src/util/ids.js, src/util/hash.js  [LANDED]
+//   Wave 2 (Plan 02-03): src/domain/banding.js, src/domain/scoring.js
+//   Wave 3 (Plan 02-04): src/domain/completion.js, src/domain/unread.js
+//   Wave 4 (Plan 02-05): src/data/migration.js, src/data/cloud-sync.js, src/auth/state-machine.js
+import {
+  uid,
+  iso,
+  formatWhen,
+  initials,
+  firstNameFromAuthor,
+} from "./src/util/ids.js";
+import { hashString } from "./src/util/hash.js";
+import {
+  pillarStatus,
+  bandLabel,
+  bandStatement,
+  bandColor,
+} from "./src/domain/banding.js";
+import {
+  pillarScoreForRound as _pillarScoreForRound,
+  pillarScore as _pillarScore,
+  respondentsForRound,
+  answeredCount as _answeredCount,
+} from "./src/domain/scoring.js";
+import {
+  userCompletionPct as _userCompletionPct,
+  orgSummary as _orgSummary,
+} from "./src/domain/completion.js";
+import {
+  unreadCountForPillar as _unreadCountForPillar,
+  unreadCountTotal as _unreadCountTotal,
+  markPillarRead as _markPillarRead,
+  unreadChatTotal as _unreadChatTotal,
+} from "./src/domain/unread.js";
+import {
+  migrateV1IfNeeded as _migrateV1IfNeeded,
+  clearOldScaleResponsesIfNeeded as _clearOldScaleResponsesIfNeeded,
+} from "./src/data/migration.js";
+import { syncFromCloud as _syncFromCloud } from "./src/data/cloud-sync.js";
+import * as auth from "./src/auth/state-machine.js";
+
 (function () {
   "use strict";
 
@@ -29,22 +74,7 @@
   };
 
   // ---------- Utilities ----------
-  const uid = (p = "") =>
-    // eslint-disable-next-line no-restricted-syntax -- Phase 4: replace with crypto.randomUUID(). See runbooks/phase-4-cleanup-ledger.md
-    p + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
-
-  const iso = () => new Date().toISOString();
-
-  const formatWhen = (when) => {
-    if (!when) return "";
-    const d = new Date(when);
-    const mins = Math.round((Date.now() - d.getTime()) / 60000);
-    if (mins < 1) return "just now";
-    if (mins < 60) return `${mins}m ago`;
-    if (mins < 60 * 24) return `${Math.round(mins / 60)}h ago`;
-    if (mins < 60 * 24 * 7) return `${Math.round(mins / (60 * 24))}d ago`;
-    return d.toLocaleDateString();
-  };
+  // Phase 2 (D-05): uid, iso, formatWhen extracted to src/util/ids.js — re-imported at module top, do not re-define.
 
   const formatDate = (when) => {
     if (!when) return "";
@@ -55,30 +85,7 @@
     });
   };
 
-  const initials = (name = "") =>
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((s) => s[0].toUpperCase())
-      .join("");
-
-  // Take "Luke Badiali" -> "Luke", "luke.badiali@x.com" -> "Luke", "luke@x.com" -> "Luke".
-  const capitalise = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
-  const firstNameFromAuthor = (m) => {
-    const name = (m.authorName || "").trim();
-    if (name) {
-      const first = name.split(/\s+/)[0];
-      if (first) return first;
-    }
-    const email = (m.authorEmail || "").trim();
-    if (email) {
-      const local = email.split("@")[0] || "";
-      const piece = local.split(/[.\-_+]/)[0] || "";
-      if (piece) return capitalise(piece);
-    }
-    return "Unknown";
-  };
+  // Phase 2 (D-05): initials, firstNameFromAuthor (and the private capitalise helper) extracted to src/util/ids.js — re-imported at module top, do not re-define.
 
   // ---------- JSON helpers ----------
   const jget = (k, fallback) => {
@@ -237,74 +244,53 @@
   }
 
   // ---------- Scoring (aggregated across users in a round) ----------
-  function pillarScoreForRound(org, roundId, pillarId) {
-    const p = DATA.pillars.find((pp) => pp.id === pillarId);
-    if (!p) return null;
-    const byUser = (org.responses || {})[roundId] || {};
-    const normalized = [];
-    Object.values(byUser).forEach((perPillar) => {
-      const perQ = (perPillar || {})[pillarId] || {};
-      Object.entries(perQ).forEach(([idx, r]) => {
-        if (!Number.isFinite(r.score)) return;
-        const meta = questionMeta(p.diagnostics[Number(idx)]);
-        if (!meta || !meta.scale) return;
-        normalized.push((r.score / meta.scale) * 100);
-      });
-    });
-    if (!normalized.length) return null;
-    return Math.round(normalized.reduce((a, b) => a + b, 0) / normalized.length);
-  }
-
-  function pillarScore(org, pillarId) {
-    return pillarScoreForRound(org, org.currentRoundId, pillarId);
-  }
-
-  function pillarStatus(score) {
-    if (score === null || score === undefined) return "gray";
-    if (score <= 50) return "red";
-    if (score <= 75) return "amber";
-    return "green";
-  }
-
-  function respondentsForRound(org, roundId) {
-    const byUser = (org.responses || {})[roundId] || {};
-    return Object.keys(byUser);
-  }
-
+  // Phase 2 (D-05): pillarScoreForRound, pillarScore, respondentsForRound, answeredCount
+  // extracted to src/domain/scoring.js — wrappers below bind DATA + questionMeta (Pattern E).
+  // pillarStatus extracted to src/domain/banding.js (D-02 routes it to banding) — re-imported at module top.
+  const pillarScoreForRound = (org, roundId, pillarId) =>
+    _pillarScoreForRound(org, roundId, pillarId, DATA, questionMeta);
+  const pillarScore = (org, pillarId) => _pillarScore(org, pillarId, DATA, questionMeta);
   // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead code or wire up call site. See runbooks/phase-4-cleanup-ledger.md
-  function answeredCount(org, roundId, userId, pillarId) {
-    const resp = (((org.responses || {})[roundId] || {})[userId] || {})[pillarId] || {};
-    const total = DATA.pillars.find((p) => p.id === pillarId).diagnostics.length;
-    const done = Object.values(resp).filter((r) => Number.isFinite(r.score)).length;
-    return { done, total };
-  }
+  const answeredCount = (org, roundId, userId, pillarId) =>
+    _answeredCount(org, roundId, userId, pillarId, DATA);
 
-  function userCompletionPct(org, roundId, userId) {
-    const totalQ = DATA.pillars.reduce((s, p) => s + p.diagnostics.length, 0);
-    const resp = ((org.responses || {})[roundId] || {})[userId] || {};
-    let done = 0;
-    DATA.pillars.forEach((p) => {
-      const pq = resp[p.id] || {};
-      done += Object.values(pq).filter((r) => Number.isFinite(r.score)).length;
-    });
-    return Math.round((done / totalQ) * 100);
-  }
+  // Phase 2 Wave 3 (D-05): wrappers for completion + unread (Pattern E).
+  // Bodies extracted to src/domain/completion.js + src/domain/unread.js.
+  // userCompletionPct + orgSummary inject DATA + pillarScore; unread wrappers
+  // inject saveOrg / commentsFor / state / lastReadMillis / msgMillis / unreadChatForOrg
+  // (all defined later in the IIFE — safe because wrappers resolve those names
+  // at call time, by which point they exist in scope).
+  const userCompletionPct = (org, roundId, userId) =>
+    _userCompletionPct(org, roundId, userId, DATA);
+  const orgSummary = (org) => _orgSummary(org, DATA, pillarScore);
+  const unreadCountForPillar = (org, pillarId, user) =>
+    _unreadCountForPillar(org, pillarId, user, commentsFor);
+  const unreadCountTotal = (org, user) => _unreadCountTotal(org, user, DATA, commentsFor);
+  const markPillarRead = (org, pillarId, user) => _markPillarRead(org, pillarId, user, saveOrg);
+  const unreadChatTotal = (user) =>
+    _unreadChatTotal(user, state, lastReadMillis, msgMillis, unreadChatForOrg);
 
-  function orgSummary(org) {
-    const scored = DATA.pillars.map((p) => pillarScore(org, p.id)).filter((s) => s !== null);
-    const avg = scored.length
-      ? Math.round(scored.reduce((a, b) => a + b, 0) / scored.length)
-      : null;
-    const statuses = DATA.pillars.map((p) => pillarStatus(pillarScore(org, p.id)));
-    return {
-      avg,
-      red: statuses.filter((s) => s === "red").length,
-      amber: statuses.filter((s) => s === "amber").length,
-      green: statuses.filter((s) => s === "green").length,
-      gray: statuses.filter((s) => s === "gray").length,
-      scoredCount: scored.length,
-    };
-  }
+  // Phase 2 Wave 4 (D-05): wrappers for migration helpers (Pattern E).
+  // Bodies extracted to src/data/migration.js.
+  const migrateV1IfNeeded = () => _migrateV1IfNeeded({
+    loadUsers, loadOrgMetas, loadOrg, saveOrg, upsertUser, findUser,
+    removeV1ActiveKey: () => LS.removeItem(K.v1Active),
+  });
+  const clearOldScaleResponsesIfNeeded = () => _clearOldScaleResponsesIfNeeded({
+    loadSettings, saveSettings, loadOrgMetas, loadOrg, saveOrg,
+  });
+  const syncFromCloud = () => _syncFromCloud({
+    fbReady, cloudFetchAllOrgs, cloudFetchAllUsers, cloudPushOrg, cloudPushUser,
+    jget, jset, K, render,
+  });
+  // Phase 2 Wave 4 (D-05): wrappers for auth state-machine (Pattern E).
+  // Bodies extracted to src/auth/state-machine.js. Phase 6 (AUTH-14) deletes the whole module.
+  const verifyInternalPassword = (pass) => auth.verifyInternalPassword(pass, { INTERNAL_PASSWORD_HASH });
+  const verifyOrgClientPassphrase = (orgId, pass) => auth.verifyOrgClientPassphrase(orgId, pass, { loadOrg });
+  const verifyUserPassword = (userId, pass) => auth.verifyUserPassword(userId, pass, { findUser });
+  const currentUser = () => auth.currentUser({ currentSession, findUser });
+
+  // Phase 2 (D-05): userCompletionPct + orgSummary extracted to src/domain/completion.js — wrappers above.
 
   function topConstraints(org, n = 3) {
     return DATA.pillars
@@ -337,33 +323,13 @@
     return list;
   }
 
-  function unreadCountForPillar(org, pillarId, user) {
-    const list = commentsFor(org, pillarId, user);
-    const last = ((org.readStates || {})[user.id] || {})[pillarId];
-    const lastT = last ? new Date(last).getTime() : 0;
-    return list.filter((c) => new Date(c.createdAt).getTime() > lastT && c.authorId !== user.id)
-      .length;
-  }
-
-  function unreadCountTotal(org, user) {
-    return DATA.pillars.reduce((s, p) => s + unreadCountForPillar(org, p.id, user), 0);
-  }
-
-  function markPillarRead(org, pillarId, user) {
-    org.readStates = org.readStates || {};
-    org.readStates[user.id] = org.readStates[user.id] || {};
-    org.readStates[user.id][pillarId] = iso();
-    saveOrg(org);
-  }
+  // Phase 2 (D-05): unreadCountForPillar, unreadCountTotal, markPillarRead extracted to src/domain/unread.js — wrappers above.
 
   // ---------- Auth ----------
   function currentSession() {
     return jget(K.session, null);
   }
-  function currentUser() {
-    const s = currentSession();
-    return s ? findUser(s.userId) : null;
-  }
+  // Phase 2 (D-05): currentUser extracted to src/auth/state-machine.js — wrapper above.
   function signIn(userId) {
     jset(K.session, { userId });
   }
@@ -402,16 +368,7 @@
       (m) => m.orgId === orgId && m.authorId !== user.id && msgMillis(m) > lastT,
     ).length;
   }
-  function unreadChatTotal(user) {
-    if (!user) return 0;
-    if (user.role === "client") return unreadChatForOrg(user, user.orgId);
-    // internal: count across every org they're seeing
-    return (state.chatMessages || []).reduce((n, m) => {
-      if (m.authorId === user.id) return n;
-      const lastT = lastReadMillis(user.id, m.orgId);
-      return msgMillis(m) > lastT ? n + 1 : n;
-    }, 0);
-  }
+  // Phase 2 (D-05): unreadChatTotal extracted to src/domain/unread.js — wrapper above.
 
   function stopChatSubscription() {
     if (state.chatSubscription) {
@@ -469,21 +426,7 @@
     document.title = unread > 0 ? `(${unread}) ${BASE_TAB_TITLE}` : BASE_TAB_TITLE;
   }
 
-  // trivial hashing for demo purposes (NOT secure — just to avoid plaintext storage)
-  async function hashString(s) {
-    try {
-      const enc = new TextEncoder().encode(String(s));
-      const buf = await crypto.subtle.digest("SHA-256", enc);
-      return Array.from(new Uint8Array(buf))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-    } catch {
-      // fallback
-      let h = 0;
-      for (const ch of String(s)) h = ((h << 5) - h + ch.charCodeAt(0)) | 0;
-      return String(h);
-    }
-  }
+  // Phase 2 (D-05): hashString extracted to src/util/hash.js — re-imported at module top, do not re-define.
 
   async function setInternalPassphrase(pass) {
     const s = loadSettings();
@@ -507,10 +450,7 @@
     const e = (email || "").trim().toLowerCase();
     return INTERNAL_ALLOWED_EMAILS.includes(e);
   }
-  async function verifyInternalPassword(pass) {
-    const h = await hashString(pass);
-    return h === INTERNAL_PASSWORD_HASH;
-  }
+  // Phase 2 (D-05): verifyInternalPassword extracted to src/auth/state-machine.js — wrapper above.
 
   // ---------- Client org passphrase (shared by all users of an org) ----------
   async function setOrgClientPassphrase(orgId, pass) {
@@ -520,12 +460,7 @@
     saveOrg(org);
     return true;
   }
-  async function verifyOrgClientPassphrase(orgId, pass) {
-    const org = loadOrg(orgId);
-    if (!org || !org.clientPassphraseHash) return false;
-    const h = await hashString(pass);
-    return h === org.clientPassphraseHash;
-  }
+  // Phase 2 (D-05): verifyOrgClientPassphrase extracted to src/auth/state-machine.js — wrapper above.
   function orgHasClientPassphrase(orgId) {
     const org = loadOrg(orgId);
     return !!(org && org.clientPassphraseHash);
@@ -539,87 +474,9 @@
     upsertUser(u);
     return true;
   }
-  async function verifyUserPassword(userId, pass) {
-    const u = findUser(userId);
-    if (!u || !u.passwordHash) return false;
-    const h = await hashString(pass);
-    return h === u.passwordHash;
-  }
+  // Phase 2 (D-05): verifyUserPassword extracted to src/auth/state-machine.js — wrapper above.
 
-  // ---------- v1 → v2 migration ----------
-  function migrateV1IfNeeded() {
-    const users = loadUsers();
-    const orgs = loadOrgMetas();
-    if (users.length > 0) return; // already v2
-
-    // If v1 data exists, migrate it
-    const v1Orgs = orgs.slice();
-    if (v1Orgs.length === 0) return;
-
-    // Create a legacy respondent user so historical responses have an owner
-    const legacyId = uid("u_");
-    const legacy = {
-      id: legacyId,
-      email: "legacy@bedeveloped.local",
-      name: "Legacy respondent",
-      role: "client",
-      orgId: null, // set later if single-org
-      createdAt: iso(),
-    };
-    upsertUser(legacy);
-
-    v1Orgs.forEach((meta) => {
-      const raw = loadOrg(meta.id);
-      if (!raw) return;
-
-      // Already migrated?
-      if (raw.rounds && raw.currentRoundId) return;
-
-      const roundId = uid("r_");
-      const migrated = {
-        id: raw.id,
-        name: raw.name,
-        createdAt: raw.createdAt || iso(),
-        currentRoundId: roundId,
-        rounds: [{ id: roundId, label: "Round 1 (migrated)", createdAt: raw.createdAt || iso() }],
-        responses: { [roundId]: {} },
-        internalNotes: {},
-        actions: (raw.actions || []).map((a) => ({ ...a, createdBy: legacyId })),
-        engagement: raw.engagement || { currentStageId: "diagnosed", stageChecks: {} },
-        comments: {},
-        readStates: {},
-      };
-
-      // migrate old responses (single respondent)
-      const oldResp = raw.responses || {};
-      const byUser = migrated.responses[roundId];
-      byUser[legacyId] = {};
-      Object.entries(oldResp).forEach(([pillarId, qs]) => {
-        byUser[legacyId][pillarId] = {};
-        Object.entries(qs || {}).forEach(([idx, r]) => {
-          byUser[legacyId][pillarId][idx] = {
-            score: r.score,
-            note: r.note || "",
-          };
-          if (r.internalNote) {
-            migrated.internalNotes[pillarId] = migrated.internalNotes[pillarId] || {};
-            migrated.internalNotes[pillarId][idx] = r.internalNote;
-          }
-        });
-      });
-
-      saveOrg(migrated);
-    });
-
-    // If there was exactly one org, point legacy user at it
-    if (v1Orgs.length === 1) {
-      const leg = findUser(legacyId);
-      leg.orgId = v1Orgs[0].id;
-      upsertUser(leg);
-    }
-
-    LS.removeItem(K.v1Active);
-  }
+  // Phase 2 (D-05): extracted to src/data/migration.js — wrappers above.
 
   // ---------- State ----------
   const state = {
@@ -2813,32 +2670,7 @@
   // ================================================================
   // REPORT
   // ================================================================
-  function bandLabel(s) {
-    if (s === null || s === undefined) return "Not scored";
-    if (s <= 50) return "Low";
-    if (s <= 75) return "Medium";
-    return "High";
-  }
-
-  function bandStatement(pillarName, s) {
-    if (s === null || s === undefined) {
-      return `${pillarName} has not yet been scored. Once the diagnostic is complete, you will see a detailed view here including your development priorities.`;
-    }
-    if (s <= 50) {
-      return `Your team scored ${s}/100 on ${pillarName}. This is a LOW score and a priority development area. Investment here is likely to unlock compounding gains across other pillars, because ${pillarName.toLowerCase()} sits upstream of how the rest of your commercial engine performs.`;
-    }
-    if (s <= 75) {
-      return `Your team scored ${s}/100 on ${pillarName}. This is a MEDIUM score. Foundational elements are in place, but there is clear room to strengthen consistency, codify what is working, and remove variability between individuals and situations.`;
-    }
-    return `Your team scored ${s}/100 on ${pillarName}. This is a HIGH score and, on current evidence, a strength. The opportunity here is to maintain discipline, protect the standard as you scale, and treat this as a competitive advantage worth defending.`;
-  }
-
-  function bandColor(s) {
-    if (s === null || s === undefined) return "var(--line-2)";
-    if (s <= 50) return "var(--red)";
-    if (s <= 75) return "var(--amber)";
-    return "var(--green)";
-  }
+  // Phase 2 (D-05): bandLabel, bandStatement, bandColor extracted to src/domain/banding.js — re-imported at module top.
 
   function renderReport(user, org) {
     const frag = h("div");
@@ -3549,48 +3381,8 @@
     }
   }
 
-  // Bootstrap: pull cloud orgs/users into local cache. Anything that exists
-  // locally but not in cloud (e.g. a brand-new install) gets pushed up.
-  // Cloud wins on overlap. Bails silently if either fetch errors so we never
-  // wipe local data on a network blip.
-  async function syncFromCloud() {
-    if (!fbReady()) return;
-    const [cloudOrgs, cloudUsers] = await Promise.all([cloudFetchAllOrgs(), cloudFetchAllUsers()]);
-    if (cloudOrgs === null || cloudUsers === null) return;
-
-    // ---- Orgs ----
-    const localMetas = jget(K.orgs, []);
-    const cloudOrgIds = new Set(cloudOrgs.map((o) => o.id));
-    localMetas.forEach((meta) => {
-      if (!cloudOrgIds.has(meta.id)) {
-        const local = jget(K.org(meta.id), null);
-        if (local) cloudPushOrg(local);
-      }
-    });
-    cloudOrgs.forEach((o) => {
-      if (o && o.id) jset(K.org(o.id), o);
-    });
-    const newMetas = cloudOrgs.filter((o) => o && o.id).map((o) => ({ id: o.id, name: o.name }));
-    localMetas.forEach((m) => {
-      if (!cloudOrgIds.has(m.id)) newMetas.push(m);
-    });
-    jset(K.orgs, newMetas);
-
-    // ---- Users ----
-    const localUsers = jget(K.users, []);
-    const cloudUserIds = new Set(cloudUsers.map((u) => u.id));
-    localUsers.forEach((u) => {
-      if (!cloudUserIds.has(u.id)) cloudPushUser(u);
-    });
-    const merged = [...cloudUsers];
-    localUsers.forEach((u) => {
-      if (!cloudUserIds.has(u.id)) merged.push(u);
-    });
-    jset(K.users, merged);
-
-    // Re-render so the UI reflects synced data
-    if (typeof render === "function") render();
-  }
+  // Phase 2 (D-05): syncFromCloud extracted to src/data/cloud-sync.js — wrapper above.
+  // Pitfall 20 / H8 entanglement preserved as REGRESSION BASELINE in tests/data/cloud-sync.test.js.
 
   // ================================================================
   // DOCUMENTS (Firebase Storage + Firestore)
@@ -5454,23 +5246,7 @@ Any questions, just let me know.`;
   // ================================================================
   // INIT
   // ================================================================
-  // One-shot: clear all diagnostic responses when switching from the
-  // old 1-5 scale to the new 1-10 confidence scale. Runs once per browser.
-  function clearOldScaleResponsesIfNeeded() {
-    const s = loadSettings();
-    if (s.scaleV2Cleared) return;
-    loadOrgMetas().forEach((m) => {
-      const org = loadOrg(m.id);
-      if (!org) return;
-      org.responses = {};
-      // Keep the current round id present but empty
-      if (org.currentRoundId) org.responses[org.currentRoundId] = {};
-      org.internalNotes = {};
-      saveOrg(org);
-    });
-    s.scaleV2Cleared = true;
-    saveSettings(s);
-  }
+  // Phase 2 (D-05): clearOldScaleResponsesIfNeeded extracted to src/data/migration.js — wrapper above.
 
   // One-shot: clear all diagnostic responses when the 10-pillar framework
   // is restructured. Pillar IDs shift meaning so old scores would attach to

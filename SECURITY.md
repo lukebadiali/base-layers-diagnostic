@@ -48,6 +48,29 @@ Phase 3's hosting cutover).
 - SOC 2 CC8.1 — change management; all dependency changes gated by CI +
   human review
 
+**Regression baseline (Phase 2):** TEST-01..07 + TEST-10 form the codified
+pre-Phase-4 contract. Vitest 4 unit tests assert the public behaviour of all
+extracted leaf modules under `src/`; file-snapshot tests under
+`tests/__snapshots__/views/` pin dashboard / diagnostic / report DOM output.
+Coverage thresholds (per-directory, hard CI fail) are wired in `vite.config.js`
+and verified by the `Test` CI job. The Phase 4 modular split is gated by these
+tests staying green; any drift surfaces as a CI failure or a snapshot diff
+reviewable in the PR.
+
+**Evidence:**
+
+- Test files: `tests/util/`, `tests/domain/`, `tests/data/`, `tests/auth/`, `tests/views/`
+- Snapshot baselines: `tests/__snapshots__/views/*.html` (committed; D-08)
+- Coverage thresholds: `vite.config.js` `test.coverage.thresholds` (D-15)
+- HTML coverage artefact in CI: `coverage-report-html` per workflow run (D-20)
+
+**Framework citations:**
+
+- OWASP ASVS L2 v5.0 V14.2 — dependencies and build verification
+- ISO/IEC 27001:2022 A.12.1.2 — change management (testing of changes)
+- SOC 2 CC8.1 — change management evidence trail
+- GDPR Art. 32(1)(d) — process for testing/evaluating effectiveness of technical measures
+
 ---
 
 ## § Dependency Monitoring

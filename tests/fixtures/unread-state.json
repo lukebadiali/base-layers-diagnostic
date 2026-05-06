@@ -1,0 +1,19 @@
+{
+  "org": {
+    "id": "org_test-1",
+    "comments": {
+      "1": [
+        { "id": "c_a", "authorId": "u_other", "createdAt": "2025-12-31T23:55:00.000Z" },
+        { "id": "c_b", "authorId": "u_other", "createdAt": "2026-01-01T00:05:00.000Z" },
+        { "id": "c_c", "authorId": "u_self",  "createdAt": "2026-01-01T00:10:00.000Z" }
+      ]
+    },
+    "readStates": {
+      "u_self": { "1": "2026-01-01T00:00:00.000Z" }
+    }
+  },
+  "users": {
+    "self":  { "id": "u_self",  "role": "internal" },
+    "other": { "id": "u_other", "role": "client" }
+  }
+}

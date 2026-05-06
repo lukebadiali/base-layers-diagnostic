@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-05-04T17:18:00.000Z"
+status: ready
+last_updated: "2026-05-06T15:30:00.000Z"
 progress:
   total_phases: 12
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
-  percent: 8
+  completed_phases: 2
+  total_plans: 18
+  completed_plans: 12
+  percent: 67
 ---
 
 # State: Base Layers Diagnostic — Hardening Pass
@@ -27,7 +27,7 @@ progress:
 Client diagnostic data must remain confidential, intact, and recoverable — and BeDeveloped must be able to honestly answer a prospect's security questionnaire about how that's enforced.
 
 **Current focus:**
-Phase 01 — engineering-foundation-tooling
+Phase 3 — Hosting Cutover + Baseline Security Headers (Phase 2 complete 2026-05-06)
 
 **Compliance bar:** credible, **not** certified. Certification is a separate workstream.
 
@@ -35,20 +35,29 @@ Phase 01 — engineering-foundation-tooling
 
 ## Current Position
 
-Phase: 01 (engineering-foundation-tooling) — COMPLETE (verifier sign-off pending)
-Plan: 6 of 6 (all waves landed)
-**Phase:** 1 — Engineering Foundation (Tooling)
-**Plan:** 6 plans created (Waves 0-5), 6/6 executed
-**Status:** Phase 01 closed — branch protection applied, Socket.dev installed, final clean-clone gauntlet PASS
-**Progress:** 1/12 phases complete
+Phase: 2 — COMPLETE (Test Suite Foundation — 6/6 plans executed, verifier 9/9, code review 0 critical / 0 warning / 9 info — all out-of-scope per D-05)
+**Status:** Phase 2 complete; awaiting next-phase routing
+**Progress:** 2/12 phases complete
 
 ```
-[#...............] 8%
+[##..............] 17%
  1  2  3  4  5  6  7  8  9 10 11 12
- ✓  .  .  .  .  .  .  .  .  .  .  .
+ ✓  ✓  .  .  .  .  .  .  .  .  .  .
 ```
 
-**Next action:** `/gsd-verify-work 1` to formally close Phase 1, then `/gsd-plan-phase 2` to begin Test Suite Foundation
+**Next action:** `/gsd-discuss-phase 3` (recommended — start the hosting-cutover discussion before planning) or `/gsd-plan-phase 3` (skip discussion).
+
+**Phase 2 deliverables (locked 2026-05-06):**
+- 9 modules extracted to `src/{util,domain,data,auth}/*` with byte-identical D-05 comments
+- 14 test files / 149 tests / coverage 100% statements / 98.94% branches / 100% functions / 100% lines
+- 3 view snapshot baselines committed at `tests/__snapshots__/views/*.html` (toMatchFileSnapshot per D-13)
+- Tiered coverage thresholds (D-15) live in CI: domain/util 100%, auth 95%, data 90%
+- ESLint `no-restricted-imports` rule blocks `src/**` and `app.js` from importing `tests/**` (T-2-03 codified)
+- CI uploads coverage HTML artefact (D-20)
+- CONTRIBUTING.md governance section codifies test-first PR rule + threshold-drop block (D-17 + D-18)
+- T-2-01 mitigated end-to-end (Pre-flight 1 + 2 confirmed `application/javascript` MIME on GH-Pages)
+- T-2-04 mitigation activated (coverage gate is now load-bearing — proven via canary procedure)
+- TEST-06 (cloud-sync) is the H8/Pitfall 20 baseline; TEST-07 (auth state machine) is the Phase 6 deletion baseline; both flagged in cleanup ledger
 
 ---
 
@@ -150,7 +159,9 @@ Additional non-negotiables:
 
 **Resume point:** `/gsd-execute-phase 1` to continue with Wave 4 (01-05 Dependabot, autonomous) and Wave 5 (01-06 runbooks + CONTRIBUTING + SECURITY.md, two human-action checkpoints: Socket.dev install + branch-protection runbook). Branch protection still deferred until Wave 5 Task 4 per Pitfall A — status-check names are now registered in GitHub's check registry from run #25317482833.
 
+**This session (2026-05-06):** Phase 2 context gathered via `/gsd-discuss-phase 2`. 20 implementation decisions captured (D-01..D-21) across four gray areas: IIFE test-access strategy (mini-strangler-fig leaf extraction per Pitfall 9 step 2 — extract scoring/banding/completion/migration/unread/cloud-sync/auth helpers into src/domain/, src/data/, src/auth/, src/util/ with ESM bridge via `<script type="module">`); snapshot strategy (TEST-10) (toMatchFileSnapshot one-html-per-view + comprehensive clock/UUID/Math.random seeding + Chart.js stub); mocking & fixtures (tests/mocks/firebase.js reusable factory + real crypto.subtle.digest with known-password fixtures + flat tests/fixtures/ layout); coverage threshold + CI strictness (tiered per-directory thresholds — domain/util 100%, auth 95%, data 90%; hard CI fail on test/coverage/snapshot/typecheck miss; soft <30s local / <90s CI runtime target). Supersedes Phase 1 D-14 (index.html unchanged) — Phase 2 D-04 explicitly rewrites the script tag to type="module". Artefacts at `.planning/phases/02-test-suite-foundation/02-CONTEXT.md` + `02-DISCUSSION-LOG.md`.
+
 ---
 
 *State initialized: 2026-05-03 after roadmap creation*
-*Last updated: 2026-05-04 — Phase 1 Waves 0-3 complete and on origin/main; first green CI run #25317482833 confirms all 5 status-check names registered (Pitfall A precondition satisfied for Wave 5)*
+*Last updated: 2026-05-06 — Phase 2 CONTEXT.md gathered; ready for /gsd-plan-phase 2*

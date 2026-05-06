@@ -79,6 +79,68 @@ target post-Phase-4 layout is in `.planning/research/ARCHITECTURE.md`.
 Tests live under `tests/`. Runbooks for one-shot operations live under
 `runbooks/`. Project planning + decision history lives under `.planning/`.
 
+## Updating snapshot tests
+
+Snapshot files at `tests/__snapshots__/views/*.html` are committed; the diff in
+PR review IS the snapshot governance.
+
+### When a snapshot diff appears
+
+1. `npm test` will fail with a snapshot mismatch.
+2. Run `npm test -- -u` locally to update the snapshot files.
+3. Inspect the diff — `git diff tests/__snapshots__/`. The diff should match
+   the change you intended (e.g., the dashboard header text changed —
+   verify the only diff is the header text).
+4. Commit the snapshot update in the same PR as the change.
+5. Reviewer asserts intentionality of the snapshot diff.
+
+### CI never auto-updates snapshots
+
+The CI invocation is `npm run test:coverage` (no `-u` / `--update`). A snapshot
+mismatch in CI is a hard failure. The `-u` flag is a developer tool, never a
+CI tool.
+
+### Regression-baseline tests
+
+Three test files are deliberate regression baselines of broken behaviour:
+
+- `tests/domain/unread.test.js` — pins H7 (clock skew) entanglement; Phase 5
+  (DATA-07) will break it by design.
+- `tests/data/cloud-sync.test.js` — pins H8 (last-writer-wins) cloud-sync
+  semantics; Phase 5+ subcollection migration will break it by design.
+- `tests/auth/state-machine.test.js` — pins the pre-Phase-6 password
+  comparator path; Phase 6 (AUTH-14) will DELETE this file alongside the
+  production code.
+
+Each file opens with a `REGRESSION BASELINE` header documenting the design
+intent. If you find yourself "fixing" a failing assertion in one of these
+files, **stop** and check whether you're in the cutover phase that's supposed
+to break it. If yes, the test diff is the cutover evidence — preserve it.
+If no, you've found a real regression; investigate the production change.
+
+### Coverage thresholds (test-first PR rule, D-15 + D-17 + D-18)
+
+`vite.config.js` declares per-directory coverage thresholds enforced as a hard
+CI gate (`npm run test:coverage` exits non-zero on threshold miss):
+
+- `src/domain/**` and `src/util/**`: 100% lines / branches / functions / statements
+- `src/auth/**`: 95% across the four metrics
+- `src/data/**`: 90% across the four metrics
+
+Every PR that touches `src/**` must touch a corresponding `tests/**` file.
+**Lowering a threshold is a separate PR** that explicitly justifies the change
+(usually with a referenced phase plan); doing so silently inside an unrelated
+feature PR is the "weakening to make it pass" anti-pattern that
+`SECURITY_AUDIT.md` §0(4) blocks. The threshold values are committed source
+of truth — any reduction shows up in `git diff vite.config.js`.
+
+## Test runtime budget
+
+Soft target (no enforcement): `npm test` completes in <30s locally and <90s in
+CI on a clean clone. If a future PR pushes runtime past 2× the target, the PR
+description should justify. Hard timeouts are added in Phase 7 once Cloud
+Functions tests + emulator suites push runtime up legitimately.
+
 ## Reporting security issues
 
 See `SECURITY.md` for the vulnerability disclosure process. Do NOT open

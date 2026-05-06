@@ -123,4 +123,27 @@ export default [
       ],
     },
   },
+
+  // Phase 2 (Plan 02-06, T-2-03 mitigation): block production code from
+  // importing test fixtures. tests/fixtures/auth-passwords.js holds TEST
+  // credentials; a stray import from src/** or app.js would leak them into
+  // the production bundle. The rule is files-scoped so tests/ keep importing
+  // from tests/ freely. Hard error — this is a security boundary.
+  {
+    files: ["src/**/*.js", "app.js"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/tests/**", "../tests/*", "../../tests/*"],
+              message:
+                "Production code (src/** or app.js) must not import from tests/. T-2-03 mitigation: tests/fixtures/auth-passwords.js is a TEST credential and must not leak into production paths.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];

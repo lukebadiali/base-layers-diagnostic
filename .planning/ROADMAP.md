@@ -88,7 +88,14 @@ Trying to merge (e.g.) Phase 5 with Phase 6, or Phase 1 with Phase 2, violates o
   3. CSP violations from real users / staging sessions arrive at the `csp-violations` Cloud Function endpoint and are persisted (or filtered, for known-noisy paths) without breaking the page
   4. Every push to `main` triggers a CI deploy to Firebase Hosting; opening a PR creates a per-PR preview channel URL
   5. `securityheaders.com` rating is at least "A" (CSP "Report-Only" status acknowledged)
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 03-01-PLAN.md — Wave 1: pre-flight verifications (Firestore region, project ID, registrar, OIDC pool, index.html meta-CSP scan, dist/index.html font-CDN scan, SDK 12.x connect-src verification)
+- [ ] 03-02-PLAN.md — Wave 2: firebase.json + .firebaserc + tests/firebase-config.test.js + tsconfig exclude + SECURITY.md §HTTP Security Headers + §CSP (Report-Only)
+- [ ] 03-03-PLAN.md — Wave 2: functions/ workspace + cspReportSink + normalise + filter + dedup + TDD unit tests
+- [ ] 03-04-PLAN.md — Wave 3: ci.yml deploy + preview jobs via OIDC + post-deploy header assertion + functions/ npm audit + SECURITY.md §Hosting & Deployment
+- [ ] 03-05-PLAN.md — Wave 4 + 5: runbooks/hosting-cutover.md + pre-cutover synthetic smoke + same-session CNAME flip + securityheaders.com manual smoke
+- [ ] 03-06-PLAN.md — Wave 6: cleanup ledger rows (T-3-4 day-14 + T-3-meta-csp-conflict) + branch protection runbook update + SECURITY.md commit-SHA backfill + §Phase 3 Audit Index
 **UI hint**: yes
 
 ### Phase 4: Modular Split + Quick Wins (Pure-Refactor Phase)

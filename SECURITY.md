@@ -238,9 +238,9 @@ Sentry quota alert.
 
 **Evidence:**
 
-- Header configuration: `firebase.json` `hosting.headers[0]` (source: `**`) — Phase 3 Plan 02
-- Schema validation: `tests/firebase-config.test.js` — guards against silent header drop (T-3-1) on every `npm test` run
-- Post-deploy assertion: `.github/workflows/ci.yml` `deploy` job step "Assert security headers" (Phase 3 Plan 04) — fails the deploy if any of HSTS / X-CTO / Referrer-Policy / Permissions-Policy / COOP / COEP / CSP-RO is missing from the live response
+- Header configuration: `firebase.json` `hosting.headers[0]` (source: `**`) — Phase 3 Plan 02 commit `e7a3e06`
+- Schema validation: `tests/firebase-config.test.js` — guards against silent header drop (T-3-1) on every `npm test` run — Phase 3 Plan 02 commit `03f4c07`
+- Post-deploy assertion: `.github/workflows/ci.yml` `deploy` job step "Assert security headers" — fails the deploy if any of HSTS / X-CTO / Referrer-Policy / Permissions-Policy / COOP / COEP / CSP-RO is missing from the live response — Phase 3 Plan 04 commit `49afecb`
 - Header values:
   - `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` (HSTS preload submission deferred to Phase 10 / HOST-06 — gated by ≥7-day stable policy)
   - `X-Content-Type-Options: nosniff`
@@ -273,10 +273,10 @@ Cleanup ledger: revisit in Phase 4 cleanup ledger row "CSP CDN allowlist" — Ph
 
 **Evidence:**
 
-- Policy configuration: `firebase.json` `hosting.headers[0]` (source: `**`) — header keys `Reporting-Endpoints` + `Content-Security-Policy-Report-Only` — Phase 3 Plan 02
+- Policy configuration: `firebase.json` `hosting.headers[0]` (source: `**`) — header keys `Reporting-Endpoints` + `Content-Security-Policy-Report-Only` — Phase 3 Plan 02 commit `e7a3e06`
 - Report sink: `functions/src/csp/cspReportSink.ts` (Phase 3 Plan 03)
 - Filter and dedup: `functions/src/csp/{filter,dedup,normalise}.ts` (Phase 3 Plan 03)
-- Schema validation: `tests/firebase-config.test.js` asserts dual-reporting tokens are present (T-3-1 + T-3-2 mitigation)
+- Schema validation: `tests/firebase-config.test.js` asserts dual-reporting tokens are present (T-3-1 + T-3-2 mitigation) — Phase 3 Plan 02 commit `03f4c07`
 - Soak window: starts on Phase 3 cutover; ends when Phase 10 enforces (CSP enforcement lives at HOST-07)
 - Note: The `csp-violations` endpoint is the **only** unauthenticated public Cloud Function in the milestone; every other callable enforces App Check + claims-based auth from Phase 7 onward. Browsers POST CSP reports natively without App Check tokens, so D-12 limits abuse protection to content-type allowlist + 64 KB body cap.
 
@@ -295,8 +295,8 @@ Cleanup ledger: revisit in Phase 4 cleanup ledger row "CSP CDN allowlist" — Ph
 
 **Evidence:**
 
-- CI deploy job: `.github/workflows/ci.yml` job `deploy` (Phase 3 Plan 04 — push to main, OIDC, post-deploy 9-header curl assertion)
-- CI preview job: `.github/workflows/ci.yml` job `preview` (Phase 3 Plan 04 — pull_request, channel `pr-<number>`, 7d expiry)
+- CI deploy job: `.github/workflows/ci.yml` job `deploy` (Phase 3 Plan 04 commit `49afecb` — push to main, OIDC, post-deploy 9-header curl assertion)
+- CI preview job: `.github/workflows/ci.yml` job `preview` (Phase 3 Plan 04 commit `49afecb` — pull_request, channel `pr-<number>`, 7d expiry)
 - OIDC bootstrap runbook: `runbooks/firebase-oidc-bootstrap.md` (Phase 1 D-23) — Workload Identity Pool `github-actions`, provider `github-oidc`, service account `github-actions-deploy@bedeveloped-base-layers.iam.gserviceaccount.com`
 - SHA-pinned auth action: `google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093` (v3) — verified against GitHub API 2026-05-06
 - SHA-pinned preview action: `FirebaseExtended/action-hosting-deploy@e2eda2e106cfa35cdbcf4ac9ddaf6c4756df2c8c` (v0.10.0)
@@ -315,6 +315,39 @@ Cleanup ledger: revisit in Phase 4 cleanup ledger row "CSP CDN allowlist" — Ph
 - ISO/IEC 27001:2022 A.5.7 — Threat intelligence (cloud services governance — short-lived federated credentials, repo-scoped trust binding)
 - SOC 2 CC8.1 — Change management (CI gates every change through lint + typecheck + test + audit + build + deploy verification before reaching production)
 - Workload Identity Federation — short-lived OAuth tokens minted via OIDC token-exchange (Google Cloud documentation: cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines)
+
+## § Phase 3 Audit Index
+
+This is a one-stop pointer for an auditor walking Phase 3's controls. Each row maps a framework citation to (a) the SECURITY.md section that documents it, (b) the artefact that implements it, (c) the test / smoke / runbook step that verifies it, and (d) the commit SHA(s) that landed each control. Phase 11 (DOC-09) walks this index to populate `docs/CONTROL_MATRIX.md`; Phase 12 (`SECURITY_AUDIT_REPORT.md`) cross-references it for Pass / Partial / N/A entries.
+
+| Framework | Citation | Phase 3 Section | Implemented in | Verified by | Commit SHA(s) |
+|-----------|----------|-----------------|----------------|-------------|---------------|
+| OWASP ASVS L2 v5.0 | V14.4 — HTTP Security Headers | § HTTP Security Headers | `firebase.json` `hosting.headers[0]` | `tests/firebase-config.test.js` (commit-time, T-3-1) + ci.yml `deploy` job "Assert security headers" step (deploy-time, T-3-1) + securityheaders.com manual smoke per `runbooks/hosting-cutover.md` Step 7 (cutover-time) | `e7a3e06` (firebase.json) + `03f4c07` (schema test) + `49afecb` (CI deploy assertion) |
+| OWASP ASVS L2 v5.0 | V14.4 — Content Security Policy | § Content Security Policy (Report-Only) | `firebase.json` `Content-Security-Policy-Report-Only` header value + dual `Reporting-Endpoints` / `report-uri` / `report-to csp-endpoint` + `functions/src/csp/cspReportSink.ts` | `tests/firebase-config.test.js` (header presence + dual-reporting tokens, T-3-1 + T-3-2) + `functions/test/csp/*.test.ts` (filter/dedup/normalise unit tests) + `runbooks/hosting-cutover.md` ## Pre-cutover Smoke Checklist Smokes 1+2 (modern + legacy wire formats; Pitfall 3 rawBody fallback exercise) | `e7a3e06` (firebase.json CSP-RO) + `03f4c07` (schema test) |
+| OWASP ASVS L2 v5.0 | V14.7 — Build & Deploy Pipeline | § Hosting & Deployment | `.github/workflows/ci.yml` `deploy` + `preview` jobs via OIDC WIF; SHA-pinned third-party actions; concurrency control | First-green-CI-run (PENDING-USER post-cutover) + post-deploy 9-header assertion + `runbooks/firebase-oidc-bootstrap.md` (Phase 1 D-23) | `49afecb` (CI deploy + preview jobs + functions/ npm audit step) |
+| ISO/IEC 27001:2022 | A.13.1.3 — Segregation in networks (header-enforced same-origin boundary) | § HTTP Security Headers | `Cross-Origin-Opener-Policy: same-origin` + `Cross-Origin-Embedder-Policy: credentialless` + `Cross-Origin-Resource-Policy: same-origin` + `frame-ancestors 'none'` (CSP) | `tests/firebase-config.test.js` `it.each` over 9 header keys + post-deploy curl assertion | `e7a3e06` (firebase.json) + `03f4c07` (schema test) |
+| ISO/IEC 27001:2022 | A.13.1 — Network security management | § Content Security Policy (Report-Only) | CSP-RO + dual reporting + same-origin `cspReportSink` Cloud Function in `europe-west2` | Synthetic smoke (`runbooks/hosting-cutover.md` Smokes 1+2) + Cloud Logging filter `jsonPayload.message="csp.violation"` + soak window through Phase 10 | `e7a3e06` (firebase.json CSP-RO) + Phase 3 Plan 03 commits (functions/ workspace) |
+| ISO/IEC 27001:2022 | A.5.7 — Threat intelligence (cloud services governance) | § Hosting & Deployment | OIDC Workload Identity Federation (no long-lived JSON keys) + per-PR preview channels with 7d auto-expiry + repo-scoped trust binding | `runbooks/firebase-oidc-bootstrap.md` + `runbooks/hosting-cutover.md` ## Prerequisites OIDC checks | `49afecb` (CI deploy + preview via OIDC) |
+| SOC 2 | CC6.6 — Logical access security boundaries | § HTTP Security Headers + § CSP (Report-Only) | Header set (HSTS / X-CTO / Referrer-Policy / Permissions-Policy / COOP / COEP / CORP) + CSP enforcement substrate (Report-Only -> Phase 10 enforced) | `tests/firebase-config.test.js` (commit-time) + post-deploy curl assertion (deploy-time) + securityheaders.com rating ≥ A (cutover-time, recorded as `securityheaders_rating` in `03-PREFLIGHT.md ## Cutover Log`) | `e7a3e06` + `03f4c07` + `49afecb` |
+| SOC 2 | CC8.1 — Change management | § Hosting & Deployment | OIDC-authenticated CI deploy from `main` (gated on lint+typecheck+test+audit+build green) + per-PR preview channels + concurrency group `firebase-deploy-main` + 14-day GH-Pages rollback retention | `.github/workflows/ci.yml` (CI gates) + `runbooks/hosting-cutover.md` (cutover script + DNS revert procedure) + `runbooks/phase-4-cleanup-ledger.md` "Phase 3 GH-Pages rollback substrate" row (day-14 trigger) | `49afecb` (CI) + Phase 3 Plan 05 commits (cutover runbook + Cutover Log skeleton) + Phase 3 Plan 06 commits (cleanup ledger row + branch-protection runbook) |
+| GDPR | Art. 32(1)(b) — Confidentiality of processing systems and services | § Content Security Policy (Report-Only) | CSP-RO + same-origin report sink (no cross-origin data leak channel for violation reports); functions filter + dedup limits log volume from extension noise | Synthetic smoke confirms reports stay same-origin (Smokes 1+2 in `runbooks/hosting-cutover.md`); SECURITY.md § CSP documents the un-authed-endpoint exemption rationale (D-12 — content-type allowlist + 64 KB body cap) | `e7a3e06` (firebase.json CSP-RO same-origin endpoint) + Phase 3 Plan 03 commits (filter + dedup) |
+
+**Cross-phase plug-ins this index will feed:**
+
+- **Phase 4** (modular split / CDN-to-npm migration) — removes the temporary CSP CDN allowlist (`cdn.jsdelivr.net`, `fonts.googleapis.com`, `fonts.gstatic.com`); the §CSP table row's "Implemented in" cell will lose the temporary additions. Phase 4 also lands `tests/index-html-meta-csp.test.js` (T-3-meta-csp-conflict mitigation per `runbooks/phase-4-cleanup-ledger.md` "Phase 3 — meta-CSP regression guard" row).
+- **Phase 10** (CSP enforcement / HOST-06 / HOST-07) — drops `'unsafe-inline'` from `style-src`, submits HSTS preload to hstspreload.org, flips CSP from Report-Only to enforced; updates §HTTP Security Headers + §CSP citations in this index accordingly.
+- **Phase 11** (Evidence Pack / DOC-09) — `docs/CONTROL_MATRIX.md` walks this index row-by-row; screenshot evidence under `docs/evidence/` (e.g. `docs/evidence/phase-3-securityheaders-rating.png` per `runbooks/hosting-cutover.md` Step 7).
+- **Phase 12** (Audit Walkthrough) — `SECURITY_AUDIT_REPORT.md` Pass / Partial / N/A entries cite specific rows in this index by framework + citation.
+
+**Forward-looking concerns recorded in `runbooks/phase-4-cleanup-ledger.md`:**
+
+- T-3-4 mitigation: GH-Pages rollback substrate deleted on `cutover_date + 14 days` (PENDING-USER until cutover lands `cutover_date`). Row title: "Phase 3 GH-Pages rollback substrate".
+- T-3-meta-csp-conflict mitigation: Phase 4 must add `tests/index-html-meta-csp.test.js` to prevent `<meta http-equiv="Content-Security-Policy">` from being silently re-introduced into `index.html`. Row title: "Phase 3 — meta-CSP regression guard".
+- T-3-5 partial mitigation (deferred): `roles/firebase.admin` over-grant on the deploy SA accepted for Phase 3; Phase 7 (FN-04) narrows to per-function service accounts. Row title (added in Phase 3 Plan 04 SUMMARY hand-off): "Phase 3 OIDC SA over-grant".
+
+**Index self-check:** if all three forward-looking rows above are still open in the cleanup ledger, this index is current. If T-3-4 + T-3-meta-csp-conflict rows are closed but the index has not been updated by a Phase 4 / Phase 10 / Phase 11 commit, the index needs a maintenance commit. Phase 10's planning explicitly lists "update SECURITY.md ## § Phase 3 Audit Index" as a task when CSP enforcement lands.
+
+---
 
 ### § Threat Model — *TODO Phase 11*
 

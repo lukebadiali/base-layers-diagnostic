@@ -232,11 +232,60 @@ Will document: Sentry browser + node (EU region), PII scrubber, Slack
 webhook auth-anomaly alerts, uptime monitor, Firebase budget alerts,
 Sentry quota alert.
 
-### § CSP & Headers — *TODO Phases 3 & 10*
+## § HTTP Security Headers
 
-Will document: Phase 3 baseline (HSTS, X-CTO, Referrer-Policy,
-Permissions-Policy, COOP, COEP, CSP Report-Only). Phase 10 enforced CSP
-(no `unsafe-inline`), HSTS preload submission.
+**Control:** Production traffic to `https://baselayers.bedeveloped.com` is served by Firebase Hosting with a static set of HTTP security response headers configured via `firebase.json hosting.headers` on the `**` source. The header set hardens the boundary against header-stripping downgrade attacks (HSTS), MIME-sniffing tampering (X-Content-Type-Options), referrer leakage (Referrer-Policy), high-risk web platform APIs in unaudited contexts (Permissions-Policy), cross-origin window-handle abuse (COOP), cross-origin embedding without isolation (COEP), and cross-origin resource reads (CORP). Cross-Origin-Embedder-Policy is set to `credentialless` rather than `require-corp` because Firebase CDN-hosted resources do not emit `Cross-Origin-Resource-Policy: cross-origin` and the credentialless variant tolerates that without breaking Storage downloads or Auth popups (Phase 6 verifies this assumption against real Auth flows).
+
+**Evidence:**
+
+- Header configuration: `firebase.json` `hosting.headers[0]` (source: `**`) — Phase 3 Plan 02
+- Schema validation: `tests/firebase-config.test.js` — guards against silent header drop (T-3-1) on every `npm test` run
+- Post-deploy assertion: `.github/workflows/ci.yml` `deploy` job step "Assert security headers" (Phase 3 Plan 04) — fails the deploy if any of HSTS / X-CTO / Referrer-Policy / Permissions-Policy / COOP / COEP / CSP-RO is missing from the live response
+- Header values:
+  - `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` (HSTS preload submission deferred to Phase 10 / HOST-06 — gated by ≥7-day stable policy)
+  - `X-Content-Type-Options: nosniff`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), bluetooth=(), hid=(), midi=(), serial=(), display-capture=(), idle-detection=(), browsing-topics=(), interest-cohort=(), autoplay=(), encrypted-media=(), picture-in-picture=(), fullscreen=(), screen-wake-lock=(), web-share=()` (FLoC's `interest-cohort` retained for backward compatibility alongside its replacement `browsing-topics`)
+  - `Cross-Origin-Opener-Policy: same-origin`
+  - `Cross-Origin-Embedder-Policy: credentialless`
+  - `Cross-Origin-Resource-Policy: same-origin`
+
+**Framework citations:**
+
+- OWASP ASVS L2 v5.0 V14.4 — HTTP Security Headers
+- ISO/IEC 27001:2022 A.13.1.3 — Segregation in networks (header-enforced same-origin boundary)
+- SOC 2 CC6.6 — Logical access security boundaries
+
+---
+
+## § Content Security Policy (Report-Only)
+
+**Control:** A two-tier CSP is shipped in `Content-Security-Policy-Report-Only` mode this phase. The tight tier covers `script-src`, `connect-src`, `frame-src`, `object-src`, `base-uri`, `form-action`, and `frame-ancestors 'none'`. The temporary permissive tier is `style-src 'self' 'unsafe-inline'` — Phase 4 sweeps inline `style="..."` strings across the views (CODE-06 / M5) and Phase 10 (HOST-07) drops `'unsafe-inline'` to enforce the strict policy. Reports are dual-channeled — legacy `report-uri /api/csp-violations` plus modern `Reporting-Endpoints` / `report-to csp-endpoint`, both pointing at the same same-origin path served by the `cspReportSink` Cloud Function (built in Phase 3 Plan 03; deployed by Phase 3 Plan 04 / 05). The function filters extension and synthetic origins and dedupes within a 5-minute in-memory window before emitting structured `severity=WARNING` entries to Cloud Logging.
+
+**Temporary CDN allowlist (Phase 3 only — removed in Phase 4):** Wave 1 pre-flight (`03-PREFLIGHT.md ## dist/index.html font-CDN scan`) confirmed the Vite-built `dist/index.html` retains three external loads that the CDN→npm migration documented in source as a Phase 4 task has not yet eliminated. To avoid drowning the Phase 3 CSP soak in known-benign violations, the Phase-3-only Report-Only CSP carries:
+
+- `script-src` adds `https://cdn.jsdelivr.net` (Chart.js 4.4.1 UMD CDN)
+- `style-src` adds `https://fonts.googleapis.com` (Google Fonts CSS)
+- `font-src` adds `https://fonts.gstatic.com` (Google Fonts woff2 binaries)
+- `connect-src` adds `https://securetoken.google.com` (Firebase Auth refresh-token endpoint not covered by `*.googleapis.com` wildcard)
+
+Cleanup ledger: revisit in Phase 4 cleanup ledger row "CSP CDN allowlist" — Phase 4 self-hosts Chart.js + Google Fonts via the npm bundler, after which these three additions are deleted from `firebase.json`. Phase 10 (HOST-07) verifies they are gone before flipping CSP to enforced mode.
+
+**Evidence:**
+
+- Policy configuration: `firebase.json` `hosting.headers[0]` (source: `**`) — header keys `Reporting-Endpoints` + `Content-Security-Policy-Report-Only` — Phase 3 Plan 02
+- Report sink: `functions/src/csp/cspReportSink.ts` (Phase 3 Plan 03)
+- Filter and dedup: `functions/src/csp/{filter,dedup,normalise}.ts` (Phase 3 Plan 03)
+- Schema validation: `tests/firebase-config.test.js` asserts dual-reporting tokens are present (T-3-1 + T-3-2 mitigation)
+- Soak window: starts on Phase 3 cutover; ends when Phase 10 enforces (CSP enforcement lives at HOST-07)
+- Note: The `csp-violations` endpoint is the **only** unauthenticated public Cloud Function in the milestone; every other callable enforces App Check + claims-based auth from Phase 7 onward. Browsers POST CSP reports natively without App Check tokens, so D-12 limits abuse protection to content-type allowlist + 64 KB body cap.
+
+**Framework citations:**
+
+- OWASP ASVS L2 v5.0 V14.4 — HTTP Security Headers
+- ISO/IEC 27001:2022 A.13.1 — Network security management
+- SOC 2 CC6.6 — Logical access security boundaries
+- GDPR Art. 32(1)(b) — Confidentiality of processing systems and services
 
 ### § Threat Model — *TODO Phase 11*
 

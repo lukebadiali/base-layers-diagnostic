@@ -16,11 +16,12 @@
   "exclude": [
     "node_modules",
     "dist",
-    "functions/lib",
+    "functions/**",
     "coverage",
     "vite.config.js",
     "eslint.config.js",
     "tests/fixtures/_generators",
-    "tests/crypto-parity.test.js"
+    "tests/crypto-parity.test.js",
+    "tests/firebase-config.test.js"
   ]
 }

@@ -1,0 +1,16 @@
+{
+  "orgMetas": [{ "id": "x", "name": "Test Org X" }],
+  "orgs": {
+    "x": {
+      "id": "x",
+      "name": "Test Org X",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "responses": {
+        "1": { "0": { "score": 5, "note": "n1", "internalNote": "in1" } },
+        "2": { "0": { "score": 7, "note": "n2" } }
+      },
+      "actions": [{ "id": "a1", "title": "T", "owner": "legacy" }],
+      "engagement": { "currentStageId": "diagnosed", "stageChecks": {} }
+    }
+  }
+}

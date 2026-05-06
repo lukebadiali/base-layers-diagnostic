@@ -48,6 +48,10 @@ import {
   markPillarRead as _markPillarRead,
   unreadChatTotal as _unreadChatTotal,
 } from "./src/domain/unread.js";
+import {
+  migrateV1IfNeeded as _migrateV1IfNeeded,
+  clearOldScaleResponsesIfNeeded as _clearOldScaleResponsesIfNeeded,
+} from "./src/data/migration.js";
 
 (function () {
   "use strict";
@@ -264,6 +268,16 @@ import {
   const unreadChatTotal = (user) =>
     _unreadChatTotal(user, state, lastReadMillis, msgMillis, unreadChatForOrg);
 
+  // Phase 2 Wave 4 (D-05): wrappers for migration helpers (Pattern E).
+  // Bodies extracted to src/data/migration.js.
+  const migrateV1IfNeeded = () => _migrateV1IfNeeded({
+    loadUsers, loadOrgMetas, loadOrg, saveOrg, upsertUser, findUser,
+    removeV1ActiveKey: () => LS.removeItem(K.v1Active),
+  });
+  const clearOldScaleResponsesIfNeeded = () => _clearOldScaleResponsesIfNeeded({
+    loadSettings, saveSettings, loadOrgMetas, loadOrg, saveOrg,
+  });
+
   // Phase 2 (D-05): userCompletionPct + orgSummary extracted to src/domain/completion.js — wrappers above.
 
   function topConstraints(org, n = 3) {
@@ -466,80 +480,7 @@ import {
     return h === u.passwordHash;
   }
 
-  // ---------- v1 → v2 migration ----------
-  function migrateV1IfNeeded() {
-    const users = loadUsers();
-    const orgs = loadOrgMetas();
-    if (users.length > 0) return; // already v2
-
-    // If v1 data exists, migrate it
-    const v1Orgs = orgs.slice();
-    if (v1Orgs.length === 0) return;
-
-    // Create a legacy respondent user so historical responses have an owner
-    const legacyId = uid("u_");
-    const legacy = {
-      id: legacyId,
-      email: "legacy@bedeveloped.local",
-      name: "Legacy respondent",
-      role: "client",
-      orgId: null, // set later if single-org
-      createdAt: iso(),
-    };
-    upsertUser(legacy);
-
-    v1Orgs.forEach((meta) => {
-      const raw = loadOrg(meta.id);
-      if (!raw) return;
-
-      // Already migrated?
-      if (raw.rounds && raw.currentRoundId) return;
-
-      const roundId = uid("r_");
-      const migrated = {
-        id: raw.id,
-        name: raw.name,
-        createdAt: raw.createdAt || iso(),
-        currentRoundId: roundId,
-        rounds: [{ id: roundId, label: "Round 1 (migrated)", createdAt: raw.createdAt || iso() }],
-        responses: { [roundId]: {} },
-        internalNotes: {},
-        actions: (raw.actions || []).map((a) => ({ ...a, createdBy: legacyId })),
-        engagement: raw.engagement || { currentStageId: "diagnosed", stageChecks: {} },
-        comments: {},
-        readStates: {},
-      };
-
-      // migrate old responses (single respondent)
-      const oldResp = raw.responses || {};
-      const byUser = migrated.responses[roundId];
-      byUser[legacyId] = {};
-      Object.entries(oldResp).forEach(([pillarId, qs]) => {
-        byUser[legacyId][pillarId] = {};
-        Object.entries(qs || {}).forEach(([idx, r]) => {
-          byUser[legacyId][pillarId][idx] = {
-            score: r.score,
-            note: r.note || "",
-          };
-          if (r.internalNote) {
-            migrated.internalNotes[pillarId] = migrated.internalNotes[pillarId] || {};
-            migrated.internalNotes[pillarId][idx] = r.internalNote;
-          }
-        });
-      });
-
-      saveOrg(migrated);
-    });
-
-    // If there was exactly one org, point legacy user at it
-    if (v1Orgs.length === 1) {
-      const leg = findUser(legacyId);
-      leg.orgId = v1Orgs[0].id;
-      upsertUser(leg);
-    }
-
-    LS.removeItem(K.v1Active);
-  }
+  // Phase 2 (D-05): extracted to src/data/migration.js — wrappers above.
 
   // ---------- State ----------
   const state = {
@@ -5349,23 +5290,7 @@ Any questions, just let me know.`;
   // ================================================================
   // INIT
   // ================================================================
-  // One-shot: clear all diagnostic responses when switching from the
-  // old 1-5 scale to the new 1-10 confidence scale. Runs once per browser.
-  function clearOldScaleResponsesIfNeeded() {
-    const s = loadSettings();
-    if (s.scaleV2Cleared) return;
-    loadOrgMetas().forEach((m) => {
-      const org = loadOrg(m.id);
-      if (!org) return;
-      org.responses = {};
-      // Keep the current round id present but empty
-      if (org.currentRoundId) org.responses[org.currentRoundId] = {};
-      org.internalNotes = {};
-      saveOrg(org);
-    });
-    s.scaleV2Cleared = true;
-    saveSettings(s);
-  }
+  // Phase 2 (D-05): clearOldScaleResponsesIfNeeded extracted to src/data/migration.js — wrapper above.
 
   // One-shot: clear all diagnostic responses when the 10-pillar framework
   // is restructured. Pillar IDs shift meaning so old scores would attach to

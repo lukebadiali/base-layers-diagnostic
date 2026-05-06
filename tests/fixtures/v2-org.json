@@ -1,0 +1,14 @@
+{
+  "expected_legacy_user_email": "legacy@bedeveloped.local",
+  "expected_legacy_user_role": "client",
+  "expected_legacy_user_name": "Legacy respondent",
+  "expected_round_label": "Round 1 (migrated)",
+  "expected_engagement": { "currentStageId": "diagnosed", "stageChecks": {} },
+  "expected_org_id": "x",
+  "expected_org_name": "Test Org X",
+  "expected_responses_pillar_1_q_0_score": 5,
+  "expected_responses_pillar_1_q_0_note": "n1",
+  "expected_internal_note_pillar_1_q_0": "in1",
+  "expected_action_count": 1,
+  "expected_action_id": "a1"
+}

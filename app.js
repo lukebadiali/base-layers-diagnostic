@@ -26,6 +26,18 @@ import {
   firstNameFromAuthor,
 } from "./src/util/ids.js";
 import { hashString } from "./src/util/hash.js";
+import {
+  pillarStatus,
+  bandLabel,
+  bandStatement,
+  bandColor,
+} from "./src/domain/banding.js";
+import {
+  pillarScoreForRound as _pillarScoreForRound,
+  pillarScore as _pillarScore,
+  respondentsForRound,
+  answeredCount as _answeredCount,
+} from "./src/domain/scoring.js";
 
 (function () {
   "use strict";
@@ -216,47 +228,15 @@ import { hashString } from "./src/util/hash.js";
   }
 
   // ---------- Scoring (aggregated across users in a round) ----------
-  function pillarScoreForRound(org, roundId, pillarId) {
-    const p = DATA.pillars.find((pp) => pp.id === pillarId);
-    if (!p) return null;
-    const byUser = (org.responses || {})[roundId] || {};
-    const normalized = [];
-    Object.values(byUser).forEach((perPillar) => {
-      const perQ = (perPillar || {})[pillarId] || {};
-      Object.entries(perQ).forEach(([idx, r]) => {
-        if (!Number.isFinite(r.score)) return;
-        const meta = questionMeta(p.diagnostics[Number(idx)]);
-        if (!meta || !meta.scale) return;
-        normalized.push((r.score / meta.scale) * 100);
-      });
-    });
-    if (!normalized.length) return null;
-    return Math.round(normalized.reduce((a, b) => a + b, 0) / normalized.length);
-  }
-
-  function pillarScore(org, pillarId) {
-    return pillarScoreForRound(org, org.currentRoundId, pillarId);
-  }
-
-  function pillarStatus(score) {
-    if (score === null || score === undefined) return "gray";
-    if (score <= 50) return "red";
-    if (score <= 75) return "amber";
-    return "green";
-  }
-
-  function respondentsForRound(org, roundId) {
-    const byUser = (org.responses || {})[roundId] || {};
-    return Object.keys(byUser);
-  }
-
+  // Phase 2 (D-05): pillarScoreForRound, pillarScore, respondentsForRound, answeredCount
+  // extracted to src/domain/scoring.js — wrappers below bind DATA + questionMeta (Pattern E).
+  // pillarStatus extracted to src/domain/banding.js (D-02 routes it to banding) — re-imported at module top.
+  const pillarScoreForRound = (org, roundId, pillarId) =>
+    _pillarScoreForRound(org, roundId, pillarId, DATA, questionMeta);
+  const pillarScore = (org, pillarId) => _pillarScore(org, pillarId, DATA, questionMeta);
   // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead code or wire up call site. See runbooks/phase-4-cleanup-ledger.md
-  function answeredCount(org, roundId, userId, pillarId) {
-    const resp = (((org.responses || {})[roundId] || {})[userId] || {})[pillarId] || {};
-    const total = DATA.pillars.find((p) => p.id === pillarId).diagnostics.length;
-    const done = Object.values(resp).filter((r) => Number.isFinite(r.score)).length;
-    return { done, total };
-  }
+  const answeredCount = (org, roundId, userId, pillarId) =>
+    _answeredCount(org, roundId, userId, pillarId, DATA);
 
   function userCompletionPct(org, roundId, userId) {
     const totalQ = DATA.pillars.reduce((s, p) => s + p.diagnostics.length, 0);
@@ -2778,32 +2758,7 @@ import { hashString } from "./src/util/hash.js";
   // ================================================================
   // REPORT
   // ================================================================
-  function bandLabel(s) {
-    if (s === null || s === undefined) return "Not scored";
-    if (s <= 50) return "Low";
-    if (s <= 75) return "Medium";
-    return "High";
-  }
-
-  function bandStatement(pillarName, s) {
-    if (s === null || s === undefined) {
-      return `${pillarName} has not yet been scored. Once the diagnostic is complete, you will see a detailed view here including your development priorities.`;
-    }
-    if (s <= 50) {
-      return `Your team scored ${s}/100 on ${pillarName}. This is a LOW score and a priority development area. Investment here is likely to unlock compounding gains across other pillars, because ${pillarName.toLowerCase()} sits upstream of how the rest of your commercial engine performs.`;
-    }
-    if (s <= 75) {
-      return `Your team scored ${s}/100 on ${pillarName}. This is a MEDIUM score. Foundational elements are in place, but there is clear room to strengthen consistency, codify what is working, and remove variability between individuals and situations.`;
-    }
-    return `Your team scored ${s}/100 on ${pillarName}. This is a HIGH score and, on current evidence, a strength. The opportunity here is to maintain discipline, protect the standard as you scale, and treat this as a competitive advantage worth defending.`;
-  }
-
-  function bandColor(s) {
-    if (s === null || s === undefined) return "var(--line-2)";
-    if (s <= 50) return "var(--red)";
-    if (s <= 75) return "var(--amber)";
-    return "var(--green)";
-  }
+  // Phase 2 (D-05): bandLabel, bandStatement, bandColor extracted to src/domain/banding.js — re-imported at module top.
 
   function renderReport(user, org) {
     const frag = h("div");

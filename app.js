@@ -11,14 +11,21 @@
    ============================================================ */
 
 // Phase 2 (D-04 supersedes Phase 1 D-14): index.html now loads this file as
-// type="module". Imports below are populated by Waves 1-4 — do NOT add wrappers
-// here in this plan, only the scaffold comment.
+// type="module". Imports below are populated by Waves 1-4.
 //
 // Waves that populate this block:
-//   Wave 1 (Plan 02-02): src/util/ids.js, src/util/hash.js
+//   Wave 1 (Plan 02-02): src/util/ids.js, src/util/hash.js  [LANDED]
 //   Wave 2 (Plan 02-03): src/domain/banding.js, src/domain/scoring.js
 //   Wave 3 (Plan 02-04): src/domain/completion.js, src/domain/unread.js
 //   Wave 4 (Plan 02-05): src/data/migration.js, src/data/cloud-sync.js, src/auth/state-machine.js
+import {
+  uid,
+  iso,
+  formatWhen,
+  initials,
+  firstNameFromAuthor,
+} from "./src/util/ids.js";
+import { hashString } from "./src/util/hash.js";
 
 (function () {
   "use strict";
@@ -39,22 +46,7 @@
   };
 
   // ---------- Utilities ----------
-  const uid = (p = "") =>
-    // eslint-disable-next-line no-restricted-syntax -- Phase 4: replace with crypto.randomUUID(). See runbooks/phase-4-cleanup-ledger.md
-    p + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
-
-  const iso = () => new Date().toISOString();
-
-  const formatWhen = (when) => {
-    if (!when) return "";
-    const d = new Date(when);
-    const mins = Math.round((Date.now() - d.getTime()) / 60000);
-    if (mins < 1) return "just now";
-    if (mins < 60) return `${mins}m ago`;
-    if (mins < 60 * 24) return `${Math.round(mins / 60)}h ago`;
-    if (mins < 60 * 24 * 7) return `${Math.round(mins / (60 * 24))}d ago`;
-    return d.toLocaleDateString();
-  };
+  // Phase 2 (D-05): uid, iso, formatWhen extracted to src/util/ids.js — re-imported at module top, do not re-define.
 
   const formatDate = (when) => {
     if (!when) return "";
@@ -65,30 +57,7 @@
     });
   };
 
-  const initials = (name = "") =>
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((s) => s[0].toUpperCase())
-      .join("");
-
-  // Take "Luke Badiali" -> "Luke", "luke.badiali@x.com" -> "Luke", "luke@x.com" -> "Luke".
-  const capitalise = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
-  const firstNameFromAuthor = (m) => {
-    const name = (m.authorName || "").trim();
-    if (name) {
-      const first = name.split(/\s+/)[0];
-      if (first) return first;
-    }
-    const email = (m.authorEmail || "").trim();
-    if (email) {
-      const local = email.split("@")[0] || "";
-      const piece = local.split(/[.\-_+]/)[0] || "";
-      if (piece) return capitalise(piece);
-    }
-    return "Unknown";
-  };
+  // Phase 2 (D-05): initials, firstNameFromAuthor (and the private capitalise helper) extracted to src/util/ids.js — re-imported at module top, do not re-define.
 
   // ---------- JSON helpers ----------
   const jget = (k, fallback) => {
@@ -479,21 +448,7 @@
     document.title = unread > 0 ? `(${unread}) ${BASE_TAB_TITLE}` : BASE_TAB_TITLE;
   }
 
-  // trivial hashing for demo purposes (NOT secure — just to avoid plaintext storage)
-  async function hashString(s) {
-    try {
-      const enc = new TextEncoder().encode(String(s));
-      const buf = await crypto.subtle.digest("SHA-256", enc);
-      return Array.from(new Uint8Array(buf))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-    } catch {
-      // fallback
-      let h = 0;
-      for (const ch of String(s)) h = ((h << 5) - h + ch.charCodeAt(0)) | 0;
-      return String(h);
-    }
-  }
+  // Phase 2 (D-05): hashString extracted to src/util/hash.js — re-imported at module top, do not re-define.
 
   async function setInternalPassphrase(pass) {
     const s = loadSettings();

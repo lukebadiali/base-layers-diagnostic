@@ -36,7 +36,7 @@ Phase 3 — Hosting Cutover + Baseline Security Headers (Phase 2 complete 2026-0
 ## Current Position
 
 Phase: 2 — COMPLETE (Test Suite Foundation — 6/6 plans executed, verifier 9/9, code review 0 critical / 0 warning / 9 info — all out-of-scope per D-05)
-**Status:** Phase 2 complete; awaiting next-phase routing
+**Status:** Phase 3 context gathered (2026-05-06); ready for `/gsd-plan-phase 3`
 **Progress:** 2/12 phases complete
 
 ```
@@ -45,7 +45,7 @@ Phase: 2 — COMPLETE (Test Suite Foundation — 6/6 plans executed, verifier 9/
  ✓  ✓  .  .  .  .  .  .  .  .  .  .
 ```
 
-**Next action:** `/gsd-discuss-phase 3` (recommended — start the hosting-cutover discussion before planning) or `/gsd-plan-phase 3` (skip discussion).
+**Next action:** `/gsd-plan-phase 3` (recommended — context locked, ready for plan) or revise CONTEXT.md before continuing.
 
 **Phase 2 deliverables (locked 2026-05-06):**
 - 9 modules extracted to `src/{util,domain,data,auth}/*` with byte-identical D-05 comments
@@ -161,7 +161,9 @@ Additional non-negotiables:
 
 **This session (2026-05-06):** Phase 2 context gathered via `/gsd-discuss-phase 2`. 20 implementation decisions captured (D-01..D-21) across four gray areas: IIFE test-access strategy (mini-strangler-fig leaf extraction per Pitfall 9 step 2 — extract scoring/banding/completion/migration/unread/cloud-sync/auth helpers into src/domain/, src/data/, src/auth/, src/util/ with ESM bridge via `<script type="module">`); snapshot strategy (TEST-10) (toMatchFileSnapshot one-html-per-view + comprehensive clock/UUID/Math.random seeding + Chart.js stub); mocking & fixtures (tests/mocks/firebase.js reusable factory + real crypto.subtle.digest with known-password fixtures + flat tests/fixtures/ layout); coverage threshold + CI strictness (tiered per-directory thresholds — domain/util 100%, auth 95%, data 90%; hard CI fail on test/coverage/snapshot/typecheck miss; soft <30s local / <90s CI runtime target). Supersedes Phase 1 D-14 (index.html unchanged) — Phase 2 D-04 explicitly rewrites the script tag to type="module". Artefacts at `.planning/phases/02-test-suite-foundation/02-CONTEXT.md` + `02-DISCUSSION-LOG.md`.
 
+**This session (2026-05-06, continued):** Phase 3 context gathered via `/gsd-discuss-phase 3`. 15 implementation decisions captured (D-01..D-15) across four gray areas: cutover topology (Firebase project URL soak + smoke + same-session CNAME flip + 14-day GH-Pages rollback retention); csp-violations Cloud Function (minimal `functions/` skeleton — TS + Node 22 + Gen 2 — that Phase 7 expands; firebase.json rewrite to /api/csp-violations same-origin; europe-west2 region pulls Phase 6's Firestore-region todo forward as a pre-flight); CSP report-only policy strictness (two-tier — tight on script/connect/frame/object/base/form, permissive on style-src 'unsafe-inline' until Phase 10's M5 sweep flips one knob; dual reporting via legacy report-uri + modern report-to + Reporting-Endpoints; frame-src for Firebase Auth popup origin added preemptively to spare Phase 6 a CSP edit); CSP report sink + filtering (Cloud Logging structured logs + filter rules for browser extensions / about:srcdoc / 5-min dedup window; abuse protection content-type + 64 KB body-size only — Cloud Armor / per-IP rate-limit deferred to Phase 7). Vercel-for-hosting-only raised by user mid-discussion; deferred per PROJECT.md "Stay on Firebase" + Pitfall 15 SOC2 co-location lock. Standard header set + CI deploy/preview-channel jobs covered as derived (D-13, D-14); SECURITY.md DOC-10 increment scoped (D-15). Artefacts at `.planning/phases/03-hosting-cutover-baseline-security-headers/03-CONTEXT.md` + `03-DISCUSSION-LOG.md`.
+
 ---
 
 *State initialized: 2026-05-03 after roadmap creation*
-*Last updated: 2026-05-06 — Phase 2 CONTEXT.md gathered; ready for /gsd-plan-phase 2*
+*Last updated: 2026-05-06 — Phase 3 CONTEXT.md gathered; ready for /gsd-plan-phase 3*

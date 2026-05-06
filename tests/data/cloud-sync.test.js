@@ -120,4 +120,63 @@ describe("syncFromCloud (H8 cloud-wins-on-overlap pinned)", () => {
     await syncFromCloud(deps);
     expect(deps.render).toHaveBeenCalledTimes(1);
   });
+
+  // Plan 02-06 (Wave 5) coverage back-fill: drive the defensive branches at
+  // src/data/cloud-sync.js:33, :37, :49 so the 90% src/data/** branches threshold
+  // (D-15) holds.
+
+  it("does NOT push a local org when its body is missing in storage (line 33 false branch)", async () => {
+    const { deps, store } = makeDeps({
+      cloudFetchAllOrgs: vi.fn(() => Promise.resolve([])),
+    });
+    // Meta says "z" exists but the body was never persisted.
+    store[K.orgs] = [{ id: "z", name: "Ghost" }];
+    // No store[K.org("z")] entry.
+
+    await syncFromCloud(deps);
+
+    expect(deps.cloudPushOrg).not.toHaveBeenCalled();
+    // newMetas still preserves the local-only meta (line 41 truthy branch).
+    expect(store[K.orgs]).toEqual(expect.arrayContaining([{ id: "z", name: "Ghost" }]));
+  });
+
+  it("skips corrupt cloud orgs lacking id (line 37 false branch — defensive `o && o.id`)", async () => {
+    // NOTE: line 29's `cloudOrgs.map((o) => o.id)` dereferences without a null
+    // guard, so passing `null` would crash before the line 37 `o && o.id`
+    // defensive check fires. The line-37 guard exists for objects without `id`
+    // — that's the branch we drive here. Logged in cleanup ledger as a
+    // candidate Phase 4 hardening (the line-29 map should also defend against
+    // null array entries).
+    const { deps, store } = makeDeps({
+      cloudFetchAllOrgs: vi.fn(() => Promise.resolve([
+        { name: "no-id" }, // skipped — line 37 falsy branch
+        { id: "good", name: "Good" }, // kept
+      ])),
+    });
+
+    await syncFromCloud(deps);
+
+    // Only the good org is written.
+    expect(store[K.org("good")]).toEqual({ id: "good", name: "Good" });
+    // newMetas only contains the good org (line 39 filter retains the only id-bearing entry).
+    expect(store[K.orgs]).toEqual([{ id: "good", name: "Good" }]);
+  });
+
+  it("does NOT push a local user that already exists in cloud (line 49 false branch)", async () => {
+    const { deps, store } = makeDeps({
+      cloudFetchAllOrgs: vi.fn(() => Promise.resolve([])),
+      cloudFetchAllUsers: vi.fn(() =>
+        Promise.resolve([{ id: "u_shared", name: "Cloud Shared" }]),
+      ),
+    });
+    store[K.users] = [{ id: "u_shared", name: "Local Shared" }];
+
+    await syncFromCloud(deps);
+
+    // Local user IS in cloud — should NOT push.
+    expect(deps.cloudPushUser).not.toHaveBeenCalled();
+    // Cloud version wins (line 51 spread, line 53 false branch — local NOT
+    // appended because cloudUserIds.has(u.id) is true).
+    expect(store[K.users]).toEqual([{ id: "u_shared", name: "Cloud Shared" }]);
+  });
 });

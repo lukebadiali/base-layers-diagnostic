@@ -140,4 +140,33 @@ describe("unreadChatTotal", () => {
     expect(unreadChatTotal(user, state, lastReadMillis, msgMillis, unreadChatForOrg))
       .toBe(1);
   });
+
+  // Plan 02-06 (Wave 5) coverage back-fill: drive the `state.chatMessages || []`
+  // defensive short-circuit on line 56 so the 100% src/domain/** threshold (D-15)
+  // holds.
+  it("returns 0 for an internal user when state.chatMessages is missing (defensive `|| []`)", () => {
+    const user = { id: "u_self", role: "internal" };
+    /** @type {*} */
+    const state = {}; // no chatMessages key
+    expect(unreadChatTotal(user, state, lastReadMillis, msgMillis, unreadChatForOrg))
+      .toBe(0);
+  });
+});
+
+// Plan 02-06 (Wave 5) coverage back-fill: drive the `org.readStates || {}`
+// defensive short-circuit on src/domain/unread.js:16 so the 100% src/domain/**
+// threshold (D-15) holds.
+describe("unreadCountForPillar — defensive `org.readStates || {}` branch", () => {
+  it("treats a missing readStates key as no-prior-read (lastT = 0, all other-author counted)", () => {
+    const org = {
+      comments: {
+        1: [
+          { id: "c1", authorId: "u_other", createdAt: "2026-01-01T00:05:00.000Z" },
+          { id: "c2", authorId: "u_self", createdAt: "2026-01-01T00:10:00.000Z" },
+        ],
+      },
+      // NO readStates key — drives `||{}` fallback on line 16
+    };
+    expect(unreadCountForPillar(org, 1, { id: "u_self" }, commentsFor)).toBe(1);
+  });
 });

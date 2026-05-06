@@ -99,6 +99,21 @@ describe("pillarScoreForRound", () => {
     const org = { currentRoundId: "r1" };
     expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBeNull();
   });
+
+  // Plan 02-06 (Wave 5) coverage back-fill: drive the `perPillar || {}` defensive
+  // short-circuit on line 30 so the 100% src/domain/** threshold (D-15) holds.
+  it("skips a user whose response object is falsy (defensive `perPillar || {}` branch)", () => {
+    const org = {
+      currentRoundId: "r1",
+      responses: {
+        r1: {
+          u1: null, // falsy perPillar — drives the `|| {}` fallback on line 30
+          u2: { 1: { 0: { score: 5 } } }, // counted as 50 → average just 50
+        },
+      },
+    };
+    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBe(50);
+  });
 });
 
 describe("pillarScore", () => {

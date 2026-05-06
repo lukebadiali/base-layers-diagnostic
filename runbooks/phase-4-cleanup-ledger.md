@@ -131,3 +131,45 @@ force a behavioural change. Phase 4 may revisit:
 | `src/domain/unread.js`          | `org` parameter (3 of 4 exports) | Same rationale: byte-identical loose-object indexing (`org.readStates[user.id][pillarId]`). Phase 4 (CODE-01) tightens once a domain `Org` shape lands. |
 | `src/domain/unread.js`          | `user` parameter on `unreadChatTotal` | Original byte-identical IIFE code passes `user.orgId` (typed `string\|undefined`) into `unreadChatForOrg(user, orgId: string)`. Tightening `user.orgId` to `string` would force a defensive guard the IIFE doesn't have; relaxing the parameter to `*` preserves byte-identical behaviour (D-05). The other three exports keep structural `user` typing because `user.id` access is straightforward. Phase 5 (DATA-07) refactors this whole module — full `User` shape lands then. |
 | `src/data/migration.js`         | `migrated` local + `r` / `qs` / `a` callback params | Original byte-identical IIFE used `// @ts-nocheck` for the entire app.js — the `migrated.responses[roundId][legacyId][pillarId][idx]` deep-loose-object writes don't typecheck under strict `checkJs`. Tagging `migrated` as `any` and the callback args as `any` preserves the byte-identical write pattern (D-05). Phase 4 (CODE-01) tightens once a domain `Org` shape lands. |
+
+### Phase 2 close-out
+
+Phase 2 closed on 2026-05-06. All 9 leaf modules extracted (uid+iso+formatWhen
++initials+firstNameFromAuthor → `src/util/ids.js`; hashString → `src/util/
+hash.js`; banding 4 → `src/domain/banding.js`; scoring 4 → `src/domain/
+scoring.js`; completion 2 → `src/domain/completion.js`; unread 4 → `src/domain/
+unread.js`; migration 2 → `src/data/migration.js`; cloud-sync 1 → `src/data/
+cloud-sync.js`; auth state-machine 4 → `src/auth/state-machine.js`).
+
+All TEST-01..07 + TEST-10 closed (149 tests across 14 files). Per-directory
+coverage thresholds wired into `vite.config.js` (D-15 — domain/util 100%,
+auth 95%, data 90%) with the mandatory "DO NOT add a global threshold key"
+comment. CI test job runs `npm run test:coverage` and uploads the HTML report
+as a `coverage-report-html` artefact (D-20). CI also enforces the snapshot-
+presence backstop (Pitfall 5) via three `test -s` checks against the committed
+baselines at `tests/__snapshots__/views/`. ESLint `no-restricted-imports`
+(T-2-03) blocks `src/**` and `app.js` from importing `tests/**`. Snapshots
+committed (T-2-02 step 2 mitigated end-to-end by `git check-ignore` returning
+exit 1 for each baseline).
+
+Phase 4 may now begin its modular split work — every domain/util/data/auth
+move is fenced by tests + by the snapshot baselines that pin the rendered
+DOM at the pre-Phase-4 boundary. Phase 4's verification = `git diff
+tests/__snapshots__/` against the boundary commit must match the explicit
+DOM-shape changes that wave introduces, nothing more.
+
+Two coverage holes remain at Phase 2 close (both inside the data tier,
+both within the 90% threshold):
+
+- `src/data/migration.js:70` — branch on `(qs)` truthiness inside the per-
+  pillar response migration. Defensive against a malformed v1 fixture where a
+  pillar entry is set but its question map is null. Wave 5 added 9 migration
+  cases including the falsy-fallback fixture, but this specific sub-branch
+  remains uncovered without a uniquely contrived fixture. Phase 4 cleanup may
+  remove the defensive guard once `migrated` has a tight `Org` shape.
+- `src/data/cloud-sync.js:58` — the `if (typeof render === "function") render()`
+  guard's false branch. Plan body says render is always a function in the IIFE
+  binding. The guard is defensive for the test surface; tightening it would
+  require either removing the guard (Phase 4 work once the firebase/ adapter
+  owns sync) or contriving a non-function render dependency (rejected — would
+  test the test, not the code).

@@ -35,6 +35,26 @@ export default defineConfig({
       provider: "v8",
       reportsDirectory: "coverage",
       reporter: ["text", "html"],
+      exclude: [
+        "tests/**",
+        "app.js",
+        "firebase-init.js",
+        "data/pillars.js",
+        "vite.config.js",
+        "eslint.config.js",
+        "**/_generators/**",
+        "node_modules/**",
+        "dist/**",
+        "coverage/**",
+      ],
+      thresholds: {
+        // DO NOT add a global threshold key — app.js is excluded by design until
+        // the Phase 4 modular split. See decision D-15 in 02-CONTEXT.md.
+        "src/domain/**": { lines: 100, branches: 100, functions: 100, statements: 100 },
+        "src/util/**":   { lines: 100, branches: 100, functions: 100, statements: 100 },
+        "src/auth/**":   { lines: 95,  branches: 95,  functions: 95,  statements: 95 },
+        "src/data/**":   { lines: 90,  branches: 90,  functions: 90,  statements: 90 },
+      },
     },
   },
 });

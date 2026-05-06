@@ -20,7 +20,7 @@ Total rows: **16** (14 ESLint disables + 2 `@ts-nocheck`).
 | ----------------- | ---- | ----------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------- |
 | app.js            | 1    | `// @ts-nocheck`                                            | tsc strict checkJs          | Remove after IIFE → modules split; per-module JSDoc types pass `tsc --noEmit` cleanly.                      | Phase 4 (CODE-01) |
 | firebase-init.js  | 1    | `// @ts-nocheck`                                            | tsc strict checkJs          | Remove after firebase-init.js becomes the lone Firebase SDK import surface (`firebase/` adapter).            | Phase 4 (CODE-01) |
-| app.js            | 33   | `// eslint-disable-next-line no-restricted-syntax`          | no-restricted-syntax        | Replace `Math.random()` with `crypto.randomUUID()` (CODE-03).                                               | Phase 4 (CODE-03) |
+| src/util/ids.js   | 7    | `// eslint-disable-next-line no-restricted-syntax`          | no-restricted-syntax        | Phase 2 (D-05): moved from app.js:33 with the uid extraction. Replace `Math.random()` with `crypto.randomUUID()` (CODE-03). | Phase 4 (CODE-03) |
 | app.js            | 274  | `// eslint-disable-next-line no-unused-vars`                | no-unused-vars              | Remove dead code or wire up call site.                                                                      | Phase 4 (CODE-01) |
 | app.js            | 420  | `// eslint-disable-next-line no-empty`                      | no-empty                    | Replace empty catch with explicit ignore + comment (Phase 9 logger TBD).                                    | Phase 4 (CODE-01) |
 | app.js            | 670  | `// eslint-disable-next-line no-unused-vars`                | no-unused-vars              | Remove dead helper or expose via export.                                                                    | Phase 4 (CODE-01) |
@@ -79,3 +79,36 @@ The Wave 3 checkpoint resolution (2026-05-04) introduced two non-suppression fix
 - `tests/smoke.test.js` pulled forward from Wave 5 Plan 01-06 Task 1 Step 1 (Vitest 4.x exits 1 on no-tests).
 
 Both are documented in `01-04-SUMMARY.md` "Resolved Checkpoint" and `01-06-SUMMARY.md` (when Wave 5 lands).
+
+## Phase 2 — extracted leaf modules (D-05 byte-identical)
+
+**D-05 byte-identical convention clarification:** Byte-identical means semantic body equivalence, not character-by-character. Extracted modules drop the 2-space indentation level that came from being nested inside the IIFE — they are now top-level ESM functions. To verify equivalence: `diff -w` (whitespace-insensitive) on the function body, or run the test that exercises the function and confirm it passes against both the inline and extracted versions.
+
+### Extracted in this phase:
+
+- 2026-05-06: extracted `hashString` from `app.js:483-495` to `src/util/hash.js` — byte-identical (Plan 02-02 Task 1)
+- 2026-05-06: extracted `uid`, `iso`, `formatWhen`, `initials`, `firstNameFromAuthor` from `app.js:42-44, 46, 48-57, 68-74, 76-91` to `src/util/ids.js` — byte-identical (Plan 02-02 Task 1). Private helper `capitalise` extracted alongside `firstNameFromAuthor`.
+- (subsequent waves append below)
+
+## Phase 2 — extracted leaf modules (informational, not suppression)
+
+Phase 2 (D-05) extracts pure-helper functions byte-identical from `app.js` into
+`src/{util,domain,data,auth}/*.js`. Phase 4 may simplify their internals
+(rename variables, split long functions, replace `let` with `const`) once the
+test fence is in place. Each row below records a function whose body is
+identical to the in-IIFE original; Phase 4 closes a row by either landing the
+simplification or marking the row "no further work required".
+
+| Source line range  | Module                          | Function(s)                                                                                                  | Phase 4 candidate cleanup                                                                                  |
+| ------------------ | ------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `app.js:42-44, 46, 48-57, 68-74, 76-91` (planner-cited as `app.js:32-81` pre-Plan-02-01 line shift) | `src/util/ids.js`               | `uid`, `iso`, `formatWhen`, `initials`, `firstNameFromAuthor` (private helper: `capitalise`)                 | Replace `Math.random()` in `uid` with `crypto.randomUUID` (CODE-03 — already tracked); inline `capitalise`. |
+| `app.js:483-495` (planner-cited as `app.js:473-486` pre-Plan-02-01 line shift) | `src/util/hash.js`              | `hashString`                                                                                                  | Phase 6 (AUTH-14) deletes — replaced by Firebase Auth.                                                      |
+
+### JSDoc-was-`any` decisions (D-06)
+
+Phase 2 left the following types as `any` in JSDoc because tightening would
+force a behavioural change. Phase 4 may revisit:
+
+| Module                          | Symbol               | Why `any`                                                                                                |
+| ------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------- |
+| (none yet — wave 1 has no `any` decisions; subsequent waves append)                                                                                                                              |

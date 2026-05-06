@@ -12,4 +12,4 @@ coverage/
 *.tsbuildinfo
 firestore-debug.log
 firebase-debug.log
-.firebaserc
+

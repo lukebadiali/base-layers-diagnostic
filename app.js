@@ -53,6 +53,7 @@ import {
   clearOldScaleResponsesIfNeeded as _clearOldScaleResponsesIfNeeded,
 } from "./src/data/migration.js";
 import { syncFromCloud as _syncFromCloud } from "./src/data/cloud-sync.js";
+import * as auth from "./src/auth/state-machine.js";
 
 (function () {
   "use strict";
@@ -282,6 +283,12 @@ import { syncFromCloud as _syncFromCloud } from "./src/data/cloud-sync.js";
     fbReady, cloudFetchAllOrgs, cloudFetchAllUsers, cloudPushOrg, cloudPushUser,
     jget, jset, K, render,
   });
+  // Phase 2 Wave 4 (D-05): wrappers for auth state-machine (Pattern E).
+  // Bodies extracted to src/auth/state-machine.js. Phase 6 (AUTH-14) deletes the whole module.
+  const verifyInternalPassword = (pass) => auth.verifyInternalPassword(pass, { INTERNAL_PASSWORD_HASH });
+  const verifyOrgClientPassphrase = (orgId, pass) => auth.verifyOrgClientPassphrase(orgId, pass, { loadOrg });
+  const verifyUserPassword = (userId, pass) => auth.verifyUserPassword(userId, pass, { findUser });
+  const currentUser = () => auth.currentUser({ currentSession, findUser });
 
   // Phase 2 (D-05): userCompletionPct + orgSummary extracted to src/domain/completion.js — wrappers above.
 
@@ -322,10 +329,7 @@ import { syncFromCloud as _syncFromCloud } from "./src/data/cloud-sync.js";
   function currentSession() {
     return jget(K.session, null);
   }
-  function currentUser() {
-    const s = currentSession();
-    return s ? findUser(s.userId) : null;
-  }
+  // Phase 2 (D-05): currentUser extracted to src/auth/state-machine.js — wrapper above.
   function signIn(userId) {
     jset(K.session, { userId });
   }
@@ -446,10 +450,7 @@ import { syncFromCloud as _syncFromCloud } from "./src/data/cloud-sync.js";
     const e = (email || "").trim().toLowerCase();
     return INTERNAL_ALLOWED_EMAILS.includes(e);
   }
-  async function verifyInternalPassword(pass) {
-    const h = await hashString(pass);
-    return h === INTERNAL_PASSWORD_HASH;
-  }
+  // Phase 2 (D-05): verifyInternalPassword extracted to src/auth/state-machine.js — wrapper above.
 
   // ---------- Client org passphrase (shared by all users of an org) ----------
   async function setOrgClientPassphrase(orgId, pass) {
@@ -459,12 +460,7 @@ import { syncFromCloud as _syncFromCloud } from "./src/data/cloud-sync.js";
     saveOrg(org);
     return true;
   }
-  async function verifyOrgClientPassphrase(orgId, pass) {
-    const org = loadOrg(orgId);
-    if (!org || !org.clientPassphraseHash) return false;
-    const h = await hashString(pass);
-    return h === org.clientPassphraseHash;
-  }
+  // Phase 2 (D-05): verifyOrgClientPassphrase extracted to src/auth/state-machine.js — wrapper above.
   function orgHasClientPassphrase(orgId) {
     const org = loadOrg(orgId);
     return !!(org && org.clientPassphraseHash);
@@ -478,12 +474,7 @@ import { syncFromCloud as _syncFromCloud } from "./src/data/cloud-sync.js";
     upsertUser(u);
     return true;
   }
-  async function verifyUserPassword(userId, pass) {
-    const u = findUser(userId);
-    if (!u || !u.passwordHash) return false;
-    const h = await hashString(pass);
-    return h === u.passwordHash;
-  }
+  // Phase 2 (D-05): verifyUserPassword extracted to src/auth/state-machine.js — wrapper above.
 
   // Phase 2 (D-05): extracted to src/data/migration.js — wrappers above.
 

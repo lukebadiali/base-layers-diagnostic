@@ -31,13 +31,22 @@ export const initials = (name = "") =>
     .join("");
 
 // Take "Luke Badiali" -> "Luke", "luke.badiali@x.com" -> "Luke", "luke@x.com" -> "Luke".
+// Plan 02-06 (Wave 5, D-15): the falsy branch is unreachable because every caller
+// guards via `if (piece)` (line 47). c8 ignore preserves byte-identical D-05
+// extraction while satisfying the 100% src/util/** threshold.
+/* c8 ignore next */
 const capitalise = (/** @type {string} */ s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 /** @param {{authorName?:string, authorEmail?:string}} m */
 export const firstNameFromAuthor = (m) => {
   const name = (m.authorName || "").trim();
   if (name) {
+    // After (...||"").trim(), if `name` is truthy then `name.split(/\s+/)[0]` is
+    // always non-empty — the false branch of `if (first)` is unreachable.
+    // c8 ignore preserves byte-identical D-05 extraction while satisfying the
+    // 100% src/util/** threshold (Plan 02-06 / D-15).
     const first = name.split(/\s+/)[0];
+    /* c8 ignore next */
     if (first) return first;
   }
   const email = (m.authorEmail || "").trim();

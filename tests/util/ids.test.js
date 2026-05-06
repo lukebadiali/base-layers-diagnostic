@@ -99,4 +99,22 @@ describe("firstNameFromAuthor", () => {
     expect(firstNameFromAuthor({})).toBe("Unknown");
     expect(firstNameFromAuthor({ authorName: "", authorEmail: "" })).toBe("Unknown");
   });
+
+  // Plan 02-06 (Wave 5) coverage back-fill: drive the defensive `|| ""` and
+  // `if (first|piece)` short-circuit branches so the 100% src/util/** threshold
+  // (D-15) holds. Each case targets a specific branch v8 reports uncovered.
+  it("falls through to authorEmail when authorName is whitespace-only (no first token)", () => {
+    // authorName.trim() yields "", so the name branch is skipped.
+    expect(firstNameFromAuthor({ authorName: "   ", authorEmail: "alice@x" })).toBe("Alice");
+  });
+
+  it("returns 'Unknown' when authorEmail local-part has no usable piece (only delimiters)", () => {
+    // local = ".-_+" → split(/[.\-_+]/)[0] === "" → piece falsy → falls through to "Unknown".
+    expect(firstNameFromAuthor({ authorEmail: ".-_+@x" })).toBe("Unknown");
+  });
+
+  it("treats an at-prefixed email (no local part) as Unknown", () => {
+    // local = "" → piece "" → "Unknown" (drives email branch but piece-empty subbranch).
+    expect(firstNameFromAuthor({ authorEmail: "@x" })).toBe("Unknown");
+  });
 });

@@ -61,6 +61,12 @@ describe("userCompletionPct", () => {
     expect(userCompletionPct({ responses: {} }, "r1", "u1", DATA)).toBe(0);
     expect(userCompletionPct({ responses: { r1: {} } }, "r1", "u1", DATA)).toBe(0);
   });
+
+  // Plan 02-06 (Wave 5) coverage back-fill: drive each defensive `|| {}` branch
+  // on line 17 so the 100% src/domain/** threshold (D-15) holds.
+  it("handles a missing responses key on the org (defensive `|| {}` branch)", () => {
+    expect(userCompletionPct({}, "r1", "u1", DATA)).toBe(0);
+  });
 });
 
 describe("orgSummary", () => {

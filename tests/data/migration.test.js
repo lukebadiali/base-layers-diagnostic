@@ -151,6 +151,99 @@ describe("migrateV1IfNeeded", () => {
     // The org should be unchanged (early return inside the forEach).
     expect(deps.store.orgs.y.rounds[0].label).toBe("Existing");
   });
+
+  // Plan 02-06 (Wave 5) coverage back-fill: drive the defensive `if (!raw) return`
+  // branch on line 43 (orgMeta references a missing org body in storage).
+  it("skips orgs whose body is missing in storage (defensive `if (!raw) return`)", () => {
+    const deps = makeDeps({
+      orgMetas: [{ id: "ghost", name: "Ghost" }, ...v1Fixture.orgMetas],
+      orgs: v1Fixture.orgs, // no key for "ghost"
+    });
+    migrateV1IfNeeded(deps);
+    // Ghost org is skipped; the real one is migrated normally.
+    expect(deps.store.orgs.ghost).toBeUndefined();
+    expect(deps.store.orgs.x).toBeDefined();
+    expect(deps.store.orgs.x.rounds).toHaveLength(1);
+  });
+
+  // Plan 02-06 (Wave 5) coverage back-fill: drive the falsy fallback branches
+  // inside the response-migration loop (lines 53, 58, 59, 65-79) so the 90%
+  // src/data/** branches threshold (D-15) holds.
+  it("falls back to iso() / [] / default-engagement when v1 org body lacks optional fields", () => {
+    const deps = makeDeps({
+      orgMetas: [{ id: "minimal", name: "Minimal" }],
+      orgs: {
+        minimal: {
+          id: "minimal",
+          name: "Minimal",
+          // NO createdAt, NO actions, NO engagement, NO responses
+        },
+      },
+    });
+    migrateV1IfNeeded(deps);
+
+    const orgM = deps.store.orgs.minimal;
+    // Falsy fallbacks applied:
+    expect(orgM.createdAt).toBe("2026-01-01T00:00:00.000Z"); // iso() under fake timers
+    expect(orgM.rounds[0].createdAt).toBe("2026-01-01T00:00:00.000Z");
+    expect(orgM.actions).toEqual([]); // raw.actions || [] -> []
+    expect(orgM.engagement).toEqual({ currentStageId: "diagnosed", stageChecks: {} });
+    expect(orgM.internalNotes).toEqual({}); // never populated
+  });
+
+  it("preserves response notes empty string when r.note is absent + skips internalNote when absent", () => {
+    const deps = makeDeps({
+      orgMetas: [{ id: "noteless", name: "Noteless" }],
+      orgs: {
+        noteless: {
+          id: "noteless",
+          name: "Noteless",
+          createdAt: "2025-01-01T00:00:00.000Z",
+          responses: {
+            // pillar 5 question 0: score only, no note, no internalNote
+            5: { 0: { score: 8 } },
+          },
+        },
+      },
+    });
+    migrateV1IfNeeded(deps);
+
+    const orgN = deps.store.orgs.noteless;
+    const legacyId = deps.store.users[0].id;
+    const round = orgN.rounds[0].id;
+    expect(orgN.responses[round][legacyId][5][0]).toEqual({ score: 8, note: "" });
+    expect(orgN.internalNotes).toEqual({}); // no internal note hoisted
+  });
+
+  it("does NOT link the legacy user to a single org when there are multiple v1 orgs (line 86 false branch)", () => {
+    const deps = makeDeps({
+      orgMetas: [
+        { id: "a", name: "A" },
+        { id: "b", name: "B" },
+      ],
+      orgs: {
+        a: { id: "a", name: "A", createdAt: "2025-01-01T00:00:00.000Z" },
+        b: { id: "b", name: "B", createdAt: "2025-01-02T00:00:00.000Z" },
+      },
+    });
+    migrateV1IfNeeded(deps);
+    expect(deps.store.users).toHaveLength(1);
+    // Multi-org migration leaves orgId null on the legacy user (line 86 false branch).
+    expect(deps.store.users[0].orgId).toBeNull();
+    expect(deps.store.orgs.a.rounds).toHaveLength(1);
+    expect(deps.store.orgs.b.rounds).toHaveLength(1);
+  });
+
+  it("hoists internalNote to org.internalNotes when present on a v1 response", () => {
+    // This covers the truthy branch of line 75 — distinct from the noteless test
+    // above which covers the falsy branch.
+    const deps = makeDeps({
+      orgMetas: v1Fixture.orgMetas,
+      orgs: v1Fixture.orgs,
+    });
+    migrateV1IfNeeded(deps);
+    expect(deps.store.orgs.x.internalNotes[1][0]).toBe("in1");
+  });
 });
 
 describe("clearOldScaleResponsesIfNeeded", () => {
@@ -177,5 +270,33 @@ describe("clearOldScaleResponsesIfNeeded", () => {
     // responses + internalNotes unchanged
     expect(deps.store.orgs.x.responses).toEqual(orgs.x.responses);
     expect(deps.store.orgs.x.internalNotes).toEqual(orgs.x.internalNotes);
+  });
+
+  // Plan 02-06 (Wave 5) coverage back-fill: drive the defensive `if (!org) return`
+  // branch on line 110 + the `if (org.currentRoundId)` false branch on line 113
+  // so the 90% src/data/** branches threshold (D-15) holds.
+  it("skips orgs whose body is missing in storage (defensive `if (!org) return`)", () => {
+    const deps = makeDeps({
+      orgMetas: [{ id: "ghost" }, { id: "x" }],
+      orgs: { x: { id: "x", currentRoundId: "r1", responses: { r1: { u1: { 1: { 0: { score: 5 } } } } } } },
+      settings: { scaleV2Cleared: false },
+    });
+    clearOldScaleResponsesIfNeeded(deps);
+    // Ghost is skipped; x is cleared normally.
+    expect(deps.store.orgs.ghost).toBeUndefined();
+    expect(deps.store.orgs.x.responses).toEqual({ r1: {} });
+    expect(deps.store.settings.scaleV2Cleared).toBe(true);
+  });
+
+  it("clears orgs without currentRoundId without seeding a round entry (line 113 false branch)", () => {
+    const deps = makeDeps({
+      orgMetas: [{ id: "x" }],
+      orgs: { x: { id: "x", responses: { someRound: { u1: {} } }, internalNotes: { 1: {} } } }, // NO currentRoundId
+      settings: { scaleV2Cleared: false },
+    });
+    clearOldScaleResponsesIfNeeded(deps);
+    // responses fully empty (no round-id seed) because currentRoundId is missing.
+    expect(deps.store.orgs.x.responses).toEqual({});
+    expect(deps.store.orgs.x.internalNotes).toEqual({});
   });
 });

@@ -287,6 +287,35 @@ Cleanup ledger: revisit in Phase 4 cleanup ledger row "CSP CDN allowlist" — Ph
 - SOC 2 CC6.6 — Logical access security boundaries
 - GDPR Art. 32(1)(b) — Confidentiality of processing systems and services
 
+---
+
+## § Hosting & Deployment
+
+**Control:** Production at `https://baselayers.bedeveloped.com` is served by Firebase Hosting from the build artefact `dist/` produced by Vite. The `cspReportSink` 2nd-generation Cloud Function is deployed alongside hosting in `europe-west2`. Continuous deployment is wired through `.github/workflows/ci.yml` jobs `deploy` (push to `main`) and `preview` (per `pull_request`); both authenticate to GCP via Workload Identity Federation (no long-lived service account JSON keys in GitHub Secrets — OIDC-only trust binding scoped to this exact repo per `runbooks/firebase-oidc-bootstrap.md`). The `deploy` job ends with a `curl -I` assertion that fails the run if any of HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, COOP, COEP, CORP, Reporting-Endpoints, or Content-Security-Policy-Report-Only is missing from the live response — a deployment-time control that prevents silent header drop (T-3-1) at the CDN edge layer (the schema test in `tests/firebase-config.test.js` catches config-time regressions; this assertion catches runtime/CDN regressions). PR preview channels are deployed via `FirebaseExtended/action-hosting-deploy` to channel `pr-<number>` with a 7-day auto-expiry, so abandoned channels self-purge (T-3-pr-channel-leak). The deploy job runs under a concurrency group `firebase-deploy-main` with `cancel-in-progress: false` so two simultaneous pushes to main do not interleave deploys (T-3-deploy-collision). The functions/ workspace is built (`cd functions && npm ci && npm run build`) before every `firebase deploy`, mitigating Pitfall 5 / T-3-functions-mod-not-found whereby `firebase-tools` would otherwise upload stale or absent compiled JS. The GitHub Pages serving substrate is retained dormant for 14 days post-cutover as a documented rollback path (5-minute re-enable + DNS revert); deletion of the `gh-pages` branch + Pages workflow is tracked in `runbooks/phase-4-cleanup-ledger.md`. Branch protection rules adding `deploy` and `preview` to required status checks are deferred to a follow-up runbook commit (Phase 3 Plan 06) — added AFTER the first green deploy run registers the check names in GitHub's check registry, mirroring the Pitfall A pattern from Phase 1 D-12.
+
+**Evidence:**
+
+- CI deploy job: `.github/workflows/ci.yml` job `deploy` (Phase 3 Plan 04 — push to main, OIDC, post-deploy 9-header curl assertion)
+- CI preview job: `.github/workflows/ci.yml` job `preview` (Phase 3 Plan 04 — pull_request, channel `pr-<number>`, 7d expiry)
+- OIDC bootstrap runbook: `runbooks/firebase-oidc-bootstrap.md` (Phase 1 D-23) — Workload Identity Pool `github-actions`, provider `github-oidc`, service account `github-actions-deploy@bedeveloped-base-layers.iam.gserviceaccount.com`
+- SHA-pinned auth action: `google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093` (v3) — verified against GitHub API 2026-05-06
+- SHA-pinned preview action: `FirebaseExtended/action-hosting-deploy@e2eda2e106cfa35cdbcf4ac9ddaf6c4756df2c8c` (v0.10.0)
+- Post-deploy header assertion: `.github/workflows/ci.yml` `deploy` job step "Assert security headers (T-3-1 mitigation)" — fails the deploy if any of the 9 expected headers is absent
+- Functions/ supply chain: `audit` job step "npm audit (functions/ prod deps, high severity)" — extends Phase 1 D-21 root-only `npm audit` to the standalone `functions/` workspace (Dependabot already monitors `/functions` per Phase 1 D-19)
+- Concurrency control: `deploy` job `concurrency.group: firebase-deploy-main` with `cancel-in-progress: false`
+- Cutover runbook: `runbooks/hosting-cutover.md` (Phase 3 Plan 05 — pre-cutover smoke + same-session CNAME flip + DNS revert procedure)
+- Cleanup ledger: `runbooks/phase-4-cleanup-ledger.md` "Phase 3 GH-Pages rollback substrate" entry (Phase 3 Plan 06 — day-14 deletion)
+- Header schema test: `tests/firebase-config.test.js` (Phase 3 Plan 02 — guards 9-header set + rewrite ordering at commit time)
+- Standalone `functions/` workspace: root `package.json` has no `workspaces` key (Pitfall 2 mitigation — Firebase deploy invokes its own `npm ci` inside `functions/`)
+- Branch-protection deferral: `runbooks/branch-protection-bootstrap.md` updated by Phase 3 Plan 06 AFTER the first green run, per Pitfall A pattern from Phase 1 D-12
+
+**Framework citations:**
+
+- OWASP ASVS L2 v5.0 V14.7 — Build & Deploy Pipeline (SHA-pinned actions, OIDC-only trust, post-deploy verification, no long-lived deploy credentials)
+- ISO/IEC 27001:2022 A.5.7 — Threat intelligence (cloud services governance — short-lived federated credentials, repo-scoped trust binding)
+- SOC 2 CC8.1 — Change management (CI gates every change through lint + typecheck + test + audit + build + deploy verification before reaching production)
+- Workload Identity Federation — short-lived OAuth tokens minted via OIDC token-exchange (Google Cloud documentation: cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines)
+
 ### § Threat Model — *TODO Phase 11*
 
 Link target: `THREAT_MODEL.md` (created Phase 11 — STRIDE-style coverage

@@ -48,6 +48,12 @@ import {
   markPillarRead as _markPillarRead,
   unreadChatTotal as _unreadChatTotal,
 } from "./src/domain/unread.js";
+import {
+  migrateV1IfNeeded as _migrateV1IfNeeded,
+  clearOldScaleResponsesIfNeeded as _clearOldScaleResponsesIfNeeded,
+} from "./src/data/migration.js";
+import { syncFromCloud as _syncFromCloud } from "./src/data/cloud-sync.js";
+import * as auth from "./src/auth/state-machine.js";
 
 (function () {
   "use strict";
@@ -264,6 +270,26 @@ import {
   const unreadChatTotal = (user) =>
     _unreadChatTotal(user, state, lastReadMillis, msgMillis, unreadChatForOrg);
 
+  // Phase 2 Wave 4 (D-05): wrappers for migration helpers (Pattern E).
+  // Bodies extracted to src/data/migration.js.
+  const migrateV1IfNeeded = () => _migrateV1IfNeeded({
+    loadUsers, loadOrgMetas, loadOrg, saveOrg, upsertUser, findUser,
+    removeV1ActiveKey: () => LS.removeItem(K.v1Active),
+  });
+  const clearOldScaleResponsesIfNeeded = () => _clearOldScaleResponsesIfNeeded({
+    loadSettings, saveSettings, loadOrgMetas, loadOrg, saveOrg,
+  });
+  const syncFromCloud = () => _syncFromCloud({
+    fbReady, cloudFetchAllOrgs, cloudFetchAllUsers, cloudPushOrg, cloudPushUser,
+    jget, jset, K, render,
+  });
+  // Phase 2 Wave 4 (D-05): wrappers for auth state-machine (Pattern E).
+  // Bodies extracted to src/auth/state-machine.js. Phase 6 (AUTH-14) deletes the whole module.
+  const verifyInternalPassword = (pass) => auth.verifyInternalPassword(pass, { INTERNAL_PASSWORD_HASH });
+  const verifyOrgClientPassphrase = (orgId, pass) => auth.verifyOrgClientPassphrase(orgId, pass, { loadOrg });
+  const verifyUserPassword = (userId, pass) => auth.verifyUserPassword(userId, pass, { findUser });
+  const currentUser = () => auth.currentUser({ currentSession, findUser });
+
   // Phase 2 (D-05): userCompletionPct + orgSummary extracted to src/domain/completion.js — wrappers above.
 
   function topConstraints(org, n = 3) {
@@ -303,10 +329,7 @@ import {
   function currentSession() {
     return jget(K.session, null);
   }
-  function currentUser() {
-    const s = currentSession();
-    return s ? findUser(s.userId) : null;
-  }
+  // Phase 2 (D-05): currentUser extracted to src/auth/state-machine.js — wrapper above.
   function signIn(userId) {
     jset(K.session, { userId });
   }
@@ -427,10 +450,7 @@ import {
     const e = (email || "").trim().toLowerCase();
     return INTERNAL_ALLOWED_EMAILS.includes(e);
   }
-  async function verifyInternalPassword(pass) {
-    const h = await hashString(pass);
-    return h === INTERNAL_PASSWORD_HASH;
-  }
+  // Phase 2 (D-05): verifyInternalPassword extracted to src/auth/state-machine.js — wrapper above.
 
   // ---------- Client org passphrase (shared by all users of an org) ----------
   async function setOrgClientPassphrase(orgId, pass) {
@@ -440,12 +460,7 @@ import {
     saveOrg(org);
     return true;
   }
-  async function verifyOrgClientPassphrase(orgId, pass) {
-    const org = loadOrg(orgId);
-    if (!org || !org.clientPassphraseHash) return false;
-    const h = await hashString(pass);
-    return h === org.clientPassphraseHash;
-  }
+  // Phase 2 (D-05): verifyOrgClientPassphrase extracted to src/auth/state-machine.js — wrapper above.
   function orgHasClientPassphrase(orgId) {
     const org = loadOrg(orgId);
     return !!(org && org.clientPassphraseHash);
@@ -459,87 +474,9 @@ import {
     upsertUser(u);
     return true;
   }
-  async function verifyUserPassword(userId, pass) {
-    const u = findUser(userId);
-    if (!u || !u.passwordHash) return false;
-    const h = await hashString(pass);
-    return h === u.passwordHash;
-  }
+  // Phase 2 (D-05): verifyUserPassword extracted to src/auth/state-machine.js — wrapper above.
 
-  // ---------- v1 → v2 migration ----------
-  function migrateV1IfNeeded() {
-    const users = loadUsers();
-    const orgs = loadOrgMetas();
-    if (users.length > 0) return; // already v2
-
-    // If v1 data exists, migrate it
-    const v1Orgs = orgs.slice();
-    if (v1Orgs.length === 0) return;
-
-    // Create a legacy respondent user so historical responses have an owner
-    const legacyId = uid("u_");
-    const legacy = {
-      id: legacyId,
-      email: "legacy@bedeveloped.local",
-      name: "Legacy respondent",
-      role: "client",
-      orgId: null, // set later if single-org
-      createdAt: iso(),
-    };
-    upsertUser(legacy);
-
-    v1Orgs.forEach((meta) => {
-      const raw = loadOrg(meta.id);
-      if (!raw) return;
-
-      // Already migrated?
-      if (raw.rounds && raw.currentRoundId) return;
-
-      const roundId = uid("r_");
-      const migrated = {
-        id: raw.id,
-        name: raw.name,
-        createdAt: raw.createdAt || iso(),
-        currentRoundId: roundId,
-        rounds: [{ id: roundId, label: "Round 1 (migrated)", createdAt: raw.createdAt || iso() }],
-        responses: { [roundId]: {} },
-        internalNotes: {},
-        actions: (raw.actions || []).map((a) => ({ ...a, createdBy: legacyId })),
-        engagement: raw.engagement || { currentStageId: "diagnosed", stageChecks: {} },
-        comments: {},
-        readStates: {},
-      };
-
-      // migrate old responses (single respondent)
-      const oldResp = raw.responses || {};
-      const byUser = migrated.responses[roundId];
-      byUser[legacyId] = {};
-      Object.entries(oldResp).forEach(([pillarId, qs]) => {
-        byUser[legacyId][pillarId] = {};
-        Object.entries(qs || {}).forEach(([idx, r]) => {
-          byUser[legacyId][pillarId][idx] = {
-            score: r.score,
-            note: r.note || "",
-          };
-          if (r.internalNote) {
-            migrated.internalNotes[pillarId] = migrated.internalNotes[pillarId] || {};
-            migrated.internalNotes[pillarId][idx] = r.internalNote;
-          }
-        });
-      });
-
-      saveOrg(migrated);
-    });
-
-    // If there was exactly one org, point legacy user at it
-    if (v1Orgs.length === 1) {
-      const leg = findUser(legacyId);
-      leg.orgId = v1Orgs[0].id;
-      upsertUser(leg);
-    }
-
-    LS.removeItem(K.v1Active);
-  }
+  // Phase 2 (D-05): extracted to src/data/migration.js — wrappers above.
 
   // ---------- State ----------
   const state = {
@@ -3444,48 +3381,8 @@ import {
     }
   }
 
-  // Bootstrap: pull cloud orgs/users into local cache. Anything that exists
-  // locally but not in cloud (e.g. a brand-new install) gets pushed up.
-  // Cloud wins on overlap. Bails silently if either fetch errors so we never
-  // wipe local data on a network blip.
-  async function syncFromCloud() {
-    if (!fbReady()) return;
-    const [cloudOrgs, cloudUsers] = await Promise.all([cloudFetchAllOrgs(), cloudFetchAllUsers()]);
-    if (cloudOrgs === null || cloudUsers === null) return;
-
-    // ---- Orgs ----
-    const localMetas = jget(K.orgs, []);
-    const cloudOrgIds = new Set(cloudOrgs.map((o) => o.id));
-    localMetas.forEach((meta) => {
-      if (!cloudOrgIds.has(meta.id)) {
-        const local = jget(K.org(meta.id), null);
-        if (local) cloudPushOrg(local);
-      }
-    });
-    cloudOrgs.forEach((o) => {
-      if (o && o.id) jset(K.org(o.id), o);
-    });
-    const newMetas = cloudOrgs.filter((o) => o && o.id).map((o) => ({ id: o.id, name: o.name }));
-    localMetas.forEach((m) => {
-      if (!cloudOrgIds.has(m.id)) newMetas.push(m);
-    });
-    jset(K.orgs, newMetas);
-
-    // ---- Users ----
-    const localUsers = jget(K.users, []);
-    const cloudUserIds = new Set(cloudUsers.map((u) => u.id));
-    localUsers.forEach((u) => {
-      if (!cloudUserIds.has(u.id)) cloudPushUser(u);
-    });
-    const merged = [...cloudUsers];
-    localUsers.forEach((u) => {
-      if (!cloudUserIds.has(u.id)) merged.push(u);
-    });
-    jset(K.users, merged);
-
-    // Re-render so the UI reflects synced data
-    if (typeof render === "function") render();
-  }
+  // Phase 2 (D-05): syncFromCloud extracted to src/data/cloud-sync.js — wrapper above.
+  // Pitfall 20 / H8 entanglement preserved as REGRESSION BASELINE in tests/data/cloud-sync.test.js.
 
   // ================================================================
   // DOCUMENTS (Firebase Storage + Firestore)
@@ -5349,23 +5246,7 @@ Any questions, just let me know.`;
   // ================================================================
   // INIT
   // ================================================================
-  // One-shot: clear all diagnostic responses when switching from the
-  // old 1-5 scale to the new 1-10 confidence scale. Runs once per browser.
-  function clearOldScaleResponsesIfNeeded() {
-    const s = loadSettings();
-    if (s.scaleV2Cleared) return;
-    loadOrgMetas().forEach((m) => {
-      const org = loadOrg(m.id);
-      if (!org) return;
-      org.responses = {};
-      // Keep the current round id present but empty
-      if (org.currentRoundId) org.responses[org.currentRoundId] = {};
-      org.internalNotes = {};
-      saveOrg(org);
-    });
-    s.scaleV2Cleared = true;
-    saveSettings(s);
-  }
+  // Phase 2 (D-05): clearOldScaleResponsesIfNeeded extracted to src/data/migration.js — wrapper above.
 
   // One-shot: clear all diagnostic responses when the 10-pillar framework
   // is restructured. Pillar IDs shift meaning so old scores would attach to

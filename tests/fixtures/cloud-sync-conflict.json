@@ -1,0 +1,20 @@
+{
+  "scenarioOverlap": {
+    "localMetas": [{ "id": "x", "name": "Local X" }],
+    "localOrg_x": { "id": "x", "name": "Local X", "marker": "local" },
+    "cloudOrgs": [{ "id": "x", "name": "Cloud X", "marker": "cloud" }],
+    "cloudUsers": [],
+    "localUsers": []
+  },
+  "scenarioLocalOnly": {
+    "localMetas": [{ "id": "y", "name": "Local Y" }],
+    "localOrg_y": { "id": "y", "name": "Local Y", "marker": "local" },
+    "cloudOrgs": [],
+    "cloudUsers": [],
+    "localUsers": [{ "id": "u_local", "name": "Local User" }]
+  },
+  "scenarioBail": {
+    "cloudOrgs": null,
+    "cloudUsers": []
+  }
+}

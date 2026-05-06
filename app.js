@@ -38,6 +38,16 @@ import {
   respondentsForRound,
   answeredCount as _answeredCount,
 } from "./src/domain/scoring.js";
+import {
+  userCompletionPct as _userCompletionPct,
+  orgSummary as _orgSummary,
+} from "./src/domain/completion.js";
+import {
+  unreadCountForPillar as _unreadCountForPillar,
+  unreadCountTotal as _unreadCountTotal,
+  markPillarRead as _markPillarRead,
+  unreadChatTotal as _unreadChatTotal,
+} from "./src/domain/unread.js";
 
 (function () {
   "use strict";
@@ -238,32 +248,23 @@ import {
   const answeredCount = (org, roundId, userId, pillarId) =>
     _answeredCount(org, roundId, userId, pillarId, DATA);
 
-  function userCompletionPct(org, roundId, userId) {
-    const totalQ = DATA.pillars.reduce((s, p) => s + p.diagnostics.length, 0);
-    const resp = ((org.responses || {})[roundId] || {})[userId] || {};
-    let done = 0;
-    DATA.pillars.forEach((p) => {
-      const pq = resp[p.id] || {};
-      done += Object.values(pq).filter((r) => Number.isFinite(r.score)).length;
-    });
-    return Math.round((done / totalQ) * 100);
-  }
+  // Phase 2 Wave 3 (D-05): wrappers for completion + unread (Pattern E).
+  // Bodies extracted to src/domain/completion.js + src/domain/unread.js.
+  // userCompletionPct + orgSummary inject DATA + pillarScore; unread wrappers
+  // inject saveOrg / commentsFor / state / lastReadMillis / msgMillis / unreadChatForOrg
+  // (all defined later in the IIFE — safe because wrappers resolve those names
+  // at call time, by which point they exist in scope).
+  const userCompletionPct = (org, roundId, userId) =>
+    _userCompletionPct(org, roundId, userId, DATA);
+  const orgSummary = (org) => _orgSummary(org, DATA, pillarScore);
+  const unreadCountForPillar = (org, pillarId, user) =>
+    _unreadCountForPillar(org, pillarId, user, commentsFor);
+  const unreadCountTotal = (org, user) => _unreadCountTotal(org, user, DATA, commentsFor);
+  const markPillarRead = (org, pillarId, user) => _markPillarRead(org, pillarId, user, saveOrg);
+  const unreadChatTotal = (user) =>
+    _unreadChatTotal(user, state, lastReadMillis, msgMillis, unreadChatForOrg);
 
-  function orgSummary(org) {
-    const scored = DATA.pillars.map((p) => pillarScore(org, p.id)).filter((s) => s !== null);
-    const avg = scored.length
-      ? Math.round(scored.reduce((a, b) => a + b, 0) / scored.length)
-      : null;
-    const statuses = DATA.pillars.map((p) => pillarStatus(pillarScore(org, p.id)));
-    return {
-      avg,
-      red: statuses.filter((s) => s === "red").length,
-      amber: statuses.filter((s) => s === "amber").length,
-      green: statuses.filter((s) => s === "green").length,
-      gray: statuses.filter((s) => s === "gray").length,
-      scoredCount: scored.length,
-    };
-  }
+  // Phase 2 (D-05): userCompletionPct + orgSummary extracted to src/domain/completion.js — wrappers above.
 
   function topConstraints(org, n = 3) {
     return DATA.pillars
@@ -296,24 +297,7 @@ import {
     return list;
   }
 
-  function unreadCountForPillar(org, pillarId, user) {
-    const list = commentsFor(org, pillarId, user);
-    const last = ((org.readStates || {})[user.id] || {})[pillarId];
-    const lastT = last ? new Date(last).getTime() : 0;
-    return list.filter((c) => new Date(c.createdAt).getTime() > lastT && c.authorId !== user.id)
-      .length;
-  }
-
-  function unreadCountTotal(org, user) {
-    return DATA.pillars.reduce((s, p) => s + unreadCountForPillar(org, p.id, user), 0);
-  }
-
-  function markPillarRead(org, pillarId, user) {
-    org.readStates = org.readStates || {};
-    org.readStates[user.id] = org.readStates[user.id] || {};
-    org.readStates[user.id][pillarId] = iso();
-    saveOrg(org);
-  }
+  // Phase 2 (D-05): unreadCountForPillar, unreadCountTotal, markPillarRead extracted to src/domain/unread.js — wrappers above.
 
   // ---------- Auth ----------
   function currentSession() {
@@ -361,16 +345,7 @@ import {
       (m) => m.orgId === orgId && m.authorId !== user.id && msgMillis(m) > lastT,
     ).length;
   }
-  function unreadChatTotal(user) {
-    if (!user) return 0;
-    if (user.role === "client") return unreadChatForOrg(user, user.orgId);
-    // internal: count across every org they're seeing
-    return (state.chatMessages || []).reduce((n, m) => {
-      if (m.authorId === user.id) return n;
-      const lastT = lastReadMillis(user.id, m.orgId);
-      return msgMillis(m) > lastT ? n + 1 : n;
-    }, 0);
-  }
+  // Phase 2 (D-05): unreadChatTotal extracted to src/domain/unread.js — wrapper above.
 
   function stopChatSubscription() {
     if (state.chatSubscription) {

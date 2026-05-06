@@ -259,6 +259,13 @@ Cut production from GitHub Pages → Firebase Hosting at `baselayers.bedeveloped
 
 </deferred>
 
+<addendum>
+## Decision Refinements (post-research)
+
+- **D-10a (refines D-10):** Use `logger.warn(message, obj)` from `firebase-functions/logger`, NOT `console.warn(JSON.stringify(...))` as originally specified in D-10. Reason: RESEARCH.md §Pattern 2 verified that in 2nd-gen Cloud Functions, only `logger.warn(message, structuredPayload)` produces a Cloud Logging entry with `severity=WARNING` AND a queryable `jsonPayload` field. `console.warn(JSON.stringify(...))` produces a `textPayload` entry that cannot be queried by field in Logs Explorer (e.g., `jsonPayload.message="csp.violation"` filters wouldn't match). Implementation: `logger.warn("csp.violation", { report: <normalized>, fingerprint: <hash>, severity: "WARNING" })`. The signature contract (severity / message / structured payload) is preserved; only the call mechanism changes.
+
+</addendum>
+
 ---
 
 *Phase: 03-hosting-cutover-baseline-security-headers*

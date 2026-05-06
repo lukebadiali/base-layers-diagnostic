@@ -20,7 +20,7 @@ window.BASE_LAYERS = {
       id: "diagnosed",
       name: "Diagnose",
       summary:
-        "Assess the business against all ten pillars. Fast, evidence-based, interview-led. Finds the real constraints — rarely where the client first assumed.",
+        "Assess the business against all ten pillars. Fast, evidence-based, interview-led. Finds the real constraints - rarely where the client first assumed.",
       checklist: [
         "All ten pillars scored with evidence",
         "Diagnostic interviews completed with commercial leadership",
@@ -59,7 +59,7 @@ window.BASE_LAYERS = {
       id: "developed",
       name: "BeDeveloped",
       summary:
-        "Handover. A self-sustaining operating model the client's team can run. Internal owners coached, measurement rhythm installed, exit checkpoints agreed.",
+        "Operational Excellence. A fully embedded, self-sustaining model the team confidently runs. Clear ownership, consistent measurement cadence, and ongoing optimisation built in.",
       checklist: [
         "Internal owners coached to run each pillar",
         "Measurement rhythm running without us",
@@ -87,9 +87,9 @@ window.BASE_LAYERS = {
   pillars: [
     {
       id: 1,
-      name: "Strategy & Market Positioning",
-      shortName: "Strategy & Positioning",
-      tagline: "The foundation. Target market, value proposition, pricing, competitive position.",
+      name: "Strategy, ICP & Market Positioning",
+      shortName: "Strategy & ICP",
+      tagline: "The foundation. Target market, ideal customer profile, value proposition, pricing, competitive position.",
       dashDescription:
         "Defines the foundation of your commercial strategy by clarifying who you sell to, the problem you solve, and why your solution matters now. Many early-stage sales challenges stem from unclear positioning rather than poor execution.",
       dashAchieve:
@@ -97,7 +97,7 @@ window.BASE_LAYERS = {
       overview:
         "Sales output is downstream of strategic clarity. Before a CRM is deployed or a cadence is written, a business must be able to articulate, in a sentence, who it sells to, what problem it helps them change, and why that buyer should act now. Most early-stage sales problems are misdiagnosed as execution problems when they are, in fact, positioning problems.",
       components: [
-        "Target market definition (ICP — ideal customer profile)",
+        "Target market definition (ICP - ideal customer profile)",
         "Value proposition (why you vs competitors)",
         "Pricing & packaging",
         "Competitive positioning",
@@ -109,21 +109,21 @@ window.BASE_LAYERS = {
         "Establish competitive positioning that every seller can defend in a live call.",
       ],
       diagnostics: [
-        "How confident are you that your current business development processes are documented and accessible?",
         {
-          text: "How regularly do you update strategy based on market and customer feedback?",
+          text: "How regularly do you review and update your go-to-market strategy based on market conditions and customer insight?",
           scale: 5,
           anchors: { low: "Yearly", high: "Monthly" },
           labels: { 1: "Yearly", 3: "6-monthly", 5: "Monthly" },
         },
-        "How clearly defined is your sales funnel?",
         "How clearly defined is your Ideal Customer Profile (ICP)?",
-        "How differentiated is your value proposition?",
-        "How well defined is your pricing and packaging strategy?",
-        "How strong is your competitive positioning?",
-        "How well aligned is your offering with current market demand?",
-        "How confident are you in your market segmentation approach?",
-        "How clearly do you understand why customers choose you over competitors?",
+        "How well segmented is your ICP (e.g. sector, size, geography, buyer role, deal size)?",
+        "How confident are you that you're focusing on the right segments (highest value, win rate, and scalability)?",
+        "How focused is your go-to-market approach (clear target segments vs trying to serve everyone)?",
+        "How clearly defined is your position in the market relative to competitors?",
+        "How distinct is your offering in the market from a buyer's perspective (without relying on relationships or reputation)?",
+        "How well defined is your pricing and packaging strategy (offers, tiers, scope, positioning by segment)?",
+        "How well aligned is your offering with current market demand and buyer priorities?",
+        "How clearly do you understand why customers choose you (and why they don't)?",
       ],
       whatWeDo: [
         "ICP workshops with commercial leadership, validated against closed won and closed lost data.",
@@ -139,16 +139,63 @@ window.BASE_LAYERS = {
     },
     {
       id: 2,
-      name: "Lead Generation",
-      shortName: "Lead Generation",
-      tagline:
-        "Getting in front of the right people consistently. Volume and quality of opportunities.",
+      name: "Value Proposition & Commercial Narrative",
+      shortName: "Value Proposition",
+      tagline: "How you express the problem, the answer and the proof. The story that earns the meeting and closes the deal.",
       dashDescription:
-        "Focuses on building a consistent flow of high-quality opportunities by selecting and executing the right channels for your market. Rather than spreading efforts too thin, this pillar emphasises focus, coordination, and repeatability.",
+        "Translates strategy into a sharp, persuasive narrative that every seller can deliver and every buyer can understand. A clear, repeatable value proposition is the difference between a polite no and a sale.",
       dashAchieve:
-        "A predictable top-of-funnel engine driven by the right mix of outbound, inbound, and other channels, generating both volume and quality pipeline.",
+        "A consistent commercial narrative that articulates problem, value and proof in a way that wins meetings, accelerates buying decisions, and is delivered the same way by every seller.",
       overview:
-        "Lead generation is about getting in front of the right people consistently, and doing so with enough volume and quality to keep pipeline predictable. Most early-stage teams either lean on a single channel until it breaks, or scatter across every channel and master none. The job here is to pick, concentrate and operate.",
+        "If positioning is what you stand for, the commercial narrative is how you say it. The strongest sales teams do not improvise the story - they have a shared way of describing the problem the buyer is in, the change they help create, and the proof that they can be trusted to deliver it. Where this is missing, every seller tells a slightly different story, and buyers feel the inconsistency before they hear it named.",
+      components: [
+        "Value proposition",
+        "Commercial narrative & messaging architecture",
+        "Differentiation & point of view",
+        "Proof, outcome statements & references",
+      ],
+      objectives: [
+        "Translate the positioning into a clear, repeatable value proposition for each segment.",
+        "Build a commercial narrative covering problem, change, proof and proposition.",
+        "Equip every seller to articulate the narrative the same way, in their own voice.",
+        "Validate the narrative against buyer feedback and win/loss patterns.",
+      ],
+      diagnostics: [
+        "How clearly articulated is your core value proposition?",
+        "How well does your value proposition differentiate you from competitors?",
+        "How specifically tailored is your messaging to your ideal customer profile?",
+        "How effectively do you quantify the impact of customers delaying or avoiding action?",
+        "How consistently is your value proposition delivered across the team?",
+        "How well does your messaging connect to the buyer's strategic priorities?",
+        "How clearly do you communicate measurable outcomes that customers can expect?",
+        "How strong is your point of view on the market your buyers operate in?",
+        "How well validated is your messaging with real customer and prospect feedback?",
+        "How effectively does your commercial narrative move buyers from interest to commitment?",
+      ],
+      whatWeDo: [
+        "Messaging architecture workshop with commercial and marketing leadership.",
+        "Narrative framework: problem, point of view, proof, proposition - mapped to ICP.",
+        "Outcome and proof asset library covering case stories, metrics and references.",
+        "Narrative testing and refinement against live buyer conversations and lost deals.",
+      ],
+      outcomes: [
+        "A single value proposition every seller can recite and tailor to the buyer in front of them.",
+        "A commercial narrative that creates urgency rather than describing features.",
+        "Higher conversion at first-meeting and proposal stages, from a story buyers recognise themselves in.",
+      ],
+    },
+    {
+      id: 3,
+      name: "Demand Generation & Behavioural Drivers",
+      shortName: "Demand Generation",
+      tagline:
+        "Getting in front of the right people consistently. Volume, quality and the behavioural triggers that earn attention.",
+      dashDescription:
+        "Focuses on building a consistent flow of high-quality opportunities by selecting and executing the right channels for your market. Rather than spreading efforts too thin, this pillar emphasises focus, coordination and behavioural relevance.",
+      dashAchieve:
+        "A predictable top-of-funnel engine driven by the right mix of outbound, inbound and other channels, generating both volume and quality pipeline by reaching buyers when they are most likely to act.",
+      overview:
+        "Demand generation is about getting in front of the right people consistently, with enough volume and quality to keep pipeline predictable, and with messaging tuned to the behavioural drivers that actually move buyers. Most early-stage teams either lean on a single channel until it breaks, or scatter across every channel and master none. The job here is to pick, concentrate and operate.",
       components: [
         "Outbound (email, LinkedIn, cold calling)",
         "Inbound (content, SEO, paid ads)",
@@ -174,8 +221,8 @@ window.BASE_LAYERS = {
       ],
       whatWeDo: [
         "Channel diagnostic mapping pipeline source, cost and conversion by stage.",
-        "Outbound cadence and sequence design grounded in positioning work from Pillar 1.",
-        "Inbound and content orchestration, coordinated with Pillar 8 on brand.",
+        "Outbound cadence and sequence design grounded in positioning and narrative work.",
+        "Inbound and content orchestration, coordinated with marketing alignment.",
         "Event, community and referral programmes sized to the opportunity.",
       ],
       outcomes: [
@@ -185,73 +232,23 @@ window.BASE_LAYERS = {
       ],
     },
     {
-      id: 3,
-      name: "Relationship Building & Networking",
-      shortName: "Relationships",
-      tagline: "Strategic relationships, long-term nurture, industry credibility.",
-      dashDescription:
-        "Treats relationships as long-term commercial assets that drive revenue over time, not just immediate deals. Particularly in B2B environments, many opportunities originate from trust built well before a sales cycle begins.",
-      dashAchieve:
-        "A steady contribution to pipeline from relationships, referrals, and industry presence, with relationship knowledge embedded in the business rather than held by individuals.",
-      overview:
-        "In B2B, and especially at higher deal sizes, a large share of revenue originates in relationships that were built months or years before the deal cycle began. This pillar is about treating relationships as a long-dated asset. It is often the most underinvested pillar in early-stage teams, and almost always the most underappreciated when it works.",
-      components: [
-        "Strategic relationships",
-        "Long-term nurturing",
-        "Industry presence / credibility",
-      ],
-      objectives: [
-        "Identify and invest in the strategic relationships that most influence the buying committee.",
-        "Build long-term nurture motions for contacts who are not in an active cycle.",
-        "Establish an industry presence that creates credibility and warm introductions.",
-        "Encode relationship discipline in the CRM so it survives a rep leaving.",
-      ],
-      diagnostics: [
-        "How complete is your list of strategic relationships?",
-        {
-          text: "How consistently do you nurture long-term relationships?",
-          scale: 5,
-          anchors: { low: "Rarely", high: "Monthly" },
-          labels: { 1: "Rarely", 3: "6-monthly", 5: "Monthly" },
-        },
-        "How strong is your industry presence and credibility, compared to similar firms?",
-        "How effective is your referral generation approach?",
-        "How often do relationships convert into opportunities over time?",
-        "How strong is your network within target accounts?",
-        "How well do you maintain relationships with non-active buyers?",
-        "How effectively do you engage key stakeholders outside of active sales cycles?",
-        "How intentional is your networking strategy?",
-        "How strong is your reputation within your industry?",
-      ],
-      whatWeDo: [
-        "Relationship map and targeting plan at account and industry level.",
-        "Nurture cadence design across email, social, events and executive outreach.",
-        "Advisory board, community and hosted event programmes where appropriate.",
-        "CRM capture of relationship context so it becomes an asset of the business.",
-      ],
-      outcomes: [
-        "A stable pipeline contribution from relationships and referrals, not just outbound.",
-        "An industry footprint proportionate to the company's stage and ambition.",
-        "Relationships retained at the company level, not only the individual level.",
-      ],
-    },
-    {
       id: 4,
-      name: "Sales Execution",
+      name: "Sales Execution & Enablement",
       shortName: "Sales Execution",
       tagline:
-        "Disciplined discovery, qualification, solution selling, objection handling, closing.",
+        "Disciplined discovery, qualification, solution selling, objection handling, closing - and the enablement that makes it repeatable.",
       dashDescription:
-        "Covers how opportunities are progressed and converted into revenue through structured, repeatable sales processes. This includes discovery, qualification, solution selling, and closing discipline.",
+        "Covers how opportunities are progressed and converted into revenue through structured, repeatable sales processes, supported by the enablement that gets every seller there. This includes discovery, qualification, solution selling and closing discipline.",
       dashAchieve:
         "A consistent and scalable sales motion that improves win rates, increases average deal size, and reduces performance variability across the team.",
       overview:
-        "Sales execution is the repeatable motion that turns qualified opportunity into revenue. Strategy tells you what to sell and to whom. Lead generation puts you in front of the right people. Execution is what happens on a live call on a Tuesday morning. Most early-stage businesses under-invest here, and it is one of the places BeDeveloped adds the most compounding value.",
+        "Sales execution is the repeatable motion that turns qualified opportunity into revenue. Strategy tells you what to sell and to whom. Demand generation puts you in front of the right people. Execution is what happens on a live call on a Tuesday morning. Most early-stage businesses under-invest here, and it is one of the places BeDeveloped adds the most compounding value - through a combination of process, enablement and coaching cadence.",
       components: [
         "Discovery & qualification",
         "Solution selling",
         "Objection handling",
         "Negotiation & closing",
+        "Enablement & coaching",
       ],
       objectives: [
         "Install a disciplined discovery and qualification approach calibrated to your buyer.",
@@ -285,26 +282,169 @@ window.BASE_LAYERS = {
     },
     {
       id: 5,
-      name: "Partnerships & Alliances",
-      shortName: "Partnerships",
-      tagline: "Channel partners, strategic alliances, referral networks, joint ventures.",
+      name: "Pipeline Architecture & Conversion",
+      shortName: "Pipeline & Conversion",
+      tagline:
+        "Stages, criteria, conversion rates and velocity. The geometry of how deals actually move.",
       dashDescription:
-        "Builds partnerships into a deliberate and measurable growth channel, rather than an ad hoc or opportunistic effort. This includes identifying the right partners and enabling them to represent your business effectively.",
+        "Designs the structure of your pipeline so deals progress predictably and conversion can be measured and improved at every stage. Without this discipline, forecasts are guesswork and coaching is reactive.",
       dashAchieve:
-        "A partner ecosystem that generates meaningful pipeline, accelerates deal flow, and creates strategic differentiation in the market.",
+        "A pipeline with clear stage definitions, measurable conversion rates, predictable cycle times, and the ability to spot risk early enough to act on it.",
       overview:
-        "Done well, partnerships outperform entire sales teams. Done badly, they absorb management attention without producing pipeline. This pillar treats partnerships as a deliberate growth engine, with the same rigour of targeting, enablement and measurement that is applied to direct sales.",
+        "Sales execution is what happens inside a deal. Pipeline architecture is what governs how deals move between stages. Without explicit entry and exit criteria, conversion rates are unmeasurable, forecasts are unreliable, and stalled deals hide in plain sight. This pillar installs the geometry that makes the rest of the commercial engine measurable.",
       components: [
-        "Channel partners",
-        "Strategic alliances",
-        "Referral networks",
-        "Joint ventures",
+        "Pipeline stages & exit criteria",
+        "Stage-to-stage conversion rates",
+        "Deal velocity & cycle time",
+        "Pipeline coverage & forecast hygiene",
       ],
       objectives: [
-        "Define the partner archetypes that fit the buying motion.",
-        "Target, recruit and onboard the partners most likely to move the needle.",
-        "Enable partners with the proposition, narrative and tools they need to represent you credibly.",
-        "Measure partner-influenced and partner-sourced pipeline as a first-class number.",
+        "Define clear, buyer-verifiable entry and exit criteria for every stage.",
+        "Measure conversion rate and cycle time at each stage as a leading indicator.",
+        "Build pipeline coverage discipline against quota and revenue targets.",
+        "Surface stalled deals early enough to coach, recover or close-lost cleanly.",
+      ],
+      diagnostics: [
+        "How clearly defined are the entry and exit criteria for each pipeline stage?",
+        "How accurately do you measure stage-to-stage conversion rates?",
+        "How clearly do you understand the average length of your sales cycle?",
+        "How well do you track deal velocity through the pipeline?",
+        "How disciplined is the team at progressing deals through defined stages?",
+        "How effectively do you identify and unblock stalled deals?",
+        "How strong is your pipeline coverage relative to quota or revenue targets?",
+        "How reliably do deals close in their expected stage and timeframe?",
+        "How clearly do you understand where deals are most commonly lost in the pipeline?",
+        "How effectively do you forecast pipeline conversion across stages?",
+      ],
+      whatWeDo: [
+        "Pipeline stage redesign aligned to the real buying motion, with explicit exit criteria.",
+        "Conversion and velocity reporting at stage and cohort level.",
+        "Coverage and inspection cadence: weekly pipeline, monthly roll-up, quarterly commit.",
+        "Stalled-deal protocol so dormant pipeline is acted on, not ignored.",
+      ],
+      outcomes: [
+        "A pipeline that reflects reality, not optimism.",
+        "Stage-by-stage diagnosis of where to invest coaching and process change.",
+        "Forecast accuracy improved by structure rather than instinct.",
+      ],
+    },
+    {
+      id: 6,
+      name: "Revenue Operations & Systems",
+      shortName: "Revenue Ops",
+      tagline: "CRM, pipeline, playbooks, forecasting, data. The engine and systems behind scale.",
+      dashDescription:
+        "Provides the infrastructure that supports the entire commercial engine, including CRM, pipeline management, forecasting and reporting. Without strong operations and systems, even the best strategies fail.",
+      dashAchieve:
+        "A reliable single source of truth with clean data, clear processes, and accurate forecasting that enables better decision-making at every level of the business.",
+      overview:
+        "Revenue operations is the engine behind everything else. It is the CRM that is trusted, the pipeline that is clean, the forecast that is believed, and the data that informs every decision from coaching to capital allocation. Where RevOps works, every other pillar compounds. Where it does not, the best strategy in the world is undone by bad data.",
+      components: [
+        "CRM and pipeline management",
+        "Sales processes & playbooks",
+        "Forecasting",
+        "Data tracking (conversion rates, funnel from leads to conversion)",
+      ],
+      objectives: [
+        "Establish a single source of truth for pipeline, accounts and activity in the CRM.",
+        "Install sales processes and playbooks that mirror the real deal journey.",
+        "Build a forecasting rhythm the leadership team actually believes.",
+        "Track the commercial metrics that matter: conversion by stage, cycle time, CAC, LTV, cohort performance.",
+      ],
+      diagnostics: [
+        "How effective is your CRM usage?",
+        "How well integrated is CRM with sales and marketing?",
+        "How strong is your data quality management?",
+        "How effectively do you use data for decision-making?",
+        "How well trained is your team on CRM systems?",
+        "How accurate is your pipeline data?",
+        "How customised is your CRM to your business needs?",
+        "How reliable is your forecasting process?",
+        "How well defined are your sales playbooks?",
+        "How effectively do you track funnel conversion metrics?",
+      ],
+      whatWeDo: [
+        "CRM audit and redesign against the operating process, not against a feature list.",
+        "Pipeline stages with explicit entry and exit criteria and required-field discipline.",
+        "Forecasting model and rhythm: weekly pipeline, monthly roll-up, quarterly commit.",
+        "Reporting and dashboard design for leaders, managers and individual sellers.",
+      ],
+      outcomes: [
+        "A CRM that is the first and last tool a seller touches every day.",
+        "Forecast accuracy improved through clean stage logic and activity truth.",
+        "A data foundation clean enough to support coaching, executive reporting and AI.",
+      ],
+    },
+    {
+      id: 7,
+      name: "Aligning Marketing Campaigning",
+      shortName: "Marketing Alignment",
+      tagline: "Campaign planning, content, brand and the marketing motion that compounds with sales.",
+      dashDescription:
+        "Aligns marketing planning, campaigns and content with the commercial engine so the two functions compound rather than collide. Strong alignment reduces friction in the sales process and improves both inbound and outbound effectiveness.",
+      dashAchieve:
+        "A marketing function that operates in lockstep with sales: campaigns tied to pipeline, messaging consistent across channels, and a content programme that supports every stage of the deal cycle.",
+      overview:
+        "Marketing and business development must operate as one revenue team. Where they are aligned, campaigns warm the audience, content arms the seller, and brand reduces friction before a call ever starts. Where they are not, marketing measures reach while sales measures revenue, and neither can explain the gap. This pillar installs shared planning, shared metrics and a single buyer journey across both functions.",
+      components: [
+        "Campaign planning & integration with sales",
+        "Content strategy",
+        "Brand & thought leadership (founders, leaders, company)",
+        "Case studies & social proof",
+      ],
+      objectives: [
+        "Align campaign planning, targeting and measurement with the commercial pipeline.",
+        "Establish a clear editorial point of view that reinforces positioning.",
+        "Build the personal brand of founders and senior sellers in the spaces where buyers gather.",
+        "Package case studies, social proof and customer stories as a sales asset.",
+      ],
+      diagnostics: [
+        "How integrated is marketing with business development?",
+        "How strong is your campaign planning process?",
+        "How consistent is your messaging across channels?",
+        "How clearly defined is your brand for your target audience?",
+        "How effectively do you track campaign performance?",
+        "How strong is your content strategy?",
+        "How effective is your personal or founder brand?",
+        "How strong is your case study and social proof library?",
+        "How consistently do you publish thought leadership content as an SLT and company page?",
+        "How effectively does marketing generate inbound leads?",
+      ],
+      whatWeDo: [
+        "Joint campaign planning between marketing and commercial leadership.",
+        "Editorial and content strategy aligned to positioning, ICP and pipeline goals.",
+        "Personal brand programme for founders and commercial leaders.",
+        "Case study and proof asset production, with measurement linking content to pipeline.",
+      ],
+      outcomes: [
+        "Marketing and sales operating from a shared plan and a shared scoreboard.",
+        "Higher quality inbound and warmer outbound conversations.",
+        "A library of proof and a recognisable market voice that compound deal momentum.",
+      ],
+    },
+    {
+      id: 8,
+      name: "Partnerships & Channel Development",
+      shortName: "Partnerships",
+      tagline:
+        "Channel partners, alliances, referral networks and the strategic relationships that influence buying decisions.",
+      dashDescription:
+        "Builds partnerships and strategic relationships into a deliberate growth channel rather than an opportunistic effort. Includes channel partners, alliances, referrers and the strategic relationships that influence buying decisions over time.",
+      dashAchieve:
+        "A partner ecosystem and relationship network that contributes a known and growing share of pipeline, with influence inside target accounts that compounds over time.",
+      overview:
+        "Done well, partnerships and high-trust relationships outperform entire sales teams. Done badly, they absorb management attention without producing pipeline. This pillar treats both as deliberate growth assets - channel partners, alliances and referrers managed with the rigour of direct sales, alongside the strategic relationships that quietly influence buying decisions over months and years.",
+      components: [
+        "Channel partners",
+        "Strategic alliances & joint ventures",
+        "Referral networks",
+        "Strategic relationships & industry presence",
+      ],
+      objectives: [
+        "Define partner archetypes and strategic relationships that fit the buying motion.",
+        "Recruit, onboard and enable partners to represent the proposition credibly.",
+        "Build a referral motion across both formal partners and informal advocates.",
+        "Measure partner-influenced and partner-sourced pipeline as first-class numbers.",
       ],
       diagnostics: [
         "How clearly defined is your partner strategy?",
@@ -314,25 +454,25 @@ window.BASE_LAYERS = {
         "How successful are your joint ventures?",
         "How well do you onboard and enable partners?",
         "How effectively do partners deliver qualified opportunities?",
-        "How consistently do partnerships contribute to pipeline?",
-        "How actively are partnerships managed and developed?",
         "How well aligned are partners with your ideal customer profile?",
+        "How effective is your referral generation approach?",
+        "How strong is your industry presence and credibility, compared to similar firms?",
       ],
       whatWeDo: [
-        "Partner archetype design and prioritisation based on buyer trust and reach.",
-        "Recruitment motion with target list, outreach and onboarding playbook.",
-        "Partner enablement kit: narrative, proof, tools, joint selling motion.",
-        "Measurement and governance, including partner-influenced pipeline in the CRM.",
+        "Partner archetype design and prioritisation by buyer trust and reach.",
+        "Recruitment, onboarding and enablement playbook (narrative, proof, joint selling motion).",
+        "Referral programme covering formal partners and informal champions.",
+        "Relationship and account-level mapping to surface influence inside target buyers.",
       ],
       outcomes: [
-        "A partner channel that contributes a known, growing share of pipeline.",
+        "A channel that contributes a known, growing share of pipeline.",
         "Faster time to first transacted deal for new partners.",
-        "Strategic alliances that create competitive differentiation, not just pipeline.",
+        "Influence and credibility inside target accounts before the buying cycle starts.",
       ],
     },
     {
-      id: 6,
-      name: "Customer Success & Retention",
+      id: 9,
+      name: "Customer Success, Retention & Expansion",
       shortName: "Customer Success",
       tagline: "Onboarding, retention, expansion, advocacy. Key Account Management.",
       dashDescription:
@@ -375,150 +515,6 @@ window.BASE_LAYERS = {
         "Measurable improvement in gross and net retention.",
         "A predictable expansion number alongside the new business number.",
         "A customer base that actively generates pipeline through advocacy.",
-      ],
-    },
-    {
-      id: 7,
-      name: "Revenue Operations",
-      shortName: "Revenue Ops",
-      tagline: "CRM, pipeline, playbooks, forecasting, data. The engine behind scale.",
-      dashDescription:
-        "Provides the infrastructure that supports the entire commercial engine, including CRM, pipeline management, forecasting, and reporting. Without strong operations, even the best strategies fail.",
-      dashAchieve:
-        "A reliable single source of truth with clean data, clear processes, and accurate forecasting that enables better decision-making at every level of the business.",
-      overview:
-        "Revenue operations is the engine behind everything else. It is the CRM that is trusted, the pipeline that is clean, the forecast that is believed, and the data that informs every decision from coaching to capital allocation. Where RevOps works, every other pillar compounds. Where it does not, the best strategy in the world is undone by bad data.",
-      components: [
-        "CRM and pipeline management",
-        "Sales processes & playbooks",
-        "Forecasting",
-        "Data tracking (conversion rates, funnel from leads to conversion)",
-      ],
-      objectives: [
-        "Establish a single source of truth for pipeline, accounts and activity in the CRM.",
-        "Install sales processes and playbooks that mirror the real deal journey.",
-        "Build a forecasting rhythm the leadership team actually believes.",
-        "Track the commercial metrics that matter: conversion by stage, cycle time, CAC, LTV, cohort performance.",
-      ],
-      diagnostics: [
-        "How effective is your CRM usage?",
-        "How well integrated is CRM with sales and marketing?",
-        "How strong is your data quality management?",
-        "How effectively do you use data for decision-making?",
-        "How well trained is your team on CRM systems?",
-        "How accurate is your pipeline data?",
-        "How customised is your CRM to your business needs?",
-        "How reliable is your forecasting process?",
-        "How well defined are your sales playbooks?",
-        "How effectively do you track funnel conversion metrics?",
-      ],
-      whatWeDo: [
-        "CRM audit and redesign against the operating process, not against a feature list.",
-        "Pipeline stages with explicit entry and exit criteria and required-field discipline.",
-        "Forecasting model and rhythm: weekly pipeline, monthly roll-up, quarterly commit.",
-        "Reporting and dashboard design for leaders, managers and individual sellers.",
-      ],
-      outcomes: [
-        "A CRM that is the first and last tool a seller touches every day.",
-        "Forecast accuracy improved through clean stage logic and activity truth.",
-        "A data foundation clean enough to support coaching, executive reporting and AI.",
-      ],
-    },
-    {
-      id: 8,
-      name: "Brand & Thought Leadership",
-      shortName: "Brand & Thought",
-      tagline: "Content, personal brand, case studies, social proof.",
-      dashDescription:
-        "Positions your company and its leaders as credible, trusted voices in the market. Strong brand and thought leadership reduce friction in the sales process and improve both inbound and outbound effectiveness.",
-      dashAchieve:
-        "A recognisable and trusted market presence that improves lead quality, supports sales conversations, and compounds over time.",
-      overview:
-        "Brand and thought leadership sit at the intersection of marketing and business development. They reduce sales friction before a call ever starts, improve inbound quality, and give sellers and partners credible material to reference in market. In early-stage businesses, this pillar is most effectively built through founders and senior leaders, not only through a marketing department.",
-      components: [
-        "Content strategy",
-        "Personal branding (especially founders / sales leaders)",
-        "Case studies & social proof",
-      ],
-      objectives: [
-        "Establish a clear editorial point of view that reinforces positioning.",
-        "Build the personal brand of founders and senior sellers in the spaces where buyers gather.",
-        "Package case studies, social proof and customer stories as a sales asset.",
-        "Measure the commercial impact of brand and thought leadership, not just reach.",
-      ],
-      diagnostics: [
-        "How integrated is marketing with business development?",
-        "How strong is your campaign planning process?",
-        "How consistent is your messaging across channels?",
-        "How clearly defined is your brand for your target audience?",
-        "How effectively do you track campaign performance?",
-        "How strong is your content strategy?",
-        "How effective is your personal or founder brand?",
-        "How strong is your case study and social proof library?",
-        "How consistently do you publish thought leadership content as an SLT and company page?",
-        "How effectively does marketing generate inbound leads?",
-      ],
-      whatWeDo: [
-        "Editorial and content strategy aligned to positioning and ICP.",
-        "Personal brand programme for founders and commercial leaders.",
-        "Case study and proof asset production and maintenance.",
-        "Measurement framework linking content to pipeline and revenue.",
-      ],
-      outcomes: [
-        "Higher quality inbound and warmer outbound conversations.",
-        "A library of proof that accelerates deals across every stage of the funnel.",
-        "A recognisable market voice that compounds over time.",
-      ],
-    },
-    {
-      id: 9,
-      name: "Product / Market Feedback Loop",
-      shortName: "Product Feedback",
-      tagline:
-        "Customer feedback into product, market signal into positioning, continuous iteration.",
-      dashDescription:
-        "Ensures that insights from customer interactions, lost deals, and market signals are captured and fed back into product, messaging, and strategy. This creates a continuous improvement cycle.",
-      dashAchieve:
-        "A business that evolves based on real market feedback, leading to sharper positioning, better product alignment, and faster response to market changes.",
-      overview:
-        "The best business development functions do not only sell the product. They shape it. Customer conversations, lost-deal patterns and market signals are some of the richest sources of product and positioning insight a business has, and they are routinely wasted. This pillar installs a deliberate loop from the field back into product, positioning and pricing.",
-      components: [
-        "Customer feedback into product",
-        "Market insights into positioning",
-        "Continuous iteration",
-      ],
-      objectives: [
-        "Capture customer feedback, lost-deal reasons and market signals in a structured, reusable form.",
-        "Create a regular, governed flow of insight from commercial teams into product and marketing.",
-        "Use market and buyer signal to continuously refine positioning and messaging.",
-        "Make the loop visible, so contributors can see their input influence decisions.",
-      ],
-      diagnostics: [
-        "How effectively is customer feedback captured and documented?",
-        "How well is feedback integrated into product/service development?",
-        "How well do you use market insights to refine positioning?",
-        "How quickly do you make adjustments based on feedback?",
-        "How strong is communication between sales and product teams?",
-        "How well do you identify emerging customer needs?",
-        "How effectively do you test new propositions?",
-        "How aligned is product development with market demand?",
-        "How structured is your feedback collection process?",
-        {
-          text: "How often does market insight influence strategy?",
-          scale: 10,
-          anchors: { low: "Not at all", high: "All the time" },
-        },
-      ],
-      whatWeDo: [
-        "Structured capture of win/loss, customer feedback and market signal.",
-        "Operating cadence between commercial, product and marketing leadership.",
-        "Insight-to-action tracker, so contributions are visible and accountable.",
-        "Refresh rhythm for ICP, positioning and messaging as the market shifts.",
-      ],
-      outcomes: [
-        "A product and positioning that sharpen over time instead of drifting.",
-        "Faster recognition of market shifts, before they appear in the forecast.",
-        "A commercial team that feels heard by product, and a product team that trusts commercial input.",
       ],
     },
     {

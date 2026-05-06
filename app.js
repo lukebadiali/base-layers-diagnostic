@@ -854,7 +854,7 @@
       ["dashboard", "Dashboard"],
       ["diagnostic", "Diagnostic"],
       ["report", "Report"],
-      ["engagement", "Engagement"],
+      ["engagement", "Delivery"],
       ["documents", "Documents"],
       ["chat", "Chat"],
       ["actions", "Actions"],
@@ -2730,7 +2730,7 @@
   // ================================================================
   function renderEngagement(user, org) {
     const frag = h("div");
-    frag.appendChild(h("h1", { class: "view-title" }, "Engagement lifecycle"));
+    frag.appendChild(h("h1", { class: "view-title" }, "Delivery framework"));
     frag.appendChild(
       h(
         "p",
@@ -4453,14 +4453,20 @@
   }
 
   // Re-render when Firebase is ready (so loading states flip to live data)
-  window.addEventListener("firebase-ready", () => {
+  window.addEventListener("firebase-ready", async () => {
     ensureChatSubscription(currentUser());
-    syncFromCloud();
+    await syncFromCloud();
+    // Cloud data is now mirrored locally; run the framework V2 wipe so
+    // saveOrg pushes the cleared responses back up to Firestore.
+    clearResponsesForFrameworkV2IfNeeded();
     if (
       state.route === "documents" ||
       state.route === "chat" ||
       state.route === "roadmap" ||
-      state.route === "funnel"
+      state.route === "funnel" ||
+      state.route === "diagnostic" ||
+      state.route === "dashboard" ||
+      (typeof state.route === "string" && state.route.startsWith("pillar:"))
     )
       render();
   });
@@ -5463,6 +5469,25 @@ Any questions, just let me know.`;
       saveOrg(org);
     });
     s.scaleV2Cleared = true;
+    saveSettings(s);
+  }
+
+  // One-shot: clear all diagnostic responses when the 10-pillar framework
+  // is restructured. Pillar IDs shift meaning so old scores would attach to
+  // the wrong pillars. Runs once per browser, after cloud sync completes,
+  // so saveOrg propagates the wipe back up to Firestore.
+  function clearResponsesForFrameworkV2IfNeeded() {
+    const s = loadSettings();
+    if (s.frameworkV2Cleared) return;
+    loadOrgMetas().forEach((m) => {
+      const org = loadOrg(m.id);
+      if (!org) return;
+      org.responses = {};
+      if (org.currentRoundId) org.responses[org.currentRoundId] = {};
+      org.internalNotes = {};
+      saveOrg(org);
+    });
+    s.frameworkV2Cleared = true;
     saveSettings(s);
   }
 

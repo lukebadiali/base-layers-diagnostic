@@ -59,7 +59,20 @@ jobs:
           node-version: "22"
           cache: "npm"
       - run: npm ci
-      - run: npm test
+      - run: npm run test:coverage
+      - name: Upload coverage HTML report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-report-html
+          path: coverage/
+          retention-days: 14
+      - name: Verify snapshot baselines present and non-empty
+        if: always()
+        run: |
+          test -s tests/__snapshots__/views/dashboard.html
+          test -s tests/__snapshots__/views/diagnostic.html
+          test -s tests/__snapshots__/views/report.html
 
   audit:
     name: Security Audit

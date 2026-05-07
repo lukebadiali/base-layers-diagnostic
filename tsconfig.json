@@ -22,6 +22,7 @@
     "eslint.config.js",
     "tests/fixtures/_generators",
     "tests/crypto-parity.test.js",
-    "tests/firebase-config.test.js"
+    "tests/firebase-config.test.js",
+    "tests/index-html-meta-csp.test.js"
   ]
 }

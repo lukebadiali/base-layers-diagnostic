@@ -134,6 +134,12 @@ describe("validateUpload() — magic-byte signatures (D-16)", () => {
 
 describe("validateUpload() — filename sanitisation (CODE-09)", () => {
   it("strips path traversal + special chars and returns sanitisedName", async () => {
+    // CODE-09 spec: replace /[^\w.\- ]/g with _, then slice(0, 200).
+    // The regex KEEPS literal `.` (it's inside the char class), so dots in the
+    // input survive. Path-traversal is mitigated server-side by the Storage
+    // path being keyed off the doc id, not the filename — this client-side
+    // sanitisation is the audit-narrative claim, not the trust boundary
+    // (D-15: Phase 5 storage.rules + Phase 7 callable validation enforce).
     const file = makeFile(
       [0x25, 0x50, 0x44, 0x46, 0x2d, 0, 0, 0],
       "application/pdf",
@@ -141,6 +147,18 @@ describe("validateUpload() — filename sanitisation (CODE-09)", () => {
     );
     const r = await validateUpload(file);
     expect(r.ok).toBe(true);
-    if (r.ok) expect(r.sanitisedName).toBe("______etc_p_sswd_.pdf");
+    if (r.ok) expect(r.sanitisedName).toBe(".._.._etc_p_sswd_.pdf");
+  });
+
+  it("truncates names longer than 200 chars (slice(0,200))", async () => {
+    const longName = "a".repeat(250) + ".pdf";
+    const file = makeFile(
+      [0x25, 0x50, 0x44, 0x46, 0x2d, 0, 0, 0],
+      "application/pdf",
+      longName,
+    );
+    const r = await validateUpload(file);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.sanitisedName.length).toBe(200);
   });
 });

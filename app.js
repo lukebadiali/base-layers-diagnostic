@@ -67,6 +67,18 @@ import { modal, promptText, confirmDialog } from "./src/ui/modal.js";
 // ./src/util/ids.js — Wave 4 may switch consumers to ./src/ui/format.js
 // per ARCHITECTURE.md §2 helpers-table import path. The re-export module
 // exists; consumers stay on util/ids.js this wave (D-12 faithful extraction).
+import { notify as _notify } from "./src/ui/toast.js";
+import {
+  validateUpload as _validateUpload,
+  ALLOWED_MIME_TYPES as _ALLOWED_MIME_TYPES,
+  MAX_BYTES as _MAX_BYTES,
+} from "./src/ui/upload.js";
+// notify / validateUpload / ALLOWED_MIME_TYPES / MAX_BYTES are aliased _* to
+// satisfy the `^_` argsIgnorePattern — Wave 4 (D-20) wires the 7 alert() sites
+// + the upload site at app.js:3433-3465 + Phase 5 storage.rules + Phase 7
+// callable validation. No new eslint-disable rows added (Phase 4 D-17 ledger
+// zero-out direction).
+import { createChrome } from "./src/ui/chrome.js";
 
 (function () {
   "use strict";
@@ -616,263 +628,31 @@ import { modal, promptText, confirmDialog } from "./src/ui/modal.js";
   }
 
   // ================================================================
-  // TOPBAR
+  // TOPBAR + FOOTER
   // ================================================================
-  function renderTopbar(user) {
-    const isClient = user.role === "client";
-    const org = activeOrgForUser(user);
-
-    const logoImg = h("img", {
-      class: "brand-logo",
-      src: "assets/logo.png",
-      alt: "BeDeveloped",
-    });
-    const brand = h("div", { class: "brand" }, [
-      logoImg,
-      h("span", { class: "brand-sub" }, "The Base Layers"),
-    ]);
-
-    // Nav
-    const nav = h("nav", { class: "topnav" });
-    const items = [
-      ["dashboard", "Dashboard"],
-      ["diagnostic", "Diagnostic"],
-      ["report", "Report"],
-      ["engagement", "Delivery"],
-      ["documents", "Documents"],
-      ["chat", "Chat"],
-      ["actions", "Actions"],
-      ["roadmap", "Plan"],
-      ["funnel", "Funnel"],
-    ];
-    // Admin access moved to the user dropdown ("Admin · manage people").
-
-    const unread = org ? unreadCountTotal(org, user) : 0;
-    const unreadChat = unreadChatTotal(user);
-
-    items.forEach(([route, label]) => {
-      const btn = h(
-        "button",
-        {
-          class:
-            "nav-btn" +
-            (state.route === route || (route === "diagnostic" && state.route.startsWith("pillar:"))
-              ? " active"
-              : ""),
-          "data-route": route,
-          onclick: () => setRoute(route),
-        },
-        label,
-      );
-      // Unread indicator on diagnostic (since comments live on pillar pages)
-      if (route === "diagnostic" && unread > 0) {
-        btn.appendChild(h("span", { class: "dot", title: `${unread} unread comment(s)` }));
-      }
-      // Unread indicator on chat
-      if (route === "chat" && unreadChat > 0) {
-        btn.appendChild(
-          h(
-            "span",
-            {
-              class: "count-badge",
-              title: `${unreadChat} unread message${unreadChat === 1 ? "" : "s"}`,
-            },
-            String(unreadChat),
-          ),
-        );
-      }
-      nav.appendChild(btn);
-    });
-
-    const topright = h("div", { class: "topright" });
-
-    // Internal-only: mode toggle + org switcher
-    if (!isClient) {
-      const modeToggle = h(
-        "label",
-        {
-          class: "mode-toggle",
-          title: "Internal view shows private commentary. Client view previews what a client sees.",
-        },
-        [
-          h("span", {}, state.mode === "internal" ? "Internal" : "Client preview"),
-          (() => {
-            const input = h("input", {
-              type: "checkbox",
-              checked: state.mode === "internal",
-            });
-            input.addEventListener("change", () => {
-              state.mode = input.checked ? "internal" : "external";
-              jset(K.mode, state.mode);
-              render();
-            });
-            return input;
-          })(),
-          h("span", { class: "switch" }),
-        ],
-      );
-      topright.appendChild(modeToggle);
-
-      const orgSelect = h("select", { "aria-label": "Select organisation" });
-      loadOrgMetas().forEach((o) => {
-        const opt = document.createElement("option");
-        opt.value = o.id;
-        opt.textContent = o.name;
-        if (o.id === org?.id) opt.selected = true;
-        orgSelect.appendChild(opt);
-      });
-      orgSelect.id = "orgSelect";
-      orgSelect.addEventListener("change", (e) => {
-        state.orgId = e.target.value;
-        state.route = "dashboard";
-        render();
-      });
-      topright.appendChild(orgSelect);
-    }
-
-    // User chip
-    const avatar = h(
-      "span",
-      {
-        class: "avatar" + (isClient ? "" : " internal"),
-      },
-      initials(user.name || user.email),
-    );
-    const who = h("div", { class: "who" }, [
-      h("div", { class: "name" }, user.name || user.email),
-      h("div", { class: "role" }, isClient ? (org ? org.name : "Client") : "BeDeveloped team"),
-    ]);
-    const chip = h(
-      "button",
-      {
-        class: "user-chip",
-        onclick: (e) => {
-          e.stopPropagation();
-          state.userMenuOpen = !state.userMenuOpen;
-          render();
-        },
-      },
-      [avatar, who],
-    );
-
-    if (state.userMenuOpen) {
-      const menu = h("div", { class: "user-menu" });
-      menu.addEventListener("click", (e) => e.stopPropagation());
-      menu.appendChild(
-        h(
-          "div",
-          { style: "padding: 8px 12px; font-size: 12px; color: var(--ink-3);" },
-          `Signed in as ${user.email}`,
-        ),
-      );
-      menu.appendChild(h("div", { class: "divider" }));
-      if (!isClient && !isClientView(user)) {
-        menu.appendChild(
-          h(
-            "button",
-            {
-              onclick: () => {
-                state.userMenuOpen = false;
-                setRoute("admin");
-              },
-            },
-            "Admin · manage people",
-          ),
-        );
-      }
-      if (isClient && user.passwordHash) {
-        menu.appendChild(
-          h(
-            "button",
-            {
-              onclick: () => {
-                state.userMenuOpen = false;
-                render();
-                openChangePasswordModal(user);
-              },
-            },
-            "Change password",
-          ),
-        );
-      }
-      menu.appendChild(
-        h(
-          "button",
-          {
-            onclick: () => {
-              state.userMenuOpen = false;
-              signOut();
-              render();
-            },
-          },
-          "Sign out",
-        ),
-      );
-      chip.appendChild(menu);
-
-      // click-outside to close
-      setTimeout(() => {
-        const handler = () => {
-          state.userMenuOpen = false;
-          render();
-        };
-        document.addEventListener("click", handler, { once: true });
-      }, 10);
-    }
-
-    topright.appendChild(chip);
-
-    return h("header", { class: "topbar" }, [brand, nav, topright]);
-  }
-
-  // ================================================================
-  // FOOTER
-  // ================================================================
-  function renderFooter(user, org) {
-    if (!user || user.role === "client") {
-      // minimal footer for clients
-      return h("footer", { class: "footer" }, [
-        h("span", {}, `The Base Layers — ${org ? org.name : "client view"}`),
-        h("span", {}),
-      ]);
-    }
-    const actions = h("span", { class: "footer-actions" }, [
-      h(
-        "button",
-        {
-          class: "btn ghost",
-          title: "Full backup of all orgs, users and responses. For internal recovery only.",
-          onclick: exportData,
-        },
-        "Export backup",
-      ),
-      (() => {
-        const input = h("input", {
-          type: "file",
-          accept: "application/json",
-          style: "display:none;",
-        });
-        input.addEventListener("change", (e) => {
-          if (e.target.files && e.target.files[0]) importData(e.target.files[0]);
-          e.target.value = "";
-        });
-        const btn = h(
-          "button",
-          {
-            class: "btn ghost",
-            title: "Restore a previously exported JSON backup. Overwrites current data.",
-            onclick: () => input.click(),
-          },
-          "Restore backup",
-        );
-        return h("span", {}, [btn, input]);
-      })(),
-    ]);
-    return h("footer", { class: "footer" }, [
-      h("span", {}, "The Base Layers — local build. Data stays in this browser."),
-      actions,
-    ]);
-  }
+  // Phase 4 Wave 2 (D-12): renderTopbar + renderFooter extracted byte-identical
+  // to src/ui/chrome.js with Pattern D DI per Phase 2 D-05. createChrome(deps)
+  // binds the IIFE state + helpers once and returns the two render functions
+  // with the original (user) / (user, org) signatures so existing callers in
+  // render() / renderRoute() don't change. Wave 5 (D-02) moves state into
+  // src/state.js — the createChrome adapter shape stays stable across that
+  // cutover.
+  const { renderTopbar, renderFooter } = createChrome({
+    state,
+    activeOrgForUser,
+    unreadCountTotal,
+    unreadChatTotal,
+    setRoute,
+    loadOrgMetas,
+    jset,
+    K,
+    render,
+    isClientView,
+    signOut,
+    openChangePasswordModal,
+    exportData,
+    importData,
+  });
 
   // ================================================================
   // AUTH / LOGIN SCREEN

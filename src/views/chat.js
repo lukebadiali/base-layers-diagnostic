@@ -73,4 +73,7 @@ export function renderChat(user, org) {
 
 // Re-export the renderConversation helper so chat.js consumers see it as
 // part of the views/* import surface (Wave 5 wires the actual call site).
-export { renderConversation } from "./_shared/render-conversation.js";
+export {
+  renderConversation,
+  renderConversationBubble,
+} from "./_shared/render-conversation.js";

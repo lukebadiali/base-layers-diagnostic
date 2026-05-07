@@ -23,7 +23,11 @@ import {
   iso,
   formatWhen,
   initials,
-  firstNameFromAuthor,
+  // CODE-08 (Wave 4): firstNameFromAuthor moved to renderConversationBubble
+  // helper in src/views/_shared/render-conversation.js. Aliased _* per
+  // ^_ argsIgnorePattern (Wave 1 lint convention) until Wave 5 retires the
+  // import alongside the IIFE death.
+  firstNameFromAuthor as _firstNameFromAuthor,
 } from "./src/util/ids.js";
 import { hashString } from "./src/util/hash.js";
 import {
@@ -67,18 +71,32 @@ import { modal, promptText, confirmDialog } from "./src/ui/modal.js";
 // ./src/util/ids.js — Wave 4 may switch consumers to ./src/ui/format.js
 // per ARCHITECTURE.md §2 helpers-table import path. The re-export module
 // exists; consumers stay on util/ids.js this wave (D-12 faithful extraction).
-import { notify as _notify } from "./src/ui/toast.js";
+import { notify } from "./src/ui/toast.js";
 import {
-  validateUpload as _validateUpload,
+  validateUpload,
   ALLOWED_MIME_TYPES as _ALLOWED_MIME_TYPES,
   MAX_BYTES as _MAX_BYTES,
 } from "./src/ui/upload.js";
-// notify / validateUpload / ALLOWED_MIME_TYPES / MAX_BYTES are aliased _* to
-// satisfy the `^_` argsIgnorePattern — Wave 4 (D-20) wires the 7 alert() sites
-// + the upload site at app.js:3433-3465 + Phase 5 storage.rules + Phase 7
-// callable validation. No new eslint-disable rows added (Phase 4 D-17 ledger
-// zero-out direction).
+// Wave 4 (D-20): notify wired (CODE-07 closes 7 alert() sites);
+// validateUpload wired (CODE-09 closes documents-upload trust boundary at
+// app.js:3201 — runs BEFORE saveDocument). ALLOWED_MIME_TYPES / MAX_BYTES
+// remain _-aliased — they are exported for cross-tier reuse (Phase 5
+// storage.rules + Phase 7 callable will reference the same constants).
+// Phase 5 + Phase 7 are the actual server-side trust boundaries; client-side
+// is the UX/audit-narrative layer per D-15. No new eslint-disable rows
+// added (Phase 4 D-17 ledger zero-out).
 import { createChrome } from "./src/ui/chrome.js";
+// Phase 4 Wave 4 (CODE-10 / D-20): tab-title unread badge memoisation —
+// only writes document.title when value differs. Setter lives in src/views/
+// chat.js (the view that owns the tab-title surface).
+import { setTitleIfDifferent } from "./src/views/chat.js";
+// Phase 4 Wave 4 (CODE-08 / D-20): shared bubble helper for chat +
+// funnel-comment renderers (M8 chat/funnel duplication closure target).
+// Both IIFE renderers call renderConversationBubble for each message —
+// chat passes `chat-bubble`/`chat-bubble-meta`/`chat-bubble-text`/
+// `chat-bubble-del` class set; funnel passes `comment-bubble`/etc. The
+// bubble shape stays visually identical to pre-Wave-4 production DOM.
+import { renderConversationBubble } from "./src/views/_shared/render-conversation.js";
 // Phase 4 Wave 3 (D-09 / D-10): 6 full-owner data/* wrappers (orgs, users,
 // roadmaps, funnels, funnel-comments, allowlist). Imports land NOW so Wave 4
 // view extraction is a pure rewire — no new module discovery. Aliased _* to
@@ -496,7 +514,8 @@ import {
   function updateTabTitleBadge() {
     const user = currentUser();
     const unread = user && user.role === "internal" ? unreadChatTotal(user) : 0;
-    document.title = unread > 0 ? `(${unread}) ${BASE_TAB_TITLE}` : BASE_TAB_TITLE;
+    // CODE-10 (D-20): memoised title write — only updates when value differs.
+    setTitleIfDifferent(unread > 0 ? `(${unread}) ${BASE_TAB_TITLE}` : BASE_TAB_TITLE);
   }
 
   // Phase 2 (D-05): hashString extracted to src/util/hash.js — re-imported at module top, do not re-define.
@@ -861,10 +880,11 @@ import {
       const email = h("input", { type: "email", placeholder: "you@company.com" });
       const team = h("input", { type: "password", placeholder: "Company passphrase (shared)" });
       const pass = h("input", { type: "password", placeholder: "Your password" });
+      // CODE-06 (D-20): is-hidden class replaces initial display:none inline style.
       const passConfirm = h("input", {
         type: "password",
         placeholder: "Confirm password (first sign-in only)",
-        style: "display:none;",
+        class: "is-hidden",
       });
       const errBox = h("div");
       if (state.authError) errBox.appendChild(h("div", { class: "auth-error" }, state.authError));
@@ -879,7 +899,8 @@ import {
       const updateFirstRunUI = () => {
         const u = findUserByEmail(email.value);
         const needsPassword = u && u.role === "client" && !u.passwordHash;
-        passConfirm.style.display = needsPassword ? "block" : "none";
+        // CODE-06 (D-20): classList toggle replaces el.style.display mutation.
+        passConfirm.classList.toggle("is-hidden", !needsPassword);
         pass.placeholder = needsPassword ? "Set your password (min 4 chars)" : "Your password";
       };
       email.addEventListener("blur", updateFirstRunUI);
@@ -3188,10 +3209,21 @@ import {
     const progressBar = h("div", { style: "margin-top:8px; font-size:12px; color:var(--ink-3);" });
 
     const upload = async (file) => {
+      // CODE-09 / D-15 / D-20: validateUpload BEFORE saveDocument trust
+      // boundary. Client-side validation (size cap + MIME allowlist + magic-
+      // byte sniff + filename sanitisation) for UX feedback + audit-narrative
+      // claim. Server-side enforcement is Phase 5 storage.rules + Phase 7
+      // callable validation.
+      const validation = await validateUpload(file);
+      if (!validation.ok) {
+        notify("error", validation.reason);
+        progressBar.textContent = "";
+        return;
+      }
       progressBar.textContent = "Uploading " + file.name + "…";
       try {
         const docId = uid("doc_");
-        const path = `orgs/${org.id}/documents/${docId}/${file.name}`;
+        const path = `orgs/${org.id}/documents/${docId}/${validation.sanitisedName}`;
         const r = storageOps.ref(storage, path);
         const task = storageOps.uploadBytesResumable(r, file, { contentType: file.type });
         task.on("state_changed", (snap) => {
@@ -3205,7 +3237,7 @@ import {
           uploaderId: user.id,
           uploaderName: user.name || user.email,
           uploaderEmail: user.email,
-          filename: file.name,
+          filename: validation.sanitisedName,
           size: file.size,
           contentType: file.type,
           storagePath: path,
@@ -3303,7 +3335,10 @@ import {
                   class: "btn secondary sm",
                   href: d.downloadURL,
                   target: "_blank",
-                  rel: "noopener",
+                  // CODE-12 (D-20): noreferrer added — opener-phishing mitigation
+                  // (CWE-1021). Pairs with target=_blank to prevent the new
+                  // tab from accessing window.opener.
+                  rel: "noopener noreferrer",
                 },
                 "Download",
               ),
@@ -3464,46 +3499,33 @@ import {
         const isSelf = m.authorId === user.id;
         const isInternalAuthor = m.authorRole === "internal";
         const bg = isInternalAuthor ? "var(--ink)" : "var(--brand)";
-        const ts = m.createdAt?.toDate?.().toLocaleString?.() || "";
-        const who = firstNameFromAuthor(m);
         const canDelete = isSelf || !isClientView(user);
-        const bubble = h(
-          "div",
-          {
-            class: "chat-bubble",
-            style: `align-self:${isSelf ? "flex-end" : "flex-start"}; background:${bg}; border-color:${bg};`,
-          },
-          [
-            h("div", { class: "chat-bubble-meta" }, `${who} · ${ts}`),
-            h("div", { class: "chat-bubble-text" }, m.text),
-          ],
-        );
-        if (canDelete) {
-          const del = h(
-            "button",
-            {
-              class: "chat-bubble-del",
-              title: "Delete",
-              onclick: (e) => {
-                e.stopPropagation();
-                confirmDialog(
-                  "Delete message?",
-                  "This cannot be undone.",
-                  async () => {
-                    try {
-                      await firestore.deleteDoc(firestore.doc(db, "messages", m.id));
-                    } catch (err) {
-                      alert("Couldn't delete: " + (err.message || err));
-                    }
-                  },
-                  "Delete",
-                );
+        // CODE-08 (D-20): shared bubble helper closes M8 chat/funnel
+        // duplication; funnel comment block calls the same helper below.
+        const bubble = renderConversationBubble({
+          message: m,
+          isSelf,
+          canDelete,
+          bg,
+          bubbleClass: "chat-bubble",
+          metaClass: "chat-bubble-meta",
+          textClass: "chat-bubble-text",
+          delClass: "chat-bubble-del",
+          onDelete: () => {
+            confirmDialog(
+              "Delete message?",
+              "This cannot be undone.",
+              async () => {
+                try {
+                  await firestore.deleteDoc(firestore.doc(db, "messages", m.id));
+                } catch (err) {
+                  notify("error", "Couldn't delete: " + (err.message || err));
+                }
               },
-            },
-            "×",
-          );
-          bubble.appendChild(del);
-        }
+              "Delete",
+            );
+          },
+        });
         list.appendChild(bubble);
       });
       list.scrollTop = list.scrollHeight;
@@ -3527,7 +3549,7 @@ import {
         });
       } catch (e) {
         textInput.value = text;
-        alert("Couldn't send: " + (e.message || e));
+        notify("error", "Couldn't send: " + (e.message || e));
       }
     };
 
@@ -3689,7 +3711,7 @@ import {
           { merge: true },
         );
       } catch (e) {
-        alert("Couldn't save roadmap: " + (e.message || e));
+        notify("error", "Couldn't save roadmap: " + (e.message || e));
       }
     };
 
@@ -3723,10 +3745,8 @@ import {
           ),
         );
 
-        // Pillars drop zone
-        const drop = h("div", {
-          style: `min-height:42px; padding:8px; border:1px dashed var(--line-2); border-radius:8px; display:flex; flex-wrap:wrap; gap:6px; background:var(--surface-muted); margin-bottom:10px;`,
-        });
+        // Pillars drop zone — CODE-06 (D-20): class roadmap-drop replaces inline style block (precondition for Phase 10 strict-CSP).
+        const drop = h("div", { class: "roadmap-drop" });
         if (!(m.pillarIds || []).length) {
           drop.appendChild(
             h(
@@ -3776,14 +3796,17 @@ import {
         if (canEdit) {
           drop.addEventListener("dragover", (e) => {
             e.preventDefault();
-            drop.style.background = "var(--brand-tint)";
+            // CODE-06 (D-20): classList toggle replaces el.style.background mutation.
+            drop.classList.add("is-dragover");
           });
           drop.addEventListener("dragleave", () => {
-            drop.style.background = "var(--surface-muted)";
+            // CODE-06 (D-20): classList toggle replaces el.style.background mutation.
+            drop.classList.remove("is-dragover");
           });
           drop.addEventListener("drop", (e) => {
             e.preventDefault();
-            drop.style.background = "var(--surface-muted)";
+            // CODE-06 (D-20): classList toggle replaces el.style.background mutation.
+            drop.classList.remove("is-dragover");
             const pid = Number(e.dataTransfer.getData("text/pillar-id"));
             if (!pid) return;
             const current = localData.periods[idx]?.pillarIds || [];
@@ -4173,7 +4196,8 @@ import {
     };
 
     const renderKpiRows = () => {
-      kpiList.innerHTML = "";
+      // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+      kpiList.replaceChildren();
       if (!localKpis.length) {
         kpiList.appendChild(
           h("div", { class: "kpi-empty" }, "No KPIs yet. Click + New KPI to add one."),
@@ -4526,7 +4550,8 @@ import {
 
     let allComments = [];
     const renderComments = () => {
-      commentsList.innerHTML = "";
+      // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+      commentsList.replaceChildren();
       if (!allComments.length) {
         commentsList.appendChild(
           h("p", { class: "comments-empty" }, "No comments yet — start the conversation."),
@@ -4537,46 +4562,33 @@ import {
         const isSelf = m.authorId === user.id;
         const isInternalAuthor = m.authorRole === "internal";
         const bg = isInternalAuthor ? "var(--ink)" : "var(--brand)";
-        const ts = m.createdAt?.toDate?.().toLocaleString?.() || "";
-        const who = firstNameFromAuthor(m);
         const canDelete = isSelf || !isClientView(user);
-        const bubble = h(
-          "div",
-          {
-            class: "comment-bubble",
-            style: `align-self:${isSelf ? "flex-end" : "flex-start"}; background:${bg}; border-color:${bg};`,
-          },
-          [
-            h("div", { class: "comment-meta" }, `${who} · ${ts}`),
-            h("div", { class: "comment-text" }, m.text),
-          ],
-        );
-        if (canDelete) {
-          const del = h(
-            "button",
-            {
-              class: "comment-bubble-del",
-              title: "Delete",
-              onclick: (e) => {
-                e.stopPropagation();
-                confirmDialog(
-                  "Delete comment?",
-                  "This cannot be undone.",
-                  async () => {
-                    try {
-                      await firestore.deleteDoc(firestore.doc(db, "funnelComments", m.id));
-                    } catch (err) {
-                      alert("Couldn't delete: " + (err.message || err));
-                    }
-                  },
-                  "Delete",
-                );
+        // CODE-08 (D-20): shared bubble helper — same call shape as chat
+        // renderList above; only class set + Firestore collection differ.
+        const bubble = renderConversationBubble({
+          message: m,
+          isSelf,
+          canDelete,
+          bg,
+          bubbleClass: "comment-bubble",
+          metaClass: "comment-meta",
+          textClass: "comment-text",
+          delClass: "comment-bubble-del",
+          onDelete: () => {
+            confirmDialog(
+              "Delete comment?",
+              "This cannot be undone.",
+              async () => {
+                try {
+                  await firestore.deleteDoc(firestore.doc(db, "funnelComments", m.id));
+                } catch (err) {
+                  notify("error", "Couldn't delete: " + (err.message || err));
+                }
               },
-            },
-            "×",
-          );
-          bubble.appendChild(del);
-        }
+              "Delete",
+            );
+          },
+        });
         commentsList.appendChild(bubble);
       });
       commentsList.scrollTop = commentsList.scrollHeight;
@@ -4598,7 +4610,7 @@ import {
         });
       } catch (e) {
         commentInput.value = text;
-        alert("Couldn't send: " + (e.message || e));
+        notify("error", "Couldn't send: " + (e.message || e));
       }
     };
     commentSendBtn.addEventListener("click", sendComment);
@@ -4624,7 +4636,8 @@ import {
         renderComments();
       },
       (err) => {
-        commentsList.innerHTML = "";
+        // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+        commentsList.replaceChildren();
         commentsList.appendChild(
           h("p", { style: "color:var(--red);" }, "Couldn't load comments: " + err.message),
         );
@@ -4683,7 +4696,8 @@ import {
           {
             class: "btn",
             onclick: () => {
-              errBox.innerHTML = "";
+              // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+              errBox.replaceChildren();
               const em = (email.value || "").trim().toLowerCase();
               if (!em || !em.includes("@")) {
                 errBox.appendChild(h("div", { class: "auth-error" }, "Enter a valid email."));
@@ -4833,7 +4847,8 @@ Any questions, just let me know.`;
           {
             class: "btn",
             onclick: async () => {
-              errBox.innerHTML = "";
+              // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+              errBox.replaceChildren();
               const ok = await verifyUserPassword(user.id, cur.value);
               if (!ok) {
                 errBox.appendChild(h("div", { class: "auth-error" }, "Current password is wrong."));
@@ -4887,7 +4902,8 @@ Any questions, just let me know.`;
           {
             class: "btn",
             onclick: async () => {
-              errBox.innerHTML = "";
+              // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+              errBox.replaceChildren();
               if (nw.value.length < 4) {
                 errBox.appendChild(
                   h("div", { class: "auth-error" }, "Passphrase must be at least 4 characters."),
@@ -4926,7 +4942,8 @@ Any questions, just let me know.`;
           {
             class: "btn",
             onclick: async () => {
-              errBox.innerHTML = "";
+              // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+              errBox.replaceChildren();
               const ok = await verifyInternalPassphrase(cur.value);
               if (!ok) {
                 errBox.appendChild(h("div", { class: "auth-error" }, "Current passphrase wrong."));
@@ -4997,9 +5014,9 @@ Any questions, just let me know.`;
           });
         }
         render();
-        alert("Import complete.");
+        notify("success", "Import complete.");
       } catch (e) {
-        alert("Import failed: " + e.message);
+        notify("error", "Import failed: " + e.message);
       }
     };
     reader.readAsText(file);

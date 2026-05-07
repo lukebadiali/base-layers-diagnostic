@@ -98,6 +98,65 @@ The Wave 2 ESLint hardening also flipped the `domain/* → firebase/*` boundary 
 
 ---
 
+
+
+---
+
+## § Data Handling
+
+### Phase 4 Wave 4 — Client-side upload validation (CODE-09 / D-15 / D-16)
+
+The documents view (today the IIFE-resident `renderDocuments` at app.js:3156-3349; Wave 5 re-homes the body into `src/views/documents.js`) calls `validateUpload(file)` from `src/ui/upload.js` BEFORE invoking the Firestore + Storage upload path. Validation enforces three layers:
+
+1. **Size cap** — reject files where `file.size > 25 * 1024 * 1024` (25 MiB).
+2. **MIME allowlist** — reject `file.type` not in `ALLOWED_MIME_TYPES` (PDF, JPEG, PNG, DOCX, XLSX, TXT).
+3. **Magic-byte sniff** — read the first 32 bytes via `file.slice(0, 32).arrayBuffer()`, match a fixed signature table (`%PDF-` for PDF, `FF D8 FF` for JPEG, `89 50 4E 47 0D 0A 1A 0A` for PNG, `50 4B 03 04` for ZIP-container DOCX/XLSX disambiguated via declared `file.type`, no-magic + no-NUL for text/plain). Reject when sniffed MIME does not match declared `file.type` (defensive against MIME spoofing). Reject when the sniffer returns null (unrecognised content).
+
+Filename sanitisation is enforced verbatim per CODE-09 specification: `String(name).replace(/[^\w.\- ]/g, "_").slice(0, 200)`. The validated `sanitisedName` is used for both the Storage path and the Firestore metadata `filename` field.
+
+The `ALLOWED_MIME_TYPES` constant is exported from `src/ui/upload.js` so server-side enforcement (Phase 5 `storage.rules` + Phase 7 callable validation) can reference the same allowlist — single source of truth, multiple enforcement points (audit-narrative line: "client and server validate against the same canonical allowlist").
+
+**Trust boundary clarification (D-15):** Client-side validation provides UX feedback and the audit-narrative client-side claim ("we validate at the browser before the network call"). It is NOT the security boundary. Server-side enforcement happens in:
+
+- Phase 5 `storage.rules`: `request.resource.size < 25 * 1024 * 1024` + MIME allowlist + path scope `orgs/{orgId}/documents/{docId}/{filename}`
+- Phase 7 callable validation: re-applies the same constraints with Zod schemas and idempotency markers
+
+The `data/documents.saveDocument` wrapper (`src/data/documents.js` — Wave 3) does NOT re-validate; it trusts the contract from the view layer. The two trust-boundary stances are decoupled: client validates declared+actual MIME (via `ui/upload.js`); server enforces (Phase 5 `storage.rules` + Phase 7 callable). Phase 5 + Phase 7 are the actual trust boundaries.
+
+Wave 4 also closes the layered defences supporting the strict-CSP enforcement Phase 10 (HOST-07) will land:
+
+- **CODE-04** (Wave 2) deleted the `html:` escape hatch in `src/ui/dom.js` (XSS regression fixture pins the closure permanently).
+- **CODE-05** (Waves 1-4) replaced all 17 `innerHTML = ""` clearing patterns with `replaceChildren()` — DOM-equivalent without touching the unsanitised-property surface ESLint guards.
+- **CODE-06** (Wave 4 partial) replaced the 4 in-IIFE `el.style.X = ...` runtime mutations with class-based DOM manipulation (the harder CSP target). The 132 `style="..."` inline-attr strings in app.js IIFE remain — they are part of the Phase 2 D-08 snapshot baseline contract and sweep with body migration in Wave 5 per D-12 + Wave 3 Dev #1 precedent. CSP-tolerated under `style-src 'unsafe-inline'` until then.
+- **CODE-07** (Wave 4) replaced 7 `alert()` sites with `notify("error"|"success", ...)` — eliminates browser-blocking modal confirmation dialogs (T-CSP-no-blocking-script-execution narrative anchor).
+- **CODE-08** (Wave 4) deduplicated chat + funnel-comments rendering via `renderConversationBubble` in `src/views/_shared/render-conversation.js` (M8 closure).
+- **CODE-10** (Wave 4) memoised the tab-title unread badge writer (`setTitleIfDifferent` in `src/views/chat.js`) — only writes `document.title` when value differs from previous write.
+- **CODE-12** (Wave 4) added `rel="noopener noreferrer"` to download anchors paired with `target="_blank"` (CWE-1021 opener-phishing mitigation).
+
+The Wave 4 ESLint hardening also flipped the `views/* → no firebase/*` boundary from warn to error (`eslint.config.js`); views/* may import `data/`, `domain/`, `auth/`, `ui/`, `cloud/` only — direct `firebase/firestore | firebase/storage | firebase/auth | firebase/app-check | firebase/functions` imports are blocked outside `src/firebase/**`. Combined with Waves 1+2+3 hardenings, all four ARCHITECTURE.md §2.4 boundaries are now lint-enforced (`firebase/*` SDK group → only `src/firebase/**`; `domain/*` → no `firebase/*`; `data/*` → only `src/firebase/db.js` + `src/firebase/storage.js`; `views/*` → no `firebase/*`). The audit-narrative anchor for T-4-3-1 (Tampering at the data → firebase boundary) is now lint-enforced end-to-end.
+
+**Evidence:**
+
+- Upload validation helper: `src/ui/upload.js` (Plan 04-02 Wave 2 — `validateUpload` / `ALLOWED_MIME_TYPES` / `MAX_BYTES` exports)
+- IIFE upload site: `app.js:3201` (Plan 04-04 Wave 4) — `const validation = await validateUpload(file); if (!validation.ok) { notify("error", validation.reason); return; }` BEFORE `firestore.setDoc(...)` + Storage upload
+- Wave 4 ESLint flip: `eslint.config.js` `src/views/**/*.js` block (Plan 04-04 Task 3)
+- Cleanup-ledger row closures: `runbooks/phase-4-cleanup-ledger.md` Phase 2 timeline section (Plan 04-04 Wave 4 entries — CODE-05/07/08/09/10/12 closed; CODE-06 partial)
+- Verification: `npm run test` exits 0 (370 tests green); `npm run typecheck` exits 0; `npm run lint` exits 0; `npm run build` exits 0; `git diff tests/__snapshots__/views/` is empty (D-12 byte-identical extraction holds)
+
+**Framework citations:**
+
+- OWASP ASVS L2 v5.0 V12.1 — File Uploads (size cap + MIME allowlist + magic-byte sniff cross-check)
+- OWASP ASVS L2 v5.0 V5.3 — Output Encoding / XSS prevention (CODE-04 html: deletion + CODE-05 replaceChildren + CODE-06 inline-style sweep precondition)
+- ISO/IEC 27001:2022 Annex A.8.24 — Use of cryptography (`crypto.randomUUID()` for doc IDs via `src/util/ids.js`)
+- ISO/IEC 27001:2022 Annex A.5.34 — Privacy and PII protection (filename sanitisation prevents path-traversal + script-injection vectors)
+- ISO/IEC 27001:2022 Annex A.8.28 — Secure coding (lint-enforced module boundaries, all four ARCHITECTURE.md §2.4 walls now hard)
+- SOC 2 CC6.1 — Logical access (boundary enforcement at the lint layer mirrors the trust-boundary policy; views/* cannot reach firebase/* directly)
+- SOC 2 CC8.1 — Change management (atomic commits per requirement; Wave 4 lands all 8 CODE-* closures + ESLint flip + SECURITY.md update across the wave's commits)
+- GDPR Art. 32(1)(b) — Confidentiality of processing (upload validation is a confidentiality control — prevents malicious-content uploads from reaching Storage; XSS prevention is a confidentiality control because successful XSS leaks session tokens / form data; CWE-1021 noopener-noreferrer prevents opener-tab phishing)
+
+
+---
+
 ## § Dependency Monitoring
 
 **Controls:**

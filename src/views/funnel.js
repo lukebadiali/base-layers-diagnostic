@@ -39,4 +39,7 @@ export function renderFunnel(user, org) {
 
 // Re-export renderConversation for the funnel-comment-block adoption site
 // (Wave 5 wires the actual call).
-export { renderConversation } from "./_shared/render-conversation.js";
+export {
+  renderConversation,
+  renderConversationBubble,
+} from "./_shared/render-conversation.js";

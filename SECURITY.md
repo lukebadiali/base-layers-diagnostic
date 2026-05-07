@@ -71,6 +71,31 @@ reviewable in the PR.
 - SOC 2 CC8.1 — change management evidence trail
 - GDPR Art. 32(1)(d) — process for testing/evaluating effectiveness of technical measures
 
+### Phase 4 Wave 2 — html: escape hatch deletion + permanent XSS regression test (CODE-04)
+
+The `html:` attribute branch in the `h(tag, attrs, children)` DOM helper was deleted (`src/ui/dom.js`). Previously `h("div", { html: userContent })` would set `el.innerHTML = userContent`, an XSS escape hatch annotated with `// eslint-disable-next-line no-unsanitized/property` (CONCERNS C4). The branch has no callers in the current codebase (verified by grep across `app.js` and `src/**/*.js`); deleting it removes a defended-but-still-present risk surface.
+
+A permanent regression test fixture at `tests/ui/dom.test.js` pins three assertions: `<script>` payloads inside string children render as text content (`textContent` equals the literal string, no DOM `<script>` element materialises, `window.__xss` remains undefined); `<img onerror>` payloads render as text content (no DOM `<img>` element materialises); the literal attribute name `html:` is silently ignored at runtime (no children consumed; no descendants from the value string). The fixture is doc-comment-marked "REGRESSION FIXTURE — permanent" so future ESLint disables that re-introduce `innerHTML =` in any new module fail this test.
+
+The Wave 2 ESLint hardening also flipped the `domain/* → firebase/*` boundary from warn to error (`eslint.config.js`); domain modules are pure logic and must not import the Firebase SDK (lint-codifies the Phase 2 D-03 already-zero-imports state). The rule is dormant-but-active at Wave 2 close — zero `src/domain/**` files import `firebase/*` today, so no errors fire, but reintroduction during any subsequent change fails CI. Combined with the Wave 1 firebase-SDK boundary (only `src/firebase/**` may import the SDK directly), the lint graph now enforces two of the four ARCHITECTURE.md §2.4 boundaries; Waves 3 + 4 close `data/*` and `views/*`.
+
+**Evidence:**
+
+- `html:` deletion: `src/ui/dom.js` (commit `ceeb07f` Plan 04-02)
+- XSS regression fixture: `tests/ui/dom.test.js` (REGRESSION FIXTURE marker)
+- Cleanup-ledger row closure: `runbooks/phase-4-cleanup-ledger.md` Suppressions table — `app.js:676` (no-unsanitized/property) row deleted
+- Wave 2 ESLint flip: `eslint.config.js` `src/domain/**/*.js` block (commit Plan 04-02 Task 3)
+- Verification: `npm run test` exits 0 (XSS fixture green); `npm run lint` exits 0 (rule active, dormant); `grep -c "k === \"html\"" src/ui/dom.js app.js` returns 0
+
+**Framework citations:**
+
+- OWASP ASVS L2 v5.0 V5.3 — Output Encoding / XSS prevention (closes the `html:` escape hatch)
+- OWASP ASVS L2 v5.0 V14.2 — Code Integrity (lint-enforced module boundaries)
+- ISO/IEC 27001:2022 Annex A.8.28 — Secure coding (modular boundary + lint enforcement)
+- ISO/IEC 27001:2022 Annex A.13.1.3 — Network segregation (boundary enforcement at the lint layer mirrors the network/trust boundary policy)
+- SOC 2 CC8.1 — Change management; the regression fixture + lint flips land atomically with the code edit per Phase 1 D-25 atomic-commit pattern, and CI hard-fails on either drift
+- GDPR Art. 32(1)(b) — Confidentiality of processing (XSS prevention is a confidentiality control because successful XSS leaks session tokens / form data)
+
 ---
 
 ## § Dependency Monitoring

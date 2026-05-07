@@ -69,15 +69,18 @@ import { modal, promptText, confirmDialog } from "./src/ui/modal.js";
 // exists; consumers stay on util/ids.js this wave (D-12 faithful extraction).
 import { notify } from "./src/ui/toast.js";
 import {
-  validateUpload as _validateUpload,
+  validateUpload,
   ALLOWED_MIME_TYPES as _ALLOWED_MIME_TYPES,
   MAX_BYTES as _MAX_BYTES,
 } from "./src/ui/upload.js";
-// Wave 4 (D-20): notify is now wired (CODE-07 closes 7 alert() sites);
-// validateUpload / ALLOWED_MIME_TYPES / MAX_BYTES remain _-aliased until
-// the upload site at app.js:3225 wires CODE-09 (validateUpload BEFORE
-// saveDocument). Phase 5 storage.rules + Phase 7 callable enforce server-
-// side. No new eslint-disable rows added (Phase 4 D-17 ledger zero-out).
+// Wave 4 (D-20): notify wired (CODE-07 closes 7 alert() sites);
+// validateUpload wired (CODE-09 closes documents-upload trust boundary at
+// app.js:3201 — runs BEFORE saveDocument). ALLOWED_MIME_TYPES / MAX_BYTES
+// remain _-aliased — they are exported for cross-tier reuse (Phase 5
+// storage.rules + Phase 7 callable will reference the same constants).
+// Phase 5 + Phase 7 are the actual server-side trust boundaries; client-side
+// is the UX/audit-narrative layer per D-15. No new eslint-disable rows
+// added (Phase 4 D-17 ledger zero-out).
 import { createChrome } from "./src/ui/chrome.js";
 // Phase 4 Wave 4 (CODE-10 / D-20): tab-title unread badge memoisation —
 // only writes document.title when value differs. Setter lives in src/views/
@@ -3193,10 +3196,21 @@ import {
     const progressBar = h("div", { style: "margin-top:8px; font-size:12px; color:var(--ink-3);" });
 
     const upload = async (file) => {
+      // CODE-09 / D-15 / D-20: validateUpload BEFORE saveDocument trust
+      // boundary. Client-side validation (size cap + MIME allowlist + magic-
+      // byte sniff + filename sanitisation) for UX feedback + audit-narrative
+      // claim. Server-side enforcement is Phase 5 storage.rules + Phase 7
+      // callable validation.
+      const validation = await validateUpload(file);
+      if (!validation.ok) {
+        notify("error", validation.reason);
+        progressBar.textContent = "";
+        return;
+      }
       progressBar.textContent = "Uploading " + file.name + "…";
       try {
         const docId = uid("doc_");
-        const path = `orgs/${org.id}/documents/${docId}/${file.name}`;
+        const path = `orgs/${org.id}/documents/${docId}/${validation.sanitisedName}`;
         const r = storageOps.ref(storage, path);
         const task = storageOps.uploadBytesResumable(r, file, { contentType: file.type });
         task.on("state_changed", (snap) => {
@@ -3210,7 +3224,7 @@ import {
           uploaderId: user.id,
           uploaderName: user.name || user.email,
           uploaderEmail: user.email,
-          filename: file.name,
+          filename: validation.sanitisedName,
           size: file.size,
           contentType: file.type,
           storagePath: path,

@@ -1,32 +1,29 @@
 // tests/data/migration.test.js
 // @ts-check
-// Phase 2 (TEST-04): coverage of src/data/migration.js. INCLUDES the load-bearing
-// idempotency assertion (Pitfall 10) — second run on migrated data is a no-op.
+// Phase 2 (TEST-04): coverage of src/data/migration.js.
+// Phase 4 Wave 6 (CODE-13): the v1→v2 migration body was REMOVED from
+// src/data/migration.js (CONCERNS L2 closure). The 9 tests that exercised
+// the removed body (legacy-user creation, v1-org→v2-shape transform,
+// already-migrated skip, missing-org-body defensive guard, falsy-fallback
+// coverage back-fill, internalNote hoisting, single/multi-org orgId linking,
+// idempotency) were DELETED — they pinned behaviour we no longer have.
+// Pre-deletion verification documented in src/data/migration.js header +
+// 04-06-SUMMARY.md "CODE-13 closure" section. The unused v1Fixture +
+// v2Expected JSON imports were dropped alongside the deleted tests.
+//
+// Tests retained:
+//   - migrateV1IfNeeded no-op when users.length > 0 (the v2-active early-return guard;
+//     this is the entire post-CODE-13 contract).
+//   - migrateV1IfNeeded no-op when users.length === 0 (the only branch left).
+//   - clearOldScaleResponsesIfNeeded — separate function, NOT dead, fully retained.
 import { describe, it, expect } from "vitest";
 import { migrateV1IfNeeded, clearOldScaleResponsesIfNeeded } from "../../src/data/migration.js";
-import v1Fixture from "../fixtures/v1-localStorage.json";
-import v2Expected from "../fixtures/v2-org.json";
-import { uid } from "../../src/util/ids.js";
-
-// CANARY: pinned UID shape guards against tests/setup.js drift.
-// If tests/setup.js silently breaks the crypto.randomUUID counter-backed mock,
-// migration.test.js's idempotency assertion would still pass (both runs use
-// the same drifted UIDs). This canary catches that case.
-//
-// Phase 4 (CODE-03): uid swapped from Math.random+Date.now to crypto.randomUUID.
-// tests/setup.js mocks crypto.randomUUID to "00000000-0000-4000-8000-{counter}";
-// uid("u_") = "u_" + that uuid (dashes stripped) sliced to 11 hex chars.
-describe("UID determinism canary (catches harness drift)", () => {
-  it("uid('u_') under counter-backed crypto.randomUUID emits 11 hex chars", () => {
-    expect(uid("u_")).toMatch(/^u_[0-9a-f]{11}$/);
-    // If this test fails, tests/setup.js crypto.randomUUID mock has drifted;
-    // do NOT update this expectation — diagnose the harness instead.
-  });
-});
 
 /**
  * Build a fresh dependency bundle backed by an in-memory store. Mimics the
  * IIFE's loadUsers/loadOrgMetas/loadOrg/saveOrg/upsertUser/findUser shape.
+ * Phase 4 Wave 6: scope narrowed — migrateV1IfNeeded only consumes loadUsers
+ * post-CODE-13 closure; clearOldScaleResponsesIfNeeded still uses the full set.
  * @param {any} initial
  */
 function makeDeps(initial) {
@@ -60,187 +57,27 @@ function makeDeps(initial) {
   };
 }
 
-describe("migrateV1IfNeeded", () => {
-  it("is a no-op when users.length > 0 (already v2)", () => {
+describe("migrateV1IfNeeded (CODE-13 — body REMOVED Phase 4 Wave 6)", () => {
+  it("is a no-op when users.length > 0 (the post-CODE-13 contract — v2-active guard)", () => {
     const deps = makeDeps({ users: [{ id: "u_existing", role: "internal" }] });
     migrateV1IfNeeded(deps);
-    expect(deps.store.users).toHaveLength(1); // unchanged
-    expect(deps.store.v1Active).toBe(true);   // not cleared (early return)
+    expect(deps.store.users).toHaveLength(1); // unchanged — early return triggered
+    expect(deps.store.v1Active).toBe(true);   // not cleared (the body that cleared it is gone)
   });
 
-  it("is a no-op when there are no v1 orgs", () => {
-    const deps = makeDeps({});
-    migrateV1IfNeeded(deps);
-    expect(deps.store.users).toHaveLength(0);
-  });
-
-  it("creates a legacy user and migrates v1 org to v2 shape", () => {
+  it("is a no-op when users.length === 0 (the only branch left after CODE-13 body removal)", () => {
+    // Pre-CODE-13: this was the path where v1-localStorage migration ran. Post-CODE-13:
+    // the function returns silently without doing anything. We assert that nothing
+    // mutates — no legacy user created, no orgs migrated, no flags toggled.
     const deps = makeDeps({
-      orgMetas: v1Fixture.orgMetas,
-      orgs: v1Fixture.orgs,
+      // Even with v1 orgs present, the body that consumed them is gone.
+      orgMetas: [{ id: "x", name: "X" }],
+      orgs: { x: { id: "x", name: "X", responses: {} } },
     });
     migrateV1IfNeeded(deps);
-
-    expect(deps.store.users).toHaveLength(1);
-    const legacy = deps.store.users[0];
-    expect(legacy.email).toBe(v2Expected.expected_legacy_user_email);
-    expect(legacy.role).toBe(v2Expected.expected_legacy_user_role);
-    expect(legacy.name).toBe(v2Expected.expected_legacy_user_name);
-
-    const orgX = deps.store.orgs[v2Expected.expected_org_id];
-    expect(orgX.name).toBe(v2Expected.expected_org_name);
-    expect(orgX.rounds).toHaveLength(1);
-    expect(orgX.rounds[0].label).toBe(v2Expected.expected_round_label);
-    expect(orgX.currentRoundId).toBe(orgX.rounds[0].id);
-
-    // Responses re-keyed under the new round + legacy user
-    const roundResp = orgX.responses[orgX.currentRoundId];
-    expect(roundResp[legacy.id][1][0].score).toBe(
-      v2Expected.expected_responses_pillar_1_q_0_score,
-    );
-    expect(roundResp[legacy.id][1][0].note).toBe(
-      v2Expected.expected_responses_pillar_1_q_0_note,
-    );
-
-    // Internal note hoisted to org.internalNotes
-    expect(orgX.internalNotes[1][0]).toBe(v2Expected.expected_internal_note_pillar_1_q_0);
-
-    // Action createdBy patched
-    expect(orgX.actions).toHaveLength(v2Expected.expected_action_count);
-    expect(orgX.actions[0].id).toBe(v2Expected.expected_action_id);
-    expect(orgX.actions[0].createdBy).toBe(legacy.id);
-
-    // v1Active flag cleared
-    expect(deps.store.v1Active).toBe(false);
-  });
-
-  it("links the legacy user to the org when there is exactly one v1 org", () => {
-    const deps = makeDeps({ orgMetas: v1Fixture.orgMetas, orgs: v1Fixture.orgs });
-    migrateV1IfNeeded(deps);
-    expect(deps.store.users[0].orgId).toBe(v2Expected.expected_org_id);
-  });
-
-  it("is idempotent — second run is a no-op (Pitfall 10)", () => {
-    const deps = makeDeps({ orgMetas: v1Fixture.orgMetas, orgs: v1Fixture.orgs });
-    migrateV1IfNeeded(deps);
-    const afterFirst = JSON.parse(JSON.stringify(deps.store));
-
-    migrateV1IfNeeded(deps);
-    const afterSecond = JSON.parse(JSON.stringify(deps.store));
-
-    expect(afterSecond).toEqual(afterFirst);
-  });
-
-  it("skips already-migrated orgs (raw.rounds && raw.currentRoundId present)", () => {
-    const alreadyMigrated = {
-      orgMetas: [{ id: "y", name: "Y" }],
-      orgs: {
-        y: {
-          id: "y", name: "Y", currentRoundId: "r0",
-          rounds: [{ id: "r0", label: "Existing" }], responses: { r0: {} },
-        },
-      },
-    };
-    const deps = makeDeps(alreadyMigrated);
-    migrateV1IfNeeded(deps);
-    // The legacy user IS still created (because users.length === 0 at start) — but
-    // the v1Orgs loop early-exits per-org via `if (raw.rounds && raw.currentRoundId) return;`
-    expect(deps.store.users).toHaveLength(1);
-    // The org should be unchanged (early return inside the forEach).
-    expect(deps.store.orgs.y.rounds[0].label).toBe("Existing");
-  });
-
-  // Plan 02-06 (Wave 5) coverage back-fill: drive the defensive `if (!raw) return`
-  // branch on line 43 (orgMeta references a missing org body in storage).
-  it("skips orgs whose body is missing in storage (defensive `if (!raw) return`)", () => {
-    const deps = makeDeps({
-      orgMetas: [{ id: "ghost", name: "Ghost" }, ...v1Fixture.orgMetas],
-      orgs: v1Fixture.orgs, // no key for "ghost"
-    });
-    migrateV1IfNeeded(deps);
-    // Ghost org is skipped; the real one is migrated normally.
-    expect(deps.store.orgs.ghost).toBeUndefined();
-    expect(deps.store.orgs.x).toBeDefined();
-    expect(deps.store.orgs.x.rounds).toHaveLength(1);
-  });
-
-  // Plan 02-06 (Wave 5) coverage back-fill: drive the falsy fallback branches
-  // inside the response-migration loop (lines 53, 58, 59, 65-79) so the 90%
-  // src/data/** branches threshold (D-15) holds.
-  it("falls back to iso() / [] / default-engagement when v1 org body lacks optional fields", () => {
-    const deps = makeDeps({
-      orgMetas: [{ id: "minimal", name: "Minimal" }],
-      orgs: {
-        minimal: {
-          id: "minimal",
-          name: "Minimal",
-          // NO createdAt, NO actions, NO engagement, NO responses
-        },
-      },
-    });
-    migrateV1IfNeeded(deps);
-
-    const orgM = deps.store.orgs.minimal;
-    // Falsy fallbacks applied:
-    expect(orgM.createdAt).toBe("2026-01-01T00:00:00.000Z"); // iso() under fake timers
-    expect(orgM.rounds[0].createdAt).toBe("2026-01-01T00:00:00.000Z");
-    expect(orgM.actions).toEqual([]); // raw.actions || [] -> []
-    expect(orgM.engagement).toEqual({ currentStageId: "diagnosed", stageChecks: {} });
-    expect(orgM.internalNotes).toEqual({}); // never populated
-  });
-
-  it("preserves response notes empty string when r.note is absent + skips internalNote when absent", () => {
-    const deps = makeDeps({
-      orgMetas: [{ id: "noteless", name: "Noteless" }],
-      orgs: {
-        noteless: {
-          id: "noteless",
-          name: "Noteless",
-          createdAt: "2025-01-01T00:00:00.000Z",
-          responses: {
-            // pillar 5 question 0: score only, no note, no internalNote
-            5: { 0: { score: 8 } },
-          },
-        },
-      },
-    });
-    migrateV1IfNeeded(deps);
-
-    const orgN = deps.store.orgs.noteless;
-    const legacyId = deps.store.users[0].id;
-    const round = orgN.rounds[0].id;
-    expect(orgN.responses[round][legacyId][5][0]).toEqual({ score: 8, note: "" });
-    expect(orgN.internalNotes).toEqual({}); // no internal note hoisted
-  });
-
-  it("does NOT link the legacy user to a single org when there are multiple v1 orgs (line 86 false branch)", () => {
-    const deps = makeDeps({
-      orgMetas: [
-        { id: "a", name: "A" },
-        { id: "b", name: "B" },
-      ],
-      orgs: {
-        a: { id: "a", name: "A", createdAt: "2025-01-01T00:00:00.000Z" },
-        b: { id: "b", name: "B", createdAt: "2025-01-02T00:00:00.000Z" },
-      },
-    });
-    migrateV1IfNeeded(deps);
-    expect(deps.store.users).toHaveLength(1);
-    // Multi-org migration leaves orgId null on the legacy user (line 86 false branch).
-    expect(deps.store.users[0].orgId).toBeNull();
-    expect(deps.store.orgs.a.rounds).toHaveLength(1);
-    expect(deps.store.orgs.b.rounds).toHaveLength(1);
-  });
-
-  it("hoists internalNote to org.internalNotes when present on a v1 response", () => {
-    // This covers the truthy branch of line 75 — distinct from the noteless test
-    // above which covers the falsy branch.
-    const deps = makeDeps({
-      orgMetas: v1Fixture.orgMetas,
-      orgs: v1Fixture.orgs,
-    });
-    migrateV1IfNeeded(deps);
-    expect(deps.store.orgs.x.internalNotes[1][0]).toBe("in1");
+    expect(deps.store.users).toHaveLength(0); // no legacy user
+    expect(deps.store.orgs.x.rounds).toBeUndefined(); // no v2 shape forced
+    expect(deps.store.v1Active).toBe(true); // flag NOT cleared (the line that cleared it is gone)
   });
 });
 

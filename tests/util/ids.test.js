@@ -52,15 +52,14 @@ describe("formatWhen", () => {
     expect(formatWhen(0)).toBe("");
   });
 
-  // Note: formatWhen does Math.round((Date.now() - when) / 60000). 30 seconds rounds
-  // to 1 minute (JS Math.round rounds .5 up), which falls into the < 60 branch
-  // ("1m ago"), not < 1 ("just now"). Use 20 seconds (rounds to 0) for the
-  // "just now" branch instead.
+  // Phase 4 Wave 6 (CODE-11): formatWhen now uses Math.floor instead of Math.round
+  // so labels are monotonic-decreasing as time passes. 30 seconds floors to 0 minutes
+  // → "just now" (was "1m ago" with Math.round). 20 seconds also floors to 0 → "just now".
   it.each([
-    [20 * 1000, "just now"],            // 20s rounds to 0 minutes → "just now"
-    [10 * 60 * 1000, "10m ago"],        // 10 minutes
-    [3 * 60 * 60 * 1000, "3h ago"],     // 3 hours
-    [5 * 24 * 60 * 60 * 1000, "5d ago"], // 5 days
+    [20 * 1000, "just now"],            // 20s floors to 0 minutes → "just now"
+    [10 * 60 * 1000, "10m ago"],        // 10 minutes (exact)
+    [3 * 60 * 60 * 1000, "3h ago"],     // 3 hours (exact)
+    [5 * 24 * 60 * 60 * 1000, "5d ago"], // 5 days (exact)
   ])("formats a timestamp %i ms in the past as '%s'", (ms, expected) => {
     expect(formatWhen(new Date(Date.now() - ms).toISOString())).toBe(expected);
   });
@@ -70,6 +69,42 @@ describe("formatWhen", () => {
     // Must NOT match any relative pattern
     expect(out).not.toMatch(/just now|m ago|h ago|d ago/);
     expect(out.length).toBeGreaterThan(0);
+  });
+
+  // CODE-11 (Phase 4 Wave 6): monotonic-decreasing label assertion. With the
+  // previous Math.round implementation, a 90s-old entry would render "2m ago"
+  // then drift BACK to "1m ago" as it became 91s, 92s ... 119s old (because
+  // Math.round flips at the .5 boundary). Math.floor keeps "1m ago" stable
+  // until 120s elapses. Closes CONCERNS L4.
+  it("uses Math.floor for the minute calculation (90s old → '1m ago', not '2m ago')", () => {
+    const t0 = new Date(Date.now() - 90 * 1000).toISOString(); // 90 seconds old
+    expect(formatWhen(t0)).toBe("1m ago"); // Math.floor(90/60) = 1
+  });
+
+  it("output is monotonic-decreasing across the minute boundary (CODE-11)", () => {
+    // 60s, 90s, 119s — all floor to 1 minute → all render "1m ago".
+    expect(formatWhen(new Date(Date.now() - 60 * 1000).toISOString())).toBe("1m ago");
+    expect(formatWhen(new Date(Date.now() - 90 * 1000).toISOString())).toBe("1m ago");
+    expect(formatWhen(new Date(Date.now() - 119 * 1000).toISOString())).toBe("1m ago");
+    // 120s floors to 2 minutes → "2m ago" (label increased monotonically).
+    expect(formatWhen(new Date(Date.now() - 120 * 1000).toISOString())).toBe("2m ago");
+  });
+
+  it("uses Math.floor for the hour calculation (89min old → '1h ago', not '1h ago' via round-up)", () => {
+    // 89 minutes old: floor(89/60) = 1 → "1h ago". With Math.round, round(89/60) = 1 too,
+    // so this case doesn't differ — but 90min old: floor(90/60) = 1 → "1h ago",
+    // round(90/60) = 2 → "2h ago" (under round). Floor keeps "1h ago" stable through 119min.
+    const t90 = new Date(Date.now() - 90 * 60 * 1000).toISOString();
+    expect(formatWhen(t90)).toBe("1h ago"); // Math.floor(90/60) = 1
+    const t119 = new Date(Date.now() - 119 * 60 * 1000).toISOString();
+    expect(formatWhen(t119)).toBe("1h ago"); // Math.floor(119/60) = 1
+  });
+
+  it("uses Math.floor for the day calculation (36h old → '1d ago', not '2d ago')", () => {
+    // 36 hours = 2160 minutes; floor(2160 / (60*24)) = 1 → "1d ago".
+    // With Math.round: round(2160/1440) = round(1.5) = 2 → "2d ago".
+    const t36h = new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString();
+    expect(formatWhen(t36h)).toBe("1d ago"); // Math.floor(2160/1440) = 1
   });
 });
 

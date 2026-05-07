@@ -86,6 +86,13 @@ import { createChrome } from "./src/ui/chrome.js";
 // only writes document.title when value differs. Setter lives in src/views/
 // chat.js (the view that owns the tab-title surface).
 import { setTitleIfDifferent } from "./src/views/chat.js";
+// Phase 4 Wave 4 (CODE-08 / D-20): shared bubble helper for chat +
+// funnel-comment renderers (M8 chat/funnel duplication closure target).
+// Both IIFE renderers call renderConversationBubble for each message —
+// chat passes `chat-bubble`/`chat-bubble-meta`/`chat-bubble-text`/
+// `chat-bubble-del` class set; funnel passes `comment-bubble`/etc. The
+// bubble shape stays visually identical to pre-Wave-4 production DOM.
+import { renderConversationBubble } from "./src/views/_shared/render-conversation.js";
 // Phase 4 Wave 3 (D-09 / D-10): 6 full-owner data/* wrappers (orgs, users,
 // roadmaps, funnels, funnel-comments, allowlist). Imports land NOW so Wave 4
 // view extraction is a pure rewire — no new module discovery. Aliased _* to
@@ -3486,46 +3493,33 @@ import {
         const isSelf = m.authorId === user.id;
         const isInternalAuthor = m.authorRole === "internal";
         const bg = isInternalAuthor ? "var(--ink)" : "var(--brand)";
-        const ts = m.createdAt?.toDate?.().toLocaleString?.() || "";
-        const who = firstNameFromAuthor(m);
         const canDelete = isSelf || !isClientView(user);
-        const bubble = h(
-          "div",
-          {
-            class: "chat-bubble",
-            style: `align-self:${isSelf ? "flex-end" : "flex-start"}; background:${bg}; border-color:${bg};`,
-          },
-          [
-            h("div", { class: "chat-bubble-meta" }, `${who} · ${ts}`),
-            h("div", { class: "chat-bubble-text" }, m.text),
-          ],
-        );
-        if (canDelete) {
-          const del = h(
-            "button",
-            {
-              class: "chat-bubble-del",
-              title: "Delete",
-              onclick: (e) => {
-                e.stopPropagation();
-                confirmDialog(
-                  "Delete message?",
-                  "This cannot be undone.",
-                  async () => {
-                    try {
-                      await firestore.deleteDoc(firestore.doc(db, "messages", m.id));
-                    } catch (err) {
-                      notify("error", "Couldn't delete: " + (err.message || err));
-                    }
-                  },
-                  "Delete",
-                );
+        // CODE-08 (D-20): shared bubble helper closes M8 chat/funnel
+        // duplication; funnel comment block calls the same helper below.
+        const bubble = renderConversationBubble({
+          message: m,
+          isSelf,
+          canDelete,
+          bg,
+          bubbleClass: "chat-bubble",
+          metaClass: "chat-bubble-meta",
+          textClass: "chat-bubble-text",
+          delClass: "chat-bubble-del",
+          onDelete: () => {
+            confirmDialog(
+              "Delete message?",
+              "This cannot be undone.",
+              async () => {
+                try {
+                  await firestore.deleteDoc(firestore.doc(db, "messages", m.id));
+                } catch (err) {
+                  notify("error", "Couldn't delete: " + (err.message || err));
+                }
               },
-            },
-            "×",
-          );
-          bubble.appendChild(del);
-        }
+              "Delete",
+            );
+          },
+        });
         list.appendChild(bubble);
       });
       list.scrollTop = list.scrollHeight;
@@ -4561,46 +4555,33 @@ import {
         const isSelf = m.authorId === user.id;
         const isInternalAuthor = m.authorRole === "internal";
         const bg = isInternalAuthor ? "var(--ink)" : "var(--brand)";
-        const ts = m.createdAt?.toDate?.().toLocaleString?.() || "";
-        const who = firstNameFromAuthor(m);
         const canDelete = isSelf || !isClientView(user);
-        const bubble = h(
-          "div",
-          {
-            class: "comment-bubble",
-            style: `align-self:${isSelf ? "flex-end" : "flex-start"}; background:${bg}; border-color:${bg};`,
-          },
-          [
-            h("div", { class: "comment-meta" }, `${who} · ${ts}`),
-            h("div", { class: "comment-text" }, m.text),
-          ],
-        );
-        if (canDelete) {
-          const del = h(
-            "button",
-            {
-              class: "comment-bubble-del",
-              title: "Delete",
-              onclick: (e) => {
-                e.stopPropagation();
-                confirmDialog(
-                  "Delete comment?",
-                  "This cannot be undone.",
-                  async () => {
-                    try {
-                      await firestore.deleteDoc(firestore.doc(db, "funnelComments", m.id));
-                    } catch (err) {
-                      notify("error", "Couldn't delete: " + (err.message || err));
-                    }
-                  },
-                  "Delete",
-                );
+        // CODE-08 (D-20): shared bubble helper — same call shape as chat
+        // renderList above; only class set + Firestore collection differ.
+        const bubble = renderConversationBubble({
+          message: m,
+          isSelf,
+          canDelete,
+          bg,
+          bubbleClass: "comment-bubble",
+          metaClass: "comment-meta",
+          textClass: "comment-text",
+          delClass: "comment-bubble-del",
+          onDelete: () => {
+            confirmDialog(
+              "Delete comment?",
+              "This cannot be undone.",
+              async () => {
+                try {
+                  await firestore.deleteDoc(firestore.doc(db, "funnelComments", m.id));
+                } catch (err) {
+                  notify("error", "Couldn't delete: " + (err.message || err));
+                }
               },
-            },
-            "×",
-          );
-          bubble.appendChild(del);
-        }
+              "Delete",
+            );
+          },
+        });
         commentsList.appendChild(bubble);
       });
       commentsList.scrollTop = commentsList.scrollHeight;

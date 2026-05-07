@@ -256,6 +256,31 @@ Sentry quota alert.
 - ISO/IEC 27001:2022 A.13.1.3 — Segregation in networks (header-enforced same-origin boundary)
 - SOC 2 CC6.6 — Logical access security boundaries
 
+### Phase 4 Wave 1 — CSP allowlist tightening (CODE-01 + ARCHITECTURE.md §2)
+
+The Content-Security-Policy-Report-Only header was tightened to drop three CDN allowlist entries that became unnecessary once Chart.js moved to npm import (`chart.js@4.5.1` bundled via Vite) and Google Fonts (Inter + Bebas Neue, both OFL-licensed) were self-hosted under `assets/fonts/`:
+
+- `script-src` no longer allows `https://cdn.jsdelivr.net` (Chart.js bundled via `src/ui/charts.js` ESM import)
+- `style-src` no longer allows `https://fonts.googleapis.com` (font CSS self-hosted via `styles.css` `@font-face` declarations)
+- `font-src` no longer allows `https://fonts.gstatic.com` (woff2 binaries served from `dist/assets/`)
+
+This shrinks Phase 10's `HOST-07` strict-CSP-enforcement work to a single-knob flip (drop `'unsafe-inline'` from `style-src` after the Wave 4 inline-style sweep). The change landed atomically with the npm migration commit per the Phase 1 D-25 atomic-commit pattern (no separate "docs catch-up" commit). The CSP-Report-Only baseline established in Phase 3 (HOST-04) remains active; the report sink at `/api/csp-violations` (FN-10) continues to receive violation reports during the report-only soak.
+
+The same wave landed `src/firebase/{app,auth,db,storage,functions,check}.js` as the per-feature SDK adapter (D-05/D-06/D-07 — `src/firebase/check.js` is a no-op stub Phase 7 fills with reCAPTCHA Enterprise without changing the adapter shape) and flipped `eslint.config.js`'s `no-restricted-imports` rule from `warn` to `error` for the `firebase/firestore | firebase/storage | firebase/auth | firebase/app-check | firebase/functions` group (D-04). Non-`src/firebase/**` files can no longer import the SDK directly — every Firestore/Storage/Auth/Functions touch goes through the adapter, which is the audit-narrative anchor for "every Firebase write goes through `data/*`, which goes through `firebase/db.js`, which goes through the SDK."
+
+Wave 1 also closed CODE-03 (CWE-330 mitigation): `src/util/ids.js` `uid()` swapped from the predictable PRNG-backed implementation to `crypto.randomUUID()` (CSPRNG); the corresponding cleanup-ledger row closes.
+
+**Framework citations (Wave 1 increment):**
+
+- OWASP ASVS L2 v5.0 V14.2 — Dependencies (npm migration removes unmanaged CDN supply chain)
+- OWASP ASVS L2 v5.0 V14.7 — Build & Deploy (Vite-bundled SRI replaces CDN-without-SRI)
+- OWASP ASVS L2 v5.0 V6.3 — Random Values (CSPRNG via `crypto.randomUUID()` — CODE-03)
+- ISO/IEC 27001:2022 A.13.1.3 — Network segregation (CSP allowlist tightening)
+- ISO/IEC 27001:2022 A.8.24 — Use of cryptography (CSPRNG enforcement)
+- ISO/IEC 27001:2022 A.8.28 — Secure coding (modular boundary + lint enforcement via `no-restricted-imports`)
+- SOC 2 CC6.6 — Logical access (boundary enforcement via lint)
+- SOC 2 CC8.1 — Change management (atomic commits per requirement)
+
 ---
 
 ## § Content Security Policy (Report-Only)

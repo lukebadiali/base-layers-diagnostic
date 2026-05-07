@@ -19,7 +19,10 @@ beforeEach(() => {
     );
   });
 
-  vi.spyOn(Math, "random").mockReturnValue(0.5);
+  // Phase 4 (CODE-03): the Math.random=0.5 spy was removed once src/util/ids.js
+  // swapped to crypto.randomUUID. No production code uses Math.random anymore;
+  // ESLint no-restricted-syntax + security/detect-pseudoRandomBytes are the
+  // regression fences against re-introduction.
 });
 
 afterEach(() => {

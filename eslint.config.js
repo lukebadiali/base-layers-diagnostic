@@ -116,24 +116,6 @@ export default [
         },
       ],
 
-      // Soft warn in Phase 1 — hardens to error in Phase 4 when modular boundary lands
-      "no-restricted-imports": [
-        "warn",
-        {
-          patterns: [
-            {
-              group: [
-                "firebase/firestore",
-                "firebase/storage",
-                "firebase/auth",
-                "firebase/app-check",
-              ],
-              message:
-                "Import Firebase services only through the firebase/ adapter module. This will harden to 'error' in Phase 4.",
-            },
-          ],
-        },
-      ],
     },
   },
 
@@ -151,22 +133,68 @@ export default [
     },
   },
 
-  // Phase 2 (Plan 02-06, T-2-03 mitigation): block production code from
-  // importing test fixtures. tests/fixtures/auth-passwords.js holds TEST
-  // credentials; a stray import from src/** or app.js would leak them into
-  // the production bundle. The rule is files-scoped so tests/ keep importing
-  // from tests/ freely. Hard error — this is a security boundary.
+  // Phase 4 Wave 1 (D-04): firebase/* is the sole SDK import surface. Non-firebase/**
+  // files must not import the SDK directly. Hardened from Phase 1's "warn" → "error"
+  // with the firebase/ adapter landing this wave (D-05). The src/firebase/** files
+  // import the SDK through bare specifiers — they are excluded via `ignores`.
+  // Also carries the Phase 2 T-2-03 mitigation (block src/** + app.js from importing
+  // tests/**) folded into the same rule key — ESLint flat config replaces (does not
+  // merge) the same rule key when later configs match the same file, so both pattern
+  // groups live in one rule. Subsequent waves close `domain/* → firebase/*` (Wave 2),
+  // `data/* → only firebase/*` (Wave 3), and `views/* → no firebase/*` (Wave 4) per
+  // ARCHITECTURE.md §2.4 by extending this block's pattern set.
   {
     files: ["src/**/*.js", "app.js"],
+    ignores: ["src/firebase/**"],
     rules: {
       "no-restricted-imports": [
         "error",
         {
           patterns: [
             {
+              group: [
+                "firebase/firestore",
+                "firebase/storage",
+                "firebase/auth",
+                "firebase/app-check",
+                "firebase/functions",
+              ],
+              message:
+                "Import Firebase services through the firebase/ adapter (src/firebase/*). Phase 4 Wave 1 (D-04).",
+            },
+            {
               group: ["**/tests/**", "../tests/*", "../../tests/*"],
               message:
                 "Production code (src/** or app.js) must not import from tests/. T-2-03 mitigation: tests/fixtures/auth-passwords.js is a TEST credential and must not leak into production paths.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  // Phase 4 Wave 1 (D-04): also block direct SDK imports in tests/** (excluding the
+  // adapter shape contract test at tests/firebase/app.test.js which mocks them via
+  // vi.mock and never actually imports `firebase/*` runtime). This catches accidental
+  // test-file SDK imports that bypass the adapter under test.
+  {
+    files: ["tests/**/*.js"],
+    ignores: ["tests/firebase/**", "tests/mocks/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "firebase/firestore",
+                "firebase/storage",
+                "firebase/auth",
+                "firebase/app-check",
+                "firebase/functions",
+              ],
+              message:
+                "Import Firebase services through the firebase/ adapter (src/firebase/*). Phase 4 Wave 1 (D-04).",
             },
           ],
         },

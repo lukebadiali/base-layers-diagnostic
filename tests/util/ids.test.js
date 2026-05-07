@@ -30,12 +30,17 @@ describe("uid (CODE-03 — crypto.randomUUID-backed)", () => {
     expect(uid("org_")).toMatch(/^org_[0-9a-f]{11}$/);
   });
 
-  it("calls crypto.randomUUID for entropy (not Math.random)", () => {
-    // Each call must consume a new randomUUID — counter-backed mock in tests/setup.js
-    // increments per call, so two consecutive uid() calls must differ.
-    const a = uid();
-    const b = uid();
-    expect(a).not.toBe(b);
+  it("derives entropy from crypto.randomUUID (not Math.random)", () => {
+    // Verify uid actually invokes crypto.randomUUID by spying. The counter-backed
+    // mock in tests/setup.js advances counter per call; the first 11 hex chars after
+    // dash-stripping happen to be constant ("00000000000") because the counter only
+    // varies in the trailing 12 hex digits — so we cannot use a !== b for uniqueness.
+    // We assert the spy is invoked instead, which proves CODE-03 wiring.
+    const before = /** @type {*} */ (crypto.randomUUID).mock.calls.length;
+    uid();
+    uid("p_");
+    const after = /** @type {*} */ (crypto.randomUUID).mock.calls.length;
+    expect(after - before).toBe(2);
   });
 });
 

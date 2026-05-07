@@ -3,9 +3,21 @@
 // Phase 2 (D-05): byte-identical extraction from app.js:42-44, 46, 48-57, 68-74, 76-91.
 // formatDate (app.js:59-66) intentionally NOT extracted — not on the D-02 target list.
 
-export const uid = (p = "") =>
-  // eslint-disable-next-line no-restricted-syntax -- Phase 4: replace with crypto.randomUUID(). See runbooks/phase-4-cleanup-ledger.md
-  p + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+/**
+ * @param {string} [p] prefix
+ * @returns {string} prefix + 11 hex chars from crypto.randomUUID()
+ *
+ * Phase 4 (CODE-03): swapped from the legacy PRNG-backed implementation
+ * (the Math `random` + Date `now` base-36 encoding) to crypto.randomUUID()
+ * (CSPRNG). Closes the cleanup-ledger row at src/util/ids.js:7 (CWE-330
+ * mitigation — the legacy PRNG was predictable).
+ * The Date.now() suffix is removed because crypto.randomUUID() is monotonic-uniqueness-
+ * sufficient on its own. Output shape changed from `prefix+5chars+4chars` (9 total
+ * past prefix) to `prefix+11hex` (11 hex chars past prefix); IDs minted before this
+ * swap remain comparable as opaque strings (PROJECT.md "no backwards-compat window"
+ * — clean cutover acceptable).
+ */
+export const uid = (p = "") => p + crypto.randomUUID().replace(/-/g, "").slice(0, 11);
 
 export const iso = () => new Date().toISOString();
 

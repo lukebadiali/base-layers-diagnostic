@@ -25,11 +25,16 @@ export const iso = () => new Date().toISOString();
 export const formatWhen = (when) => {
   if (!when) return "";
   const d = new Date(when);
-  const mins = Math.round((Date.now() - d.getTime()) / 60000);
+  // CODE-11 (Phase 4 Wave 6): Math.floor instead of Math.round so labels
+  // are monotonic-decreasing as time passes. With Math.round, a 90s-old
+  // entry would render "2m ago" then drift back to "1m ago" as it became
+  // 91s old (1.5 → 1.51 minutes; round flips at the .5 boundary). Math.floor
+  // keeps "1m ago" stable until 120s elapses. Closes CONCERNS L4.
+  const mins = Math.floor((Date.now() - d.getTime()) / 60000);
   if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
-  if (mins < 60 * 24) return `${Math.round(mins / 60)}h ago`;
-  if (mins < 60 * 24 * 7) return `${Math.round(mins / (60 * 24))}d ago`;
+  if (mins < 60 * 24) return `${Math.floor(mins / 60)}h ago`;
+  if (mins < 60 * 24 * 7) return `${Math.floor(mins / (60 * 24))}d ago`;
   return d.toLocaleDateString();
 };
 

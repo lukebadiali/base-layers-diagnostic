@@ -79,6 +79,10 @@ import {
 // saveDocument). Phase 5 storage.rules + Phase 7 callable enforce server-
 // side. No new eslint-disable rows added (Phase 4 D-17 ledger zero-out).
 import { createChrome } from "./src/ui/chrome.js";
+// Phase 4 Wave 4 (CODE-10 / D-20): tab-title unread badge memoisation —
+// only writes document.title when value differs. Setter lives in src/views/
+// chat.js (the view that owns the tab-title surface).
+import { setTitleIfDifferent } from "./src/views/chat.js";
 // Phase 4 Wave 3 (D-09 / D-10): 6 full-owner data/* wrappers (orgs, users,
 // roadmaps, funnels, funnel-comments, allowlist). Imports land NOW so Wave 4
 // view extraction is a pure rewire — no new module discovery. Aliased _* to
@@ -496,7 +500,8 @@ import {
   function updateTabTitleBadge() {
     const user = currentUser();
     const unread = user && user.role === "internal" ? unreadChatTotal(user) : 0;
-    document.title = unread > 0 ? `(${unread}) ${BASE_TAB_TITLE}` : BASE_TAB_TITLE;
+    // CODE-10 (D-20): memoised title write — only updates when value differs.
+    setTitleIfDifferent(unread > 0 ? `(${unread}) ${BASE_TAB_TITLE}` : BASE_TAB_TITLE);
   }
 
   // Phase 2 (D-05): hashString extracted to src/util/hash.js — re-imported at module top, do not re-define.
@@ -3303,7 +3308,10 @@ import {
                   class: "btn secondary sm",
                   href: d.downloadURL,
                   target: "_blank",
-                  rel: "noopener",
+                  // CODE-12 (D-20): noreferrer added — opener-phishing mitigation
+                  // (CWE-1021). Pairs with target=_blank to prevent the new
+                  // tab from accessing window.opener.
+                  rel: "noopener noreferrer",
                 },
                 "Download",
               ),

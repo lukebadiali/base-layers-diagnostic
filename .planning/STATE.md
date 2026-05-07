@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready
-last_updated: "2026-05-07T09:10:00.000Z"
+status: executing
+last_updated: "2026-05-07T09:55:16.716Z"
 progress:
   total_phases: 12
   completed_phases: 3
-  total_plans: 18
+  total_plans: 24
   completed_plans: 18
-  percent: 25
+  percent: 75
 ---
 
 # State: Base Layers Diagnostic — Hardening Pass
 
 **Initialized:** 2026-05-03
-**Last updated:** 2026-05-03 — Phase 1 planned (6 plans, ready to execute)
+**Last updated:** 2026-05-07 — Phase 4 planned (6 plans across 6 sequential waves; ready to execute)
 
 ---
 
@@ -27,7 +27,7 @@ progress:
 Client diagnostic data must remain confidential, intact, and recoverable — and BeDeveloped must be able to honestly answer a prospect's security questionnaire about how that's enforced.
 
 **Current focus:**
-Phase 4 — Modular Split + Quick Wins (context gathered 2026-05-07; ready for /gsd-plan-phase 4)
+Phase 4 — Modular Split + Quick Wins (planned 2026-05-07; 6 PLAN.md files across 6 sequential waves; ready for /gsd-execute-phase 4)
 
 **Compliance bar:** credible, **not** certified. Certification is a separate workstream.
 
@@ -36,7 +36,7 @@ Phase 4 — Modular Split + Quick Wins (context gathered 2026-05-07; ready for /
 ## Current Position
 
 Phase: 3 — COMPLETE (Hosting Cutover + Baseline Security Headers — 6/6 plans executed; verifier 16/19 must-haves; 3 operator-execution items deferred to 03-HUMAN-UAT.md per "author runbook now, execute later" choice)
-**Status:** Ready to execute Phase 4
+**Status:** Ready to execute
 **Progress:** 3/12 phases complete
 
 ```
@@ -45,7 +45,7 @@ Phase: 3 — COMPLETE (Hosting Cutover + Baseline Security Headers — 6/6 plans
  ✓  ✓  ✓  .  .  .  .  .  .  .  .  .
 ```
 
-**Next action:** `/gsd-plan-phase 4` (Phase 4 context gathered; planner consumes 04-CONTEXT.md).
+**Next action:** `/gsd-execute-phase 4` (Phase 4 planned; 6 PLAN.md files in `.planning/phases/04-modular-split-quick-wins/`).
 
 **Phase 3 deliverables (locked 2026-05-07):**
 
@@ -190,7 +190,9 @@ Additional non-negotiables:
 
 **This session (2026-05-06, continued):** Phase 3 context gathered via `/gsd-discuss-phase 3`. 15 implementation decisions captured (D-01..D-15) across four gray areas: cutover topology (Firebase project URL soak + smoke + same-session CNAME flip + 14-day GH-Pages rollback retention); csp-violations Cloud Function (minimal `functions/` skeleton — TS + Node 22 + Gen 2 — that Phase 7 expands; firebase.json rewrite to /api/csp-violations same-origin; europe-west2 region pulls Phase 6's Firestore-region todo forward as a pre-flight); CSP report-only policy strictness (two-tier — tight on script/connect/frame/object/base/form, permissive on style-src 'unsafe-inline' until Phase 10's M5 sweep flips one knob; dual reporting via legacy report-uri + modern report-to + Reporting-Endpoints; frame-src for Firebase Auth popup origin added preemptively to spare Phase 6 a CSP edit); CSP report sink + filtering (Cloud Logging structured logs + filter rules for browser extensions / about:srcdoc / 5-min dedup window; abuse protection content-type + 64 KB body-size only — Cloud Armor / per-IP rate-limit deferred to Phase 7). Vercel-for-hosting-only raised by user mid-discussion; deferred per PROJECT.md "Stay on Firebase" + Pitfall 15 SOC2 co-location lock. Standard header set + CI deploy/preview-channel jobs covered as derived (D-13, D-14); SECURITY.md DOC-10 increment scoped (D-15). Artefacts at `.planning/phases/03-hosting-cutover-baseline-security-headers/03-CONTEXT.md` + `03-DISCUSSION-LOG.md`.
 
+**This session (2026-05-07, continued):** Phase 4 planned via `/gsd-plan-phase 4`. 6 PLAN.md files across 6 sequential waves authored (commit `5048e6e`): 04-01 firebase/ adapter + Chart.js+font self-host + CSP CDN drop + CODE-03 + meta-CSP test (Wave 1); 04-02 ui/* helpers + html: deletion + permanent XSS regression fixture + ESLint domain/* boundary flip (Wave 2); 04-03 12 data/* wrappers (6 owners + 6 Phase-5-rewrite-target pass-throughs) + 5 cloud/* + 2 observability/* empty stub seams + ESLint data/* boundary flip (Wave 3); 04-04 12 views/* extracted + per-view quick wins folded (CODE-05/06/07/08/09/10/12) + ESLint views/* boundary flip (Wave 4); 04-05 state.js+router.js+main.js extract LAST + atomic terminal cutover (app.js DELETED + index.html `<script src>` flip in single commit per D-03) (Wave 5); 04-06 vite.config.js per-directory thresholds (D-21 verbatim) + final ESLint hardening + CODE-11 + CODE-13 (with pre-deletion gate) + cleanup-ledger zero-out gate + SECURITY.md final § Code Quality + Module Boundaries paragraph + human-verify checkpoint (Wave 6). Pattern map (`04-PATTERNS.md`) authored before planning — every new file maps to a pre-existing analog inside the repo with paste-ready code excerpts. Plan-checker VERIFICATION PASSED (zero blockers, zero warnings; 14/14 requirements covered: CODE-01..13 + DOC-10). Pattern-mapper, planner, and plan-checker agents all dispatched in this session. Skipped: phase-level RESEARCH.md (CONTEXT.md is exhaustive — D-01..D-21 locked, with project-wide research at .planning/research/* heavily referenced); UI-SPEC.md (D-13/D-14 lock toast visuals; D-15/D-16 lock upload UX; CODE-06 is style-string→class with no new design); Nyquist VALIDATION.md (no RESEARCH.md → Dimension 8 gap accepted; verification rigor comes from snapshot baselines + per-directory coverage thresholds + atomic-commit pattern). Artefacts at `.planning/phases/04-modular-split-quick-wins/04-{01..06}-PLAN.md` + `04-PATTERNS.md`.
+
 ---
 
 *State initialized: 2026-05-03 after roadmap creation*
-*Last updated: 2026-05-07 — Phase 4 context gathered (21 decisions captured); ready for /gsd-plan-phase 4*
+*Last updated: 2026-05-07 — Phase 4 planned (6 plans across 6 sequential waves; commit 5048e6e); ready for /gsd-execute-phase 4*

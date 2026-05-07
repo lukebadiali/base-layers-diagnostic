@@ -93,6 +93,19 @@ export default [
       "security/detect-non-literal-regexp": "warn",
       "security/detect-eval-with-expression": "error",
 
+      // Allow underscore-prefixed parameters/variables to opt out of no-unused-vars
+      // (Phase 4 D-05: src/firebase/* placeholder helpers like signInEmailPassword(_email, _password)
+      // declare bodies that Phase 6+ fills in; the underscore prefix is the explicit
+      // "intentionally unused" convention).
+      "no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+
       // Belt + suspenders — block Math.random() via no-restricted-syntax for explicit-error message
       "no-restricted-syntax": [
         "error",

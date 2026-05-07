@@ -623,7 +623,8 @@ import {
     updateTabTitleBadge();
 
     const app = appEl();
-    app.innerHTML = "";
+    // Phase 4 Wave 4 (CODE-05 / D-20): replaceChildren() replaces innerHTML="" — DOM-equivalent (clears children) without touching the unsanitised-property surface ESLint guards.
+    app.replaceChildren();
 
     const user = currentUser();
     ensureChatSubscription(user);
@@ -766,7 +767,8 @@ import {
       {
         class: "auth-submit",
         onclick: async () => {
-          errBox.innerHTML = "";
+          // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+          errBox.replaceChildren();
           if (!name.value.trim() || !email.value.trim() || pass.value.length < 4) {
             errBox.appendChild(
               h(
@@ -3267,7 +3269,8 @@ import {
           return (d.allowedUserIds || []).includes(user.id);
         });
 
-        listBody.innerHTML = "";
+        // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+        listBody.replaceChildren();
         if (!visible.length) {
           listBody.appendChild(h("p", { style: "color:var(--ink-3);" }, "No files yet."));
           return;
@@ -3335,7 +3338,8 @@ import {
         });
       },
       (err) => {
-        listBody.innerHTML = "";
+        // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+        listBody.replaceChildren();
         listBody.appendChild(
           h("p", { style: "color:var(--red);" }, "Couldn't load documents: " + err.message),
         );
@@ -3444,7 +3448,8 @@ import {
               (m.authorName || "").toLowerCase().includes(term),
           )
         : allMessages;
-      list.innerHTML = "";
+      // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+      list.replaceChildren();
       if (!filtered.length) {
         list.appendChild(
           h(
@@ -3549,7 +3554,8 @@ import {
         renderList();
       },
       (err) => {
-        list.innerHTML = "";
+        // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+        list.replaceChildren();
         list.appendChild(
           h("p", { style: "color:var(--red);" }, "Couldn't load chat: " + err.message),
         );
@@ -3688,7 +3694,8 @@ import {
     };
 
     const renderPeriods = () => {
-      periodsCol.innerHTML = "";
+      // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+      periodsCol.replaceChildren();
       localData.periods.forEach((m, idx) => {
         const card = h("div", { class: "card", style: "padding:14px;" });
         card.appendChild(

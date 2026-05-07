@@ -79,6 +79,54 @@ import {
 // callable validation. No new eslint-disable rows added (Phase 4 D-17 ledger
 // zero-out direction).
 import { createChrome } from "./src/ui/chrome.js";
+// Phase 4 Wave 3 (D-09 / D-10): 6 full-owner data/* wrappers (orgs, users,
+// roadmaps, funnels, funnel-comments, allowlist). Imports land NOW so Wave 4
+// view extraction is a pure rewire — no new module discovery. Aliased _* to
+// satisfy the `^_` argsIgnorePattern (added Wave 1) until Wave 4 wires
+// consumers; the current IIFE keeps its localStorage-fronted helpers
+// (loadOrg/loadUsers/etc.) verbatim per D-12 faithful extraction so the
+// snapshot baselines at tests/__snapshots__/views/{dashboard,diagnostic,
+// report}.html continue to produce zero diff. Phase 5 (DATA-01..06) replaces
+// the localStorage-fronted helpers with these wrappers' subcollection-aware
+// successors; Wave 4 (04-04) is the wave that flips views/* call sites.
+import {
+  getOrg as _getOrg,
+  listOrgs as _listOrgs,
+  saveOrg as _saveOrg,
+  deleteOrg as _deleteOrg,
+  subscribeOrgs as _subscribeOrgs,
+} from "./src/data/orgs.js";
+import {
+  getUser as _getUser,
+  listUsers as _listUsers,
+  saveUser as _saveUser,
+  deleteUser as _deleteUser,
+  subscribeUsers as _subscribeUsers,
+} from "./src/data/users.js";
+import {
+  getRoadmap as _getRoadmap,
+  listRoadmaps as _listRoadmaps,
+  saveRoadmap as _saveRoadmap,
+  deleteRoadmap as _deleteRoadmap,
+  subscribeRoadmaps as _subscribeRoadmaps,
+} from "./src/data/roadmaps.js";
+import {
+  getFunnel as _getFunnel,
+  listFunnels as _listFunnels,
+  saveFunnel as _saveFunnel,
+  deleteFunnel as _deleteFunnel,
+  subscribeFunnels as _subscribeFunnels,
+} from "./src/data/funnels.js";
+import {
+  listFunnelComments as _listFunnelComments,
+  addFunnelComment as _addFunnelComment,
+  deleteFunnelComment as _deleteFunnelComment,
+  subscribeFunnelComments as _subscribeFunnelComments,
+} from "./src/data/funnel-comments.js";
+import {
+  getAllowlistEntry as _getAllowlistEntry,
+  listAllowlist as _listAllowlist,
+} from "./src/data/allowlist.js";
 
 (function () {
   "use strict";

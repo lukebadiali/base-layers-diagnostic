@@ -231,4 +231,38 @@ export default [
       ],
     },
   },
+
+  // Phase 4 Wave 3 (D-04): data/* must access the SDK only through the
+  // adapter — src/firebase/db.js + src/firebase/storage.js. Direct
+  // firebase/firestore | storage | auth | app-check | functions imports are
+  // blocked outside src/firebase/**. This is the audit-narrative anchor for
+  // T-4-3-1 (Tampering at the data → firebase boundary): every Firestore
+  // write goes through src/data/*, which imports only from src/firebase/db.js
+  // (or src/firebase/storage.js for Storage), which imports the SDK. Lint
+  // hard-fails CI on any new boundary breach. Rule is dormant-but-active at
+  // Wave 3 close: src/data/* uses only src/firebase/db.js +
+  // src/firebase/storage.js today (verified by grep).
+  {
+    files: ["src/data/**/*.js"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "firebase/firestore",
+                "firebase/storage",
+                "firebase/auth",
+                "firebase/app-check",
+                "firebase/functions",
+              ],
+              message:
+                "data/* must access SDK only through src/firebase/db.js + src/firebase/storage.js (Wave 3 D-04).",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];

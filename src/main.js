@@ -1,14 +1,60 @@
 // @ts-nocheck
-// Phase 4: remove after modular split. See runbooks/phase-4-cleanup-ledger.md
+// Phase 4 Wave 5 (D-12 transitional): the IIFE body is preserved verbatim
+// per Wave 4 Dev #1 + Wave 3 Dev #1 — body migration to src/views/*.js is
+// a follow-up wave (the snapshot baselines at tests/__snapshots__/views/
+// {dashboard,diagnostic,report}.html are the rendered-DOM contract). The
+// strict checkJs surface is too tight for a 5,000-line IIFE that uses
+// duck typing throughout (HTMLElement.value, implicit any in callbacks,
+// etc.). Wave 6 cleanup migrates IIFE-resident renderX functions into the
+// views/* stubs, after which src/main.js shrinks to the boot scaffold +
+// dispatcher wiring + init() and this directive closes (the cleanup-
+// ledger row tracking the @ts-nocheck migrates from app.js:1 to
+// src/main.js:1 for Wave 6 to close). The new src/state.js + src/router.js
+// modules (D-02 byte-identical extractions) DO have full @ts-check
+// coverage with strict JSDoc types — the architectural intent (per-file
+// type-discipline) is honoured for the cleanly-extracted units.
 /* ============================================================
-   BeDeveloped — Base Layers (v2)
+   BeDeveloped — Base Layers (v2) — src/main.js
+   Phase 4 Wave 5 (D-02 / D-03 / D-06 / D-12): terminal cutover. The
+   legacy `app.js` IIFE that served as the single bootstrap from Phase 0
+   through Wave 4 is re-homed here as src/main.js. index.html's script
+   tag flips to ./src/main.js in this same atomic commit. The IIFE body
+   stays intact (D-12 + Wave 4 Dev #1 + Wave 3 Dev #1 — the snapshot
+   baselines at tests/__snapshots__/views/{dashboard,diagnostic,report}
+   .html are the rendered-DOM contract); a follow-up wave migrates the
+   IIFE-resident renderX functions into the src/views/*.js stub Pattern D
+   DI factories that Wave 4 created (84bbed2 / 8edb169).
+
    - Login (internal + client roles)
    - Multi-user diagnostic, per-user responses
    - Assessment rounds with radar overlay (current vs previous)
    - Comments thread per pillar with unread tracking
    - Data isolation: clients see only their org
-   All state in localStorage — no backend required.
    ============================================================ */
+
+// CRITICAL D-06: src/firebase/app.js MUST be the FIRST functional import —
+// initializeApp + initAppCheck (Phase 4 = no-op stub; Phase 7 = real
+// reCAPTCHA Enterprise) MUST run before any data/* or views/* code touches
+// the Firebase SDK. Phase 7 (FN-04) wires the App Check body into the
+// existing slot — zero adapter-shape change between phases.
+import "./firebase/app.js";
+// Side-effect imports for Firebase SDK adapter feature submodules. These
+// previously loaded as separate <script type="module"> tags in index.html
+// (Wave 1 bridge tags); main.js now imports them transitively so the only
+// application bootstrap script in index.html is ./src/main.js.
+import "./firebase/auth.js";
+import "./firebase/db.js";
+import "./firebase/storage.js";
+import "./ui/charts.js";
+
+// Application state singleton — extracted byte-identical to src/state.js
+// (D-02). The IIFE closure references the imported binding directly; no
+// shape change.
+import { state } from "./state.js";
+// Router dispatcher — setRoute + renderRoute extracted to src/router.js
+// (D-02 / Pattern D DI per Phase 2 D-05). The IIFE closure provides the
+// renderX functions via a deps object at the dispatcher call site.
+import { setRoute as routerSetRoute, renderRoute as routerRenderRoute } from "./router.js";
 
 // Phase 2 (D-04 supersedes Phase 1 D-14): index.html now loads this file as
 // type="module". Imports below are populated by Waves 1-4.
@@ -25,39 +71,38 @@ import {
   initials,
   // CODE-08 (Wave 4): firstNameFromAuthor moved to renderConversationBubble
   // helper in src/views/_shared/render-conversation.js. Aliased _* per
-  // ^_ argsIgnorePattern (Wave 1 lint convention) until Wave 5 retires the
-  // import alongside the IIFE death.
+  // ^_ argsIgnorePattern (Wave 1 lint convention).
   firstNameFromAuthor as _firstNameFromAuthor,
-} from "./src/util/ids.js";
-import { hashString } from "./src/util/hash.js";
+} from "./util/ids.js";
+import { hashString } from "./util/hash.js";
 import {
   pillarStatus,
   bandLabel,
   bandStatement,
   bandColor,
-} from "./src/domain/banding.js";
+} from "./domain/banding.js";
 import {
   pillarScoreForRound as _pillarScoreForRound,
   pillarScore as _pillarScore,
   respondentsForRound,
   answeredCount as _answeredCount,
-} from "./src/domain/scoring.js";
+} from "./domain/scoring.js";
 import {
   userCompletionPct as _userCompletionPct,
   orgSummary as _orgSummary,
-} from "./src/domain/completion.js";
+} from "./domain/completion.js";
 import {
   unreadCountForPillar as _unreadCountForPillar,
   unreadCountTotal as _unreadCountTotal,
   markPillarRead as _markPillarRead,
   unreadChatTotal as _unreadChatTotal,
-} from "./src/domain/unread.js";
+} from "./domain/unread.js";
 import {
   migrateV1IfNeeded as _migrateV1IfNeeded,
   clearOldScaleResponsesIfNeeded as _clearOldScaleResponsesIfNeeded,
-} from "./src/data/migration.js";
-import { syncFromCloud as _syncFromCloud } from "./src/data/cloud-sync.js";
-import * as auth from "./src/auth/state-machine.js";
+} from "./data/migration.js";
+import { syncFromCloud as _syncFromCloud } from "./data/cloud-sync.js";
+import * as auth from "./auth/state-machine.js";
 // Phase 4 Wave 2 (D-12): ui/* helpers extracted from app.js IIFE.
 // Closes runbooks/phase-4-cleanup-ledger.md row at app.js:676 (CODE-04 — html:
 // branch deleted in src/ui/dom.js) and app.js:527 (the no-unused-vars
@@ -65,18 +110,18 @@ import * as auth from "./src/auth/state-machine.js";
 // $$ is exported from src/ui/dom.js for Wave 4 view consumers; aliased to _$$
 // here so app.js's per-file `no-unused-vars` rule (^_ argsIgnorePattern)
 // permits the unused import without re-introducing an eslint-disable.
-import { h, $, $$ as _$$ } from "./src/ui/dom.js";
-import { modal, promptText, confirmDialog } from "./src/ui/modal.js";
+import { h, $, $$ as _$$ } from "./ui/dom.js";
+import { modal, promptText, confirmDialog } from "./ui/modal.js";
 // formatWhen/iso/initials/firstNameFromAuthor already imported above from
 // ./src/util/ids.js — Wave 4 may switch consumers to ./src/ui/format.js
 // per ARCHITECTURE.md §2 helpers-table import path. The re-export module
 // exists; consumers stay on util/ids.js this wave (D-12 faithful extraction).
-import { notify } from "./src/ui/toast.js";
+import { notify } from "./ui/toast.js";
 import {
   validateUpload,
   ALLOWED_MIME_TYPES as _ALLOWED_MIME_TYPES,
   MAX_BYTES as _MAX_BYTES,
-} from "./src/ui/upload.js";
+} from "./ui/upload.js";
 // Wave 4 (D-20): notify wired (CODE-07 closes 7 alert() sites);
 // validateUpload wired (CODE-09 closes documents-upload trust boundary at
 // app.js:3201 — runs BEFORE saveDocument). ALLOWED_MIME_TYPES / MAX_BYTES
@@ -85,18 +130,18 @@ import {
 // Phase 5 + Phase 7 are the actual server-side trust boundaries; client-side
 // is the UX/audit-narrative layer per D-15. No new eslint-disable rows
 // added (Phase 4 D-17 ledger zero-out).
-import { createChrome } from "./src/ui/chrome.js";
+import { createChrome } from "./ui/chrome.js";
 // Phase 4 Wave 4 (CODE-10 / D-20): tab-title unread badge memoisation —
 // only writes document.title when value differs. Setter lives in src/views/
 // chat.js (the view that owns the tab-title surface).
-import { setTitleIfDifferent } from "./src/views/chat.js";
+import { setTitleIfDifferent } from "./views/chat.js";
 // Phase 4 Wave 4 (CODE-08 / D-20): shared bubble helper for chat +
 // funnel-comment renderers (M8 chat/funnel duplication closure target).
 // Both IIFE renderers call renderConversationBubble for each message —
 // chat passes `chat-bubble`/`chat-bubble-meta`/`chat-bubble-text`/
 // `chat-bubble-del` class set; funnel passes `comment-bubble`/etc. The
 // bubble shape stays visually identical to pre-Wave-4 production DOM.
-import { renderConversationBubble } from "./src/views/_shared/render-conversation.js";
+import { renderConversationBubble } from "./views/_shared/render-conversation.js";
 // Phase 4 Wave 3 (D-09 / D-10): 6 full-owner data/* wrappers (orgs, users,
 // roadmaps, funnels, funnel-comments, allowlist). Imports land NOW so Wave 4
 // view extraction is a pure rewire — no new module discovery. Aliased _* to
@@ -113,38 +158,38 @@ import {
   saveOrg as _saveOrg,
   deleteOrg as _deleteOrg,
   subscribeOrgs as _subscribeOrgs,
-} from "./src/data/orgs.js";
+} from "./data/orgs.js";
 import {
   getUser as _getUser,
   listUsers as _listUsers,
   saveUser as _saveUser,
   deleteUser as _deleteUser,
   subscribeUsers as _subscribeUsers,
-} from "./src/data/users.js";
+} from "./data/users.js";
 import {
   getRoadmap as _getRoadmap,
   listRoadmaps as _listRoadmaps,
   saveRoadmap as _saveRoadmap,
   deleteRoadmap as _deleteRoadmap,
   subscribeRoadmaps as _subscribeRoadmaps,
-} from "./src/data/roadmaps.js";
+} from "./data/roadmaps.js";
 import {
   getFunnel as _getFunnel,
   listFunnels as _listFunnels,
   saveFunnel as _saveFunnel,
   deleteFunnel as _deleteFunnel,
   subscribeFunnels as _subscribeFunnels,
-} from "./src/data/funnels.js";
+} from "./data/funnels.js";
 import {
   listFunnelComments as _listFunnelComments,
   addFunnelComment as _addFunnelComment,
   deleteFunnelComment as _deleteFunnelComment,
   subscribeFunnelComments as _subscribeFunnelComments,
-} from "./src/data/funnel-comments.js";
+} from "./data/funnel-comments.js";
 import {
   getAllowlistEntry as _getAllowlistEntry,
   listAllowlist as _listAllowlist,
-} from "./src/data/allowlist.js";
+} from "./data/allowlist.js";
 
 (function () {
   "use strict";
@@ -571,20 +616,11 @@ import {
   // Phase 2 (D-05): extracted to src/data/migration.js — wrappers above.
 
   // ---------- State ----------
-  const state = {
-    mode: jget(K.mode, "internal"), // internal view mode (only meaningful for internal role)
-    route: "dashboard",
-    orgId: null, // current selected org (for internal role; for client it's pinned)
-    pillarId: null,
-    chart: null,
-    userMenuOpen: false,
-    authTab: "client",
-    authError: "",
-    expandedPillars: new Set(), // dashboard-tile accordion state
-    chatMessages: [], // live feed from Firestore, filtered by role
-    chatSubscription: null, // unsubscribe function for the live listener
-    chatSubscribedFor: null, // user.id the current subscription is for
-  };
+  // Phase 4 Wave 5 (D-02): state singleton extracted to src/state.js — the
+  // import binding at top of file (`import { state } from "./state.js"`)
+  // brings the same closure-captured object into scope. The state.mode
+  // initial value reads from localStorage at module load (mirrors app.js's
+  // jget(K.mode, "internal") shape verbatim — see src/state.js).
 
   function activeOrgForUser(user) {
     if (!user) return null;
@@ -622,9 +658,11 @@ import {
   // at tests/ui/dom.test.js (REGRESSION FIXTURE marker).
 
   // ---------- Router ----------
+  // Phase 4 Wave 5 (D-02): setRoute delegates to src/router.js — the IIFE
+  // closure provides render() via deps so the router module stays
+  // independent of IIFE-locals (loadOrg / currentUser / jset / K / etc.).
   function setRoute(route) {
-    state.route = route;
-    render();
+    routerSetRoute(route, { render });
   }
 
   // ---------- Top-level render ----------
@@ -672,27 +710,27 @@ import {
     app.appendChild(renderFooter(user, org));
   }
 
+  // Phase 4 Wave 5 (D-02): renderRoute delegates to src/router.js's
+  // renderRoute. The IIFE closure provides each renderX function via the
+  // deps object — router.js stays independent of IIFE-locals (loadOrg /
+  // currentUser / etc.) while owning the dispatcher SHAPE. The byte-identical
+  // logical structure (route → renderX dispatch + admin gating + unknown
+  // fallback) is preserved.
   function renderRoute(main, user, org) {
-    const isClient = isClientView(user);
-
-    const route = state.route;
-    if (route === "dashboard") main.appendChild(renderDashboard(user, org));
-    else if (route === "diagnostic") main.appendChild(renderDiagnosticIndex(user, org));
-    else if (route.startsWith("pillar:")) {
-      const id = Number(route.split(":")[1]);
-      main.appendChild(renderPillar(user, org, id));
-    } else if (route === "actions") main.appendChild(renderActions(user, org));
-    else if (route === "engagement") main.appendChild(renderEngagement(user, org));
-    else if (route === "report") main.appendChild(renderReport(user, org));
-    else if (route === "documents") main.appendChild(renderDocuments(user, org));
-    else if (route === "chat") main.appendChild(renderChat(user, org));
-    else if (route === "roadmap") main.appendChild(renderRoadmap(user, org));
-    else if (route === "funnel") main.appendChild(renderFunnel(user, org));
-    else if (route === "admin" && !isClient) main.appendChild(renderAdmin(user));
-    else {
-      state.route = "dashboard";
-      main.appendChild(renderDashboard(user, org));
-    }
+    routerRenderRoute(main, user, org, {
+      isClientView,
+      renderDashboard,
+      renderDiagnosticIndex,
+      renderPillar,
+      renderActions,
+      renderEngagement,
+      renderReport,
+      renderDocuments,
+      renderChat,
+      renderRoadmap,
+      renderFunnel,
+      renderAdmin,
+    });
   }
 
   // ================================================================

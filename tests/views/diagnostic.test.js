@@ -1,14 +1,17 @@
 // tests/views/diagnostic.test.js
 // @ts-check
-// Phase 2 (TEST-10): file-snapshot of the diagnostic-index view rendered HTML
-// — pre-Phase-4 baseline. Same boot pattern as dashboard.test.js, but after
-// the IIFE renders the default dashboard, this test programmatically clicks
-// the `[data-route="diagnostic"]` nav button to flip `state.route` (which is
-// IIFE-private) and trigger a re-render of the diagnostic view.
+// Phase 2 (TEST-10): file-snapshot of the diagnostic-index view rendered HTML.
+// Phase 4 Wave 5 (D-03 retarget): now imports src/main.js (the renamed
+// app.js IIFE) since app.js died in the cutover commit. Same boot pattern
+// as dashboard.test.js, but after the IIFE renders the default dashboard,
+// this test programmatically clicks the `[data-route="diagnostic"]` nav
+// button to flip `state.route` (which is now imported from src/state.js
+// per D-02) and trigger a re-render of the diagnostic view.
 //
-// Routing note: the IIFE has no hash router; `state.route` is private.
-// Click-to-navigate is the realistic path a real user would take, so this
-// also exercises the topbar nav onclick handler end-to-end.
+// Routing note: the IIFE has no hash router; `state.route` is owned by
+// src/state.js (Wave 5 D-02 extraction). Click-to-navigate is the realistic
+// path a real user would take, so this also exercises the topbar nav
+// onclick handler end-to-end.
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import snapshotOrg from "../fixtures/snapshot-org.json";
 
@@ -34,7 +37,7 @@ describe("Diagnostic view (TEST-10)", () => {
     window.location.hash = "#diagnostic";
 
     vi.resetModules();
-    await import("../../app.js");
+    await import("../../src/main.js");
 
     await Promise.resolve();
     await Promise.resolve();

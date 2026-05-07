@@ -5,21 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>BeDeveloped - The Base Layers</title>
     <link rel="icon" href="assets/logo.png" type="image/png" />
-    <link rel="stylesheet" href="styles.css?v=51" />
-    <!-- Phase 4 Wave 1 (D-08): self-hosted fonts (assets/fonts/, OFL); Chart.js bundled via src/ui/charts.js (npm). -->
+    <link rel="stylesheet" href="styles.css?v=52" />
+    <!-- Phase 4 Wave 1 (D-08): self-hosted fonts (assets/fonts/, OFL); Chart.js bundled via npm (loaded transitively by src/main.js). -->
   </head>
   <body>
-    <!-- App shell: gets mounted by app.js depending on session state -->
+    <!-- App shell: gets mounted by src/main.js depending on session state -->
     <div id="app"></div>
 
     <!-- Modal host -->
     <div id="modalRoot" class="modal-root hidden" role="dialog" aria-modal="true"></div>
 
-    <script type="module" src="./src/firebase/app.js?v=51"></script>
-    <script type="module" src="./src/firebase/auth.js?v=51"></script>
-    <script type="module" src="./src/firebase/db.js?v=51"></script>
-    <script type="module" src="./src/firebase/storage.js?v=51"></script>
-    <script src="data/pillars.js?v=50"></script>
-    <script type="module" src="./app.js?v=50"></script>
+    <!-- Phase 4 Wave 5 (D-03): app.js died; src/main.js is the single bootstrap.
+         The Wave 1 bridge tags for src/firebase/{app,auth,db,storage}.js were
+         removed — main.js imports them transitively as side-effect imports
+         at module top so initializeApp + initAppCheck still run before any
+         data/* or views/* code (D-06 critical ordering preserved). -->
+    <script src="data/pillars.js?v=52"></script>
+    <script type="module" src="./src/main.js?v=52"></script>
   </body>
 </html>

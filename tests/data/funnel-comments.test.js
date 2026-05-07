@@ -19,10 +19,11 @@ describe("data/funnel-comments.js (D-09 full owner)", () => {
     expect(cs.find((/** @type {any} */ c) => c.id === "c2")).toBeFalsy();
   });
 
-  it("addFunnelComment writes a new comment scoped to the orgId", async () => {
-    await addFunnelComment("o1", { id: "c3", body: "Q2 KPI shift" });
+  it("addFunnelComment writes a new comment scoped to the orgId (Firestore auto-id)", async () => {
+    const { id } = await addFunnelComment("o1", { body: "Q2 KPI shift" });
+    expect(id).toBeTruthy();
     const cs = await listFunnelComments("o1");
-    expect(cs.find((/** @type {any} */ c) => c.id === "c3")).toBeTruthy();
+    expect(cs.find((/** @type {any} */ c) => c.body === "Q2 KPI shift")).toBeTruthy();
   });
 
   it("deleteFunnelComment removes the doc", async () => {

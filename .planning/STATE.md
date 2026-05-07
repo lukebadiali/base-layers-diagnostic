@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready
-last_updated: "2026-05-06T15:30:00.000Z"
+last_updated: "2026-05-07T00:00:00.000Z"
 progress:
   total_phases: 12
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 18
-  completed_plans: 12
-  percent: 67
+  completed_plans: 18
+  percent: 25
 ---
 
 # State: Base Layers Diagnostic — Hardening Pass
@@ -27,7 +27,7 @@ progress:
 Client diagnostic data must remain confidential, intact, and recoverable — and BeDeveloped must be able to honestly answer a prospect's security questionnaire about how that's enforced.
 
 **Current focus:**
-Phase 3 — Hosting Cutover + Baseline Security Headers (Phase 2 complete 2026-05-06)
+Phase 4 — Modular Split + Quick Wins (Phase 3 complete 2026-05-07; 3 operator items in 03-HUMAN-UAT.md)
 
 **Compliance bar:** credible, **not** certified. Certification is a separate workstream.
 
@@ -35,19 +35,44 @@ Phase 3 — Hosting Cutover + Baseline Security Headers (Phase 2 complete 2026-0
 
 ## Current Position
 
-Phase: 2 — COMPLETE (Test Suite Foundation — 6/6 plans executed, verifier 9/9, code review 0 critical / 0 warning / 9 info — all out-of-scope per D-05)
-**Status:** Phase 3 context gathered (2026-05-06); ready for `/gsd-plan-phase 3`
-**Progress:** 2/12 phases complete
+Phase: 3 — COMPLETE (Hosting Cutover + Baseline Security Headers — 6/6 plans executed; verifier 16/19 must-haves; 3 operator-execution items deferred to 03-HUMAN-UAT.md per "author runbook now, execute later" choice)
+**Status:** Ready to execute Phase 4
+**Progress:** 3/12 phases complete
 
 ```
-[##..............] 17%
+[####............] 25%
  1  2  3  4  5  6  7  8  9 10 11 12
- ✓  ✓  .  .  .  .  .  .  .  .  .  .
+ ✓  ✓  ✓  .  .  .  .  .  .  .  .  .
 ```
 
-**Next action:** `/gsd-plan-phase 3` (recommended — context locked, ready for plan) or revise CONTEXT.md before continuing.
+**Next action:** `/gsd-discuss-phase 4` (recommended — gather phase context before planning) or `/gsd-plan-phase 4` (skip discussion).
+
+**Phase 3 deliverables (locked 2026-05-07):**
+
+- `firebase.json` declares full HTTP security header set (HSTS, X-CTO, Referrer-Policy, Permissions-Policy 22-directive expanded list, COOP same-origin, COEP credentialless, CORP same-origin) + Content-Security-Policy-Report-Only with two-tier directives + `/api/csp-violations` rewrite to `cspReportSink` in `europe-west2` BEFORE the SPA fallback
+- `.firebaserc` pinned to `bedeveloped-base-layers`
+- `tests/firebase-config.test.js` — 17 schema-validation assertions (rewrite-ordering + 9-header presence) — gates CI
+- `functions/` workspace stood up: TS + Node 22 + 2nd-gen, firebase-admin 13.8.0 + firebase-functions 7.2.5, `cspReportSink` handler with rawBody Pitfall-3 fallback + content-type allowlist + 64 KB body cap (T-3-3) + 5-min in-memory dedup (D-11) + extension/synthetic origin filter + `logger.warn("csp.violation")` (D-10a). 31/31 vitest tests passing.
+- `.github/workflows/ci.yml` — `deploy` job (push to main, OIDC via `google-github-actions/auth@7c6bc77...`, concurrency `firebase-deploy-main` cancel-in-progress: false, 9-header `curl -I` assertion at end) + `preview` job (PR-only, channel `pr-<number>`, 7d expiry, SHA-pinned `FirebaseExtended/action-hosting-deploy@e2eda2e1...`) + extended audit step (functions npm audit --audit-level=high)
+- `runbooks/hosting-cutover.md` — 431 lines, 6 sections: Prerequisites, Pre-cutover Smoke Checklist (legacy + modern wire formats), Cutover Steps (D-02 same-session ~1h plan), DNS Revert Procedure (≤15 min), Day-14 Cleanup, Citations
+- `03-PREFLIGHT.md ## Cutover Log` skeleton with PENDING-USER markers
+- `runbooks/branch-protection-bootstrap.md` updated with deploy + preview required-status-check entries (post-first-green-run precondition documented)
+- `runbooks/phase-4-cleanup-ledger.md` gains "Phase 3 GH-Pages rollback substrate" + "Phase 3 — meta-CSP regression guard" rows
+- `SECURITY.md` — §HTTP Security Headers + §CSP (Report-Only) + §Hosting & Deployment + §Phase 3 Audit Index (9-row framework citation table cross-referenced by section + commit SHA) all landed; commit-SHA backfill complete
+- Cross-plan ESLint integration fix (`ba382ff`): root `eslint.config.js` ignores `functions/` + Node-globals declared for `tests/**`
+- Wave 1 CDN divergence honored: CSP carries temporary allowlist for `cdn.jsdelivr.net` + `fonts.googleapis.com` + `fonts.gstatic.com` + `securetoken.google.com` (Phase 4 cleanup-ledger row queued)
+- Threats mitigated: T-3-1 (silent header drop — three layers: schema test + curl assertion + securityheaders.com), T-3-2 (rewrite shadowing), T-3-3 (CSP report abuse), T-3-6 (Permissions-Policy directive completeness — 22 directives), T-3-7 (meta+header CSP conflict), T-3-functions-mod-not-found (Pitfall 5)
+
+**Phase 3 PENDING-OPERATOR-EXECUTION items (in 03-HUMAN-UAT.md):**
+
+1. Wave 1 (03-01) Task 2 — 7-line operator response (gcloud/Console/registrar verifications)
+2. Wave 4 (03-05) Task 3 — production cutover (CNAME flip + GH-Pages disable + smoke + securityheaders ≥A)
+3. Wave 6 (03-06) Task 3 — apply branch protection rule in GitHub UI (gated on first green deploy)
+
+These persist in `/gsd-progress` + `/gsd-audit-uat` until resolved. Cleanup ledger has 14-day GH-Pages retention reminder.
 
 **Phase 2 deliverables (locked 2026-05-06):**
+
 - 9 modules extracted to `src/{util,domain,data,auth}/*` with byte-identical D-05 comments
 - 14 test files / 149 tests / coverage 100% statements / 98.94% branches / 100% functions / 100% lines
 - 3 view snapshot baselines committed at `tests/__snapshots__/views/*.html` (toMatchFileSnapshot per D-13)
@@ -166,4 +191,4 @@ Additional non-negotiables:
 ---
 
 *State initialized: 2026-05-03 after roadmap creation*
-*Last updated: 2026-05-06 — Phase 3 CONTEXT.md gathered; ready for /gsd-plan-phase 3*
+*Last updated: 2026-05-07 — Phase 3 complete (3 operator items in 03-HUMAN-UAT.md); ready for /gsd-discuss-phase 4*

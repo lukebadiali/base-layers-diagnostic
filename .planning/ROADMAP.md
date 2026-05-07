@@ -117,7 +117,7 @@ Plans:
 - [x] 04-03-PLAN.md — Wave 3: 12 data/* wrappers (6 owners + 6 pass-throughs) + 5 cloud/* stubs + 2 observability/* stubs + Wave 3 ESLint flip + 13 forward-tracking ledger rows
 - [x] 04-04-PLAN.md — Wave 4: 12 views/*.js + _shared/render-conversation.js + per-view CODE-05/06/07/08/09/10/12 quick wins + Wave 4 ESLint flip + SECURITY.md § Data Handling
 - [x] 04-05-PLAN.md — Wave 5: state.js + router.js + main.js + atomic terminal cutover (app.js DELETED, index.html → ./src/main.js) + 3 view-snapshot tests retargeted
-- [ ] 04-06-PLAN.md — Wave 6: cleanup — D-21 per-directory coverage thresholds + final ESLint hardening + CODE-11 + CODE-13 + cleanup-ledger zero-out + SECURITY.md § Code Quality + Module Boundaries + human-verify checkpoint
+- [x] 04-06-PLAN.md — Wave 6: cleanup — D-21 per-directory coverage thresholds + final ESLint hardening + CODE-11 + CODE-13 + cleanup-ledger zero-out + SECURITY.md § Code Quality + Module Boundaries + human-verify checkpoint
 **UI hint**: yes
 
 ### Phase 5: Firestore Data Model Migration + Rules Authoring (Committed, Not Deployed)

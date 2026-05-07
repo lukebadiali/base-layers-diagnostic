@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready
-last_updated: "2026-05-07T00:00:00.000Z"
+last_updated: "2026-05-07T09:10:00.000Z"
 progress:
   total_phases: 12
   completed_phases: 3
@@ -27,7 +27,7 @@ progress:
 Client diagnostic data must remain confidential, intact, and recoverable — and BeDeveloped must be able to honestly answer a prospect's security questionnaire about how that's enforced.
 
 **Current focus:**
-Phase 4 — Modular Split + Quick Wins (Phase 3 complete 2026-05-07; 3 operator items in 03-HUMAN-UAT.md)
+Phase 4 — Modular Split + Quick Wins (context gathered 2026-05-07; ready for /gsd-plan-phase 4)
 
 **Compliance bar:** credible, **not** certified. Certification is a separate workstream.
 
@@ -45,7 +45,7 @@ Phase: 3 — COMPLETE (Hosting Cutover + Baseline Security Headers — 6/6 plans
  ✓  ✓  ✓  .  .  .  .  .  .  .  .  .
 ```
 
-**Next action:** `/gsd-discuss-phase 4` (recommended — gather phase context before planning) or `/gsd-plan-phase 4` (skip discussion).
+**Next action:** `/gsd-plan-phase 4` (Phase 4 context gathered; planner consumes 04-CONTEXT.md).
 
 **Phase 3 deliverables (locked 2026-05-07):**
 
@@ -186,9 +186,11 @@ Additional non-negotiables:
 
 **This session (2026-05-06):** Phase 2 context gathered via `/gsd-discuss-phase 2`. 20 implementation decisions captured (D-01..D-21) across four gray areas: IIFE test-access strategy (mini-strangler-fig leaf extraction per Pitfall 9 step 2 — extract scoring/banding/completion/migration/unread/cloud-sync/auth helpers into src/domain/, src/data/, src/auth/, src/util/ with ESM bridge via `<script type="module">`); snapshot strategy (TEST-10) (toMatchFileSnapshot one-html-per-view + comprehensive clock/UUID/Math.random seeding + Chart.js stub); mocking & fixtures (tests/mocks/firebase.js reusable factory + real crypto.subtle.digest with known-password fixtures + flat tests/fixtures/ layout); coverage threshold + CI strictness (tiered per-directory thresholds — domain/util 100%, auth 95%, data 90%; hard CI fail on test/coverage/snapshot/typecheck miss; soft <30s local / <90s CI runtime target). Supersedes Phase 1 D-14 (index.html unchanged) — Phase 2 D-04 explicitly rewrites the script tag to type="module". Artefacts at `.planning/phases/02-test-suite-foundation/02-CONTEXT.md` + `02-DISCUSSION-LOG.md`.
 
+**This session (2026-05-07):** Phase 4 context gathered via `/gsd-discuss-phase 4`. 21 implementation decisions captured (D-01..D-21) across four gray areas: wave shape & app.js death (Pattern A boundaries-first 6-wave shape — firebase/ → ui/ → data/ → views/ → state+router+main+app.js dies → cleanup; state+router+main extract LAST; one-final-commit cutover; per-wave no-restricted-imports warn→error hardening); firebase/ adapter shape + Chart.js CDN→npm (per-feature submodules per ARCHITECTURE.md §2.2; eager synchronous init; App Check empty no-op stub Phase 7 fills; Chart.js → ui/charts.js wrapper + Google Fonts self-hosted — closes 3 of Phase 3 D-07 temporary CSP allowlist entries); data/* scope vs Phase 5 collision (all 12 wrappers ship; 6 Phase-5-rewrite-targets as thin pass-throughs delegating to data/orgs.js; Promise CRUD + subscribe* helpers; cloud/* + observability/* empty stub seams Phase 7/8/9 fill; faithful extraction wrap-don't-refactor); toast + upload UX (ui/toast.js with 4 levels + tinted bg + Unicode symbols + role=status/role=alert; top-right + tiered auto-dismiss + sticky errors; ui/upload.js helper as trust boundary BEFORE data/documents.js; magic-byte sniff first 32 bytes + declared file.type cross-check; allowlist {PDF, JPEG, PNG, DOCX, XLSX, TXT}). Cross-cutting decisions: cleanup-ledger zero-out gates phase close (16 active rows + Phase 7/8/9 forward-tracking rows added); tests/index-html-meta-csp.test.js lands Wave 1 (T-3-meta-csp-conflict closure from Phase 3 cleanup ledger); per-wave SECURITY.md DOC-10 increment (Phase 1 D-25 atomic-commit); quick-wins (CODE-03..CODE-13) fold into the wave that touches their code area; per-directory coverage thresholds extend Phase 2 D-15 (views/ 80%, ui/ 100%, firebase/+cloud/+observability/ excluded in Phase 4, data/ raised 90%→95%). All recommended defaults selected by user. Artefacts at `.planning/phases/04-modular-split-quick-wins/04-CONTEXT.md` + `04-DISCUSSION-LOG.md` (commit `26a7273`).
+
 **This session (2026-05-06, continued):** Phase 3 context gathered via `/gsd-discuss-phase 3`. 15 implementation decisions captured (D-01..D-15) across four gray areas: cutover topology (Firebase project URL soak + smoke + same-session CNAME flip + 14-day GH-Pages rollback retention); csp-violations Cloud Function (minimal `functions/` skeleton — TS + Node 22 + Gen 2 — that Phase 7 expands; firebase.json rewrite to /api/csp-violations same-origin; europe-west2 region pulls Phase 6's Firestore-region todo forward as a pre-flight); CSP report-only policy strictness (two-tier — tight on script/connect/frame/object/base/form, permissive on style-src 'unsafe-inline' until Phase 10's M5 sweep flips one knob; dual reporting via legacy report-uri + modern report-to + Reporting-Endpoints; frame-src for Firebase Auth popup origin added preemptively to spare Phase 6 a CSP edit); CSP report sink + filtering (Cloud Logging structured logs + filter rules for browser extensions / about:srcdoc / 5-min dedup window; abuse protection content-type + 64 KB body-size only — Cloud Armor / per-IP rate-limit deferred to Phase 7). Vercel-for-hosting-only raised by user mid-discussion; deferred per PROJECT.md "Stay on Firebase" + Pitfall 15 SOC2 co-location lock. Standard header set + CI deploy/preview-channel jobs covered as derived (D-13, D-14); SECURITY.md DOC-10 increment scoped (D-15). Artefacts at `.planning/phases/03-hosting-cutover-baseline-security-headers/03-CONTEXT.md` + `03-DISCUSSION-LOG.md`.
 
 ---
 
 *State initialized: 2026-05-03 after roadmap creation*
-*Last updated: 2026-05-07 — Phase 3 complete (3 operator items in 03-HUMAN-UAT.md); ready for /gsd-discuss-phase 4*
+*Last updated: 2026-05-07 — Phase 4 context gathered (21 decisions captured); ready for /gsd-plan-phase 4*

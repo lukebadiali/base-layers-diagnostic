@@ -67,17 +67,17 @@ import { modal, promptText, confirmDialog } from "./src/ui/modal.js";
 // ./src/util/ids.js — Wave 4 may switch consumers to ./src/ui/format.js
 // per ARCHITECTURE.md §2 helpers-table import path. The re-export module
 // exists; consumers stay on util/ids.js this wave (D-12 faithful extraction).
-import { notify as _notify } from "./src/ui/toast.js";
+import { notify } from "./src/ui/toast.js";
 import {
   validateUpload as _validateUpload,
   ALLOWED_MIME_TYPES as _ALLOWED_MIME_TYPES,
   MAX_BYTES as _MAX_BYTES,
 } from "./src/ui/upload.js";
-// notify / validateUpload / ALLOWED_MIME_TYPES / MAX_BYTES are aliased _* to
-// satisfy the `^_` argsIgnorePattern — Wave 4 (D-20) wires the 7 alert() sites
-// + the upload site at app.js:3433-3465 + Phase 5 storage.rules + Phase 7
-// callable validation. No new eslint-disable rows added (Phase 4 D-17 ledger
-// zero-out direction).
+// Wave 4 (D-20): notify is now wired (CODE-07 closes 7 alert() sites);
+// validateUpload / ALLOWED_MIME_TYPES / MAX_BYTES remain _-aliased until
+// the upload site at app.js:3225 wires CODE-09 (validateUpload BEFORE
+// saveDocument). Phase 5 storage.rules + Phase 7 callable enforce server-
+// side. No new eslint-disable rows added (Phase 4 D-17 ledger zero-out).
 import { createChrome } from "./src/ui/chrome.js";
 // Phase 4 Wave 3 (D-09 / D-10): 6 full-owner data/* wrappers (orgs, users,
 // roadmaps, funnels, funnel-comments, allowlist). Imports land NOW so Wave 4
@@ -3493,7 +3493,7 @@ import {
                     try {
                       await firestore.deleteDoc(firestore.doc(db, "messages", m.id));
                     } catch (err) {
-                      alert("Couldn't delete: " + (err.message || err));
+                      notify("error", "Couldn't delete: " + (err.message || err));
                     }
                   },
                   "Delete",
@@ -3527,7 +3527,7 @@ import {
         });
       } catch (e) {
         textInput.value = text;
-        alert("Couldn't send: " + (e.message || e));
+        notify("error", "Couldn't send: " + (e.message || e));
       }
     };
 
@@ -3689,7 +3689,7 @@ import {
           { merge: true },
         );
       } catch (e) {
-        alert("Couldn't save roadmap: " + (e.message || e));
+        notify("error", "Couldn't save roadmap: " + (e.message || e));
       }
     };
 
@@ -4568,7 +4568,7 @@ import {
                     try {
                       await firestore.deleteDoc(firestore.doc(db, "funnelComments", m.id));
                     } catch (err) {
-                      alert("Couldn't delete: " + (err.message || err));
+                      notify("error", "Couldn't delete: " + (err.message || err));
                     }
                   },
                   "Delete",
@@ -4600,7 +4600,7 @@ import {
         });
       } catch (e) {
         commentInput.value = text;
-        alert("Couldn't send: " + (e.message || e));
+        notify("error", "Couldn't send: " + (e.message || e));
       }
     };
     commentSendBtn.addEventListener("click", sendComment);
@@ -5004,9 +5004,9 @@ Any questions, just let me know.`;
           });
         }
         render();
-        alert("Import complete.");
+        notify("success", "Import complete.");
       } catch (e) {
-        alert("Import failed: " + e.message);
+        notify("error", "Import failed: " + e.message);
       }
     };
     reader.readAsText(file);

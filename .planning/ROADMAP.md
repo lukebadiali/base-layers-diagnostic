@@ -110,7 +110,14 @@ Plans:
   5. Every previous `alert()` error site renders a non-blocking `notify(level, message)` toast instead; chat / funnel-comment renderers share a single `renderConversation` helper
   6. Every previous `style="..."` inline string is migrated to a CSS class (precondition for Phase 10 strict CSP)
   7. Client-side file upload validation rejects oversized (>25 MB), wrong-MIME, or unsanitisable-filename uploads before the network call
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 04-01-PLAN.md — Wave 1: firebase/ adapter (6 submodules) + Chart.js npm + Google Fonts self-host + CSP allowlist tightening + CODE-03 (crypto.randomUUID) + meta-CSP regression test (D-18) + Wave 1 ESLint flip
+- [ ] 04-02-PLAN.md — Wave 2: ui/* helpers (dom/modal/toast/format/chrome/upload) + CODE-04 (delete html: + permanent XSS regression fixture) + Wave 2 ESLint flip + SECURITY.md § Build & Supply Chain
+- [ ] 04-03-PLAN.md — Wave 3: 12 data/* wrappers (6 owners + 6 pass-throughs) + 5 cloud/* stubs + 2 observability/* stubs + Wave 3 ESLint flip + 13 forward-tracking ledger rows
+- [ ] 04-04-PLAN.md — Wave 4: 12 views/*.js + _shared/render-conversation.js + per-view CODE-05/06/07/08/09/10/12 quick wins + Wave 4 ESLint flip + SECURITY.md § Data Handling
+- [ ] 04-05-PLAN.md — Wave 5: state.js + router.js + main.js + atomic terminal cutover (app.js DELETED, index.html → ./src/main.js) + 3 view-snapshot tests retargeted
+- [ ] 04-06-PLAN.md — Wave 6: cleanup — D-21 per-directory coverage thresholds + final ESLint hardening + CODE-11 + CODE-13 + cleanup-ledger zero-out + SECURITY.md § Code Quality + Module Boundaries + human-verify checkpoint
 **UI hint**: yes
 
 ### Phase 5: Firestore Data Model Migration + Rules Authoring (Committed, Not Deployed)

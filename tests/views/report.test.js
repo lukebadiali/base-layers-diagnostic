@@ -1,9 +1,11 @@
 // tests/views/report.test.js
 // @ts-check
-// Phase 2 (TEST-10): file-snapshot of the report view rendered HTML —
-// pre-Phase-4 baseline. Same boot pattern as dashboard.test.js, then click
-// the `[data-route="report"]` nav button to flip `state.route` (private to
-// the IIFE) and re-render the report view.
+// Phase 2 (TEST-10): file-snapshot of the report view rendered HTML.
+// Phase 4 Wave 5 (D-03 retarget): now imports src/main.js (the renamed
+// app.js IIFE) since app.js died in the cutover commit. Same boot pattern
+// as dashboard.test.js, then click the `[data-route="report"]` nav button
+// to flip `state.route` (now owned by src/state.js per D-02) and re-render
+// the report view.
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import snapshotOrg from "../fixtures/snapshot-org.json";
 
@@ -29,7 +31,7 @@ describe("Report view (TEST-10)", () => {
     window.location.hash = "#report";
 
     vi.resetModules();
-    await import("../../app.js");
+    await import("../../src/main.js");
 
     await Promise.resolve();
     await Promise.resolve();

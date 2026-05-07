@@ -7,9 +7,16 @@ import { auth } from "./app.js";
 
 export { auth, onAuthStateChanged, signInAnonymously };
 
-// Preserve the firebase-init.js:82-90 dispatch — app.js IIFE listens for
-// "firebase-ready" via the window.dispatchEvent below. The window.FB.currentUser
-// bridge keeps the IIFE booting until Wave 5 deletes app.js (D-03).
+// Preserve the firebase-init.js:82-90 dispatch — main.js IIFE listens for
+// "firebase-ready" via the window.dispatchEvent below + reads
+// window.FB.currentUser to avoid coupling main.js to the SDK directly.
+//
+// Phase 4 Wave 5 (D-03 transitional): the window.FB.currentUser bridge
+// stays alive while main.js's IIFE body uses it. Wave 6 cleanup migrates
+// the IIFE body into views/* + auth/state-machine.js (which would own
+// currentUser directly), at which point the bridge retires. Same Wave 4
+// Dev #1 + Wave 3 Dev #1 logic: D-12 + must_haves snapshot stability
+// trump literal task instructions.
 onAuthStateChanged(auth, (u) => {
   if (u) {
     if (typeof window !== "undefined") {

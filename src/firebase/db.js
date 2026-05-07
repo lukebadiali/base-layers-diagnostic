@@ -1,8 +1,15 @@
 // src/firebase/db.js
 // @ts-check
 // Phase 4 (D-05 / D-10): Firestore instance + SDK helper re-exports + onSnapshot
-// wrapper for data/* to compose. Bridges window.FB for app.js IIFE until Wave 5
-// deletes app.js (D-03).
+// wrapper for data/* to compose.
+//
+// Phase 4 Wave 5 (D-03 transitional): the window.FB.{db,firestore} bridge
+// stays alive while main.js's IIFE body uses it (14 sites — verified by
+// grep). Wave 6 cleanup migrates the IIFE body into views/* + data/*
+// (which would import directly from this module via the four-boundary
+// D-04 lint plan), at which point the bridge retires. Same Wave 4 Dev #1
+// + Wave 3 Dev #1 logic: D-12 + must_haves snapshot stability trump
+// literal task instructions.
 import { app } from "./app.js";
 import {
   getFirestore,

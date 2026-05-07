@@ -37,23 +37,42 @@ export default defineConfig({
       reporter: ["text", "html"],
       exclude: [
         "tests/**",
-        "app.js",
-        "firebase-init.js",
-        "data/pillars.js",
+        "data/pillars.js",         // legacy global; not source-of-truth
         "vite.config.js",
         "eslint.config.js",
         "**/_generators/**",
         "node_modules/**",
         "dist/**",
         "coverage/**",
+        // Phase 4 Wave 6 (D-21): firebase/, cloud/, observability/ excluded by design.
+        // firebase/* is the SDK adapter — exercised through data/* tests.
+        // cloud/* + observability/* are documented stubs; Phase 7/8/9 fill bodies + thresholds.
+        // app.js + firebase-init.js rows REMOVED (both deleted in Wave 5 cutover; D-03).
+        "src/firebase/**",
+        "src/cloud/**",
+        "src/observability/**",
       ],
       thresholds: {
-        // DO NOT add a global threshold key — app.js is excluded by design until
-        // the Phase 4 modular split. See decision D-15 in 02-CONTEXT.md.
-        "src/domain/**": { lines: 100, branches: 100, functions: 100, statements: 100 },
-        "src/util/**":   { lines: 100, branches: 100, functions: 100, statements: 100 },
-        "src/auth/**":   { lines: 95,  branches: 95,  functions: 95,  statements: 95 },
-        "src/data/**":   { lines: 90,  branches: 90,  functions: 90,  statements: 90 },
+        // DO NOT add a global threshold key — firebase/, cloud/, observability/
+        // are excluded by design until Phase 7/8/9 fills them. See D-15 (Phase 2)
+        // and D-21 (Phase 4 Wave 6).
+        "src/domain/**":  { lines: 100, branches: 100, functions: 100, statements: 100 },
+        "src/util/**":    { lines: 100, branches: 100, functions: 100, statements: 100 },
+        "src/auth/**":    { lines: 95,  branches: 95,  functions: 95,  statements: 95 },
+        // Phase 4 Wave 6 (D-21): src/data/** raised from 90 → 95 (Phase 5 will add
+        // subcollection bodies; the higher threshold gates regressions during the
+        // pass-through → owned rewrite).
+        "src/data/**":    { lines: 95,  branches: 95,  functions: 95,  statements: 95 },
+        // Phase 4 Wave 6 (D-21): NEW — ui/* helpers are pure DOM; expectation 100%.
+        "src/ui/**":      { lines: 100, branches: 100, functions: 100, statements: 100 },
+        // Phase 4 Wave 6 (D-21): NEW — views/* are render-heavy + DI-mocked; 80%
+        // is realistic for the Wave 4 stub state + Wave 5 main.js IIFE-resident
+        // body migration (Wave 6 carryover).
+        "src/views/**":   { lines: 80,  branches: 80,  functions: 80,  statements: 80 },
+        // Phase 4 Wave 6 (D-21): NEW — boot scaffold + dispatcher + state singleton.
+        "src/state.js":   { lines: 90,  branches: 90,  functions: 90,  statements: 90 },
+        "src/router.js":  { lines: 90,  branches: 90,  functions: 90,  statements: 90 },
+        "src/main.js":    { lines: 90,  branches: 90,  functions: 90,  statements: 90 },
       },
     },
   },

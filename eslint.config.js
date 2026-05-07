@@ -297,4 +297,40 @@ export default [
       ],
     },
   },
+
+  // Phase 4 Wave 6 (D-04 final hardening): block bare-global access to `FB`
+  // (the Wave 5 transitional `window.FB` bridge sites in src/main.js use
+  // `window.FB.X` which is member-access on `window` — this rule does NOT
+  // fire for `window.FB` references). The rule is dormant-but-active at
+  // Wave 6 close; it gates against any future src/* file accidentally
+  // re-introducing the bare-global IIFE pattern after Wave 5 retired the
+  // standalone bridge tags from index.html. Wave 5 threat model T-4-5-1
+  // anchor.
+  //
+  // The corresponding `Chart` bare-global guard is DEFERRED to the
+  // main.js-body-migration carryover sub-wave: src/main.js IIFE-resident
+  // render functions at lines 1604 + 2749 consume `Chart` as a bare global
+  // (via the window.Chart bridge in src/ui/charts.js); enforcing now would
+  // break the boot path. The bridge retires when IIFE bodies migrate into
+  // src/views/report.js + dashboard.js + funnel.js (Wave 5 carryover);
+  // this rule extends with `Chart` at that point. Tracked in
+  // runbooks/phase-4-cleanup-ledger.md "Wave 6 carryover" section.
+  //
+  // Excludes src/firebase/** + src/ui/charts.js (legitimate users of the
+  // adapter ESM imports) + src/main.js (carries the IIFE residue per
+  // Wave 5 deviation #2; transitional carry-forward until body migration).
+  {
+    files: ["src/**/*.js"],
+    ignores: ["src/firebase/**", "src/ui/charts.js", "src/main.js"],
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        {
+          name: "FB",
+          message:
+            "window.FB was a Wave 5 transitional bridge — retiring with the main.js IIFE body migration. Use src/firebase/* imports for new code (Phase 4 Wave 6 D-04 final hardening).",
+        },
+      ],
+    },
+  },
 ];

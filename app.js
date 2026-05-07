@@ -876,10 +876,11 @@ import {
       const email = h("input", { type: "email", placeholder: "you@company.com" });
       const team = h("input", { type: "password", placeholder: "Company passphrase (shared)" });
       const pass = h("input", { type: "password", placeholder: "Your password" });
+      // CODE-06 (D-20): is-hidden class replaces initial display:none inline style.
       const passConfirm = h("input", {
         type: "password",
         placeholder: "Confirm password (first sign-in only)",
-        style: "display:none;",
+        class: "is-hidden",
       });
       const errBox = h("div");
       if (state.authError) errBox.appendChild(h("div", { class: "auth-error" }, state.authError));
@@ -894,7 +895,8 @@ import {
       const updateFirstRunUI = () => {
         const u = findUserByEmail(email.value);
         const needsPassword = u && u.role === "client" && !u.passwordHash;
-        passConfirm.style.display = needsPassword ? "block" : "none";
+        // CODE-06 (D-20): classList toggle replaces el.style.display mutation.
+        passConfirm.classList.toggle("is-hidden", !needsPassword);
         pass.placeholder = needsPassword ? "Set your password (min 4 chars)" : "Your password";
       };
       email.addEventListener("blur", updateFirstRunUI);
@@ -3739,10 +3741,8 @@ import {
           ),
         );
 
-        // Pillars drop zone
-        const drop = h("div", {
-          style: `min-height:42px; padding:8px; border:1px dashed var(--line-2); border-radius:8px; display:flex; flex-wrap:wrap; gap:6px; background:var(--surface-muted); margin-bottom:10px;`,
-        });
+        // Pillars drop zone — CODE-06 (D-20): class roadmap-drop replaces inline style block (precondition for Phase 10 strict-CSP).
+        const drop = h("div", { class: "roadmap-drop" });
         if (!(m.pillarIds || []).length) {
           drop.appendChild(
             h(
@@ -3792,14 +3792,17 @@ import {
         if (canEdit) {
           drop.addEventListener("dragover", (e) => {
             e.preventDefault();
-            drop.style.background = "var(--brand-tint)";
+            // CODE-06 (D-20): classList toggle replaces el.style.background mutation.
+            drop.classList.add("is-dragover");
           });
           drop.addEventListener("dragleave", () => {
-            drop.style.background = "var(--surface-muted)";
+            // CODE-06 (D-20): classList toggle replaces el.style.background mutation.
+            drop.classList.remove("is-dragover");
           });
           drop.addEventListener("drop", (e) => {
             e.preventDefault();
-            drop.style.background = "var(--surface-muted)";
+            // CODE-06 (D-20): classList toggle replaces el.style.background mutation.
+            drop.classList.remove("is-dragover");
             const pid = Number(e.dataTransfer.getData("text/pillar-id"));
             if (!pid) return;
             const current = localData.periods[idx]?.pillarIds || [];

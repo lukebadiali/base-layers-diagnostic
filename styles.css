@@ -2766,3 +2766,36 @@ a:hover {
   border-color: var(--brand);
   box-shadow: 0 0 0 2px var(--brand-tint);
 }
+
+/* ============================================================
+   Phase 4 Wave 4 — CODE-06 (D-20): inline-style sweep classes
+   ============================================================
+   Replaces the 4 in-IIFE el.style.X = ... runtime mutations with
+   class-toggling, eliminating the need for direct .style mutation
+   in src/views/** + app.js. The remaining style="..." inline-attr
+   strings (132 sites) defer to Wave 5 per D-12 (Wave 3 Dev #1 precedent
+   — production rendering bodies remain in app.js IIFE until Wave 5
+   re-homes them, at which point the inline-attr sweep + CSP-strict
+   precondition land together with the body migration).
+   ============================================================ */
+.is-hidden {
+  display: none !important;
+}
+.is-shown-block {
+  display: block !important;
+}
+.roadmap-drop {
+  min-height: 42px;
+  padding: 8px;
+  border: 1px dashed var(--line-2);
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: var(--surface-muted);
+  margin-bottom: 10px;
+  transition: background 0.15s ease;
+}
+.roadmap-drop.is-dragover {
+  background: var(--brand-tint);
+}

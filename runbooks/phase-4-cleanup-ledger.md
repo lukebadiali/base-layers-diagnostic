@@ -98,6 +98,7 @@ Both are documented in `01-04-SUMMARY.md` "Resolved Checkpoint" and `01-06-SUMMA
 - 2026-05-07: extracted `h`, `$`, `$$` from `app.js:526-547` to `src/ui/dom.js` — byte-identical EXCEPT the `html:` branch DELETED (CODE-04, CWE-79 mitigation). The permanent XSS regression fixture at `tests/ui/dom.test.js` (REGRESSION FIXTURE marker per D-19) pins `<script>` + `<img onerror>` payloads as text content forever. Closes ledger rows at app.js:670 (no-unused-vars on `$$`) + app.js:676 (no-unsanitized/property on `html:` branch). The `$$` import in app.js is aliased `_$$` to satisfy the `^_` argsIgnorePattern until Wave 4 wires consumers (Plan 04-02 Task 1).
 - 2026-05-07: extracted `modal`, `promptText`, `confirmDialog` from `app.js:550-616` to `src/ui/modal.js` — byte-identical (D-12 faithful extraction); IIFE-resident closure references to `h()` rewritten to `import { h } from "./dom.js"`. The two `root.innerHTML = ""` lines at modal.js:21 + 28 are CODE-05 forward-tracking — Wave 4 may swap to `replaceChildren()` once views/* fully sweep innerHTML sites (see Phase 4 forward-tracking row below) (Plan 04-02 Task 1).
 - 2026-05-07: created `src/ui/format.js` — re-exports `formatWhen`, `iso`, `initials`, `firstNameFromAuthor` from `src/util/ids.js`. Provides the `ui/format` import path views/* expect per ARCHITECTURE.md §2 helpers table; util/ids.js implementation stays in place so the existing 100% src/util/** coverage threshold continues to fence behaviour (Plan 04-02 Task 1).
+- 2026-05-07: created the 12 src/data/* per-collection wrappers (Plan 04-03 Wave 3) — 6 full owners (orgs/users/roadmaps/funnels/funnel-comments/allowlist) + 6 Phase-5-rewrite-target pass-throughs (responses/comments/actions/documents/messages/audit-events). All ship `// @ts-check` + JSDoc Promise-CRUD + subscribe* per D-10. Pass-throughs delegate to data/orgs.js's nested-map shape per D-09; Phase 5 (DATA-01..06) replaces the bodies with subcollection access in lockstep without changing the API surface (views/* never re-extract their consumption pattern). data/audit-events.js delegates to cloud/audit.js (a Phase 7 stub).
 - (subsequent waves append below)
 
 ### Phase 4 forward-tracking rows (CODE-05 candidates within ui/* extractions — D-12)
@@ -107,6 +108,19 @@ Faithful extractions in Wave 2 preserve `innerHTML = ""` reset patterns where th
 | Path / line                                  | Pattern                          | Closes when                                                                                          |
 | -------------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `src/ui/modal.js:21` + `src/ui/modal.js:28`  | `root.innerHTML = "";` reset     | Wave 4 (per-view CODE-05 sweep) replaces with `root.replaceChildren()` once views/* depend on modal.js stable. |
+
+## Phase 4 — forward-tracking rows (Phase 5 / Phase 7 / Phase 8 / Phase 9 closures)
+
+Wave 3 lands the complete ARCHITECTURE.md §2 directory tree as documented seams. Each row below tracks a downstream phase that fills the body without changing the import surface (views/* / data/* never re-extract).
+
+| Module                               | Forward closure                                                                                                                                | Closure phase     |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `src/data/responses.js`              | Phase 5 (DATA-01) replaces pass-through body with subcollection access (`orgs/{orgId}/responses/{respId}`); API stable                          | Phase 5           |
+| `src/data/comments.js`               | Phase 5 (DATA-01) replaces pass-through body with subcollection access (`orgs/{orgId}/comments/{cmtId}`); API stable                            | Phase 5           |
+| `src/data/actions.js`                | Phase 5 (DATA-01) replaces pass-through body with subcollection access (`orgs/{orgId}/actions/{actId}`); API stable                             | Phase 5           |
+| `src/data/documents.js`              | Phase 5 (DATA-01) replaces pass-through body with subcollection access (`orgs/{orgId}/documents/{docId}`) + Storage Rules (RULES-04); API stable | Phase 5           |
+| `src/data/messages.js`               | Phase 5 (DATA-01) replaces pass-through body with subcollection access (`orgs/{orgId}/messages/{msgId}`) + `readStates/{userId}`; API stable    | Phase 5           |
+| `src/data/audit-events.js`           | Phase 7 (FN-04 / AUDIT-01) wires `recordAuditEvent` → `cloud/audit.js` → real `auditWrite` callable                                            | Phase 7           |
 
 ## Phase 2 — extracted leaf modules (informational, not suppression)
 

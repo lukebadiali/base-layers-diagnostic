@@ -54,6 +54,19 @@ import {
 } from "./src/data/migration.js";
 import { syncFromCloud as _syncFromCloud } from "./src/data/cloud-sync.js";
 import * as auth from "./src/auth/state-machine.js";
+// Phase 4 Wave 2 (D-12): ui/* helpers extracted from app.js IIFE.
+// Closes runbooks/phase-4-cleanup-ledger.md row at app.js:676 (CODE-04 — html:
+// branch deleted in src/ui/dom.js) and app.js:527 (the no-unused-vars
+// disable for $$ — now legitimately exported).
+// $$ is exported from src/ui/dom.js for Wave 4 view consumers; aliased to _$$
+// here so app.js's per-file `no-unused-vars` rule (^_ argsIgnorePattern)
+// permits the unused import without re-introducing an eslint-disable.
+import { h, $, $$ as _$$ } from "./src/ui/dom.js";
+import { modal, promptText, confirmDialog } from "./src/ui/modal.js";
+// formatWhen/iso/initials/firstNameFromAuthor already imported above from
+// ./src/util/ids.js — Wave 4 may switch consumers to ./src/ui/format.js
+// per ARCHITECTURE.md §2 helpers-table import path. The re-export module
+// exists; consumers stay on util/ids.js this wave (D-12 faithful extraction).
 
 (function () {
   "use strict";
@@ -523,97 +536,11 @@ import * as auth from "./src/auth/state-machine.js";
   }
 
   // ---------- DOM helpers ----------
-  const $ = (sel, el = document) => el.querySelector(sel);
-  // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead helper or expose via export. See runbooks/phase-4-cleanup-ledger.md
-  const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
-  const h = (tag, attrs = {}, children = []) => {
-    const el = document.createElement(tag);
-    for (const [k, v] of Object.entries(attrs)) {
-      if (k === "class") el.className = v;
-      // eslint-disable-next-line no-unsanitized/property -- Phase 4: replace innerHTML with replaceChildren() / DOMPurify.sanitize(). See runbooks/phase-4-cleanup-ledger.md
-      else if (k === "html") el.innerHTML = v;
-      else if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.slice(2), v);
-      else if (v === false || v === null || v === undefined) continue;
-      else if (v === true) el.setAttribute(k, "");
-      else el.setAttribute(k, v);
-    }
-    (Array.isArray(children) ? children : [children]).forEach((c) => {
-      if (c === null || c === undefined || c === false) return;
-      if (typeof c === "string" || typeof c === "number")
-        el.appendChild(document.createTextNode(c));
-      else el.appendChild(c);
-    });
-    return el;
-  };
-
-  // ---------- Modal ----------
-  function modal(content) {
-    const root = $("#modalRoot");
-    root.innerHTML = "";
-    const wrap = h("div", { class: "modal" }, content);
-    root.appendChild(wrap);
-    root.classList.remove("hidden");
-    const close = (ev) => {
-      if (ev && ev.target !== root && !ev.isProgrammatic) return;
-      root.classList.add("hidden");
-      root.innerHTML = "";
-      root.removeEventListener("click", close);
-    };
-    root.addEventListener("click", close);
-    return {
-      close: () => {
-        const ev = new Event("click");
-        ev.isProgrammatic = true;
-        Object.defineProperty(ev, "target", { value: root });
-        close(ev);
-      },
-    };
-  }
-
-  function promptText(title, placeholder, onSubmit, initial = "") {
-    const input = h("input", { type: "text", placeholder });
-    input.value = initial;
-    const cancel = h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel");
-    const ok = h(
-      "button",
-      {
-        class: "btn",
-        onclick: () => {
-          const v = input.value.trim();
-          if (!v) return;
-          onSubmit(v);
-          m.close();
-        },
-      },
-      "Save",
-    );
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") ok.click();
-    });
-    const m = modal([h("h3", {}, title), input, h("div", { class: "row" }, [cancel, ok])]);
-    setTimeout(() => input.focus(), 10);
-  }
-
-  function confirmDialog(title, message, onOk, okLabel = "Confirm") {
-    const m = modal([
-      h("h3", {}, title),
-      h("p", { style: "color: var(--ink-2); font-size: 14px;" }, message),
-      h("div", { class: "row" }, [
-        h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-        h(
-          "button",
-          {
-            class: "btn",
-            onclick: () => {
-              onOk();
-              m.close();
-            },
-          },
-          okLabel,
-        ),
-      ]),
-    ]);
-  }
+  // Phase 4 Wave 2 (D-12 / CODE-04): h / $ / $$ extracted to src/ui/dom.js;
+  // modal / promptText / confirmDialog extracted to src/ui/modal.js. The
+  // IIFE closure now references the file-scope ESM imports above. The
+  // `html:` branch in h() was deleted with permanent XSS regression fixture
+  // at tests/ui/dom.test.js (REGRESSION FIXTURE marker).
 
   // ---------- Router ----------
   function setRoute(route) {

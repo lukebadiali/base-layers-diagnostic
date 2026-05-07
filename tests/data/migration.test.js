@@ -8,21 +8,19 @@ import v1Fixture from "../fixtures/v1-localStorage.json";
 import v2Expected from "../fixtures/v2-org.json";
 import { uid } from "../../src/util/ids.js";
 
-// CANARY: pinned EXPECTED_LEGACY_UID guards against tests/setup.js drift.
-// If tests/setup.js silently breaks the Math.random=0.5 mock or the fake-timer
-// pin for Date.now, migration.test.js's idempotency assertion would still
-// pass (both runs use the same drifted UIDs). This canary catches that case.
+// CANARY: pinned UID shape guards against tests/setup.js drift.
+// If tests/setup.js silently breaks the crypto.randomUUID counter-backed mock,
+// migration.test.js's idempotency assertion would still pass (both runs use
+// the same drifted UIDs). This canary catches that case.
 //
-// Pre-computed under tests/setup.js mocks (Math.random=0.5 + Date frozen at
-// 2026-01-01T00:00:00.000Z): (0.5).toString(36) = "0.i", slice(2,9) = "i";
-// Date.now() = 1767225600000, .toString(36) = "mjuohs00", slice(-4) = "hs00";
-// uid("u_") = "u_" + "i" + "hs00" = "u_ihs00".
+// Phase 4 (CODE-03): uid swapped from Math.random+Date.now to crypto.randomUUID.
+// tests/setup.js mocks crypto.randomUUID to "00000000-0000-4000-8000-{counter}";
+// uid("u_") = "u_" + that uuid (dashes stripped) sliced to 11 hex chars.
 describe("UID determinism canary (catches harness drift)", () => {
-  it("uid('u_') under Math.random=0.5 + frozen Date.now produces the pinned value", () => {
-    const EXPECTED_LEGACY_UID = "u_ihs00";
-    expect(uid("u_")).toBe(EXPECTED_LEGACY_UID);
-    // If this test fails, tests/setup.js has drifted; do NOT update this
-    // expectation — diagnose the harness instead.
+  it("uid('u_') under counter-backed crypto.randomUUID emits 11 hex chars", () => {
+    expect(uid("u_")).toMatch(/^u_[0-9a-f]{11}$/);
+    // If this test fails, tests/setup.js crypto.randomUUID mock has drifted;
+    // do NOT update this expectation — diagnose the harness instead.
   });
 });
 

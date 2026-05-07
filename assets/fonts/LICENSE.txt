@@ -1,0 +1,19 @@
+Self-hosted webfont assets for baselayers.bedeveloped.com
+Phase 4 Wave 1 (D-08) — replaces fonts.googleapis.com / fonts.gstatic.com CDN.
+
+Inter
+  Copyright (c) 2016-present Rasmus Andersson
+  Licensed under the SIL Open Font License v1.1
+  https://rsms.me/inter/
+  Source: https://rsms.me/inter/font-files/
+
+Bebas Neue
+  Copyright (c) 2010-present Dharma Type
+  Licensed under the SIL Open Font License v1.1
+  https://github.com/dharmatype/Bebas-Neue
+  Source: https://fonts.bunny.net/family/bebas-neue
+
+Both fonts are distributed under the SIL Open Font License v1.1 (OFL),
+which explicitly permits self-hosting (Permission Section §1) provided
+this license notice is included with the font files. The full OFL text
+is available at https://openfontlicense.org/.

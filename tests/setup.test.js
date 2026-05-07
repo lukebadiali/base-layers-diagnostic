@@ -17,8 +17,9 @@ describe("tests/setup.js preflight", () => {
     expect(b).toMatch(/^00000000-0000-4000-8000-[0-9a-f]{12}$/);
   });
 
-  it("pins Math.random to 0.5 (D-09)", () => {
-    // eslint-disable-next-line no-restricted-syntax -- intentional: this test verifies the Math.random spy in tests/setup.js
-    expect(Math.random()).toBe(0.5);
-  });
+  // Phase 4 (CODE-03): the Math.random=0.5 spy was removed from tests/setup.js
+  // when src/util/ids.js swapped to crypto.randomUUID. No production code uses
+  // Math.random anymore (verified via `git grep "Math.random" src/`); the spy
+  // is no longer load-bearing. The eslint no-restricted-syntax rule + the
+  // security/detect-pseudoRandomBytes lint guard remain the regression fences.
 });

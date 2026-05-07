@@ -201,4 +201,34 @@ export default [
       ],
     },
   },
+
+  // Phase 4 Wave 2 (D-04): domain/* MUST NOT import firebase/* — codifies the
+  // Phase 2 D-03 already-zero-imports state. domain/* is pure logic; any
+  // Firestore / Storage / Auth touch belongs in data/* or auth/*. This rule
+  // is dormant-but-active at Wave 2 close: zero src/domain/** files import
+  // firebase/* today, so the rule fires nothing — but reintroduction during
+  // Wave 4 view extraction or any future change fails CI.
+  // ARCHITECTURE.md §2.4: domain/* imports nothing from Firebase (lint-enforced).
+  {
+    files: ["src/domain/**/*.js"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "**/firebase/*",
+                "../firebase/*",
+                "../../firebase/*",
+                "firebase/*",
+              ],
+              message:
+                "domain/* is pure logic — no Firebase imports allowed (ARCHITECTURE.md §2.4). Phase 4 Wave 2 (D-04).",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];

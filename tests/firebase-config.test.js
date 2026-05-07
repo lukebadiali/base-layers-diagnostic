@@ -81,4 +81,13 @@ describe("firebase.json — header values (HSTS preload + COEP + CSP)", () => {
     const v = headerByKey("Reporting-Endpoints")?.value ?? "";
     expect(v).toContain('csp-endpoint="/api/csp-violations"');
   });
+
+  // Phase 4 Wave 1 (D-08): chart.js npm import + Inter/Bebas Neue self-host let
+  // us drop the 3 CDN allowlist entries Phase 3 D-07 carried as temporary.
+  it("CSP-RO header drops cdn.jsdelivr.net + fonts.googleapis.com + fonts.gstatic.com (Phase 4 D-08)", () => {
+    const csp = headerByKey("Content-Security-Policy-Report-Only")?.value ?? "";
+    expect(csp).not.toMatch(/cdn\.jsdelivr\.net/);
+    expect(csp).not.toMatch(/fonts\.googleapis\.com/);
+    expect(csp).not.toMatch(/fonts\.gstatic\.com/);
+  });
 });

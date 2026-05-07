@@ -16,24 +16,26 @@ describe("iso", () => {
   });
 });
 
-describe("uid", () => {
-  it("returns a deterministic string under Math.random=0.5 + frozen Date.now", () => {
-    // Both inputs are pinned by tests/setup.js — output must be stable across runs.
-    // Pre-computed: (0.5).toString(36).slice(2,9) === "i"
-    //               new Date("2026-01-01T00:00:00.000Z").getTime().toString(36).slice(-4) === "hs00"
-    //               -> uid() === "ihs00"
-    const a = uid();
-    const b = uid();
-    expect(a).toBe(b); // byte-identical inputs => byte-identical output (D-05 pinned)
-    expect(a).toBe("ihs00");
-    expect(typeof a).toBe("string");
+describe("uid (CODE-03 — crypto.randomUUID-backed)", () => {
+  it("emits 11 hex chars from crypto.randomUUID with no prefix", () => {
+    // Phase 4 (CODE-03 swap): uid now derives entropy from crypto.randomUUID()
+    // rather than Math.random + Date.now. Shape = optional prefix + 11 hex chars
+    // (lowercase 0-9a-f). tests/setup.js mocks crypto.randomUUID to a counter-
+    // backed sentinel; the regex assertion is robust to any future setup change.
+    expect(uid()).toMatch(/^[0-9a-f]{11}$/);
   });
 
-  it("prefixes the result with the supplied prefix", () => {
-    expect(uid("u_").startsWith("u_")).toBe(true);
-    expect(uid("org_").startsWith("org_")).toBe(true);
-    // With pinned inputs, the suffix is deterministic too.
-    expect(uid("u_")).toBe("u_ihs00");
+  it("prefixes the result with the supplied prefix and emits 11 hex chars", () => {
+    expect(uid("u_")).toMatch(/^u_[0-9a-f]{11}$/);
+    expect(uid("org_")).toMatch(/^org_[0-9a-f]{11}$/);
+  });
+
+  it("calls crypto.randomUUID for entropy (not Math.random)", () => {
+    // Each call must consume a new randomUUID — counter-backed mock in tests/setup.js
+    // increments per call, so two consecutive uid() calls must differ.
+    const a = uid();
+    const b = uid();
+    expect(a).not.toBe(b);
   });
 });
 

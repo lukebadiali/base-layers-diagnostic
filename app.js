@@ -4173,7 +4173,8 @@ import {
     };
 
     const renderKpiRows = () => {
-      kpiList.innerHTML = "";
+      // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+      kpiList.replaceChildren();
       if (!localKpis.length) {
         kpiList.appendChild(
           h("div", { class: "kpi-empty" }, "No KPIs yet. Click + New KPI to add one."),
@@ -4526,7 +4527,8 @@ import {
 
     let allComments = [];
     const renderComments = () => {
-      commentsList.innerHTML = "";
+      // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+      commentsList.replaceChildren();
       if (!allComments.length) {
         commentsList.appendChild(
           h("p", { class: "comments-empty" }, "No comments yet — start the conversation."),
@@ -4624,7 +4626,8 @@ import {
         renderComments();
       },
       (err) => {
-        commentsList.innerHTML = "";
+        // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+        commentsList.replaceChildren();
         commentsList.appendChild(
           h("p", { style: "color:var(--red);" }, "Couldn't load comments: " + err.message),
         );
@@ -4683,7 +4686,8 @@ import {
           {
             class: "btn",
             onclick: () => {
-              errBox.innerHTML = "";
+              // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+              errBox.replaceChildren();
               const em = (email.value || "").trim().toLowerCase();
               if (!em || !em.includes("@")) {
                 errBox.appendChild(h("div", { class: "auth-error" }, "Enter a valid email."));
@@ -4833,7 +4837,8 @@ Any questions, just let me know.`;
           {
             class: "btn",
             onclick: async () => {
-              errBox.innerHTML = "";
+              // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+              errBox.replaceChildren();
               const ok = await verifyUserPassword(user.id, cur.value);
               if (!ok) {
                 errBox.appendChild(h("div", { class: "auth-error" }, "Current password is wrong."));
@@ -4887,7 +4892,8 @@ Any questions, just let me know.`;
           {
             class: "btn",
             onclick: async () => {
-              errBox.innerHTML = "";
+              // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+              errBox.replaceChildren();
               if (nw.value.length < 4) {
                 errBox.appendChild(
                   h("div", { class: "auth-error" }, "Passphrase must be at least 4 characters."),
@@ -4926,7 +4932,8 @@ Any questions, just let me know.`;
           {
             class: "btn",
             onclick: async () => {
-              errBox.innerHTML = "";
+              // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
+              errBox.replaceChildren();
               const ok = await verifyInternalPassphrase(cur.value);
               if (!ok) {
                 errBox.appendChild(h("div", { class: "auth-error" }, "Current passphrase wrong."));

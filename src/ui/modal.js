@@ -4,9 +4,11 @@
 // modal / promptText / confirmDialog moved verbatim; the IIFE-resident
 // closure references to h() were rewritten to `import { h } from "./dom.js"`.
 //
-// The `root.innerHTML = ""` lines at app.js:552 + 559 are CODE-05 candidates;
-// D-12 keeps them at extraction time. See runbooks/phase-4-cleanup-ledger.md
-// "Phase 4 Wave 2 — modal innerHTML reset (CODE-05 forward-tracking)".
+// Phase 4 Wave 6 (CODE-05 forward-tracked): the two `root.innerHTML = ""`
+// lines were replaced with `root.replaceChildren()` — DOM-equivalent for
+// the clearing use case but consistent with the Wave 4 CODE-05 sweep across
+// src/** + app.js production code (closes the cleanup-ledger forward-tracking
+// row "Phase 4 Wave 2 — modal innerHTML reset").
 //
 // Per Phase 4 D-13: there are zero confirm()/prompt() sites in the codebase,
 // so promptText/confirmDialog are NOT replacements for native prompts —
@@ -16,7 +18,7 @@ import { h } from "./dom.js";
 /** @param {(HTMLElement|string|null|false)[]} content */
 export function modal(content) {
   const root = /** @type {HTMLElement} */ (document.getElementById("modalRoot"));
-  root.innerHTML = "";
+  root.replaceChildren();
   const wrap = h("div", { class: "modal" }, content);
   root.appendChild(wrap);
   root.classList.remove("hidden");
@@ -24,7 +26,7 @@ export function modal(content) {
   const close = (ev) => {
     if (ev && ev.target !== root && !ev.isProgrammatic) return;
     root.classList.add("hidden");
-    root.innerHTML = "";
+    root.replaceChildren();
     root.removeEventListener("click", /** @type {EventListener} */ (close));
   };
   root.addEventListener("click", /** @type {EventListener} */ (close));

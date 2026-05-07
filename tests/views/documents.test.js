@@ -20,7 +20,10 @@ describe("src/views/documents.js — Wave 4 Pattern D extraction", () => {
   });
 
   it("uploadWithValidation calls validateUpload BEFORE saveDocument (CODE-09 / D-15)", async () => {
-    const validateUpload = vi.fn(async () => ({ ok: true, sanitisedName: "ok.pdf" }));
+    const validateUpload = vi.fn(
+      async () =>
+        /** @type {{ ok: true, sanitisedName: string }} */ ({ ok: true, sanitisedName: "ok.pdf" }),
+    );
     const saveDocument = vi.fn(async () => undefined);
     const notify = vi.fn();
     const file = { name: "ok.pdf", size: 100, type: "application/pdf" };
@@ -42,7 +45,10 @@ describe("src/views/documents.js — Wave 4 Pattern D extraction", () => {
   });
 
   it("uploadWithValidation aborts and notifies when validation fails", async () => {
-    const validateUpload = vi.fn(async () => ({ ok: false, reason: "Too large" }));
+    const validateUpload = vi.fn(
+      async () =>
+        /** @type {{ ok: false, reason: string }} */ ({ ok: false, reason: "Too large" }),
+    );
     const saveDocument = vi.fn(async () => undefined);
     const notify = vi.fn();
     await uploadWithValidation({

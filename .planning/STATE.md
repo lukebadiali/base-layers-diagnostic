@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-07T09:55:16.716Z"
+last_updated: "2026-05-07T16:30:00.000Z"
 progress:
   total_phases: 12
-  completed_phases: 3
-  total_plans: 24
-  completed_plans: 18
-  percent: 75
+  completed_phases: 4
+  total_plans: 30
+  completed_plans: 24
+  percent: 80
 ---
 
 # State: Base Layers Diagnostic — Hardening Pass
 
 **Initialized:** 2026-05-03
-**Last updated:** 2026-05-07 — Phase 4 planned (6 plans across 6 sequential waves; ready to execute)
+**Last updated:** 2026-05-07 — Phase 4 COMPLETE (6/6 plans executed; verifier 4/4 SC + 14/14 requirements; 3 UI smoke checks deferred to 04-HUMAN-UAT.md; sub-wave queued as 4.1 for IIFE body migration)
 
 ---
 
@@ -27,7 +27,7 @@ progress:
 Client diagnostic data must remain confidential, intact, and recoverable — and BeDeveloped must be able to honestly answer a prospect's security questionnaire about how that's enforced.
 
 **Current focus:**
-Phase 4 — Modular Split + Quick Wins (planned 2026-05-07; 6 PLAN.md files across 6 sequential waves; ready for /gsd-execute-phase 4)
+Phase 5 — Firestore Data Model Migration + Rules Authoring (Committed, Not Deployed). Phase 4 closed 2026-05-07 with sub-wave 4.1 queued (main.js-body-migration; closes 16 documented carryover items including @ts-nocheck on src/main.js, 132 static `style="..."` strings, window.FB/Chart bridges, coverage threshold misses).
 
 **Compliance bar:** credible, **not** certified. Certification is a separate workstream.
 
@@ -35,17 +35,39 @@ Phase 4 — Modular Split + Quick Wins (planned 2026-05-07; 6 PLAN.md files acro
 
 ## Current Position
 
-Phase: 3 — COMPLETE (Hosting Cutover + Baseline Security Headers — 6/6 plans executed; verifier 16/19 must-haves; 3 operator-execution items deferred to 03-HUMAN-UAT.md per "author runbook now, execute later" choice)
-**Status:** Ready to execute
-**Progress:** 3/12 phases complete
+Phase: 4 — COMPLETE (Modular Split + Quick Wins — 6/6 plans executed across 6 sequential waves; verifier 4/4 ROADMAP success criteria + 14/14 requirements; 376/376 tests pass; typecheck/lint/build clean; snapshot baselines zero diff; 3 UI smoke checks deferred to 04-HUMAN-UAT.md; deviation cluster operator-approved as queued sub-wave 4.1)
+**Status:** Ready to discuss/plan Phase 5
+**Progress:** 4/12 phases complete
 
 ```
-[####............] 25%
+[######..........] 33%
  1  2  3  4  5  6  7  8  9 10 11 12
- ✓  ✓  ✓  .  .  .  .  .  .  .  .  .
+ ✓  ✓  ✓  ✓  .  .  .  .  .  .  .  .
 ```
 
-**Next action:** `/gsd-execute-phase 4` (Phase 4 planned; 6 PLAN.md files in `.planning/phases/04-modular-split-quick-wins/`).
+**Next action:** `/gsd-discuss-phase 5` (recommended — Phase 5 has no CONTEXT.md yet) or `/gsd-plan-phase 5`.
+
+**Phase 4 deliverables (locked 2026-05-07):**
+
+- `src/firebase/{app,auth,db,storage,functions,check}.js` — sole SDK import surface (Wave 1)
+- `src/ui/{dom,modal,toast,format,chrome,upload}.js` — UI helpers with @ts-check + JSDoc; XSS regression fixture permanent (CODE-04); validateUpload magic-byte sniff (Wave 2)
+- `src/data/*` (12 wrappers — 6 owners + 6 Phase-5 pass-throughs); `src/cloud/*` (5 stubs — Phase 6/7/8 seams); `src/observability/*` (2 stubs — Phase 7/9 seams) (Wave 3)
+- `src/views/*` (12 Pattern D DI factories) + `src/views/_shared/render-conversation.js` (CODE-08) (Wave 4)
+- `src/state.js` + `src/router.js` + `src/main.js`; `app.js` DELETED; `index.html` flipped to `./src/main.js` (Wave 5)
+- vite.config.js D-21 per-directory coverage thresholds; ESLint Wave 1-4 boundaries at error level (zero `"warn"`); CODE-11 (Math.floor) + CODE-13 (dead v1 migration removed); cleanup-ledger D-17 zero-out gate (Wave 6)
+- 6 self-hosted woff2 fonts (Inter + Bebas Neue, OFL); chart.js@4.5.1 npm (no CDN); CSP allowlist drops cdn.jsdelivr.net + fonts.googleapis.com + fonts.gstatic.com (Wave 1)
+- `crypto.randomUUID()` for ids (CODE-03); zero `innerHTML=` in production code (CODE-05); zero `alert()` (CODE-07 — replaced by `notify()`); `validateUpload` trust boundary (CODE-09); memoised tab-title (CODE-10); `rel="noopener noreferrer"` on download anchors (CODE-12)
+- `SECURITY.md` § HTTP Security Headers (Wave 1) + § Build & Supply Chain (Wave 2) + § Data Handling (Wave 4) + § Code Quality + Module Boundaries (Wave 6)
+- `runbooks/phase-4-cleanup-ledger.md` D-17 zero-out: 0 in-Phase-4-tracker rows; 12 carryover rows persistent-with-rationale documenting the 4.1 sub-wave forward-pointers
+
+**Phase 4 deviation cluster (operator-approved as sub-wave 4.1):**
+
+- IIFE body preserved in `src/main.js` (~5,000 lines) with closure intact — Pattern D DI factories in `src/views/*` are STUBS pending body migration
+- `// @ts-nocheck` rotated from app.js:1 to src/main.js:1 (must-have violation acknowledged)
+- ~132 static `style="..."` strings in main.js (deferred CODE-06 — runtime `el.style.X` mutations ARE closed)
+- `window.FB.*` + bare `Chart` bridges (14 sites in main.js)
+- Coverage thresholds set per D-21 but unenforceable on main.js / state.js / router.js / views/* / ui/* until body migration completes
+- Phase 5 (Firestore subcollection migration) does NOT block on these — `data/*` is properly modularized
 
 **Phase 3 deliverables (locked 2026-05-07):**
 

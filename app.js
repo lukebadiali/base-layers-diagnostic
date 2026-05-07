@@ -23,7 +23,11 @@ import {
   iso,
   formatWhen,
   initials,
-  firstNameFromAuthor,
+  // CODE-08 (Wave 4): firstNameFromAuthor moved to renderConversationBubble
+  // helper in src/views/_shared/render-conversation.js. Aliased _* per
+  // ^_ argsIgnorePattern (Wave 1 lint convention) until Wave 5 retires the
+  // import alongside the IIFE death.
+  firstNameFromAuthor as _firstNameFromAuthor,
 } from "./src/util/ids.js";
 import { hashString } from "./src/util/hash.js";
 import {

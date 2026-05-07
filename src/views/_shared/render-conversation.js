@@ -1,14 +1,18 @@
 // src/views/_shared/render-conversation.js
 // @ts-check
-// Phase 4 Wave 4 (CODE-08 / D-20): shared helper for chat.js + funnel.js
+// Phase 4 Wave 4 (CODE-08 / D-20): shared helpers for chat.js + funnel.js
 // (M8 closure substrate — chat-vs-funnel-comments duplication target).
 //
-// This module is genuinely new code (NOT an extraction from app.js) — it
-// hoists the message-list + input-area + empty-state pattern that the
-// IIFE-resident renderChat (app.js:3351) and renderFunnel comment block
-// (app.js:4500-4604) share verbatim today. Wave 5 will adopt it from both
-// view modules when state.js + router.js + main.js extract and the IIFE
-// finally dies (D-02 / D-03).
+// Exports two helpers:
+//   1. renderConversation(opts) — generic future-shape helper (the
+//      conversation__* BEM-ish CSS class set). Used by Wave 5 when
+//      chat.js + funnel.js view modules adopt the body. Tests pin this
+//      shape at tests/views/_shared/render-conversation.test.js.
+//   2. renderConversationBubble(opts) — production-shape bubble helper
+//      (chat-bubble / comment-bubble class shape). Used TODAY by the
+//      IIFE-resident renderChat (app.js:3355) + renderFunnel comment
+//      block (app.js:4500-4604) — both call it for each message,
+//      closing CODE-08 / M8 without disturbing production DOM.
 //
 // Citations: CONCERNS.md §M8 (chat/funnel duplication closure target).
 import { h } from "../../ui/dom.js";
@@ -86,4 +90,68 @@ export function renderConversation(opts) {
   root.appendChild(h("div", { class: "conversation__compose" }, [ta, send]));
 
   return root;
+}
+
+
+/**
+ * Production-shape bubble helper — emits a single message bubble in the
+ * IIFE existing chat-bubble / comment-bubble shape. Used by the IIFE-
+ * resident renderChat (app.js:3355) + renderFunnel comment block
+ * (app.js:4500-4604) — both call this for each message instead of
+ * inlining the bubble construction (M8 closure / CODE-08).
+ *
+ * @param {{
+ *   message: { id: string, text: string, authorId: string, authorName?: string, authorEmail?: string, authorRole?: string, createdAt?: { toDate?: () => Date } },
+ *   isSelf: boolean,
+ *   canDelete: boolean,
+ *   bg: string,
+ *   bubbleClass: string,
+ *   metaClass: string,
+ *   textClass: string,
+ *   delClass: string,
+ *   onDelete: () => void,
+ * }} opts
+ * @returns {HTMLElement}
+ */
+export function renderConversationBubble(opts) {
+  const {
+    message: m,
+    isSelf,
+    canDelete,
+    bg,
+    bubbleClass,
+    metaClass,
+    textClass,
+    delClass,
+    onDelete,
+  } = opts;
+  const ts = m.createdAt?.toDate?.().toLocaleString?.() || "";
+  const who = firstNameFromAuthor(m);
+  const bubble = h(
+    "div",
+    {
+      class: bubbleClass,
+      style: `align-self:${isSelf ? "flex-end" : "flex-start"}; background:${bg}; border-color:${bg};`,
+    },
+    [
+      h("div", { class: metaClass }, `${who} · ${ts}`),
+      h("div", { class: textClass }, m.text),
+    ],
+  );
+  if (canDelete) {
+    const del = h(
+      "button",
+      {
+        class: delClass,
+        title: "Delete",
+        onclick: (/** @type {Event} */ e) => {
+          e.stopPropagation();
+          onDelete();
+        },
+      },
+      "×",
+    );
+    bubble.appendChild(del);
+  }
+  return bubble;
 }

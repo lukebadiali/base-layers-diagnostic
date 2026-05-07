@@ -265,4 +265,36 @@ export default [
       ],
     },
   },
+
+  // Phase 4 Wave 4 (D-04): views/* may import data/, domain/, auth/, ui/,
+  // cloud/ — but NOT firebase/* directly (per ARCHITECTURE.md §2.4). Closes
+  // the fourth and final boundary of the four-boundary D-04 plan. Views
+  // construct DOM and orchestrate user flows; every Firestore/Storage/Auth/
+  // Functions touch belongs in data/* / cloud/* / auth/* — which themselves
+  // route through src/firebase/* (Waves 1+3). Lint hard-fails CI on any
+  // boundary breach. Rule is dormant-but-active at Wave 4 close: src/views/*
+  // are stub Pattern D DI factories that import only from src/ui/dom.js +
+  // _shared/render-conversation.js today (no firebase/* imports anywhere).
+  {
+    files: ["src/views/**/*.js"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "**/firebase/*",
+                "../firebase/*",
+                "../../firebase/*",
+                "firebase/*",
+              ],
+              message:
+                "views/* may import data/, domain/, auth/, ui/, cloud/ — never firebase/* directly (Wave 4 D-04).",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];

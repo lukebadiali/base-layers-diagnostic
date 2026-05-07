@@ -157,6 +157,72 @@ The Wave 4 ESLint hardening also flipped the `views/* → no firebase/*` boundar
 
 ---
 
+## § Code Quality + Module Boundaries
+
+### Phase 4 Wave 6 — Modular split + lint-enforced module boundaries (CODE-01 + CODE-02)
+
+Phase 4 decomposed the prior 5,289-line `app.js` IIFE into a per-feature ES module layout per `.planning/research/ARCHITECTURE.md` §2:
+
+- `src/firebase/*` — sole import surface for the Firebase SDK (`@firebase/app|auth|firestore|storage|functions|app-check`)
+- `src/data/*` — 12 per-collection wrappers (6 owners + 6 Phase-5-rewrite-target pass-throughs); accesses SDK only through `src/firebase/db.js` + `src/firebase/storage.js`
+- `src/domain/*` — pure logic with zero Firebase imports
+- `src/auth/*` — session-layer logic on top of `src/firebase/auth.js` (Phase 6 replaces with real Email/Password + custom claims; current state is the local-allowlist substrate)
+- `src/cloud/*` — empty stub seams Phase 6/7/8 fill (callable Cloud Functions clients)
+- `src/views/*` — 12 per-route render functions; may import data/domain/auth/ui/cloud — never `firebase/*` directly
+- `src/ui/*` — DOM helpers (dom/modal/toast/format/chrome/charts/upload); pure DOM, no business logic
+- `src/observability/*` — empty stub seams Phase 7/9 fill (Sentry init + audit-event constants + emit)
+- `src/state.js` + `src/router.js` + `src/main.js` — boot infrastructure; `src/main.js` imports `src/firebase/app.js` as its FIRST functional import to guarantee `initializeApp` + `initAppCheck` run before any data/* or views/* code touches the SDK
+
+These boundaries are lint-enforced via ESLint `no-restricted-imports` rules in `eslint.config.js` (Wave 1-4 hardening at error level; Wave 6 verified zero `"warn"` strings remain on no-restricted-imports rules):
+
+- `**/*.js` (excluding `src/firebase/**`) cannot import `firebase/firestore | firebase/storage | firebase/auth | firebase/app-check | firebase/functions` directly (Wave 1)
+- `src/domain/**` cannot import any `firebase/*` path (Wave 2)
+- `src/data/**` cannot import `firebase/*` directly outside the adapter (Wave 3)
+- `src/views/**` cannot import `firebase/*` directly (Wave 4)
+
+Wave 6 also added `no-restricted-globals` blocking bare-global `FB` references (the IIFE-era bridge pattern Wave 5 retired from `index.html`'s standalone bridge tags). The rule is dormant-but-active at Wave 6 close because `src/main.js` consumes `window.FB.X` (member access on `window`) which does NOT trigger the bare-global rule. The bare-`Chart` global guard is deferred to the main.js-body-migration carryover sub-wave because `src/main.js` IIFE-resident render functions consume `Chart` as a bare global at two sites; enforcing now would break the boot path. Tracked in `runbooks/phase-4-cleanup-ledger.md` "Wave 6 → main.js-body-migration carryover" section.
+
+Per-directory coverage thresholds are tiered per `vite.config.js` (D-21):
+
+- `src/domain/**` and `src/util/**` and `src/ui/**`: 100%
+- `src/auth/**` and `src/data/**`: 95% (data/** raised from 90 in Wave 6 — gates regressions during Phase 5's pass-through → owned rewrite)
+- `src/views/**`: 80%
+- `src/state.js`, `src/router.js`, `src/main.js`: 90%
+- `src/firebase/**`, `src/cloud/**`, `src/observability/**`: EXCLUDED (adapter exercised through data/* tests; cloud + observability stubs filled in Phase 7/8/9)
+
+Quick wins folded across Waves 1-6 close the corresponding CONCERNS.md findings:
+
+- CODE-03 (Math.random → crypto.randomUUID) — closes H5; ESLint security/detect-pseudoRandomBytes blocks reintroduction (Wave 1)
+- CODE-04 (delete `html:` branch in `h()` + permanent XSS regression test) — closes C4; ESLint no-unsanitized blocks reintroduction (Wave 2)
+- CODE-05 (17 innerHTML="" → replaceChildren) — closes M2 (Waves 1-4 + Wave 6 forward-tracked modal.js closure)
+- CODE-06 partial (4 in-IIFE el.style.X mutations + 1 inline-style block) — closes the harder CSP target; the 132 static `style="..."` inline-attr strings sweep atomically with the Wave 5 IIFE body migration in a follow-up sub-wave (Phase 10 HOST-07 single-knob flip pending)
+- CODE-07 (alert → toast notify) — closes M3 (Wave 4)
+- CODE-08 (renderConversation shared helper) — closes M8 chat/funnel duplication (Wave 4)
+- CODE-09 (client-side upload validation) — closes H6 client-side; trust boundary at Phase 5 storage.rules + Phase 7 callable (Wave 4)
+- CODE-10 (tab-title unread badge memoisation) — closes M9 (Wave 4)
+- CODE-11 (formatWhen Math.floor for monotonic-decreasing labels) — closes L4 (Wave 6)
+- CODE-12 (rel="noopener noreferrer" on download links) — closes L3 / CWE-1021 (Wave 4)
+- CODE-13 (dead v1-migration code removal — gated on pre-deletion verification of v2-active early-return guard + the absence of live v1 data per PROJECT.md "no backwards-compat window") — closes L2 (Wave 6)
+
+The CSP allowlist tightening (Wave 1 — `cdn.jsdelivr.net`, `fonts.googleapis.com`, `fonts.gstatic.com` dropped via Chart.js npm import + Google Fonts self-host) shrinks Phase 10's strict-CSP enforcement work to a single-knob flip (drop `'unsafe-inline'` from `style-src`).
+
+**Phase 4 cleanup-ledger Suppressions table — D-17 phase-close gate posture:** the in-Phase-4-tracker rows reach zero (every original Phase 1 row closed via extraction or file deletion). The 12 rotated `src/main.js:N` rows + the `window.FB`/`window.Chart` bridges + the 132 inline-style strings + the unmet coverage thresholds are documented as **persistent-with-rationale** under the Wave 6 → main.js-body-migration carryover section (D-17 escape hatch: "if a suppression was actually still needed — document under Persistent suppressions with rationale, and reflect in `SECURITY.md` so the audit narrative is honest"). The carryover items close atomically when IIFE bodies migrate from `src/main.js` into the 12 `src/views/*.js` Pattern D DI factory stubs — a sub-wave deliberately deferred from Wave 6 to keep the human-verify checkpoint contract small and avoid the same Phase-2 D-08 snapshot-baseline jeopardy that gated Wave 4 Dev #1 + Wave 5 Dev #1.
+
+The forward-tracking section in the cleanup-ledger retains rows for Phase 5 (D-09 pass-through bodies → subcollection rewrites), Phase 6 (AUTH-14 deletes `src/auth/state-machine.js` + `INTERNAL_PASSWORD_HASH`; AUTH-07 fills `src/cloud/claims-admin.js`), Phase 7 (FN-04 fills `src/firebase/check.js` + `src/cloud/audit.js` + `src/cloud/retry.js` + `src/observability/audit-events.js` constants), Phase 8 (LIFE-04/GDPR-01 fills `src/cloud/soft-delete.js` + `src/cloud/gdpr.js`), and Phase 9 (OBS-01 fills `src/observability/sentry.js`; AUDIT-05 wires `emitAuditEvent` in views/*) — these are the audit-narrative substrate, not leftover suppressions.
+
+**Citations:** OWASP ASVS L2 v5.0 — V14.2 (Dependencies — npm migration), V14.7 (Build & Deploy — lint-enforced boundaries), V5.3 (Output Encoding / XSS prevention — CODE-04 layered with CODE-05/06); ISO/IEC 27001:2022 Annex A — A.8.28 (Secure coding — modular boundary enforcement), A.8.24 (Use of cryptography — CSPRNG via CODE-03); SOC 2 — CC8.1 (Change management — atomic per-requirement commits), CC6.1 (Logical access — boundary enforcement via lint); GDPR Art. 32(1)(b) (Confidentiality of processing — XSS + upload validation), Art. 32(1)(d) (Testing/evaluating effectiveness — coverage thresholds + permanent regression tests).
+
+**Evidence:**
+
+- Module layout: `src/firebase/`, `src/data/`, `src/domain/`, `src/auth/`, `src/cloud/`, `src/views/`, `src/ui/`, `src/observability/`, `src/state.js`, `src/router.js`, `src/main.js`
+- ESLint boundary rules: `eslint.config.js` (Wave 1-4 no-restricted-imports at error + Wave 6 no-restricted-globals on bare FB)
+- Coverage thresholds: `vite.config.js` `test.coverage.thresholds` (D-21 extended in Wave 6)
+- CODE-* closures: `runbooks/phase-4-cleanup-ledger.md` "Phase 2 — extracted leaf modules" section (timeline)
+- Wave 6 → main.js-body-migration carryover documentation: `runbooks/phase-4-cleanup-ledger.md` "Wave 6 → main.js-body-migration carryover" section
+- Wave-level summaries: `.planning/phases/04-modular-split-quick-wins/04-01-SUMMARY.md` through `04-06-SUMMARY.md`
+
+---
+
 ## § Dependency Monitoring
 
 **Controls:**

@@ -1,0 +1,4 @@
+880:        passConfirm.style.display = needsPassword ? "block" : "none";
+3772:            drop.style.background = "var(--brand-tint)";
+3775:            drop.style.background = "var(--surface-muted)";
+3779:            drop.style.background = "var(--surface-muted)";

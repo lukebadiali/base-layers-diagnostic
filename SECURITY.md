@@ -532,6 +532,152 @@ supply-chain compromise, insider misuse).
 
 ---
 
+## § Firestore Data Model
+
+**Control:** Production Firestore data lives under the subcollection-based shape specified in `.planning/research/ARCHITECTURE.md` §4 — `orgs/{orgId}/responses/{respId}`, `orgs/{orgId}/comments/{cmtId}`, `orgs/{orgId}/actions/{actId}`, `orgs/{orgId}/documents/{docId}`, `orgs/{orgId}/messages/{msgId}`, `orgs/{orgId}/readStates/{userId}` — replacing the prior monolithic nested-map shape (`orgs/{orgId}.responses[roundId][userId][pillarId][idx]` etc.) that was approaching the 1 MiB doc-size cliff and exhibited last-writer-wins entanglement (CONCERNS H8).
+
+The migration was executed via a one-shot Node script (`scripts/migrate-subcollections/run.js`) using the firebase-admin SDK from an internal operator workstation. The script supports a `--dry-run` flag whose output (`scripts/migrate-subcollections/dry-run-output.log`) is committed as audit evidence. Per-doc idempotency markers under `migrations/{stepId}/items/{docId}` make the script re-runnable — DONE markers skip; PENDING markers re-process partial-runs.
+
+**Audit-narrative line (D-05 staging deviation):** Migration is idempotent (per-doc markers) and bracketed by a manual `gcloud firestore export` taken immediately before the run.
+Rules unit-tested against the local emulator before the script runs.
+**Rollback procedure:** `gcloud firestore import` of that export — the pre-migration export bucket URI is the rollback substrate.
+This deviates from `.planning/research/PITFALLS.md` Pitfall 1's "use a staging Firebase project" recommendation explicitly. Justification: the project was between client engagements with no live writes; the per-doc markers + pre-migration export + emulator rules tests provide equivalent safety with substantially lower operational cost than a permanent staging project (duplicate IAM, OIDC pool, App Check site keys, billing).
+
+**Cutover outcome (2026-05-08):** The cutover was executed on 2026-05-08 at ~17:10 UTC by the project Owner (`business@bedeveloped.com`) against `bedeveloped-base-layers`. Outcome: success — but a **no-op** because the production database was empty at the time (project baseline per `.planning/PROJECT.md`: "between client engagements"). The audit value of this cutover is therefore in the **discipline of the export → dry-run → real-run → verify chain**, not in transformed data. The same migration script will correctly walk real client data once it exists post-Phase-6. The pre-migration export at `gs://bedeveloped-base-layers-backups/pre-phase5-migration/2026-05-08T17-10-06Z/` (operation `projects/bedeveloped-base-layers/databases/(default)/operations/ASAzZjU4MjJkMjRjMTUtYTE5OS1lOTc0LTU1MWYtZTNlMjQ4OTUkGnNlbmlsZXBpcAkKMxI`) is retained as the rollback substrate and as the change-management evidence artefact.
+
+**Stray-data cleanup deviation:** The post-migration `assertFieldPresence` initially failed because 3 stray `messages/{id}` and 3 stray `documents/{id}` root-collection docs predating the Phase 4 modular split lacked the D-03 inline legacy fields. They were investigated via `scripts/migrate-subcollections/find-strays.js`, confirmed to be v0 test fixtures with the wrong shape (`text` field instead of `body`), and deleted via `scripts/migrate-subcollections/delete-strays.js`. Both scripts are committed as audit evidence in commit `663927f`. The deletion is documented as a Wave 5 in-flight scope deviation in `05-PREFLIGHT.md` §notes.
+
+The CONCERNS.md H7 (clock skew on unread tracking) and H8 (last-writer-wins cloud sync) were folded into Phase 5 Wave 4 as **two atomic commits** per `.planning/research/PITFALLS.md` §Pitfall 20 (the bundled-fix risk): Commit A rewrote `src/domain/unread.js` to read server-time Timestamp values via duck-typed `toMillis()` (DATA-07); Commit B rewrote `src/data/cloud-sync.js` to remove the parent-doc syncer entirely + delegate per-subcollection listening to wrappers.
+
+**Evidence:**
+
+- Subcollection layout: `.planning/research/ARCHITECTURE.md` §4
+- Migration script: `scripts/migrate-subcollections/run.js` (Wave 2 — commits `f8b7e9b` + `fd7cc7d`)
+- Idempotency marker pattern: `scripts/migrate-subcollections/process-doc.js` (D-02 / Pitfall 10 — Wave 2 commit `fd7cc7d`)
+- Pre/post assertion harness: `scripts/migrate-subcollections/assertions.js` (DATA-06 — Wave 2 commit `f8b7e9b`)
+- Pre-migration export procedure: `runbooks/phase5-subcollection-migration.md` §3.1 (D-04 — Wave 5 commit `130a501`)
+- Migration runbook: `runbooks/phase5-subcollection-migration.md` (Wave 5 commit `130a501`)
+- Operator cutover log: `.planning/phases/05-firestore-data-model-migration-rules-authoring-committed-not-deployed/05-PREFLIGHT.md` (Wave 5 skeleton `130a501` + cutover-day fill `7969f21`)
+- Cutover evidence (logs + stray cleanup): commit `663927f` — `dry-run-output.log` + `real-run-output.log` + `find-strays.js` + `delete-strays.js`
+- Pre-migration export bucket URI: `gs://bedeveloped-base-layers-backups/pre-phase5-migration/2026-05-08T17-10-06Z/`
+- `data/responses,comments,actions,documents,messages,read-states.js` body rewrites (Wave 3 — commits `a6d7f2f` + `817a2ed` + `c17d0d0` + `fd44c78` + `2056e9e` + `485c1c2`)
+- H7 fix commit: `feat(05-04): H7 fix - server-clock readStates comparator + setPillarRead rewire (DATA-07)` — `d81cb50`
+- H8 fix commit: `feat(05-04): H8 fix - per-subcollection listeners replace parent-doc sync (D-13)` — `3145ebc`
+
+**Framework citations:**
+
+- OWASP ASVS L2 V4.1.5 — data-model authorisation aligned with rules engine
+- ISO/IEC 27001:2022 A.8.10 — information deletion (the legacy nested-map fields stay during Phase 5 as the rollback substrate; a Phase 6+ cleanup wave deletes them)
+- SOC 2 CC6.1 — logical access (subcollection-scoped match blocks make access decisions explicit per resource)
+- GDPR Art. 32(1)(b) — ongoing confidentiality + integrity (subcollection migration enables per-resource access controls without 1 MiB doc-size cliff)
+
+---
+
+## § Firestore Security Rules — Authored, Not Yet Deployed
+
+**Control:** `firestore.rules` and `storage.rules` are committed at the repo root. They are **NOT** deployed to production in Phase 5 (`firebase deploy --only firestore:rules` is not invoked anywhere in this phase). Sequencing Non-Negotiable #2: rules deploy in lockstep with the Phase 6 Auth migration when Email/Password sign-in + custom claims + MFA all go live; per `.planning/research/PITFALLS.md` §Pitfall 1, deploying tightened rules before claims-issuing Auth is a production lockout pattern. **The rules deploy gate is held for Phase 6 (RULES-07).**
+
+The rules predicate library (D-14) reads top-to-bottom as English: a reviewer can trace each `allow` rule back to a named helper (`isAuthed()`, `role()`, `orgId()`, `isInternal()`, `isAdmin()`, `inOrg(o)`, `notDeleted(r)`, `isOwnAuthor(r)`, `immutable(field)`, `mutableOnly(fields)`) declared once at the top of the file. `isAuthed()` includes both `email_verified == true` AND `sign_in_provider != "anonymous"` per `.planning/research/PITFALLS.md` §Pitfall 2 (anonymous tokens trivially satisfy `request.auth != null`).
+
+Every `allow update` path uses `mutableOnly([...])` field whitelist + `immutable("orgId")` / `immutable("createdAt")` per D-15 (Pitfall 3 closure). Mass-assignment attacks (a client adding `role: "admin"` to its own user doc) deny by virtue of the whitelist.
+
+The collection scope per D-17:
+
+- `orgs/{orgId}` parent doc (read: `inOrg(orgId) && notDeleted`; create/update: `isInternal`; delete: `false`)
+- 6 subcollections under `orgs/{orgId}` — `responses`, `comments`, `actions`, `documents`, `messages`, `readStates`
+- `users/{uid}`, `internalAllowlist/{email}`
+- `auditLog/{eventId}`, `softDeleted/{type}/items/{id}`, `rateLimits/{uid}/buckets/{windowStart}` — server-only (clients cannot write; Phase 7 fills the writers + replaces `rateLimits` deny-block with a `request.time` predicate)
+- `roadmaps/{orgId}`, `funnels/{orgId}`, `funnelComments/{id}` (top-level per ARCHITECTURE.md §4 table)
+
+The audit log rules (`auditLog/{eventId}: allow read: if isAdmin(); allow write: if false`) explicitly prevent the audited user from reading their own audit records (per `.planning/research/PITFALLS.md` §Pitfall 17 / AUDIT-07).
+
+A table-driven `@firebase/rules-unit-testing` v5 matrix at `tests/rules/firestore.test.js` iterates 5 roles (anonymous / client_orgA / client_orgB / internal / admin) × 16 collection paths × 4 ops (read / create / update / delete) with explicit allow/deny expectations per cell. Cross-cutting suites: `tests/rules/tenant-jump.test.js` (every collection enumerated under a tenant-jump scenario per RULES-04), `tests/rules/soft-delete-predicate.test.js`, `tests/rules/server-only-deny-all.test.js`. The CI `test-rules` job boots Firestore + Storage emulators via `firebase emulators:exec` and runs the matrix on every PR (TEST-08). Last verified green at 176/176 in commit `4fe36b9`.
+
+**Phase 5 RULES-06 verification gate (Wave 6):** `git log --grep="firebase deploy --only firestore:rules" 5276d9d..HEAD` (where `5276d9d` is the Phase 4 close commit) matches a single commit `4fe36b9` whose body is the Wave 1 atomic commit explicitly DOCUMENTING the absence of the deploy command (`"RULES-06: rules COMMITTED, NOT DEPLOYED — no firebase deploy --only firestore:rules invocation anywhere"`). The match is therefore a documented false positive. `git grep "firebase deploy --only firestore:rules" -- '*.yml' '*.yaml' '*.json' '*.js' '*.sh' '*.ts'` (enforcement file types) returns empty. The gate **PASSES**.
+
+**Evidence:**
+
+- Rules file: `firestore.rules` (Wave 1 — commit `4fe36b9`)
+- Storage rules: `storage.rules` (Wave 1 — commit `4fe36b9`)
+- firebase.json declarations: `firebase.json` `firestore.rules` + `storage.rules` paths declared (Wave 1 — commit `4fe36b9`)
+- Predicate library: `firestore.rules` lines 5–27 (D-14 — commit `4fe36b9`)
+- Mutation whitelist enforcement: every `allow update` path in `firestore.rules`
+- Test matrix: `tests/rules/firestore.test.js` (Wave 1 — commit `4fe36b9`)
+- Cross-cutting test suites: `tests/rules/tenant-jump.test.js`, `tests/rules/soft-delete-predicate.test.js`, `tests/rules/server-only-deny-all.test.js` (Wave 1 — commit `4fe36b9`)
+- Test exemption + cleanup: `fix(05-01): exempt tests/rules/** from no-restricted-imports + drop unused vars` — commit `6e85e1c`; `fix(05-01): exclude tests/rules/** from default vitest run` — commit `345cf5d`
+- CI test-rules job: `.github/workflows/ci.yml` `test-rules` job (Wave 1 — commit `4fe36b9`)
+- Phase 5 RULES-06 verification gate (Wave 6 — this section): `git log --grep="firebase deploy --only firestore:rules" 5276d9d..HEAD` returns only the Wave 1 false-positive; `git grep` over enforcement file types returns empty
+- RULES-07 deploy gate held for Phase 6 — tracked in `runbooks/phase-5-cleanup-ledger.md` forward-tracking row
+
+**Framework citations:**
+
+- OWASP ASVS L2 V4.1 — general access control; V4.2 — operation-level access control; V4.3 — other access control considerations
+- ISO/IEC 27001:2022 A.5.15 — access control; A.5.18 — access rights; A.8.3 — information access restriction
+- SOC 2 CC6.1 — logical access; CC6.2 — new/modified access; CC6.3 — access modification
+- GDPR Art. 32(1)(b) — ongoing confidentiality; Art. 32(2) — level of security appropriate to risk
+
+---
+
+## § Storage Rules
+
+**Control:** `storage.rules` enforces three constraints on uploads to `orgs/{orgId}/documents/{docId}/{filename}`:
+
+1. **Size cap:** `request.resource.size <= 25 * 1024 * 1024` (25 MiB) — matches `src/ui/upload.js` `MAX_BYTES` exactly. Closes CONCERNS.md H6 server-side (the client-side sanitisation in Phase 4 was the UX-feedback layer; the storage rule is the trust boundary).
+2. **MIME allowlist:** `request.resource.contentType.matches('application/pdf|image/jpeg|...')` — mirrors the canonical `ALLOWED_MIME_TYPES` constant exported from `src/ui/upload.js`. The client-side magic-byte sniff (Phase 4 `validateUpload`) cross-checks the declared content-type against the actual file header; the storage rule enforces the declared type at upload time.
+3. **Path scope:** the `match /orgs/{orgId}/documents/{docId}/{filename}` block constrains writes to the documented prefix; a global `match /{allPaths=**} { allow read, write: if false }` denies everything else (defense in depth).
+
+The MIME allowlist is deliberately duplicated between `src/ui/upload.js` and `storage.rules` because the rules language does not support `import`. A cleanup-ledger row tracks drift if `ui/upload.js`'s allowlist ever changes — any modification must sync `storage.rules` in the same commit.
+
+**Evidence:**
+
+- Storage rules: `storage.rules` (Wave 1 — commit `4fe36b9`)
+- Single source of truth: `src/ui/upload.js` `ALLOWED_MIME_TYPES` + `MAX_BYTES` (Phase 4 D-15/D-16)
+- Cleanup-ledger drift tracker: `runbooks/phase-5-cleanup-ledger.md` (this Wave 6)
+- Storage matrix tests: `tests/rules/storage.test.js` (Wave 1 — commit `4fe36b9`)
+- Closure of CONCERNS.md H6: client-side validation (Phase 4 CODE-09) + server-side rule (Phase 5 RULES-05)
+
+**Framework citations:**
+
+- OWASP ASVS L2 V12.1 — file upload; V13.1 — web service security
+- ISO/IEC 27001:2022 A.8.24 — use of cryptography (covers content-type integrity); A.8.7 — protection against malware (MIME allowlist limits attack surface)
+- SOC 2 CC6.7 — boundary protection
+- GDPR Art. 32(1)(b) — integrity
+
+---
+
+## § Phase 5 Audit Index
+
+This is a one-stop pointer for an auditor walking Phase 5's controls. Each row maps a Phase 5 control to (a) the SECURITY.md section + decision that defines it, (b) the code path that implements it, (c) the test that verifies it, and (d) the framework citations it addresses. Mirrors the Phase 3 Audit Index pattern; Phase 11 (DOC-09) walks both indexes to populate `docs/CONTROL_MATRIX.md`.
+
+| Audit row | Control | Code path | Test | Framework |
+|-----------|---------|-----------|------|-----------|
+| Subcollection data model | DATA-01..04 | `src/data/{responses,comments,actions,documents,messages,read-states}.js` | `tests/data/*.test.js` | ASVS V4.1.5 / ISO A.8.10 / SOC2 CC6.1 / GDPR Art 32(1)(b) |
+| Migration script (one-shot) | DATA-04 / D-01 | `scripts/migrate-subcollections/run.js` | `tests/scripts/migrate-subcollections/*.test.js` | ASVS V14.5.1 (deployment) / SOC2 CC8.1 |
+| Idempotency markers | DATA-05 / D-02 / Pitfall 10 | `scripts/migrate-subcollections/process-doc.js` | `tests/scripts/migrate-subcollections/idempotency.test.js` | SOC2 CC7.4 (system operations — resilience) |
+| Pre/post assertion harness | DATA-06 | `scripts/migrate-subcollections/assertions.js` | `tests/scripts/migrate-subcollections/assertions.test.js` | SOC2 CC7.4 |
+| Inline legacy fields | DATA-02 / D-03 / Pitfall 5 | `scripts/migrate-subcollections/builders.js` (`legacyAppUserId` / `legacyAuthorId`) | `tests/scripts/migrate-subcollections/builders.test.js` | (substrate for Phase 6 AUTH-15 backfill) |
+| H7 server-clock comparator | DATA-07 | `src/domain/unread.js` | `tests/domain/unread.test.js` (5-min skew test, ROADMAP SC#4) | ASVS V8.3.1 / GDPR Art 32(1)(b) |
+| H8 per-subcollection listeners | (D-13) | `src/data/cloud-sync.js` | `tests/data/cloud-sync.test.js` | SOC2 CC7.2 (system operations — data integrity) |
+| Helper-rich predicate library | RULES-01 / D-14 / Pitfall 2 | `firestore.rules` lines 5–27 | `tests/rules/firestore.test.js` | ASVS V4.1.1 (claims-based access control) |
+| Mutation whitelist | RULES-02 / D-15 / Pitfall 3 | `firestore.rules` every `allow update` | `tests/rules/firestore.test.js` (mass-assignment cells) | ASVS V4.2.1 / SOC2 CC6.1 |
+| Server-only collections | RULES-03 / D-17 | `firestore.rules` `auditLog`/`softDeleted`/`rateLimits` blocks | `tests/rules/server-only-deny-all.test.js` | ASVS V13.1.5 / Pitfall 17 |
+| Tenant isolation | RULES-04 | `firestore.rules` `inOrg(orgId)` predicate | `tests/rules/tenant-jump.test.js` | ASVS V4.3.2 / SOC2 CC6.1 |
+| Storage size + MIME + path | RULES-05 | `storage.rules` | `tests/rules/storage.test.js` | ASVS V12.1 / ISO A.8.7 / GDPR Art 32(1)(b) |
+| Rules deploy gate held | RULES-06 / Pitfall 1 | (no `firebase deploy --only firestore:rules` invocation in any enforcement file across the phase) | `git log --grep="firebase deploy --only firestore:rules" 5276d9d..HEAD` returns only documented false positive (commit `4fe36b9` body) | (audit-narrative integrity) |
+| AUDIT-07 audited user cannot read | RULES-03 / Pitfall 17 | `firestore.rules` `auditLog` `allow read: if isAdmin()` | `tests/rules/server-only-deny-all.test.js` | ASVS V13.1.5 |
+| Migration runbook + rollback | (procedural) | `runbooks/phase5-subcollection-migration.md` | (operator-execution + `05-PREFLIGHT.md` Cutover Log: `cutover_outcome: success`) | SOC2 CC9.1 (risk mitigation) / ISO A.5.30 (ICT readiness for business continuity) |
+
+Each row's evidence + test path is a direct verification of the control. A reviewer reading this index plus the `firestore.rules` and `storage.rules` files plus the `tests/rules/` matrix output answers the "how do you secure data at rest + access?" portion of a vendor questionnaire without referencing additional documentation.
+
+**Cross-phase plug-ins this index will feed:**
+
+- **Phase 6** (RULES-07 + AUTH-15) — flips the "Rules deploy gate held" row from "(no invocation)" to "(deployed via `firebase deploy --only firestore:rules` in lockstep with Auth + claims cutover)"; AUTH-15 backfills `legacyAppUserId → firebaseUid` mapping using the inline legacy fields preserved in Phase 5.
+- **Phase 7** (FN-01..09) — flips `auditLog`/`softDeleted` server-only deny-blocks to active server-side writers; replaces `rateLimits/{uid}/buckets/{windowStart}` deny-block body with `request.time` predicate (FN-09).
+- **Phase 8** (BACKUP-01..07) — establishes daily-export rotation; deletes the Phase 5 pre-migration export bucket (`gs://bedeveloped-base-layers-backups/pre-phase5-migration/2026-05-08T17-10-06Z/`) once retention policy supersedes the one-off snapshot.
+- **Phase 11** (DOC-09 / Evidence Pack) — `docs/CONTROL_MATRIX.md` walks this index row-by-row.
+
+---
+
 ## Compliance posture statement
 
 This codebase aims for **credible, not certified** compliance with

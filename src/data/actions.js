@@ -1,21 +1,36 @@
 // src/data/actions.js
 // @ts-check
-// Phase 4 Wave 3 (D-09 / D-12): pass-through to data/orgs.js's flat-map shape
-// (org.actions[actionId]). Phase 5 (DATA-01..06) replaces this body with
-// subcollection access; the API surface stays stable.
+// Phase 5 Wave 3 (DATA-01 / D-11 / 05-03): subcollection access at
+// orgs/{orgId}/actions/{actId}. API surface unchanged from Phase 4 D-09 /
+// D-10 — listActions, saveAction, deleteAction keep their names +
+// signatures verbatim per D-11.
 //
 // Cleanup-ledger row: "Phase 5 (DATA-01) replaces body with subcollection
 // access (orgs/{orgId}/actions/{actId}); data/actions.js API stable" —
-// closes at Phase 5.
-import { getOrg, saveOrg } from "./orgs.js";
+// CLOSES with this commit.
+//
+// D-03 invariant: every write carries `legacyAppUserId: action.ownerId` so
+// Phase 6 (AUTH-15) can backfill firebaseUid in-place.
+import {
+  db,
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  serverTimestamp,
+} from "../firebase/db.js";
 
 /**
  * @param {string} orgId
  * @returns {Promise<Array<any>>}
  */
 export async function listActions(orgId) {
-  const org = await getOrg(orgId);
-  return Object.values(org?.actions || {});
+  const snap = await getDocs(collection(db, "orgs", orgId, "actions"));
+  /** @type {Array<any>} */
+  const out = [];
+  snap.forEach((/** @type {any} */ d) => out.push({ id: d.id, ...d.data() }));
+  return out;
 }
 
 /**
@@ -24,11 +39,17 @@ export async function listActions(orgId) {
  * @returns {Promise<void>}
  */
 export async function saveAction(orgId, action) {
-  const org = await getOrg(orgId);
-  if (!org) return;
-  org.actions = org.actions || {};
-  org.actions[action.id] = action;
-  await saveOrg(org);
+  if (!action?.id) throw new Error("action.id required");
+  await setDoc(
+    doc(db, "orgs", orgId, "actions", action.id),
+    {
+      ...action,
+      orgId,
+      legacyAppUserId: action.ownerId, // D-03 inline legacy field
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
 }
 
 /**
@@ -37,8 +58,5 @@ export async function saveAction(orgId, action) {
  * @returns {Promise<void>}
  */
 export async function deleteAction(orgId, actionId) {
-  const org = await getOrg(orgId);
-  if (!org) return;
-  if (org.actions) delete org.actions[actionId];
-  await saveOrg(org);
+  await deleteDoc(doc(db, "orgs", orgId, "actions", actionId));
 }

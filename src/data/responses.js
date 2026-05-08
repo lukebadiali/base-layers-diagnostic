@@ -1,13 +1,34 @@
 // src/data/responses.js
 // @ts-check
-// Phase 4 Wave 3 (D-09 / D-12): pass-through to data/orgs.js's nested-map
-// shape (org.responses[roundId][userId][pillarId][idx]). Phase 5 (DATA-01..06)
-// replaces this body with subcollection access; the API surface stays stable.
+// Phase 5 Wave 3 (DATA-01 / D-11 / 05-03 / RESEARCH Pattern 3): subcollection
+// access at orgs/{orgId}/responses/{respId} where respId = roundId__userId__pillarId.
+// API surface unchanged from Phase 4 D-09 / D-10 — listResponses, saveResponse,
+// deleteResponse keep their names + signatures + return types verbatim per D-11.
 //
 // Cleanup-ledger row: "Phase 5 (DATA-01) replaces body with subcollection
 // access (orgs/{orgId}/responses/{respId}); data/responses.js API stable" —
-// closes at Phase 5.
-import { getOrg, saveOrg } from "./orgs.js";
+// CLOSES with this commit.
+//
+// D-03 invariant: every write carries `legacyAppUserId: userId` so Phase 6
+// (AUTH-15) can backfill the firebaseUid mapping in-place.
+import {
+  db,
+  doc,
+  getDoc,
+  setDoc,
+  deleteDoc,
+  serverTimestamp,
+} from "../firebase/db.js";
+
+/**
+ * @param {string} roundId
+ * @param {string} userId
+ * @param {number|string} pillarId
+ * @returns {string}
+ */
+function buildRespId(roundId, userId, pillarId) {
+  return `${roundId}__${userId}__${String(pillarId)}`;
+}
 
 /**
  * @param {string} orgId
@@ -17,8 +38,11 @@ import { getOrg, saveOrg } from "./orgs.js";
  * @returns {Promise<Array<any>>}
  */
 export async function listResponses(orgId, roundId, userId, pillarId) {
-  const org = await getOrg(orgId);
-  return ((org?.responses?.[roundId]?.[userId]?.[pillarId]) || []).slice();
+  const respId = buildRespId(roundId, userId, pillarId);
+  const snap = await getDoc(doc(db, "orgs", orgId, "responses", respId));
+  if (!snap.exists()) return [];
+  const data = snap.data();
+  return Array.isArray(data?.values) ? data.values.slice() : [];
 }
 
 /**
@@ -31,14 +55,30 @@ export async function listResponses(orgId, roundId, userId, pillarId) {
  * @returns {Promise<void>}
  */
 export async function saveResponse(orgId, roundId, userId, pillarId, idx, value) {
-  const org = await getOrg(orgId);
-  if (!org) return;
-  org.responses = org.responses || {};
-  org.responses[roundId] = org.responses[roundId] || {};
-  org.responses[roundId][userId] = org.responses[roundId][userId] || {};
-  org.responses[roundId][userId][pillarId] = org.responses[roundId][userId][pillarId] || [];
-  org.responses[roundId][userId][pillarId][idx] = value;
-  await saveOrg(org);
+  const respId = buildRespId(roundId, userId, pillarId);
+  const ref = doc(db, "orgs", orgId, "responses", respId);
+  // Read-modify-write: the original API contract accumulates per-idx values
+  // into a single per-(round,user,pillar) array. Subcollection rewrite
+  // preserves that shape by reading the existing doc, mutating values[idx],
+  // writing back via merge.
+  const existing = await getDoc(ref);
+  /** @type {Array<any>} */
+  const values = existing.exists() && Array.isArray(existing.data()?.values)
+    ? existing.data().values.slice()
+    : [];
+  values[idx] = value;
+  await setDoc(
+    ref,
+    {
+      roundId,
+      userId,
+      pillarId: String(pillarId),
+      values,
+      legacyAppUserId: userId,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
 }
 
 /**
@@ -49,8 +89,6 @@ export async function saveResponse(orgId, roundId, userId, pillarId, idx, value)
  * @returns {Promise<void>}
  */
 export async function deleteResponse(orgId, roundId, userId, pillarId) {
-  const org = await getOrg(orgId);
-  if (!org) return;
-  if (org.responses?.[roundId]?.[userId]) delete org.responses[roundId][userId][pillarId];
-  await saveOrg(org);
+  const respId = buildRespId(roundId, userId, pillarId);
+  await deleteDoc(doc(db, "orgs", orgId, "responses", respId));
 }

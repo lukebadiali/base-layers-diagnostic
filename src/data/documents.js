@@ -1,20 +1,32 @@
 // src/data/documents.js
 // @ts-check
-// Phase 4 Wave 3 (D-09 / D-12 / D-15): pass-through to data/orgs.js's flat-map
-// shape (org.documents[docId]) PLUS Storage upload via firebase/storage.js.
-// Phase 5 (DATA-01..06) replaces the metadata path with subcollection access;
-// Phase 7 wires the secure-upload callable. The API surface stays stable.
-//
-// Trust-boundary anchor (D-15 / T-4-3-4): saveDocument is called BY Wave 4
-// views AFTER ui/upload.js validateUpload(file) returns ok:true with a
-// sanitisedName. data/documents.js does NOT re-validate — trusts the contract.
-// Storage path: orgs/{orgId}/documents/{docId}/{sanitisedName}. Phase 5
-// storage.rules adds the actual server-side enforcement (RULES-04).
+// Phase 5 Wave 3 (DATA-01 / D-11 / 05-03): subcollection METADATA at
+// orgs/{orgId}/documents/{docId}. Storage path
+// orgs/{orgId}/documents/{docId}/{sanitisedName} unchanged (RULES-05). API
+// surface unchanged from Phase 4 D-09 / D-10 — listDocuments, saveDocument,
+// deleteDocument keep their names + signatures verbatim per D-11.
 //
 // Cleanup-ledger row: "Phase 5 (DATA-01) replaces body with subcollection
 // access (orgs/{orgId}/documents/{docId}); data/documents.js API stable" —
-// closes at Phase 5.
-import { getOrg, saveOrg } from "./orgs.js";
+// CLOSES with this commit.
+//
+// Trust-boundary anchor (D-15 / T-4-3-4): saveDocument is called BY views
+// AFTER ui/upload.js validateUpload(file) returns ok:true with a
+// sanitisedName. data/documents.js does NOT re-validate — trusts the
+// contract. Phase 5 storage.rules adds the actual server-side enforcement.
+//
+// D-03 invariant: every doc carries `legacyAppUserId: meta.uploadedBy` so
+// Phase 6 (AUTH-15) can backfill firebaseUid in-place.
+import {
+  db,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  serverTimestamp,
+} from "../firebase/db.js";
 import { storage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "../firebase/storage.js";
 import { uid } from "../util/ids.js";
 
@@ -23,8 +35,11 @@ import { uid } from "../util/ids.js";
  * @returns {Promise<Array<any>>}
  */
 export async function listDocuments(orgId) {
-  const org = await getOrg(orgId);
-  return Object.values(org?.documents || {});
+  const snap = await getDocs(collection(db, "orgs", orgId, "documents"));
+  /** @type {Array<any>} */
+  const out = [];
+  snap.forEach((/** @type {any} */ d) => out.push({ id: d.id, ...d.data() }));
+  return out;
 }
 
 /**
@@ -40,12 +55,20 @@ export async function saveDocument(orgId, file, sanitisedName, meta = {}) {
   const task = uploadBytesResumable(ref(storage, path), file);
   await task;
   const downloadURL = await getDownloadURL(/** @type {*} */ (task).snapshot.ref);
-  const org = await getOrg(orgId);
-  if (org) {
-    org.documents = org.documents || {};
-    org.documents[docId] = { id: docId, name: sanitisedName, path, downloadURL, ...meta };
-    await saveOrg(org);
-  }
+  await setDoc(
+    doc(db, "orgs", orgId, "documents", docId),
+    {
+      id: docId,
+      orgId,
+      name: sanitisedName,
+      path,
+      downloadURL,
+      ...meta,
+      legacyAppUserId: meta?.uploadedBy || null, // D-03 (placed after spread so meta cannot override)
+      createdAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
   return { id: docId, downloadURL };
 }
 
@@ -55,10 +78,10 @@ export async function saveDocument(orgId, file, sanitisedName, meta = {}) {
  * @returns {Promise<void>}
  */
 export async function deleteDocument(orgId, docId) {
-  const org = await getOrg(orgId);
-  if (!org?.documents?.[docId]) return;
-  const d = org.documents[docId];
-  if (d?.path) await deleteObject(ref(storage, d.path));
-  delete org.documents[docId];
-  await saveOrg(org);
+  const ref0 = doc(db, "orgs", orgId, "documents", docId);
+  const snap = await getDoc(ref0);
+  if (!snap.exists()) return;
+  const data = snap.data();
+  if (data?.path) await deleteObject(ref(storage, data.path));
+  await deleteDoc(ref0);
 }

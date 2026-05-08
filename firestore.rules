@@ -1,0 +1,159 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Auth predicates (D-14 / Pitfall 2) ────────────────────────────
+    function isAuthed() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider != "anonymous";
+    }
+    function role()  { return request.auth.token.role; }
+    function orgId() { return request.auth.token.orgId; }
+    function isInternal() { return isAuthed() && role() in ["internal", "admin"]; }
+    function isAdmin()    { return isAuthed() && role() == "admin"; }
+    function inOrg(o)     { return isAuthed() && (isInternal() || orgId() == o); }
+
+    // ── Document predicates ───────────────────────────────────────────
+    function notDeleted(r) { return !("deletedAt" in r) || r.deletedAt == null; }
+    function isOwnAuthor(r){ return r.authorId == request.auth.uid; }
+
+    // ── Mutation whitelist (D-15 / Pitfall 3 / RULES-02) ──────────────
+    function immutable(field) {
+      return request.resource.data[field] == resource.data[field];
+    }
+    function mutableOnly(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    // ── orgs/{orgId} parent doc ───────────────────────────────────────
+    match /orgs/{orgId} {
+      allow read:   if inOrg(orgId) && notDeleted(resource.data);
+      allow create: if isInternal();
+      allow update: if isInternal()
+                    && immutable("orgId")
+                    && immutable("createdAt");
+      allow delete: if false;  // soft-delete via Cloud Function only
+
+      // ── responses subcollection ─────────────────────────────────────
+      match /responses/{respId} {
+        allow read:   if inOrg(orgId);
+        allow create: if inOrg(orgId)
+                      && request.resource.data.userId == request.auth.uid;
+        allow update: if inOrg(orgId)
+                      && immutable("userId")
+                      && immutable("orgId")
+                      && mutableOnly(["values", "updatedAt", "legacyAppUserId"]);
+        allow delete: if false;
+      }
+
+      // ── comments subcollection ──────────────────────────────────────
+      match /comments/{cmtId} {
+        allow read:   if inOrg(orgId)
+                      && (!("internalOnly" in resource.data) || !resource.data.internalOnly || isInternal());
+        allow create: if inOrg(orgId)
+                      && request.resource.data.authorId == request.auth.uid;
+        allow update: if false;
+        allow delete: if false;
+      }
+
+      // ── actions subcollection ───────────────────────────────────────
+      match /actions/{actId} {
+        allow read:   if inOrg(orgId);
+        allow create: if inOrg(orgId);
+        allow update: if inOrg(orgId)
+                      && immutable("orgId")
+                      && immutable("createdAt")
+                      && mutableOnly(["status", "ownerId", "title", "description", "dueAt", "updatedAt"]);
+        allow delete: if false;
+      }
+
+      // ── documents subcollection ─────────────────────────────────────
+      match /documents/{docId} {
+        allow read:   if inOrg(orgId);
+        allow create: if inOrg(orgId);
+        allow update: if false;
+        allow delete: if false;
+      }
+
+      // ── messages subcollection (H8 fix lands in Wave 4) ─────────────
+      match /messages/{msgId} {
+        allow read:   if inOrg(orgId);
+        allow create: if inOrg(orgId)
+                      && request.resource.data.authorId == request.auth.uid;
+        allow update: if false;
+        allow delete: if false;
+      }
+
+      // ── readStates subcollection (DATA-07 H7 fix lands in Wave 4) ───
+      match /readStates/{userId} {
+        allow read:   if inOrg(orgId)
+                      && (request.auth.uid == userId || isInternal());
+        allow create: if inOrg(orgId) && request.auth.uid == userId;
+        allow update: if inOrg(orgId) && request.auth.uid == userId
+                      && mutableOnly(["pillarReads", "chatLastRead"]);
+        allow delete: if false;
+      }
+    }
+
+    // ── users/{uid} ───────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read:   if isAuthed() && (request.auth.uid == uid || isInternal());
+      allow create: if false;  // server-only; bootstrap migration in Phase 6
+      allow update: if false;  // server-only via setClaims callable (Phase 6)
+      allow delete: if false;
+    }
+
+    // ── internalAllowlist/{email} ─────────────────────────────────────
+    match /internalAllowlist/{email} {
+      allow read:  if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // ── auditLog/{eventId} (AUDIT-07 / Pitfall 17) ────────────────────
+    match /auditLog/{eventId} {
+      allow read:  if isAdmin();   // internal CANNOT read own audit records
+      allow write: if false;       // server-only via auditWrite callable (Phase 7)
+    }
+
+    // ── softDeleted/{type}/items/{id} ─────────────────────────────────
+    match /softDeleted/{type}/items/{id} {
+      allow read:  if isAdmin();
+      allow write: if false;       // server-only (Phase 8)
+    }
+
+    // ── rateLimits (D-17: deny-all in Phase 5; FN-09 replaces in Phase 7) ─
+    match /rateLimits/{uid}/buckets/{windowStart} {
+      allow read, write: if false;
+    }
+
+    // ── roadmaps/{orgId} (top-level per ARCHITECTURE.md §4) ──────────
+    match /roadmaps/{orgId} {
+      allow read:   if inOrg(orgId);
+      allow create: if inOrg(orgId);
+      allow update: if inOrg(orgId)
+                    && immutable("orgId")
+                    && mutableOnly(["pillars", "updatedAt"]);
+      allow delete: if false;
+    }
+
+    // ── funnels/{orgId} ───────────────────────────────────────────────
+    match /funnels/{orgId} {
+      allow read:   if inOrg(orgId);
+      allow create: if inOrg(orgId);
+      allow update: if inOrg(orgId)
+                    && immutable("orgId")
+                    && mutableOnly(["stages", "updatedAt"]);
+      allow delete: if false;
+    }
+
+    // ── funnelComments/{id} (orgId field per ARCHITECTURE.md §4) ─────
+    match /funnelComments/{id} {
+      allow read:   if inOrg(resource.data.orgId);
+      allow create: if inOrg(request.resource.data.orgId)
+                    && request.resource.data.authorId == request.auth.uid;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

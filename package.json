@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-project-rules \"vitest run --config vitest.rules.config.js\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky || true"

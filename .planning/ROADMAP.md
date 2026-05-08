@@ -131,7 +131,14 @@ Plans:
   4. Comment + chat unread comparators use server-clock-vs-server-clock exclusively (last-read markers in `orgs/{orgId}/readStates/{userId}`); a 5-minute client-clock skew test does not change unread counts
   5. `@firebase/rules-unit-testing` suite covers every collection × every role (anonymous / client / internal / admin) × allowed and denied paths against the local emulator and runs green in CI; tenant-jump test (client with `orgId=A` cannot read or write any document under `orgs/B/*`) passes
   6. `firestore.rules` and `storage.rules` are committed to the repo but **not** present in the production Firebase project (deploy gate held for Phase 6)
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 05-01-PLAN.md — Wave 1: rules infra (firestore.rules + storage.rules + helper-rich predicate library) + 5 rules-unit-testing files (matrix + tenant-jump + soft-delete + server-only-deny-all + storage) + vitest.rules.config.js + firebase.json declarations + CI test-rules job (RULES-01..06, TEST-08)
+- [ ] 05-02-PLAN.md — Wave 2: migration script body (firebase-admin) with --dry-run + per-doc idempotency markers + pre/post collectionGroup assertion harness + pure builder functions for 6 migration steps + unit tests (DATA-01..06)
+- [ ] 05-03-PLAN.md — Wave 3: 5 src/data/* wrapper bodies rewritten to subcollection access + new src/data/read-states.js wrapper + tests/mocks/firebase.js subcollection-path support + Phase 4 D-09 cleanup-ledger row closures (DATA-01, DATA-04, DATA-07)
+- [ ] 05-04-PLAN.md — Wave 4: H7 fix (src/domain/unread.js server-clock comparator + 5-minute skew test) + H8 fix (src/data/cloud-sync.js per-subcollection dispatcher) — TWO ATOMIC COMMITS per Pitfall 20 (DATA-04, DATA-07)
+- [ ] 05-05-PLAN.md — Wave 5: production migration runbook (runbooks/phase5-subcollection-migration.md) + 05-PREFLIGHT.md skeleton + operator-execution checkpoint (gcloud export + dry-run + real run + post-assertions + rollback) (DATA-01..06)
+- [ ] 05-06-PLAN.md — Wave 6: SECURITY.md DOC-10 update (4 sections + Phase 5 Audit Index) + RULES-06 verification gate (zero firebase deploy --only firestore:rules in phase commits) + runbooks/phase-5-cleanup-ledger.md + phase-close human-verify checkpoint (DOC-10, RULES-06)
 
 ### Phase 6: Real Auth + MFA + Rules Deploy (Cutover)
 **Goal**: Every production user is a real Firebase Auth identity with custom claims, MFA-enrolled if internal; the trust boundary moves from `localStorage` JS gating to server-side Rules + claims; this is the load-bearing cutover phase of the milestone.
@@ -241,7 +248,7 @@ Plans:
 | 2. Test Suite Foundation (Tests-First) | 0/0 | Not started | - |
 | 3. Hosting Cutover + Baseline Security Headers | 6/6 | Complete (3 operator items in 03-HUMAN-UAT.md) | 2026-05-07 |
 | 4. Modular Split + Quick Wins | 6/6 | Complete (3 UI smoke items in 04-HUMAN-UAT.md; sub-wave queued as 4.1) | 2026-05-07 |
-| 5. Firestore Data Model Migration + Rules Authoring | 0/0 | Not started | - |
+| 5. Firestore Data Model Migration + Rules Authoring | 0/6 | Not started | - |
 | 6. Real Auth + MFA + Rules Deploy (Cutover) | 0/0 | Not started | - |
 | 7. Cloud Functions + App Check | 0/0 | Not started | - |
 | 8. Data Lifecycle (Soft-Delete + GDPR + Backups) | 0/0 | Not started | - |

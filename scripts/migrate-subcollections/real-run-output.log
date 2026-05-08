@@ -1,4 +1,3 @@
-[MODE] DRY-RUN -- no Firestore writes will occur
 
 === Phase 5 subcollection migration (project=bedeveloped-base-layers) ===
 [PRE]
@@ -6,8 +5,8 @@
   responses    0
   comments     0
   actions      0
-  documents    3
-  messages     3
+  documents    0
+  messages     0
   readStates   0
 
 === STEP responses-v1 (responses) ===
@@ -28,4 +27,13 @@
 === STEP readStates-init (readStates) ===
 [STEP readStates-init] orgs=0 skipped=0 written=0 dryRunWouldWrite=0
 
-[OK] Dry-run complete; no writes performed; rerun without --dry-run to execute.
+[POST]
+  orgs         0
+  responses    0
+  comments     0
+  actions      0
+  documents    0
+  messages     0
+  readStates   0
+
+[OK] Migration complete; pre/post assertions passed.

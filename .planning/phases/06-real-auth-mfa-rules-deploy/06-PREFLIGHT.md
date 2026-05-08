@@ -214,17 +214,21 @@ test -f functions/src/auth/.keep && grep -q "Phase 6" functions/src/auth/.keep &
 
 ### Captured Output
 
-**Status:** Will be populated in Task 2 of this plan.
+```
+subdirectory_created: yes
+placeholder_path: functions/src/auth/.keep
+verified_at: 2026-05-08T20:21:52Z
+```
+
+Captured stdout from verify command:
 
 ```
-subdirectory_created: <yes|no — populated by Task 2>
-placeholder_path: functions/src/auth/.keep
-verified_at: <ISO timestamp — populated by Task 2>
+placeholder OK
 ```
 
 ### Decision
 
-**PENDING TASK 2** — Task 2 of plan 06-01 creates `functions/src/auth/.keep` and updates this section.
+**PASS — verified at 2026-05-08T20:21:52Z.** `functions/src/auth/.keep` exists with a one-line comment naming Phase 6 Wave 1 + the Wave 2 hand-off (`beforeUserCreated.ts`, `beforeUserSignedIn.ts`, `setClaims.ts`, `claim-builder.ts` per CONTEXT.md D-10). Zero `.ts` source files added in this wave (D-01 wave shape: Wave 2 owns those). `functions/src/index.ts` UNCHANGED. `functions/package.json` UNCHANGED (Phase 3 pinned firebase-admin@13.8.0 + firebase-functions@7.2.5 stand).
 
 ---
 
@@ -238,7 +242,7 @@ verified_at: <ISO timestamp — populated by Task 2>
 | Identity Platform Upgrade        | PENDING-OPERATOR-EXECUTION      | PENDING     |
 | passwordPolicy                   | PENDING-OPERATOR-EXECUTION      | PENDING     |
 | firebase.json declarations       | Verified by agent (verify-and-leave) | PASS  |
-| functions/src/auth scaffolding   | Will be created by Task 2 of this plan | PENDING-TASK-2 |
+| functions/src/auth scaffolding   | Verified by agent (.keep placeholder created) | PASS |
 
 **Wave 2 unblock condition:** all five sections must show `Decision: PASS`. Three of the five (Firestore Region, Identity Platform Upgrade, passwordPolicy) require live Firebase Console / gcloud access by the operator. The executor agent has captured the exact commands + URLs + expected outputs above; operator must run them and update this file before `/gsd-execute-phase 6` resumes for Wave 2.
 

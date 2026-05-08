@@ -32,7 +32,6 @@ import {
   beforeEach,
   describe,
   it,
-  expect,
 } from "vitest";
 import {
   initRulesEnv,
@@ -180,7 +179,6 @@ afterAll(async () => {
  * Encodes "valid create" shape per D-15/D-17.
  */
 function createPayload(role, path) {
-  const claims = claimsByRole[role] || {};
   const uid = role === "anonymous" ? null : role;
   if (path === "orgs/orgA")
     return { orgId: "orgA", name: "Org A new", createdAt: Timestamp.now() };

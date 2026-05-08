@@ -5,7 +5,7 @@
 // Cells: tenant scope + size cap + MIME allowlist + delete role check + path
 // catch-all deny-all fallback.
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { afterAll, beforeAll, describe, it, expect } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { initRulesEnv, ROLES, asStorageUser, assertSucceeds, assertFails } from "./setup.js";
 
 let testEnv;

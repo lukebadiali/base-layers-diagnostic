@@ -180,9 +180,13 @@ export default [
   // adapter shape contract test at tests/firebase/app.test.js which mocks them via
   // vi.mock and never actually imports `firebase/*` runtime). This catches accidental
   // test-file SDK imports that bypass the adapter under test.
+  // Phase 5 Wave 1 (05-01): tests/rules/** is exempted — the rules suite runs under
+  // @firebase/rules-unit-testing's emulator-bound RulesTestContext and must call the
+  // raw firebase/firestore + firebase/storage SDKs directly against that context. The
+  // src/firebase/ adapter targets the production SDK and would defeat the rules harness.
   {
     files: ["tests/**/*.js"],
-    ignores: ["tests/firebase/**", "tests/mocks/**"],
+    ignores: ["tests/firebase/**", "tests/mocks/**", "tests/rules/**"],
     rules: {
       "no-restricted-imports": [
         "error",

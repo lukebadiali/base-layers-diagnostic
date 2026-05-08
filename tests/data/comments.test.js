@@ -1,44 +1,58 @@
 // tests/data/comments.test.js
 // @ts-check
-// Phase 4 Wave 3 (D-09 pass-through): comments.js delegates to data/orgs.js's
-// nested-map shape (org.comments[pillarId][...]). Phase 5 (DATA-01) replaces
-// the body with subcollection access; the API surface stays stable.
+// Phase 5 Wave 3 (DATA-01 / 05-03): subcollection rewrite.
+// comments.js now reads/writes orgs/{orgId}/comments/{cmtId} directly via
+// firebase/db.js — Phase 4 D-09 / D-10 API surface preserved verbatim.
 import { describe, it, expect, vi } from "vitest";
 import { makeFirestoreMock } from "../mocks/firebase.js";
 
 vi.mock("../../src/firebase/db.js", () => makeFirestoreMock({
   seed: {
-    "orgs/o1": { id: "o1", comments: { p1: [{ id: "c1", body: "hi" }] } },
+    "orgs/o1/comments/c1": {
+      pillarId: "p1",
+      authorId: "u_a",
+      legacyAuthorId: "u_a",
+      body: "hi",
+      createdAt: null,
+    },
+    "orgs/o1/comments/c2": {
+      pillarId: "p2",
+      authorId: "u_b",
+      legacyAuthorId: "u_b",
+      body: "elsewhere",
+      createdAt: null,
+    },
   },
 }));
 
 const { listComments, addComment, deleteComment } = await import("../../src/data/comments.js");
 
-describe("data/comments.js (D-09 pass-through)", () => {
-  it("listComments returns seeded comments for the pillar", async () => {
+describe("data/comments.js (Phase 5 subcollection rewrite)", () => {
+  it("listComments filters subcollection by pillarId", async () => {
     const cs = await listComments("o1", "p1");
-    expect(cs).toEqual([{ id: "c1", body: "hi" }]);
+    expect(cs.length).toBe(1);
+    expect(cs[0].id).toBe("c1");
+    expect(cs[0].body).toBe("hi");
   });
 
-  it("listComments returns [] when no comments for that pillar", async () => {
+  it("listComments returns [] when no comments match the pillar", async () => {
     const cs = await listComments("o1", "p999");
     expect(cs).toEqual([]);
   });
 
-  it("addComment appends to the org's comments map", async () => {
-    await addComment("o1", "p1", { id: "c2", body: "hello" });
+  it("addComment writes to subcollection with createdAt: serverTimestamp() and legacyAuthorId", async () => {
+    await addComment("o1", "p1", { authorId: "u_c", body: "hello" });
     const cs = await listComments("o1", "p1");
-    expect(cs.find((/** @type {any} */ c) => c.id === "c2")).toBeTruthy();
+    const added = cs.find((/** @type {any} */ c) => c.body === "hello");
+    expect(added).toBeTruthy();
+    expect(added.authorId).toBe("u_c");
+    expect(added.legacyAuthorId).toBe("u_c");
+    expect(added.createdAt).toEqual({ __serverTimestamp: true });
   });
 
-  it("deleteComment removes the matching comment by id", async () => {
+  it("deleteComment removes the matching subcollection doc by id", async () => {
     await deleteComment("o1", "p1", "c1");
     const cs = await listComments("o1", "p1");
     expect(cs.find((/** @type {any} */ c) => c.id === "c1")).toBeFalsy();
-  });
-
-  it("addComment is a no-op when the org is missing", async () => {
-    // Should not throw
-    await addComment("missing-org", "p1", { id: "x", body: "x" });
   });
 });

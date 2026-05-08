@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-08T19:58:05.899Z"
+last_updated: "2026-05-08T20:19:12.198Z"
 progress:
   total_phases: 12
   completed_phases: 5
@@ -27,7 +27,7 @@ progress:
 Client diagnostic data must remain confidential, intact, and recoverable — and BeDeveloped must be able to honestly answer a prospect's security questionnaire about how that's enforced.
 
 **Current focus:**
-Phase 5 closed 2026-05-08 — 6/6 plans executed across 6 sequential waves; verifier 6/6 SC + 15/15 requirements PASS; 65 files / 454 unit tests + 176/176 rules tests green. Cutover executed against bedeveloped-base-layers production by business@bedeveloped.com. Empty-database no-op outcome (PROJECT.md "between client engagements" baseline) + 6-doc stray-cleanup deviation accepted. RULES-06 holds symmetrically (repo grep + Firebase Console latest deployed Apr 27, 2026 — predates Phase 5). 1 item deferred to Phase 6 in 05-HUMAN-UAT.md (live SC#4 clock-skew exercise — degenerate against empty DB). Phase 6 (Real Auth + MFA + Rules Deploy) unblocked. Phase 4 sub-wave 4.1 (main.js-body-migration) still queued.
+Phase 06 — real-auth-mfa-rules-deploy
 
 **Compliance bar:** credible, **not** certified. Certification is a separate workstream.
 
@@ -35,8 +35,9 @@ Phase 5 closed 2026-05-08 — 6/6 plans executed across 6 sequential waves; veri
 
 ## Current Position
 
-Phase: 5 — COMPLETE (6/6 plans across 6 sequential waves: rules infra → migration script → data/* wrappers → H7+H8 closures → cutover runbook + production execution → SECURITY.md + cleanup ledger; verifier 6/6 SC + 15/15 requirements PASS at substrate level; 1 item deferred to Phase 6 via 05-HUMAN-UAT.md)
-**Status:** Ready to execute
+Phase: 06 (real-auth-mfa-rules-deploy) — EXECUTING
+Plan: 1 of 6
+**Status:** Executing Phase 06
 **Progress:** 5/12 phases complete
 
 ```

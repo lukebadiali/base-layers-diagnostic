@@ -121,8 +121,11 @@ export default [
 
   // Tests run under Node (vitest); declare Node globals so schema tests like
   // tests/firebase-config.test.js (which calls process.cwd()) lint clean.
+  // Phase 5 Wave 2 (05-02): also covers scripts/**/*.js — the migration
+  // script (scripts/migrate-subcollections/run.js) is a Node entry point
+  // using process.exitCode + console + Buffer-style APIs.
   {
-    files: ["tests/**/*.js"],
+    files: ["tests/**/*.js", "scripts/**/*.js"],
     languageOptions: {
       globals: {
         process: "readonly",

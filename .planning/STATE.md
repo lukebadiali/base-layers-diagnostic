@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute Phase 5
-last_updated: "2026-05-08T10:30:00.000Z"
+status: Phase 5 in progress — Waves 1-5 author portion complete, Wave 5 operator cutover pending
+last_updated: "2026-05-08T13:00:00.000Z"
 progress:
   total_phases: 12
   completed_phases: 4
-  total_plans: 30
-  completed_plans: 24
-  percent: 80
+  total_plans: 36
+  completed_plans: 29
+  percent: 80.5
 ---
 
 # State: Base Layers Diagnostic — Hardening Pass
 
 **Initialized:** 2026-05-03
-**Last updated:** 2026-05-08 — Phase 5 PLANNED (6 plans across 6 waves; checker passed iteration 2; ready to execute)
+**Last updated:** 2026-05-08 — Phase 5 IN PROGRESS — Waves 1-5 (author portion) complete; Wave 5 operator cutover (gcloud export + dry-run + real migration) pending; Wave 6 (SECURITY.md + cleanup ledger) blocked on cutover
 
 ---
 
@@ -27,7 +27,7 @@ progress:
 Client diagnostic data must remain confidential, intact, and recoverable — and BeDeveloped must be able to honestly answer a prospect's security questionnaire about how that's enforced.
 
 **Current focus:**
-Phase 5 — Firestore Data Model Migration + Rules Authoring (Committed, Not Deployed). Phase 4 closed 2026-05-07 with sub-wave 4.1 queued (main.js-body-migration; closes 16 documented carryover items including @ts-nocheck on src/main.js, 132 static `style="..."` strings, window.FB/Chart bridges, coverage threshold misses).
+Phase 5 — Firestore Data Model Migration + Rules Authoring (Committed, Not Deployed). Wave 1 (rules + 5 emulator-backed test files), Wave 2 (migration script + builders + idempotency tests), Wave 3 (6 data/* wrappers rewritten onto subcollection paths + read-states.js), Wave 4 (H7 server-time comparator + H8 cloud-sync atomicity, 2 atomic commits per Pitfall 20), and Wave 5 author portion (runbook + 05-PREFLIGHT.md skeleton + dry-run-output.log placeholder) all merged to main. **454/454 unit tests + 176/176 rules tests green.** Wave 5 operator cutover pending (operator runs gcloud firestore export → dry-run → real migration → post-verification per runbooks/phase5-subcollection-migration.md). Phase 4 sub-wave 4.1 (main.js-body-migration) still queued.
 
 **Compliance bar:** credible, **not** certified. Certification is a separate workstream.
 
@@ -35,17 +35,17 @@ Phase 5 — Firestore Data Model Migration + Rules Authoring (Committed, Not Dep
 
 ## Current Position
 
-Phase: 5 — PLANNED (Firestore Data Model Migration + Rules Authoring — 6 plans created across 6 waves: rules infra, migration script, wrapper rewrites, H7+H8 fixes, cutover, cleanup; plan-checker passed iteration 2; CONTEXT.md + RESEARCH.md + PATTERNS.md + VALIDATION.md all committed)
-**Status:** Ready to execute Phase 5
-**Progress:** 4/12 phases complete (Phase 5 planned, not yet executed)
+Phase: 5 — IN PROGRESS (Wave 1: ✓ rules infra; Wave 2: ✓ migration script; Wave 3: ✓ data/* wrappers; Wave 4: ✓ H7+H8 closures; Wave 5 author: ✓ runbook + PREFLIGHT; Wave 5 operator cutover: ⏸ pending; Wave 6: blocked on cutover)
+**Status:** Phase 5 paused mid-execution — operator cutover required before Wave 6
+**Progress:** 4/12 phases complete; Phase 5 ≈ 83% complete (5/6 waves)
 
 ```
 [######..........] 33%
  1  2  3  4  5  6  7  8  9 10 11 12
- ✓  ✓  ✓  ✓  .  .  .  .  .  .  .  .
+ ✓  ✓  ✓  ✓  ▶  .  .  .  .  .  .  .
 ```
 
-**Next action:** `/gsd-execute-phase 5` (recommended — 6 plans verified and committed; clear context first).
+**Next action:** Operator runs `runbooks/phase5-subcollection-migration.md` against production: (1) `gcloud firestore export gs://bedeveloped-base-layers-backups/pre-phase5-migration/$ISO/`, (2) `node scripts/migrate-subcollections/run.js --dry-run` then commit dry-run-output.log, (3) `node scripts/migrate-subcollections/run.js` (real migration), (4) post-verification, (5) fill `05-PREFLIGHT.md` PENDING-USER markers and commit. Then `/gsd-execute-phase 5` to continue Wave 6.
 
 **Phase 4 deliverables (locked 2026-05-07):**
 

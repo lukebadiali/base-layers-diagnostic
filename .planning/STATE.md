@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to discuss/plan Phase 5
-last_updated: "2026-05-08T08:05:07.704Z"
+status: Ready to execute Phase 5
+last_updated: "2026-05-08T10:30:00.000Z"
 progress:
   total_phases: 12
   completed_phases: 4
-  total_plans: 24
+  total_plans: 30
   completed_plans: 24
-  percent: 100
+  percent: 80
 ---
 
 # State: Base Layers Diagnostic — Hardening Pass
 
 **Initialized:** 2026-05-03
-**Last updated:** 2026-05-07 — Phase 4 COMPLETE (6/6 plans executed; verifier 4/4 SC + 14/14 requirements; 3 UI smoke checks deferred to 04-HUMAN-UAT.md; sub-wave queued as 4.1 for IIFE body migration)
+**Last updated:** 2026-05-08 — Phase 5 PLANNED (6 plans across 6 waves; checker passed iteration 2; ready to execute)
 
 ---
 
@@ -35,9 +35,9 @@ Phase 5 — Firestore Data Model Migration + Rules Authoring (Committed, Not Dep
 
 ## Current Position
 
-Phase: 4 — COMPLETE (Modular Split + Quick Wins — 6/6 plans executed across 6 sequential waves; verifier 4/4 ROADMAP success criteria + 14/14 requirements; 376/376 tests pass; typecheck/lint/build clean; snapshot baselines zero diff; 3 UI smoke checks deferred to 04-HUMAN-UAT.md; deviation cluster operator-approved as queued sub-wave 4.1)
-**Status:** Ready to discuss/plan Phase 5
-**Progress:** 4/12 phases complete
+Phase: 5 — PLANNED (Firestore Data Model Migration + Rules Authoring — 6 plans created across 6 waves: rules infra, migration script, wrapper rewrites, H7+H8 fixes, cutover, cleanup; plan-checker passed iteration 2; CONTEXT.md + RESEARCH.md + PATTERNS.md + VALIDATION.md all committed)
+**Status:** Ready to execute Phase 5
+**Progress:** 4/12 phases complete (Phase 5 planned, not yet executed)
 
 ```
 [######..........] 33%
@@ -45,7 +45,7 @@ Phase: 4 — COMPLETE (Modular Split + Quick Wins — 6/6 plans executed across 
  ✓  ✓  ✓  ✓  .  .  .  .  .  .  .  .
 ```
 
-**Next action:** `/gsd-discuss-phase 5` (recommended — Phase 5 has no CONTEXT.md yet) or `/gsd-plan-phase 5`.
+**Next action:** `/gsd-execute-phase 5` (recommended — 6 plans verified and committed; clear context first).
 
 **Phase 4 deliverables (locked 2026-05-07):**
 

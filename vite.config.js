@@ -31,6 +31,16 @@ export default defineConfig({
     environment: "happy-dom",
     setupFiles: ["./tests/setup.js"],
     globals: false,
+    // Phase 5 Wave 1 (05-01): the rules suite runs under `vitest.rules.config.js`
+    // with environment: "node" + emulator-bound. Excluding it from the default
+    // unit suite so `npm test` doesn't try to run rules tests in happy-dom
+    // without the Firestore + Storage emulators.
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/.git/**",
+      "tests/rules/**",
+    ],
     coverage: {
       provider: "v8",
       reportsDirectory: "coverage",

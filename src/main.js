@@ -94,9 +94,9 @@ import {
 import {
   unreadCountForPillar as _unreadCountForPillar,
   unreadCountTotal as _unreadCountTotal,
-  markPillarRead as _markPillarRead,
   unreadChatTotal as _unreadChatTotal,
 } from "./domain/unread.js";
+import { setPillarRead } from "./data/read-states.js";
 import {
   migrateV1IfNeeded as _migrateV1IfNeeded,
   clearOldScaleResponsesIfNeeded as _clearOldScaleResponsesIfNeeded,
@@ -393,18 +393,58 @@ import {
   // Phase 2 Wave 3 (D-05): wrappers for completion + unread (Pattern E).
   // Bodies extracted to src/domain/completion.js + src/domain/unread.js.
   // userCompletionPct + orgSummary inject DATA + pillarScore; unread wrappers
-  // inject saveOrg / commentsFor / state / lastReadMillis / msgMillis / unreadChatForOrg
+  // inject saveOrg / commentsFor / state / lastReadMillis / msgMillis
   // (all defined later in the IIFE — safe because wrappers resolve those names
   // at call time, by which point they exist in scope).
   const userCompletionPct = (org, roundId, userId) =>
     _userCompletionPct(org, roundId, userId, DATA);
   const orgSummary = (org) => _orgSummary(org, DATA, pillarScore);
-  const unreadCountForPillar = (org, pillarId, user) =>
-    _unreadCountForPillar(org, pillarId, user, commentsFor);
-  const unreadCountTotal = (org, user) => _unreadCountTotal(org, user, DATA, commentsFor);
-  const markPillarRead = (org, pillarId, user) => _markPillarRead(org, pillarId, user, saveOrg);
-  const unreadChatTotal = (user) =>
-    _unreadChatTotal(user, state, lastReadMillis, msgMillis, unreadChatForOrg);
+  // Phase 5 Wave 4 (DATA-07 / H7 fix): the domain comparators were rewritten
+  // to consume server-time Timestamp values via duck-typed toMillis(). The
+  // IIFE here still works against the legacy parent-doc readStates (ISO
+  // strings) + state.chatMessages (mixed ISO/Timestamp via msgMillis); the
+  // wrappers below adapt those legacy shapes to the new Timestamp-shaped
+  // signatures so the IIFE boot path keeps rendering. The Phase 4 4.1
+  // main.js-body-migration sub-wave migrates these IIFE-resident render
+  // functions into views/* (Pattern D DI factories) which read directly
+  // from data/read-states.js + data/comments.js + data/messages.js (server-
+  // time Timestamp natives) and these wrappers retire.
+  /** @param {string|null|undefined} iso */
+  const _toTsFromIso = (iso) => iso ? { toMillis: () => Date.parse(iso) || 0 } : null;
+  /** @param {{ createdAt?: * }} c */
+  const _toCommentDuck = (c) => {
+    if (!c || !c.createdAt) return c;
+    if (typeof c.createdAt === "object" && typeof c.createdAt.toMillis === "function") return c;
+    return { ...c, createdAt: { toMillis: () => new Date(c.createdAt).getTime() || 0 } };
+  };
+  const unreadCountForPillar = (org, pillarId, user) => {
+    const lastIso = ((org.readStates || {})[user.id] || {})[pillarId];
+    const list = commentsFor(org, pillarId, user).map(_toCommentDuck);
+    return _unreadCountForPillar(_toTsFromIso(lastIso), list, user.id);
+  };
+  const unreadCountTotal = (org, user) => {
+    /** @type {Record<string, *>} */
+    const pillarReads = {};
+    /** @type {Record<string, Array<*>>} */
+    const commentsByPillar = {};
+    const userReads = (org.readStates || {})[user.id] || {};
+    for (const p of DATA.pillars) {
+      pillarReads[String(p.id)] = _toTsFromIso(userReads[p.id]);
+      commentsByPillar[String(p.id)] = commentsFor(org, p.id, user).map(_toCommentDuck);
+    }
+    return _unreadCountTotal(pillarReads, commentsByPillar, user.id, DATA.pillars);
+  };
+  const unreadChatTotal = (user) => {
+    if (!user) return 0;
+    const messages = (state.chatMessages || []).map((m) => {
+      if (m && m.createdAt && typeof m.createdAt === "object" && typeof m.createdAt.toMillis === "function") return m;
+      return { ...m, createdAt: { toMillis: () => msgMillis(m) } };
+    });
+    /** @param {string} orgId */
+    const lastReadForOrg = (orgId) => ({ toMillis: () => lastReadMillis(user.id, orgId) });
+    return _unreadChatTotal(user, messages, lastReadForOrg);
+  };
+  // The legacy per-org client unread helper was deleted (caller migrated to
 
   // Phase 2 Wave 4 (D-05): wrappers for migration helpers (Pattern E).
   // Bodies extracted to src/data/migration.js.
@@ -459,7 +499,13 @@ import {
     return list;
   }
 
-  // Phase 2 (D-05): unreadCountForPillar, unreadCountTotal, markPillarRead extracted to src/domain/unread.js — wrappers above.
+  // Phase 2 (D-05): unreadCountForPillar, unreadCountTotal extracted to src/domain/unread.js — wrappers above.
+  // Phase 5 Wave 4 (DATA-07 / H7 fix): the legacy domain-side write helper
+  // was DELETED from src/domain/unread.js; its callsite at line 1739 is rewired
+  // to setPillarRead from data/read-states.js (server-clock write via
+  // serverTimestamp). The IIFE wrappers above for unreadCountForPillar /
+  // unreadCountTotal / unreadChatTotal still consume the OLD signatures; they
+  // migrate in the Phase 4 4.1 main.js-body-migration sub-wave.
 
   // ---------- Auth ----------
   function currentSession() {
@@ -497,13 +543,11 @@ import {
   function msgMillis(msg) {
     return msg.createdAt?.toMillis?.() || (msg.createdAt ? new Date(msg.createdAt).getTime() : 0);
   }
-  function unreadChatForOrg(user, orgId) {
-    if (!user || !orgId) return 0;
-    const lastT = lastReadMillis(user.id, orgId);
-    return (state.chatMessages || []).filter(
-      (m) => m.orgId === orgId && m.authorId !== user.id && msgMillis(m) > lastT,
-    ).length;
-  }
+  // Phase 5 Wave 4 (DATA-07 / H7 fix): unreadChatForOrg deleted - the only
+  // caller was the IIFE unreadChatTotal wrapper, which now routes through
+  // the new server-time domain comparator (_unreadChatTotal) via the
+  // lastReadForOrg accessor. The per-org client unread count flows through
+  // the same domain function path now.
   // Phase 2 (D-05): unreadChatTotal extracted to src/domain/unread.js — wrapper above.
 
   function stopChatSubscription() {
@@ -1735,8 +1779,8 @@ import {
     const p = DATA.pillars.find((x) => x.id === pillarId);
     if (!p) return h("div", {}, "Pillar not found.");
 
-    // mark comments read on load
-    markPillarRead(org, pillarId, user);
+    // mark comments read on load (Phase 5 Wave 4 H7 fix: server-clock write via setPillarRead)
+    void setPillarRead(org.id, user.id, pillarId);
 
     const s = pillarScore(org, p.id);
     const status = pillarStatus(s);

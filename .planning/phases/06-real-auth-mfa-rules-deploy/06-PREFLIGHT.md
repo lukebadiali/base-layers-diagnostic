@@ -276,6 +276,38 @@ placeholder OK
 
 ---
 
+## Wave 5 D-12 substrate adjustment (deviation captured 2026-05-09T13:30:00Z)
+
+**Discovered before Step 1 of cutover.** The original D-12 design assumed the Phase 3 CI deploy job redeploys `firestore.rules` + `storage.rules` on every push to main. Reading `.github/workflows/ci.yml:189-192` showed the actual deploy command is:
+
+```yaml
+npx firebase-tools@15.16.0 deploy \
+  --only hosting,functions \
+  --project bedeveloped-base-layers \
+  --non-interactive
+```
+
+Rules are not in the `--only` list — Phase 3 set up CI to deploy hosting+functions only. D-12's "5-minute rollback via `git revert + push`" substrate therefore did not actually exist at Wave 5 start. Caught before any production state changed.
+
+**Resolution chosen (decided 2026-05-09T13:30:00Z): Option A — extend CI deploy to include rules.** The cutover commit (Step 8 in `runbooks/phase6-cutover.md`) will include a single-line edit to `ci.yml` adding `firestore:rules,storage:rules` to the `--only` list, atomic with the AUTH-14 deletions per D-04. The push of that commit IS the rules deploy. From that commit onward, the D-12 substrate works as designed: `git revert <cutover-sha> && git push` triggers CI which redeploys whatever rules are at the parent commit.
+
+**Step 1 rehearsal procedure adjusted:** Because CI does not yet include rules, the pre-cutover rehearsal cannot use the `git revert + push + watch CI` loop in `runbooks/phase6-cutover.md` Step 1 verbatim. Substituted with a manual local `firebase deploy --only firestore:rules,storage:rules` rehearsal that exercises the same effect (production rules can be flipped quickly) using a different mechanism. Procedure:
+
+1. Deploy current main rules to production: `firebase deploy --only firestore:rules,storage:rules --project bedeveloped-base-layers` (T0 timestamp).
+2. Switch worktree to a pre-Phase-5 SHA's rules: `git show <pre-phase-5-sha>:firestore.rules > firestore.rules; git show <pre-phase-5-sha>:storage.rules > storage.rules`.
+3. Deploy reverted rules: same `firebase deploy --only firestore:rules,storage:rules` (T1 timestamp).
+4. Verify rules reverted in Firebase Console.
+5. Restore current rules from main: `git checkout HEAD -- firestore.rules storage.rules`.
+6. Re-deploy current rules: same `firebase deploy --only firestore:rules,storage:rules` (T2 timestamp).
+7. Total elapsed time = T2 − T0; SC#4 target < 5 minutes.
+
+The rehearsal proves the operator can flip rules in <5min via local CLI; the post-cutover production rollback uses the CI substrate. Both paths are now load-bearing and operator should know both. Captured for runbook update post-cutover.
+
+**Runbook update deferred to post-cutover.** `runbooks/phase6-cutover.md` Step 1 + Step 8 are not edited mid-cutover. The actual procedure executed for this phase is the procedure above; the runbook will be reconciled to match in Step 12 or as a Wave 6 documentation task.
+
+---
+
 *Phase: 06-real-auth-mfa-rules-deploy*
 *Plan: 06-01 (Wave 1 — Pre-flight Verifications)*
 *Authored: 2026-05-08T20:21:52Z*
+*Updated: 2026-05-09T13:30:00Z (D-12 substrate adjustment captured)*

@@ -10,6 +10,15 @@
 // reconsider — see runbooks/phase-6-cleanup-ledger.md (Wave 6 deliverable).
 // Phase 7 (TEST-09) adds firebase-functions-test integration coverage; Phase 6
 // unit-tests claim-builder.ts only (the pure-logic seam this module calls).
+//
+// Phase 7 Wave 5 (Branch B substrate-honest fallback): minInstances:1
+// restoration + cold-start p99 measurement DEFERRED to sub-wave 7.1 because
+// the D-22 ToS gate (firebaseauth.googleapis.com) is still operator-deferred
+// — the IdP signs blocking-handler invocations as `gcp-sa-firebaseauth` SA
+// which doesn't yet exist on the project. Restoring minInstances now is
+// pointless because the trigger can't be invoked until the SA + invoker
+// bindings + IdP `blockingFunctions.triggers` URLs are restored. See
+// `runbooks/phase-7-d22-tos-gate-resolution.md` for resolution path.
 
 import { beforeUserCreated } from "firebase-functions/v2/identity";
 import { logger } from "firebase-functions/logger";

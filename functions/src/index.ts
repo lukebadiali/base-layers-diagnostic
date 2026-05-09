@@ -8,3 +8,6 @@ export { beforeUserCreatedHandler } from "./auth/beforeUserCreated.js";
 export { beforeUserSignedInHandler } from "./auth/beforeUserSignedIn.js";
 export { setClaims } from "./auth/setClaims.js";
 export { auditWrite } from "./audit/auditWrite.js";
+export { onOrgDelete } from "./audit/triggers/onOrgDelete.js";
+export { onUserDelete } from "./audit/triggers/onUserDelete.js";
+export { onDocumentDelete } from "./audit/triggers/onDocumentDelete.js";

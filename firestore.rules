@@ -26,6 +26,22 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
 
+    // ── Rate-limit predicates (FN-09 / Pitfall 9 / Phase 7 Wave 4) ────
+    // 60-second buckets keyed off request.time (server-controlled timestamp).
+    // Returns the windowStart as a string so it composes with bucket doc ids.
+    function rateLimitWindow() {
+      return string(int(request.time.toMillis() / 60000) * 60000);
+    }
+    // Composed into messages + comments create predicates. Allows the write
+    // IF either no bucket exists for the current window, OR the current
+    // bucket count is < 30. Costs 1 Firestore get() per evaluation
+    // (Pitfall 4 — single-get budget). MUST be the LAST conjunct so the
+    // cheap predicates (inOrg, authorId == uid) short-circuit first.
+    function rateLimitOk(uid) {
+      return !exists(/databases/$(database)/documents/rateLimits/$(uid)/buckets/$(rateLimitWindow()))
+        || get(/databases/$(database)/documents/rateLimits/$(uid)/buckets/$(rateLimitWindow())).data.count < 30;
+    }
+
     // ── orgs/{orgId} parent doc ───────────────────────────────────────
     match /orgs/{orgId} {
       allow read:   if inOrg(orgId) && notDeleted(resource.data);
@@ -47,12 +63,13 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // ── comments subcollection ──────────────────────────────────────
+      // ── comments subcollection (FN-09 rate-limit composed at create) ─
       match /comments/{cmtId} {
         allow read:   if inOrg(orgId)
                       && (!("internalOnly" in resource.data) || !resource.data.internalOnly || isInternal());
         allow create: if inOrg(orgId)
-                      && request.resource.data.authorId == request.auth.uid;
+                      && request.resource.data.authorId == request.auth.uid
+                      && rateLimitOk(request.auth.uid);
         allow update: if false;
         allow delete: if false;
       }
@@ -76,11 +93,12 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // ── messages subcollection (H8 fix lands in Wave 4) ─────────────
+      // ── messages subcollection (FN-09 rate-limit composed at create) ─
       match /messages/{msgId} {
         allow read:   if inOrg(orgId);
         allow create: if inOrg(orgId)
-                      && request.resource.data.authorId == request.auth.uid;
+                      && request.resource.data.authorId == request.auth.uid
+                      && rateLimitOk(request.auth.uid);
         allow update: if false;
         allow delete: if false;
       }
@@ -122,9 +140,23 @@ service cloud.firestore {
       allow write: if false;       // server-only (Phase 8)
     }
 
-    // ── rateLimits (D-17: deny-all in Phase 5; FN-09 replaces in Phase 7) ─
+    // ── rateLimits (FN-09 — replaces Phase 5 D-17 deny-block; Phase 7 W4) ─
+    // Per-uid 60s sliding-window bucket. Self-readable for UI affordance
+    // ("you've sent N/30"). Create requires count==1 + windowStart matches
+    // server's current window. Update enforces monotonic +1 with hard cap 30.
+    // Delete forbidden — buckets age out via scheduled cleanup (Phase 8+).
     match /rateLimits/{uid}/buckets/{windowStart} {
-      allow read, write: if false;
+      allow read:   if isAuthed() && request.auth.uid == uid;
+      allow create: if isAuthed() && request.auth.uid == uid
+                    && windowStart == rateLimitWindow()
+                    && request.resource.data.uid == uid
+                    && request.resource.data.count == 1;
+      allow update: if isAuthed() && request.auth.uid == uid
+                    && immutable("uid")
+                    && windowStart == rateLimitWindow()
+                    && request.resource.data.count == resource.data.count + 1
+                    && request.resource.data.count <= 30;
+      allow delete: if false;
     }
 
     // ── roadmaps/{orgId} (top-level per ARCHITECTURE.md §4) ──────────

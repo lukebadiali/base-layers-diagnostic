@@ -240,9 +240,14 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-      - uses: FirebaseExtended/action-hosting-deploy@e2eda2e106cfa35cdbcf4ac9ddaf6c4756df2c8c # v0.10.0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          projectId: bedeveloped-base-layers
-          channelId: pr-${{ github.event.pull_request.number }}
-          expires: 7d
+      # Phase 6 Wave 5 (cutover-CI-fix): action-hosting-deploy@v0.10.0 requires a
+      # `firebaseServiceAccount` JSON key input and does not natively consume WIF
+      # credentials. Use raw firebase-tools instead — same mechanism as the main
+      # Deploy to Firebase Hosting job, proven WIF-compatible because google-
+      # github-actions/auth has already populated GOOGLE_APPLICATION_CREDENTIALS.
+      - name: Deploy to PR preview channel
+        run: |
+          npx firebase-tools@15.16.0 hosting:channel:deploy pr-${{ github.event.pull_request.number }} \
+            --project bedeveloped-base-layers \
+            --expires 7d \
+            --non-interactive

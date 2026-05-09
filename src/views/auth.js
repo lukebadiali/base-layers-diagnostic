@@ -40,8 +40,7 @@ import { h as defaultH } from "../ui/dom.js";
  */
 export function createAuthView(deps) {
   const h = deps.h || defaultH;
-  const notify =
-    deps.notify || ((/** @type {string} */ _l, /** @type {string} */ _m) => {});
+  const notify = deps.notify || ((/** @type {string} */ _l, /** @type {string} */ _m) => {});
 
   function renderSignIn() {
     const wrap = h("div", { class: "auth-wrap auth-sign-in" });
@@ -61,16 +60,8 @@ export function createAuthView(deps) {
       placeholder: "Password",
     });
     const submit = h("button", { type: "submit" }, "Sign in");
-    const reset = h(
-      "button",
-      { type: "button", class: "auth-reset-link" },
-      "Forgot password?",
-    );
-    const forgotMfa = h(
-      "button",
-      { type: "button", class: "auth-forgot-mfa-link" },
-      "Forgot 2FA?",
-    );
+    const reset = h("button", { type: "button", class: "auth-reset-link" }, "Forgot password?");
+    const forgotMfa = h("button", { type: "button", class: "auth-forgot-mfa-link" }, "Forgot 2FA?");
     form.appendChild(email);
     form.appendChild(password);
     form.appendChild(submit);
@@ -81,20 +72,15 @@ export function createAuthView(deps) {
       const emailVal = /** @type {HTMLInputElement} */ (email).value;
       const passVal = /** @type {HTMLInputElement} */ (password).value;
       try {
-        if (deps.signInEmailPassword)
-          await deps.signInEmailPassword(emailVal, passVal);
+        if (deps.signInEmailPassword) await deps.signInEmailPassword(emailVal, passVal);
       } catch (err) {
-        notify(
-          "error",
-          (err && /** @type {*} */ (err).message) || "Sign-in failed",
-        );
+        notify("error", (err && /** @type {*} */ (err).message) || "Sign-in failed");
       }
     });
     reset.addEventListener("click", async () => {
       const emailVal = /** @type {HTMLInputElement} */ (email).value;
       try {
-        if (deps.sendPasswordResetEmail && emailVal)
-          await deps.sendPasswordResetEmail(emailVal);
+        if (deps.sendPasswordResetEmail && emailVal) await deps.sendPasswordResetEmail(emailVal);
       } catch (_err) {
         /* swallow - D-15 generic-success */
       }
@@ -149,13 +135,24 @@ export function createAuthView(deps) {
       try {
         if (deps.updatePassword) await deps.updatePassword(a);
       } catch (err) {
-        notify(
-          "error",
-          (err && /** @type {*} */ (err).message) || "Password update failed",
-        );
+        notify("error", (err && /** @type {*} */ (err).message) || "Password update failed");
       }
     });
     wrap.appendChild(form);
+    // Phase 6 Wave 5 cutover-recovery (2026-05-09): escape hatch on the
+    // firstRun screen for cases where the post-password setClaims wiring
+    // hasn't flipped firstRun:true → false yet (BLOCKER-FIX 1 carry-forward).
+    // Without this, an admin who lands here after a stale session has no UI
+    // path off the screen.
+    const signOutBtn = h("button", { type: "button", class: "auth-sign-out-link" }, "Sign out");
+    signOutBtn.addEventListener("click", async () => {
+      try {
+        if (deps.signOut) await deps.signOut();
+      } catch (err) {
+        notify("error", (err && /** @type {*} */ (err).message) || "Sign out failed");
+      }
+    });
+    wrap.appendChild(signOutBtn);
     return wrap;
   }
 
@@ -170,8 +167,7 @@ export function createAuthView(deps) {
       ),
     );
     const qr = h("img", { class: "qr-code", alt: "TOTP enrolment QR code" });
-    if (deps.qrcodeDataUrl)
-      /** @type {HTMLImageElement} */ (qr).src = deps.qrcodeDataUrl;
+    if (deps.qrcodeDataUrl) /** @type {HTMLImageElement} */ (qr).src = deps.qrcodeDataUrl;
     wrap.appendChild(qr);
     const form = h("form", { class: "auth-form", method: "post" });
     const code = h("input", {
@@ -191,10 +187,7 @@ export function createAuthView(deps) {
       try {
         if (deps.enrollTotp) await deps.enrollTotp(codeVal);
       } catch (err) {
-        notify(
-          "error",
-          (err && /** @type {*} */ (err).message) || "Verification failed",
-        );
+        notify("error", (err && /** @type {*} */ (err).message) || "Verification failed");
       }
     });
     wrap.appendChild(form);
@@ -205,11 +198,7 @@ export function createAuthView(deps) {
     const wrap = h("div", { class: "auth-wrap auth-email-verification" });
     wrap.appendChild(h("h2", {}, "Check your email"));
     wrap.appendChild(
-      h(
-        "p",
-        {},
-        "We have sent a verification link to your inbox. Click the link to continue.",
-      ),
+      h("p", {}, "We have sent a verification link to your inbox. Click the link to continue."),
     );
     const resend = h(
       "button",
@@ -263,9 +252,7 @@ export function createAuthView(deps) {
             window.localStorage.setItem("emailForSignIn", emailVal);
           }
           await deps.sendSignInLinkToEmail(emailVal, {
-            url:
-              (typeof window !== "undefined" ? window.location.origin : "") +
-              "/?mfaRecovery=1",
+            url: (typeof window !== "undefined" ? window.location.origin : "") + "/?mfaRecovery=1",
             handleCodeInApp: true,
           });
         }
@@ -286,10 +273,7 @@ export function createAuthView(deps) {
     confirm.addEventListener("click", async () => {
       try {
         if (deps.unenrollAllMfa) await deps.unenrollAllMfa();
-        notify(
-          "info",
-          "2FA un-enrolled. You will now be asked to set up a fresh authenticator.",
-        );
+        notify("info", "2FA un-enrolled. You will now be asked to set up a fresh authenticator.");
         if (deps.routeToMfaEnrol) deps.routeToMfaEnrol();
       } catch (_err) {
         notify(

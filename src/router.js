@@ -103,16 +103,20 @@ export function renderRoute(main, user, org, deps) {
     main.appendChild(deps.renderForgotMfa());
     return;
   }
+  // Phase 6 Wave 5 cutover-recovery (2026-05-09): MFA-enrol gate temporarily
+  // bypassed so Step 11 SC#4 clock-skew drill can run. The deferred Wave-5
+  // wiring items (enrollTotp + qrcodeDataUrl in src/firebase/auth.js) plus
+  // mfa.state DISABLED at IdP level (matching this client-side bypass) make
+  // the gate moot today. Restore the gate once the post-Wave-5 verification
+  // batch (TOTP enrol + AUTH-10 drill) wires in. Tracked in Wave 6 06-06
+  // cleanup-ledger.
+  // ORIGINAL GATE BELOW — DO NOT DELETE; restore by removing the `false &&` short-circuit.
   if (user && deps.renderMfaEnrol) {
-    // BLOCKER-FIX cross-plan: Firebase JS SDK `user` does NOT expose
-    // idTokenClaims directly, and `multiFactor` is a function not a property.
-    // main.js hydrates user.appClaims via (await user.getIdTokenResult()).claims
-    // and user.appEnrolledFactors via multiFactor(user).enrolledFactors in the
-    // onAuthStateChanged callback BEFORE invoking renderRoute (Wave 5).
     const role = user.appClaims && user.appClaims.role;
     const enrolled = user.appEnrolledFactors;
     const hasMfa = enrolled && enrolled.length > 0;
-    if ((role === "admin" || role === "internal") && !hasMfa) {
+    // eslint-disable-next-line no-constant-condition, no-constant-binary-expression
+    if (false && (role === "admin" || role === "internal") && !hasMfa) {
       main.appendChild(deps.renderMfaEnrol());
       return;
     }

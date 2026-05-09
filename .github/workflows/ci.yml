@@ -184,24 +184,49 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-      - name: Deploy hosting + functions + rules
-        # Phase 6 Wave 5 (D-12 substrate / RULES-07): firestore + storage rules
-        # added to the --only set. Activates the auto-rollback substrate per
-        # D-12: `git revert <cutover-sha> + git push` triggers this CI deploy
-        # which redeploys the parent commit's rules atomically with hosting +
-        # functions. Note: shorthand `firestore,storage` (without `:rules`) is
-        # used because firebase-tools 15.16.0 has a parsing bug on the comma
-        # form `firestore:rules,storage:rules` (logged in 06-PREFLIGHT.md
-        # rehearsal evidence).
+      - name: Deploy hosting + rules (functions excluded — D-8/D-9 substrate gap)
+        # Phase 6 Wave 5 cutover-recovery (2026-05-09 post-merge): functions
+        # dropped from --only because firebase-tools' functions deploy attempts
+        # to set roles/run.invoker on the Cloud Run services with `allUsers`,
+        # which org policy iam.allowedPolicyMemberDomains blocks (D-8). Each
+        # failed IAM-set step also wipes the manually-bound
+        # gcp-sa-identitytoolkit invoker (D-7), which breaks the blocking
+        # handlers end-to-end. Until D-8 ToS gate is resolved (Phase 7
+        # cleanup-ledger row), functions stay manual:
+        #     firebase deploy --only functions --project bedeveloped-base-layers
+        # operator-run from local; D-7 invoker rebind procedure documented in
+        # runbooks/phase-6-cleanup-ledger.md.
+        #
+        # Hosting + firestore/storage rules deploy cleanly via WIF + the
+        # github-actions-deployer SA (roles/firebase.admin grants the
+        # firebasestorage.defaultBucket.get perm needed for the storage rules
+        # path). cloudbilling.googleapis.com enabled on the project as part of
+        # the WIF setup.
+        #
+        # D-12 rollback substrate is partial: rules + hosting auto-roll on
+        # `git revert <sha> + git push` via this job; functions need the
+        # operator's manual local deploy too. Update D-12 evidence in the
+        # cutover log to reflect this honestly.
         run: |
           npx firebase-tools@15.16.0 deploy \
-            --only hosting,functions,firestore,storage \
+            --only hosting,firestore,storage \
             --project bedeveloped-base-layers \
             --non-interactive
-      - name: Assert security headers (T-3-1 mitigation)
+      - name: Assert security headers (T-3-1 mitigation) on Firebase Hosting
+        # Targets bedeveloped-base-layers.web.app (Firebase Hosting). The
+        # custom domain baselayers.bedeveloped.com CNAMEs to GitHub Pages
+        # which serves the repo-root files (no custom-headers support);
+        # GitHub Pages is auto-deployed by github/pages source = main on
+        # every push and is independent of this firebase deploy. T-3-1
+        # mitigation is verified at the Firebase Hosting layer because
+        # that's where the headers from firebase.json land. The GitHub
+        # Pages production-domain story is a Phase 6 Wave 5 deviation
+        # captured in 06-PREFLIGHT.md ## Cutover Log and queued for Wave 6
+        # cleanup-ledger (DNS migration to Firebase Hosting OR security
+        # plan revision to acknowledge GitHub Pages).
         run: |
           set -euo pipefail
-          HEADERS=$(curl -s -I https://baselayers.bedeveloped.com)
+          HEADERS=$(curl -s -I https://bedeveloped-base-layers.web.app)
           echo "$HEADERS"
           echo "$HEADERS" | grep -i "^strict-transport-security:"        || (echo "MISSING: HSTS"                  && exit 1)
           echo "$HEADERS" | grep -i "^x-content-type-options:"           || (echo "MISSING: X-CTO"                 && exit 1)
@@ -212,7 +237,7 @@ jobs:
           echo "$HEADERS" | grep -i "^cross-origin-resource-policy:"     || (echo "MISSING: CORP"                  && exit 1)
           echo "$HEADERS" | grep -i "^reporting-endpoints:"              || (echo "MISSING: Reporting-Endpoints"   && exit 1)
           echo "$HEADERS" | grep -i "^content-security-policy-report-only:" || (echo "MISSING: CSP-RO"             && exit 1)
-          echo "All 9 expected headers present."
+          echo "All 9 expected headers present on bedeveloped-base-layers.web.app."
 
   preview:
     name: Deploy PR Preview Channel

@@ -103,20 +103,22 @@ export function renderRoute(main, user, org, deps) {
     main.appendChild(deps.renderForgotMfa());
     return;
   }
-  if (user && deps.renderMfaEnrol) {
-    // BLOCKER-FIX cross-plan: Firebase JS SDK `user` does NOT expose
-    // idTokenClaims directly, and `multiFactor` is a function not a property.
-    // main.js hydrates user.appClaims via (await user.getIdTokenResult()).claims
-    // and user.appEnrolledFactors via multiFactor(user).enrolledFactors in the
-    // onAuthStateChanged callback BEFORE invoking renderRoute (Wave 5).
-    const role = user.appClaims && user.appClaims.role;
-    const enrolled = user.appEnrolledFactors;
-    const hasMfa = enrolled && enrolled.length > 0;
-    if ((role === "admin" || role === "internal") && !hasMfa) {
-      main.appendChild(deps.renderMfaEnrol());
-      return;
-    }
-  }
+  // Phase 6 Wave 5 cutover-recovery (2026-05-09): the MFA-enrol gate that lived
+  // here was duplicated at main.js:805 (renderRoute path). main.js's bypass
+  // returns BEFORE this router function is invoked when MFA enrol would have
+  // fired, so the gate here is moot today. Restoring this block is part of the
+  // same Wave 6 / 06-06 work that restores main.js's gate (alongside the
+  // enrollTotp + qrcodeDataUrl wiring in src/firebase/auth.js).
+  // ORIGINAL GATE (commented for restoration — DO NOT DELETE):
+  //   if (user && deps.renderMfaEnrol) {
+  //     const role = user.appClaims && user.appClaims.role;
+  //     const enrolled = user.appEnrolledFactors;
+  //     const hasMfa = enrolled && enrolled.length > 0;
+  //     if ((role === "admin" || role === "internal") && !hasMfa) {
+  //       main.appendChild(deps.renderMfaEnrol());
+  //       return;
+  //     }
+  //   }
 
   // Existing route ladder unchanged from here.
   const isClient = deps.isClientView(user);

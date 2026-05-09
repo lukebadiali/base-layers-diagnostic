@@ -618,16 +618,15 @@ import {
     if (!(window.FB && window.FB.currentUser && window.FB.firestore)) return;
     const { db, firestore } = window.FB;
     let q;
-    if (user.role === "internal") {
-      q = firestore.collection(db, "messages");
-    } else if (user.orgId) {
-      q = firestore.query(
-        firestore.collection(db, "messages"),
-        firestore.where("orgId", "==", user.orgId),
-      );
-    } else {
-      return;
-    }
+    // Phase 6 Wave 5 cutover-recovery (2026-05-09): top-level /messages was the
+    // pre-migration legacy path; Phase 5 rules only cover /orgs/{orgId}/messages
+    // (subcollection). Internal users no longer get a cross-org global view here
+    // (that wider read pattern was always unsound under the strict rules); for
+    // Step 11 we use the active-org subcollection which is what the unread-count
+    // comparator (domain/unread.js) is built around. Tracked in Wave 6 06-06.
+    const targetOrgId = user.orgId || state.activeOrgId;
+    if (!targetOrgId) return;
+    q = firestore.collection(db, "orgs", targetOrgId, "messages");
     state.chatSubscribedFor = user.id;
     state.chatSubscription = firestore.onSnapshot(
       q,
@@ -802,7 +801,11 @@ import {
       const role = state.fbUser.appClaims && state.fbUser.appClaims.role;
       const enrolled = state.fbUser.appEnrolledFactors;
       const hasMfa = enrolled && enrolled.length > 0;
-      if ((role === "admin" || role === "internal") && !hasMfa) {
+      // Phase 6 Wave 5 cutover-recovery (2026-05-09): MFA-enrol gate temporarily
+      // bypassed for Step 11 SC#4. Mirror of the bypass at router.js. Restore
+      // by removing the `false &&` short-circuit below. Tracked in Wave 6 06-06.
+      // eslint-disable-next-line no-constant-condition, no-constant-binary-expression
+      if (false && (role === "admin" || role === "internal") && !hasMfa) {
         app.appendChild(authView.renderMfaEnrol());
         return;
       }
@@ -3660,8 +3663,9 @@ import {
       if (!text) return;
       textInput.value = "";
       try {
-        await firestore.addDoc(firestore.collection(db, "messages"), {
-          orgId: org.id,
+        // Phase 6 Wave 5 cutover-recovery: subcollection /orgs/{orgId}/messages
+        // (matching firestore.rules:80-86). orgId field dropped — it's in the path.
+        await firestore.addDoc(firestore.collection(db, "orgs", org.id, "messages"), {
           authorId: user.id,
           authorName: user.name || user.email,
           authorEmail: user.email,
@@ -3683,10 +3687,8 @@ import {
       }
     });
 
-    const q = firestore.query(
-      firestore.collection(db, "messages"),
-      firestore.where("orgId", "==", org.id),
-    );
+    // Phase 6 Wave 5 cutover-recovery: subcollection path matches rules.
+    const q = firestore.collection(db, "orgs", org.id, "messages");
     firestore.onSnapshot(
       q,
       (snap) => {

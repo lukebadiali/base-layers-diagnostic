@@ -678,6 +678,81 @@ Each row's evidence + test path is a direct verification of the control. A revie
 
 ---
 
+## § Authentication & Sessions
+
+Phase 6 Wave 5 cutover replaced the Anonymous-Auth-plus-hardcoded-password substrate with real Firebase Auth Email/Password identities. Every production user now signs in with email + password; ID tokens carry custom claims `{role, orgId}` set by the `beforeUserCreated` blocking Cloud Function (commit SHA recorded in 06-PREFLIGHT.md `## Cutover Log: rules_deploy_sha`).
+
+**passwordPolicy (AUTH-04):** ≥ 12 character minimum; HIBP leaked-password check enabled at the Identity Platform level (verified at Wave 1 preflight: `06-PREFLIGHT.md ## passwordPolicy`).
+
+**AUTH-12 unified-error wrapper (D-13):** `src/firebase/auth.js` exports `signInEmailPassword` which catches the Firebase auth-credential error codes (`auth/user-not-found`, `auth/wrong-password`, `auth/invalid-credential`, `auth/too-many-requests`, `auth/user-disabled`, `auth/invalid-email`, `auth/missing-password`, `auth/missing-email`) and re-throws a single `SignInError("Email or password incorrect")`. Account-enumeration mitigation per AUTH-12 + L1.
+
+**AUTH-13 progressive delay (D-21):** Firebase Auth's defaults handle account lockout / progressive delay server-side. Verification: cutover-day manual smoke test in `runbooks/phase6-cutover.md` Step 4 confirmed `auth/too-many-requests` is the eventual response after repeated failed attempts.
+
+**Bootstrap admins (AUTH-15):** Luke + George were operator-Console-created (D-05) with `internalAllowlist/{lowercaseEmail}` seeded first via `scripts/seed-internal-allowlist/run.js`. `beforeUserCreated` was intended to read the allowlist + set claims in the first ID token (Pitfall 6 mitigation #3 — no refresh dance). Both UIDs captured in 06-PREFLIGHT.md `## Cutover Log`. Cutover reality: Path B Admin SDK direct claim issuance was used because the IdP blocking-handler invocation path was broken at cutover time (D-22 substrate gap — `gcp-sa-firebaseauth` SA not provisioned because `firebaseauth.googleapis.com` API ToS-gated; resolution queued in `runbooks/phase-6-cleanup-ledger.md` Phase 7 row).
+
+**OOB temp-credential delivery (D-06):** Operator delivers temp credentials via secure channel of operator's standard practice; runbook does NOT prescribe channel. Tradeoff: operator-discretion on delivery method. Future invite flow (v2) will codify a single channel. Explicit deviation from Pitfall 7's "in-person side-by-side enrolment" recommendation.
+
+## § Multi-Factor Authentication
+
+Phase 6 Wave 5 Step 9 (TOTP enrolment) and Step 10 (AUTH-10 lockout drill) are deferred to an end-of-all-phases user-testing batch per operator instruction; the substrate to enrol (Firebase Identity Platform TOTP + admin un-enrol script `scripts/admin-mfa-unenroll/run.js`) ships in this phase, but the live drill data populates `runbooks/phase6-mfa-recovery-drill.md` when Luke + George run the same-session drill. AUTH-08 hard-enforced for `role: internal` users via router gates (gates temporarily short-circuited at cutover per D-27 to land Step 11 SC#4 — restoration queued in `runbooks/phase-6-cleanup-ledger.md` Phase 6 sub-wave 6.1 row alongside `enrollTotp + qrcodeDataUrl` wiring).
+
+**AUTH-09 SUPERSEDED (D-07):** The original AUTH-09 spec (10 hashed recovery codes generated at MFA enrolment, stored under `users/{uid}.recoveryCodeHashes[]`) was replaced 2026-05-08 by **email-link recovery**:
+
+- **Tier 1 (user-side, expected path):** user requests email-link sign-in via `sendSignInLinkToEmail` → re-authenticates via the link → un-enrols TOTP themselves via `multiFactor(currentUser).unenroll(...)` → re-enrols TOTP.
+- **Tier 2 (operator-side, fallback):** other admin runs `firebase auth:multifactor:unenroll --uid <uid> --factor <factorId>` (or equivalent Admin SDK call via `scripts/admin-mfa-unenroll/run.js`) after OOB identity verification (Pitfall 7 mitigation).
+
+**Tradeoff:** email-account compromise is the recovery substrate; this is acceptable because email is also the primary sign-in identifier and identity recovery substrate. The additional risk surface is bounded.
+
+**AUTH-10 drill substrate:** `runbooks/phase6-mfa-recovery-drill.md` skeleton present; populated when the drill runs end-of-phases-batch. Pitfall 19 closure ("claim only what was rehearsed") is partial at phase close — the substrate is honest (script + runbook + admin un-enrol path), drill execution deferred per operator instruction. Tracked in `runbooks/phase-6-cleanup-ledger.md` Phase 6 sub-wave 6.1 row.
+
+## § Anonymous Auth Disabled
+
+C1 closure. Phase 6 Wave 5 Step 7: Anonymous Auth provider disabled at the IdP layer via admin v2 PATCH (`signIn.anonymous.enabled=false`, HTTP 200) at 2026-05-09T16:43:07Z (timestamp captured in 06-PREFLIGHT.md `## Cutover Log: anon_auth_console_disabled_at`). Phase 6 Wave 5 Step 8 atomic deletion commit (`auth14_deletion_sha: 3fddc1c` in same log) removed `signInAnonymously` import + call site + `firebase-ready` window.dispatchEvent bridge from source. No dead-code window for the runtime path: the runtime password-hash constants (`INTERNAL_PASSWORD_HASH` + `INTERNAL_ALLOWED_EMAILS`) + the anon-auth substrate were deleted from `src/main.js` IN THE SAME COMMIT that disabled Anonymous Auth at the IdP layer + carried the strict rules into production.
+
+Pitfall 2 (`request.auth != null` is not access control) closure: combined with Phase 5 D-14 `isAuthed()` predicate (requires `email_verified == true` AND `sign_in_provider != "anonymous"`).
+
+**AUTH-14 partial — substrate-honest at phase close:** the cutover commit retired the load-bearing runtime artifacts (constants + `signInAnonymously` call + `firebase-ready` bridge); `src/auth/state-machine.js` + `tests/auth/state-machine.test.js` + `tests/fixtures/auth-passwords.js` + the `INTERNAL_PASSWORD_HASH`-shape `gitleaks` rule are NOT deleted at Phase 6 close because `src/main.js` line 120 still imports `state-machine.js` (the Phase 4 IIFE body migration is the load-bearing predecessor). Closure tied to Phase 4 sub-wave 4.1 — tracked in `runbooks/phase-6-cleanup-ledger.md` "Phase 6 sub-wave 6.1" carry-forward row.
+
+## § Production Rules Deployment
+
+RULES-07 closure. Phase 6 Wave 5 Step 6: `firestore.rules` + `storage.rules` deployed to `bedeveloped-base-layers` via the cutover commit SHA chain (cutover commit `3fddc1c` squash-merged from PR #3 to `main` at 2026-05-09T16:18:22Z; manual local-CLI re-deploy `firebase deploy --only firestore:rules` + `firebase deploy --only storage` at ~2026-05-09T17:00Z to ensure production matches HEAD after CI deploy retries — captured in 06-PREFLIGHT.md `## Cutover Log: rules_deploy_sha + rules_deploy_console_timestamp`). The deploy fired exactly once during the phase against the production project (verified by Wave 6 RULES-07 verification gate — `runbooks/phase-6-cleanup-ledger.md ## RULES-07 Deploy Verification Gate`).
+
+**5-minute rollback procedure (D-12):** `git revert <cutover-sha> --no-edit && git push` triggers the Phase 3 CI deploy job which redeploys the parent commit's rules. Substrate caveat captured in 06-PREFLIGHT.md ## Cutover Log: D-12 auto-rollback works for hosting + firestore + storage rules ONLY (not functions — D-8 cascade). Rehearsed end-to-end against the live Firebase project pre-cutover with timing recorded in `runbooks/phase6-rules-rollback-rehearsal.md` (`rehearsal_total_seconds: 121`, well under SC#4 5-min target). Pitfall 19 closure.
+
+**Pitfall 1 mitigation (lockout on first rules deploy):** D-11 deploy ordering — functions deployed FIRST → admin bootstrap (Path B Admin SDK direct claims given D-22 substrate gap) → claims-verify (admin's ID token carried `role: "admin"`) → rules deploy → anon-disable. The strict-rules switch only flipped after Auth was proven end-to-end for at least one admin (Luke; George's first signin deferred to end-of-phases batch).
+
+## § Phase 6 Audit Index
+
+This is a one-stop pointer for an auditor walking Phase 6's controls. Each row maps a Phase 6 control to (a) the SECURITY.md section + decision that defines it, (b) the code path that implements it, (c) the test that verifies it, and (d) the framework citations it addresses. Mirrors the §Phase 3 Audit Index + §Phase 5 Audit Index pattern.
+
+| Audit row | Control | Code path | Test | Framework |
+|-----------|---------|-----------|------|-----------|
+| beforeUserCreated claims-set | AUTH-03 / AUTH-05 / D-10 / Pitfall 6 | `functions/src/auth/beforeUserCreated.ts` + `functions/src/auth/claim-builder.ts` | `functions/test/auth/claim-builder.test.ts` | ASVS V2.4 / ISO A.5.17 / SOC2 CC6.1 |
+| beforeUserSignedIn audit substrate | AUTH-06 / D-21 | `functions/src/auth/beforeUserSignedIn.ts` | (Phase 7 TEST-09 integration tests) | ASVS V2.5 / SOC2 CC6.7 |
+| setClaims callable + poke pattern | AUTH-07 / ARCHITECTURE.md §7 Flow C | `functions/src/auth/setClaims.ts` + `src/cloud/claims-admin.js` | (Phase 7 TEST-09) | ASVS V4.1.1 |
+| TOTP MFA enrol | AUTH-08 / D-08 | `src/views/auth.js` renderMfaEnrol + `src/firebase/auth.js` multiFactor | `tests/views/auth.test.js` mfa-enrol snapshot | ASVS V2.7 / ISO A.8.5 / SOC2 CC6.1 |
+| Password policy >=12 + HIBP | AUTH-04 | (Identity Platform server-side) | `06-PREFLIGHT.md ## passwordPolicy` + cutover Step 4 manual smoke | ASVS V2.1.1 / GDPR Art 32(1)(b) |
+| AUTH-12 unified-error wrapper | AUTH-12 / D-13 | `src/firebase/auth.js` SignInError + AUTH_CRED_ERROR_CODES set | `tests/views/auth.test.js` (renderSignIn behaviour) | ASVS V2.6 / OWASP Top 10 A07 |
+| Anonymous Auth source removal | AUTH-01 / C1 / D-03 / D-04 | (deletion in cutover commit `auth14_deletion_sha: 3fddc1c`) | `grep -r "signInAnonymously" src/` returns 0 | (audit-narrative integrity) |
+| RULES-07 production deploy | RULES-07 / D-11 | `firestore.rules` + `storage.rules` deployed | RULES-07 verification gate (`runbooks/phase-6-cleanup-ledger.md ## RULES-07 Deploy Verification Gate`) — exactly one deploy chain against bedeveloped-base-layers in the phase commit chain | ASVS V4 / SOC2 CC6.1 |
+| 5-min rollback rehearsal | SC#4 / D-12 / Pitfall 19 | `runbooks/phase6-rules-rollback-rehearsal.md` | runbook `rehearsal_total_seconds: 121` (< 300) | SOC2 CC9.1 / ISO A.5.30 |
+| AUTH-10 MFA drill (Tier-2) | AUTH-10 / D-08 / Pitfall 7 / Pitfall 19 | `runbooks/phase6-mfa-recovery-drill.md` + `scripts/admin-mfa-unenroll/run.js` | runbook drill evidence (skeleton present; populated end-of-phases-batch per operator deferral) | ASVS V2.7.4 / SOC2 CC6.1 |
+| AUTH-14 source deletions | AUTH-14 / C2 / D-04 | (partial deletion in cutover commit `auth14_deletion_sha: 3fddc1c` — runtime constants + signInAnonymously call + firebase-ready bridge gone; state-machine.js + 2 test fixtures + .gitleaks.toml C2 rule deferred to Phase 4 sub-wave 4.1 per `phase-6-cleanup-ledger.md`) | partial verification: `grep -r "INTERNAL_PASSWORD_HASH\|INTERNAL_ALLOWED_EMAILS" src/` returns 0; full closure pending sub-wave 4.1 | (audit-narrative integrity) |
+| AUTH-09 supersession | AUTH-09 / D-07 | (no code path — supersession is a documented decision) | `.planning/REQUIREMENTS.md` AUTH-09 row marks SUPERSEDED 2026-05-08 by email-link recovery | (compliance-credible posture per D-07) |
+| AUTH-13 progressive delay | AUTH-13 / D-21 | (Firebase Auth defaults) | `runbooks/phase6-cutover.md` Step 4 manual smoke; `auth/too-many-requests` documented behaviour | ASVS V2.1.5 |
+| AUTH-15 bootstrap migration | AUTH-15 / D-05 | `scripts/seed-internal-allowlist/run.js` + `runbooks/phase6-bootstrap.md` | `06-PREFLIGHT.md ## Cutover Log: bootstrap_log_*` populated for both admins; Luke first-signin verified | ASVS V2.4.5 |
+| AUTH-11 email-verify (belt-and-braces) | AUTH-11 / D-14 | `firestore.rules` `isAuthed()` predicate (server) + `src/views/auth.js` renderEmailVerificationLanding (client) + `src/router.js` auth-state ladder | `tests/views/auth.test.js` renderEmailVerificationLanding test | ASVS V2.5 / GDPR Art 32(1)(b) |
+
+**Cross-phase plug-ins this index will feed:**
+
+- **Phase 7** (FN-01..09 / AUDIT-01..04 / AUDIT-06..07 / TEST-09) — wires `auditLog/` Firestore-side writers from Cloud Logging back-fill; replaces `rateLimits/{uid}/buckets/{windowStart}` deny-block body with `request.time` predicate; adds `enforceAppCheck: true` to `setClaims`; adds Zod validation + idempotency-key marker; firebase-functions-test integration coverage. Also resolves D-22 ToS gate (`firebaseauth.googleapis.com`) so blocking-handler invocation path is unbroken — Phase 6 used Path B Admin SDK direct claims as workaround.
+- **Phase 8** (BACKUP-01..07 / GDPR-01..04) — backup automation + GDPR rights.
+- **Phase 9** (AUDIT-05 / OBS-01..08) — view-side `auditWrite` wiring + Sentry + auth-anomaly Slack alerts.
+- **Phase 10** (HOST-06) — drops temporary CSP allowlist for Firebase Auth popups (Phase 3 added preemptively in D-07).
+- **Phase 11** (DOC-04) — customises Firebase password-reset email sender domain to `noreply@bedeveloped.com`.
+
+---
+
 ## Compliance posture statement
 
 This codebase aims for **credible, not certified** compliance with

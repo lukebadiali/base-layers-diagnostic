@@ -1,9 +1,9 @@
 ---
 status: partial
 phase: 07-cloud-functions-app-check-trusted-server-layer
-source: [07-03-PLAN.md, 07-03-SUMMARY.md, 07-05-PLAN.md, 07-05-SUMMARY.md]
+source: [07-03-PLAN.md, 07-03-SUMMARY.md, 07-05-PLAN.md, 07-05-SUMMARY.md, 07-06-PLAN.md, 07-06-SUMMARY.md]
 started: 2026-05-09T22:07:51Z
-updated: 2026-05-09T (Wave 5 — BigQuery sink + D-22 verification operator items appended)
+updated: 2026-05-10 (Wave 6 close-gate — operator items unchanged from Wave 5; Tests 1-9 remain pending; Phase 7 close PASS-PARTIAL accepts substrate landed + Tests as queued; Tests 4-6 + 7-9 close at sub-wave 7.1 / Phase 8+ per cleanup-ledger)
 ---
 
 ## Current Test

@@ -1,7 +1,26 @@
 // vite.config.js
-import { defineConfig } from "vite";
+/* global process */
+import { defineConfig, loadEnv } from "vite";
 
-export default defineConfig({
+export default defineConfig(({ command, mode }) => {
+  // Phase 7 Wave 3 (FN-07): fail-closed build-time guard. Without a site key
+  // in production builds, src/firebase/check.js would throw at module init —
+  // but that error surfaces only at runtime in the browser. Catching the
+  // misconfiguration at `vite build` keeps it out of production altogether
+  // (T-07-03-06 Tampering disposition: mitigate via build-time guard).
+  // DEV builds intentionally skip this check — emulator and unit tests run
+  // without a real reCAPTCHA Enterprise key (Pitfall 1 mitigation).
+  const env = loadEnv(mode, process.cwd(), "");
+  if (
+    command === "build" &&
+    mode === "production" &&
+    !env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY
+  ) {
+    throw new Error(
+      "VITE_RECAPTCHA_ENTERPRISE_SITE_KEY required for production build (FN-07)",
+    );
+  }
+  return {
   build: {
     target: "es2020",
     sourcemap: true,
@@ -81,4 +100,5 @@ export default defineConfig({
       },
     },
   },
+};
 });

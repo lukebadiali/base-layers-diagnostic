@@ -1,15 +1,16 @@
 // src/firebase/auth.js
 // @ts-check
-// Phase 4 (D-05): Auth instance + onAuthStateChanged firebase-ready bridge.
+// Phase 4 (D-05): Auth instance + onAuthStateChanged export.
 // Phase 6 Wave 3: real signInEmailPassword + signOut + multiFactor bodies +
 // AUTH-12 unified-error wrapper at this chokepoint per D-13 + BLOCKER-FIX 2
 // (updatePassword) + BLOCKER-FIX 3 (email-link Tier-1 recovery surface).
 //
-// Wave 5 cutover commit (D-04) DELETES the signInAnonymously import + call +
-// firebase-ready bridge in a single atomic commit alongside the rules deploy.
-// Wave 3 leaves them in place so the existing main.js IIFE continues to boot.
+// Phase 6 Wave 5 cutover (D-04 / AUTH-14): signInAnonymously import + call +
+// firebase-ready bridge DELETED. main.js subscribes to onAuthStateChanged
+// directly via the export below; the legacy `window.FB.currentUser` global
+// + `firebase-ready` event are retired. Re-exports below add the auth helpers
+// that views/auth.js (Wave 3 D-13 / D-16) consumes via deps.
 import {
-  signInAnonymously,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut as fbSignOut,
@@ -18,24 +19,12 @@ import {
   sendSignInLinkToEmail as fbSendSignInLinkToEmail,
   isSignInWithEmailLink as fbIsSignInWithEmailLink,
   signInWithEmailLink as fbSignInWithEmailLink,
+  sendEmailVerification as fbSendEmailVerification,
+  sendPasswordResetEmail as fbSendPasswordResetEmail,
 } from "firebase/auth";
 import { auth } from "./app.js";
 
-export { auth, onAuthStateChanged, signInAnonymously };
-
-// Phase 4 firebase-ready bridge - Wave 5 cutover commit deletes this block per D-04.
-onAuthStateChanged(auth, (u) => {
-  if (u) {
-    if (typeof window !== "undefined") {
-      /** @type {*} */ (window).FB = /** @type {*} */ (window).FB || {};
-      /** @type {*} */ (window).FB.currentUser = u;
-    }
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("firebase-ready"));
-    }
-  }
-});
-signInAnonymously(auth).catch((e) => console.error("Firebase anon sign-in failed:", e));
+export { auth, onAuthStateChanged };
 
 // Phase 6 (AUTH-12 / D-13): single-chokepoint unified-error wrapper. Catches
 // Firebase auth-credential error codes and re-throws SignInError so callers
@@ -128,4 +117,19 @@ export function isSignInWithEmailLink(url) {
 /** @param {string} email @param {string} url */
 export async function signInWithEmailLink(email, url) {
   return fbSignInWithEmailLink(auth, email, url);
+}
+
+// Phase 6 Wave 5 (BLOCKER-FIX 1 wiring): re-exports consumed by views/auth.js
+// deps via main.js. Trivial wrappers — no AUTH-12 chokepoint applies (these
+// are silent-success / generic-success per Firebase Auth's account-enumeration
+// hardening on the email-link APIs).
+
+/** @param {*} user */
+export async function sendEmailVerification(user) {
+  return fbSendEmailVerification(user);
+}
+
+/** @param {string} email */
+export async function sendPasswordResetEmail(email) {
+  return fbSendPasswordResetEmail(auth, email);
 }

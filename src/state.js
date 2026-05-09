@@ -23,6 +23,8 @@
  *   chatMessages: Array<*>,
  *   chatSubscription: (() => void) | null,
  *   chatSubscribedFor: string|null,
+ *   fbUser: *,
+ *   qrcodeDataUrl: string|null,
  * }} AppState
  */
 
@@ -64,4 +66,14 @@ export const state = {
   chatMessages: [], // live feed from Firestore, filtered by role
   chatSubscription: null, // unsubscribe function for the live listener
   chatSubscribedFor: null, // user.id the current subscription is for
+  // Phase 6 Wave 5 (BLOCKER-FIX 1): Firebase Auth user shim — null when
+  // unauthenticated; populated by main.js's onAuthStateChanged callback with
+  // a hybrid object that exposes BOTH the Firebase User properties (uid,
+  // email, emailVerified, appClaims, appEnrolledFactors) AND the legacy
+  // shape (id, role, name, orgId) so existing render functions work
+  // unchanged. Phase 7+ tightens this when the legacy substrate retires.
+  fbUser: null,
+  // Pre-rendered QR-code data URL for renderMfaEnrol. Populated when MFA
+  // enrolment is initiated (deferred to user-testing phase).
+  qrcodeDataUrl: null,
 };

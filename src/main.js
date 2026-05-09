@@ -47,6 +47,26 @@ import "./firebase/db.js";
 import "./firebase/storage.js";
 import "./ui/charts.js";
 
+// Phase 6 Wave 5 (BLOCKER-FIX 1 wiring contract): named imports for the
+// Firebase Auth helpers consumed by the Phase 6 sign-in / first-run / MFA
+// views. main.js subscribes to onAuthStateChanged here, hydrates user.appClaims
+// + user.appEnrolledFactors, and passes the 5 auth render fns into the router
+// via the deps object so renderRoute's auth-state ladder takes precedence.
+import {
+  auth as fbAuthInstance,
+  onAuthStateChanged as fbOnAuthStateChanged,
+  signInEmailPassword,
+  signOut as fbSignOut,
+  multiFactor as fbMultiFactor,
+  updatePassword as fbUpdatePassword,
+  sendSignInLinkToEmail as fbSendSignInLinkToEmail,
+  // isSignInWithEmailLink + signInWithEmailLink imports deferred to user-testing
+  // phase when the email-link MFA recovery flow is fully wired (06-WAVE-5-PARTIAL-STATE.md).
+  sendEmailVerification as fbSendEmailVerification,
+  sendPasswordResetEmail as fbSendPasswordResetEmail,
+} from "./firebase/auth.js";
+import { createAuthView } from "./views/auth.js";
+
 // Application state singleton — extracted byte-identical to src/state.js
 // (D-02). The IIFE closure references the imported binding directly; no
 // shape change.
@@ -75,12 +95,7 @@ import {
   firstNameFromAuthor as _firstNameFromAuthor,
 } from "./util/ids.js";
 import { hashString } from "./util/hash.js";
-import {
-  pillarStatus,
-  bandLabel,
-  bandStatement,
-  bandColor,
-} from "./domain/banding.js";
+import { pillarStatus, bandLabel, bandStatement, bandColor } from "./domain/banding.js";
 import {
   pillarScoreForRound as _pillarScoreForRound,
   pillarScore as _pillarScore,
@@ -410,7 +425,7 @@ import {
   // from data/read-states.js + data/comments.js + data/messages.js (server-
   // time Timestamp natives) and these wrappers retire.
   /** @param {string|null|undefined} iso */
-  const _toTsFromIso = (iso) => iso ? { toMillis: () => Date.parse(iso) || 0 } : null;
+  const _toTsFromIso = (iso) => (iso ? { toMillis: () => Date.parse(iso) || 0 } : null);
   /** @param {{ createdAt?: * }} c */
   const _toCommentDuck = (c) => {
     if (!c || !c.createdAt) return c;
@@ -437,7 +452,13 @@ import {
   const unreadChatTotal = (user) => {
     if (!user) return 0;
     const messages = (state.chatMessages || []).map((m) => {
-      if (m && m.createdAt && typeof m.createdAt === "object" && typeof m.createdAt.toMillis === "function") return m;
+      if (
+        m &&
+        m.createdAt &&
+        typeof m.createdAt === "object" &&
+        typeof m.createdAt.toMillis === "function"
+      )
+        return m;
       return { ...m, createdAt: { toMillis: () => msgMillis(m) } };
     });
     /** @param {string} orgId */
@@ -448,23 +469,50 @@ import {
 
   // Phase 2 Wave 4 (D-05): wrappers for migration helpers (Pattern E).
   // Bodies extracted to src/data/migration.js.
-  const migrateV1IfNeeded = () => _migrateV1IfNeeded({
-    loadUsers, loadOrgMetas, loadOrg, saveOrg, upsertUser, findUser,
-    removeV1ActiveKey: () => LS.removeItem(K.v1Active),
-  });
-  const clearOldScaleResponsesIfNeeded = () => _clearOldScaleResponsesIfNeeded({
-    loadSettings, saveSettings, loadOrgMetas, loadOrg, saveOrg,
-  });
-  const syncFromCloud = () => _syncFromCloud({
-    fbReady, cloudFetchAllOrgs, cloudFetchAllUsers, cloudPushOrg, cloudPushUser,
-    jget, jset, K, render,
-  });
+  const migrateV1IfNeeded = () =>
+    _migrateV1IfNeeded({
+      loadUsers,
+      loadOrgMetas,
+      loadOrg,
+      saveOrg,
+      upsertUser,
+      findUser,
+      removeV1ActiveKey: () => LS.removeItem(K.v1Active),
+    });
+  const clearOldScaleResponsesIfNeeded = () =>
+    _clearOldScaleResponsesIfNeeded({
+      loadSettings,
+      saveSettings,
+      loadOrgMetas,
+      loadOrg,
+      saveOrg,
+    });
+  const syncFromCloud = () =>
+    _syncFromCloud({
+      fbReady,
+      cloudFetchAllOrgs,
+      cloudFetchAllUsers,
+      cloudPushOrg,
+      cloudPushUser,
+      jget,
+      jset,
+      K,
+      render,
+    });
   // Phase 2 Wave 4 (D-05): wrappers for auth state-machine (Pattern E).
-  // Bodies extracted to src/auth/state-machine.js. Phase 6 (AUTH-14) deletes the whole module.
-  const verifyInternalPassword = (pass) => auth.verifyInternalPassword(pass, { INTERNAL_PASSWORD_HASH });
-  const verifyOrgClientPassphrase = (orgId, pass) => auth.verifyOrgClientPassphrase(orgId, pass, { loadOrg });
+  // Bodies extracted to src/auth/state-machine.js. Phase 6 Wave 5 (AUTH-14):
+  // verifyInternalPassword wrapper retired alongside src/auth/state-machine.js's
+  // verifyInternalPassword export — replaced by Firebase Auth signInEmailPassword
+  // via src/firebase/auth.js. The other 3 wrappers (verifyOrgClientPassphrase,
+  // verifyUserPassword, currentUser) remain in active use for client/user
+  // passphrase login paths.
+  const verifyOrgClientPassphrase = (orgId, pass) =>
+    auth.verifyOrgClientPassphrase(orgId, pass, { loadOrg });
   const verifyUserPassword = (userId, pass) => auth.verifyUserPassword(userId, pass, { findUser });
-  const currentUser = () => auth.currentUser({ currentSession, findUser });
+  const legacyCurrentUser = () => auth.currentUser({ currentSession, findUser });
+  // currentUser() now prefers the Phase 6 Firebase-hydrated user (state.fbUser) —
+  // legacy localStorage path remains for client/user role flows.
+  const currentUser = () => state.fbUser || legacyCurrentUser();
 
   // Phase 2 (D-05): userCompletionPct + orgSummary extracted to src/domain/completion.js — wrappers above.
 
@@ -622,16 +670,11 @@ import {
     return h === s.internalPassphrase;
   }
 
-  // ---------- Hardcoded internal credentials ----------
-  // NOTE: this hash lives in a public repo. Treat as a light access gate,
-  // not real auth. Rotate the password if you suspect exposure.
-  const INTERNAL_ALLOWED_EMAILS = ["luke@bedeveloped.com", "george@bedeveloped.com"];
-  const INTERNAL_PASSWORD_HASH = "6110f27c9c91658c3489285abd5c45ffe5c1aa99c7f3f37d23e32834566e7fce";
-  function isAllowedInternalEmail(email) {
-    const e = (email || "").trim().toLowerCase();
-    return INTERNAL_ALLOWED_EMAILS.includes(e);
-  }
-  // Phase 2 (D-05): verifyInternalPassword extracted to src/auth/state-machine.js — wrapper above.
+  // Phase 6 Wave 5 (AUTH-14 / D-04): INTERNAL_ALLOWED_EMAILS + INTERNAL_PASSWORD_HASH
+  // + isAllowedInternalEmail removed alongside the legacy doInternalLogin form
+  // and the verifyInternalPassword wrapper. Internal admin authentication now
+  // routes through Firebase Auth (src/firebase/auth.js signInEmailPassword) +
+  // beforeUserCreated/beforeUserSignedIn blocking handlers + custom-claim role.
 
   // ---------- Client org passphrase (shared by all users of an org) ----------
   async function setOrgClientPassphrase(orgId, pass) {
@@ -735,6 +778,33 @@ import {
       return;
     }
 
+    // Phase 6 Wave 5 (BLOCKER-FIX 1 / D-16 router auth-state ladder, mirrored inline):
+    // For Firebase-authed users (state.fbUser), check the auth-state guards
+    // BEFORE the existing topbar+org+route flow. Legacy localStorage users
+    // (state.fbUser is null but legacyCurrentUser returns a user) skip these
+    // checks — their auth path is unchanged.
+    if (state.fbUser && user === state.fbUser) {
+      if (state.fbUser.emailVerified === false) {
+        app.appendChild(authView.renderEmailVerificationLanding());
+        return;
+      }
+      if (state.fbUser.firstRun === true) {
+        app.appendChild(authView.renderFirstRun());
+        return;
+      }
+      if (state.route === "forgot-mfa") {
+        app.appendChild(authView.renderForgotMfa());
+        return;
+      }
+      const role = state.fbUser.appClaims && state.fbUser.appClaims.role;
+      const enrolled = state.fbUser.appEnrolledFactors;
+      const hasMfa = enrolled && enrolled.length > 0;
+      if ((role === "admin" || role === "internal") && !hasMfa) {
+        app.appendChild(authView.renderMfaEnrol());
+        return;
+      }
+    }
+
     // Mount shell
     app.appendChild(renderTopbar(user));
     const main = h("main");
@@ -805,7 +875,44 @@ import {
   });
 
   // ================================================================
-  // AUTH / LOGIN SCREEN
+  // PHASE 6 AUTH VIEW (BLOCKER-FIX 1 wiring)
+  // ================================================================
+  // Pattern D DI factory bound once with all Firebase Auth helpers + nav
+  // callbacks. renderAuth (legacy entry) hands off to authView.renderSignIn()
+  // for internal admins. The render() top-level dispatcher injects authView's
+  // 5 render fns inline as the auth-state ladder per src/router.js D-16.
+  // enrollTotp + unenrollAllMfa + qrcodeDataUrl deps are deferred to the
+  // user-testing phase — left undefined here, the view forms render but
+  // submission is a no-op until those deps are wired.
+  const authView = createAuthView({
+    state,
+    h,
+    notify,
+    signInEmailPassword,
+    signOut: fbSignOut,
+    updatePassword: fbUpdatePassword,
+    sendSignInLinkToEmail: fbSendSignInLinkToEmail,
+    sendEmailVerification: fbSendEmailVerification,
+    sendPasswordResetEmail: fbSendPasswordResetEmail,
+    routeToForgotMfa: () => setRoute("forgot-mfa"),
+    routeToMfaEnrol: () => setRoute("mfa-enrol"),
+    // Live getters so the view sees fresh Firebase state on each access.
+    get currentUser() {
+      return fbAuthInstance.currentUser;
+    },
+    get qrcodeDataUrl() {
+      return state.qrcodeDataUrl || "";
+    },
+    get isMfaRecoveryFlow() {
+      return state.route === "forgot-mfa";
+    },
+    // Deferred to user-testing phase (06-WAVE-5-PARTIAL-STATE.md):
+    //   enrollTotp: undefined,
+    //   unenrollAllMfa: undefined,
+  });
+
+  // ================================================================
+  // AUTH / LOGIN SCREEN (legacy)
   // ================================================================
   function renderAuth() {
     const wrap = h("div", { class: "auth-wrap" });
@@ -1072,78 +1179,15 @@ import {
         ),
       );
     } else {
-      container.appendChild(h("h2", { class: "auth-heading" }, "Internal sign-in"));
-      container.appendChild(
-        h(
-          "p",
-          { class: "auth-sub" },
-          "BeDeveloped team members. Enter your work email and the team password.",
-        ),
-      );
-
-      const email = h("input", { type: "email", placeholder: "you@bedeveloped.com" });
-      const pass = h("input", { type: "password", placeholder: "Team password" });
-      const errBox = h("div");
-      if (state.authError) errBox.appendChild(h("div", { class: "auth-error" }, state.authError));
-
-      const doInternalLogin = async () => {
-        state.authError = "";
-        if (!isAllowedInternalEmail(email.value)) {
-          state.authError = "That email isn't on the internal allowlist. Contact Luke to be added.";
-          render();
-          return;
-        }
-        const ok = await verifyInternalPassword(pass.value);
-        if (!ok) {
-          state.authError = "Password didn't match. Ask another team member for the current one.";
-          render();
-          return;
-        }
-        let u = findUserByEmail(email.value);
-        if (u && u.role !== "internal") {
-          state.authError = "That email is registered as a client.";
-          render();
-          return;
-        }
-        if (!u) {
-          u = {
-            id: uid("u_"),
-            email: email.value.trim().toLowerCase(),
-            name: email.value.split("@")[0],
-            role: "internal",
-            createdAt: iso(),
-          };
-          upsertUser(u);
-        }
-        signIn(u.id);
-        state.route = "dashboard";
-        render();
-      };
-      pass.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") doInternalLogin();
-      });
-      email.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") doInternalLogin();
-      });
-
-      [
-        ["Email", email],
-        ["Team password", pass],
-      ].forEach(([lbl, input]) => {
-        container.appendChild(h("div", { class: "auth-field" }, [h("label", {}, lbl), input]));
-      });
-      container.appendChild(errBox);
-      container.appendChild(
-        h("button", { class: "auth-submit", onclick: doInternalLogin }, "Sign in"),
-      );
-
-      container.appendChild(
-        h(
-          "div",
-          { class: "auth-help" },
-          "Access is limited to the BeDeveloped internal team. You can invite clients after signing in.",
-        ),
-      );
+      // Phase 6 Wave 5 (AUTH-14 / D-04 / BLOCKER-FIX 1 wiring): legacy
+      // doInternalLogin form (verifyInternalPassword + isAllowedInternalEmail
+      // + INTERNAL_PASSWORD_HASH) RETIRED. Internal admins now sign in via the
+      // Phase 6 Pattern D auth view's renderSignIn — wraps Firebase Auth
+      // signInWithEmailAndPassword with the AUTH-12 unified-error chokepoint.
+      // On successful sign-in, onAuthStateChanged hydrates state.fbUser and
+      // triggers render(); the auth-state ladder in render() then routes
+      // through firstRun / mfaEnrol / dashboard per claims state.
+      container.appendChild(authView.renderSignIn());
     }
 
     return container;
@@ -3146,14 +3190,7 @@ import {
       h(
         "p",
         { style: "color:var(--ink-2); font-size:13px; margin-top:0;" },
-        "Internal sign-in is restricted to a fixed allowlist of emails with a shared team password, configured in the app source. To add a team member or rotate the password, edit the repo.",
-      ),
-    );
-    settingsCard.appendChild(
-      h(
-        "div",
-        { style: "font-size:12.5px; color:var(--ink-3);" },
-        "Allowed emails: " + INTERNAL_ALLOWED_EMAILS.join(", "),
+        "Internal sign-in uses Firebase Auth + custom-claim role assignment + TOTP MFA. Admin accounts are seeded via internalAllowlist/{email} and bootstrapped through the Firebase Console; see runbooks/phase6-bootstrap.md.",
       ),
     );
     frag.appendChild(settingsCard);
@@ -4111,23 +4148,84 @@ import {
     setTimeout(() => ta.focus(), 10);
   }
 
-  // Re-render when Firebase is ready (so loading states flip to live data)
-  window.addEventListener("firebase-ready", async () => {
-    ensureChatSubscription(currentUser());
-    await syncFromCloud();
+  // Phase 6 Wave 5 (BLOCKER-FIX 1 / D-04): replaces the legacy `firebase-ready`
+  // window event listener (deleted alongside the signInAnonymously bridge in
+  // src/firebase/auth.js per AUTH-14). Subscribes directly to Firebase Auth
+  // state; on a signed-in user, hydrates state.fbUser with a shim that exposes
+  // BOTH Firebase User properties (uid, emailVerified, appClaims, appEnrolledFactors)
+  // AND the legacy shape (id, role, name, orgId) so existing render functions
+  // work unchanged. Also keeps window.FB.currentUser in sync until the IIFE
+  // body migrates to fully use state.fbUser (Phase 7+ cleanup-ledger).
+  fbOnAuthStateChanged(fbAuthInstance, async (fbUser) => {
+    if (!fbUser) {
+      state.fbUser = null;
+      if (typeof window !== "undefined") {
+        /** @type {*} */ (window).FB = /** @type {*} */ (window).FB || {};
+        /** @type {*} */ (window).FB.currentUser = null;
+      }
+      render();
+      return;
+    }
+
+    // Hydrate appClaims (used by router auth-state ladder + main.js role checks).
+    /** @type {*} */
+    let claims;
+    try {
+      const tokenResult = await fbUser.getIdTokenResult();
+      claims = tokenResult.claims || {};
+    } catch (_e) {
+      // Token fetch failure — proceed with empty claims; user.role check below
+      // will deny access. Phase 9 Sentry will catch the underlying error.
+      claims = {};
+    }
+
+    // Hydrate enrolled MFA factors (used by router for renderMfaEnrol guard).
+    /** @type {Array<*>} */
+    let enrolledFactors;
+    try {
+      enrolledFactors = fbMultiFactor(fbUser).enrolledFactors || [];
+    } catch (_e) {
+      enrolledFactors = [];
+    }
+
+    // Compose the user shim — Firebase props + hoisted claim flags + legacy shape.
+    state.fbUser = {
+      // Firebase Auth User properties (live references where possible)
+      uid: fbUser.uid,
+      email: fbUser.email,
+      emailVerified: fbUser.emailVerified,
+      displayName: fbUser.displayName,
+      providerData: fbUser.providerData,
+      metadata: fbUser.metadata,
+      // Phase 6 hydrated fields consumed by src/router.js D-16 auth-state ladder
+      appClaims: claims,
+      appEnrolledFactors: enrolledFactors,
+      firstRun: claims.firstRun === true,
+      // Legacy user shape consumed by main.js render functions
+      id: fbUser.uid,
+      name: fbUser.displayName || fbUser.email,
+      role: claims.role || "internal",
+      orgId: claims.orgId || null,
+      createdAt: fbUser.metadata && fbUser.metadata.creationTime,
+    };
+
+    if (typeof window !== "undefined") {
+      /** @type {*} */ (window).FB = /** @type {*} */ (window).FB || {};
+      /** @type {*} */ (window).FB.currentUser = fbUser;
+    }
+
+    // Post-auth setup (was previously gated on the firebase-ready event):
+    ensureChatSubscription(state.fbUser);
+    try {
+      await syncFromCloud();
+    } catch (_e) {
+      /* sync failures bubble to console; do not block render */
+    }
     // Cloud data is now mirrored locally; run the framework V2 wipe so
     // saveOrg pushes the cleared responses back up to Firestore.
     clearResponsesForFrameworkV2IfNeeded();
-    if (
-      state.route === "documents" ||
-      state.route === "chat" ||
-      state.route === "roadmap" ||
-      state.route === "funnel" ||
-      state.route === "diagnostic" ||
-      state.route === "dashboard" ||
-      (typeof state.route === "string" && state.route.startsWith("pillar:"))
-    )
-      render();
+
+    render();
   });
 
   // ================================================================

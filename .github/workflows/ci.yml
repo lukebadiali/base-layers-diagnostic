@@ -184,10 +184,18 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-      - name: Deploy hosting + functions
+      - name: Deploy hosting + functions + rules
+        # Phase 6 Wave 5 (D-12 substrate / RULES-07): firestore + storage rules
+        # added to the --only set. Activates the auto-rollback substrate per
+        # D-12: `git revert <cutover-sha> + git push` triggers this CI deploy
+        # which redeploys the parent commit's rules atomically with hosting +
+        # functions. Note: shorthand `firestore,storage` (without `:rules`) is
+        # used because firebase-tools 15.16.0 has a parsing bug on the comma
+        # form `firestore:rules,storage:rules` (logged in 06-PREFLIGHT.md
+        # rehearsal evidence).
         run: |
           npx firebase-tools@15.16.0 deploy \
-            --only hosting,functions \
+            --only hosting,functions,firestore,storage \
             --project bedeveloped-base-layers \
             --non-interactive
       - name: Assert security headers (T-3-1 mitigation)

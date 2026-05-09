@@ -35,18 +35,26 @@ Phase 06 — real-auth-mfa-rules-deploy
 
 ## Current Position
 
-Phase: 06 (real-auth-mfa-rules-deploy) — EXECUTING
-Plan: 1 of 6
-**Status:** Executing Phase 06
-**Progress:** 5/12 phases complete
+Phase: 06 (real-auth-mfa-rules-deploy) — **WAVE 5 PAUSED** (production-state-changes landed; cutover commit pending)
+Plans complete: 4 of 6 (06-01 ✓ 06-02 ✓ 06-03 ✓ 06-04 ✓ — 06-05 in-progress, 06-06 not started)
+**Status:** Phase 06 paused mid-Wave-5 (2026-05-09T14:45:00Z) — see `.planning/phases/06-real-auth-mfa-rules-deploy/06-WAVE-5-PARTIAL-STATE.md` for full state-of-play, deviation log (11 entries), and resume procedure.
+**Progress:** 5/12 phases complete (Phase 6 partially executed; cutover commit + Steps 7-12 pending)
 
 ```
 [########........] 42%
  1  2  3  4  5  6  7  8  9 10 11 12
- ✓  ✓  ✓  ✓  ✓  .  .  .  .  .  .  .
+ ✓  ✓  ✓  ✓  ✓  ⏸  .  .  .  .  .  .   (⏸ = Wave 5 paused after Steps 1-4)
 ```
 
-**Next action:** `/gsd-discuss-phase 6` (recommended — gather context for Real Auth + MFA + Rules Deploy cutover before planning) or `/gsd-plan-phase 6` (skip discuss).
+**Production state at pause (no live users — safe to remain in this state):**
+- Strict Phase 5 rules deployed to production (firestore + storage)
+- 3 Phase 6 auth Cloud Functions deployed in europe-west2 (degraded — `gcp-sa-firebaseauth` ToS gate blocks blocking-handler invocation; admin claims set via Admin SDK Path B instead)
+- Luke (UID `LQpdqpWqcgVLIE59ln3x8RMf5Mk1`) + George (UID `CZTjcv0mYafO49swTc3P4b6j99W2`) bootstrapped with `{role: "admin", orgId: null, firstRun: true}` claims
+- Anonymous Auth STILL ENABLED; Phase 4 hosting bundle STILL SERVING
+
+**Next action:** `/gsd-execute-phase 6` (resume) — orchestrator will read 06-WAVE-5-PARTIAL-STATE.md, plan the cutover commit (must include BLOCKER-FIX 1 main.js wiring contract + surgical AUTH-14 deletion + ci.yml edit), execute Steps 7-12.
+
+**Best resumed in a single focused session with George available** (Steps 9-10 require both admins same-session for the AUTH-10 drill).
 
 **Phase 4 deliverables (locked 2026-05-07):**
 

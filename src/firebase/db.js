@@ -27,9 +27,14 @@ import {
   onSnapshot,
   serverTimestamp,
   limit,
+  runTransaction,
 } from "firebase/firestore";
 
 export const db = getFirestore(app);
+// Phase 7 Wave 4 (FN-09 / 07-04): runTransaction added to the re-exports so
+// src/data/rate-limit.js can compose the bucket-counter increment with the
+// protected-doc write atomically while still honouring the Wave 3 D-04
+// boundary (data/* imports SDK only through firebase/db.js).
 export {
   collection,
   doc,
@@ -45,6 +50,7 @@ export {
   onSnapshot,
   serverTimestamp,
   limit,
+  runTransaction,
 };
 
 /**

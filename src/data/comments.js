@@ -11,17 +11,22 @@
 //
 // D-03 invariant: addComment carries `legacyAuthorId: comment.authorId` so
 // Phase 6 (AUTH-15) can backfill firebaseUid in-place.
+//
+// Phase 7 Wave 4 (FN-09 / 07-04): addComment now routes through
+// incrementBucketAndWrite so each comment write atomically increments the
+// per-uid 60s rate-limit bucket counter (shared with messages — combined
+// 30 writes/window cap). Rules-side denies the 31st write within window.
 import {
   db,
   collection,
   doc,
-  addDoc,
   getDocs,
   deleteDoc,
   query,
   where,
   serverTimestamp,
 } from "../firebase/db.js";
+import { incrementBucketAndWrite } from "./rate-limit.js";
 
 /**
  * @param {string} orgId
@@ -41,18 +46,33 @@ export async function listComments(orgId, pillarId) {
 }
 
 /**
+ * Add a comment to orgs/{orgId}/comments subcollection. Routes through
+ * incrementBucketAndWrite so the per-uid 60s rate-limit bucket increments
+ * atomically with the comment write — shared with messages (combined 30
+ * writes/window). Caller MUST handle permission-denied errors (rate-limit
+ * hit) via the unified-error wrapper surface (Phase 6 D-13).
+ *
+ * Doc id generated client-side via crypto.randomUUID() so the helper can
+ * compose a fully-qualified protectedDocPath.
+ *
  * @param {string} orgId
  * @param {number|string} pillarId
  * @param {*} comment
  * @returns {Promise<void>}
  */
 export async function addComment(orgId, pillarId, comment) {
-  await addDoc(
-    collection(db, "orgs", orgId, "comments"),
+  const uid = comment?.authorId;
+  if (!uid) {
+    throw new Error("addComment: comment.authorId is required");
+  }
+  const cmtId = crypto.randomUUID();
+  await incrementBucketAndWrite(
+    uid,
+    `orgs/${orgId}/comments/${cmtId}`,
     {
       ...comment,
       pillarId: String(pillarId),
-      legacyAuthorId: comment?.authorId, // D-03 inline legacy field
+      legacyAuthorId: uid, // D-03 inline legacy field
       createdAt: serverTimestamp(),
     },
   );

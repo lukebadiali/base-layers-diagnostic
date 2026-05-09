@@ -68,7 +68,24 @@ export function makeFirestoreMock(opts = {}) {
     //   doc(db, 'orgs', orgId, 'readStates', userId)     -> 4-segment
     // Path segments are alternating (collection, id) pairs; the args length
     // (excluding `db`) MUST be even.
+    //
+    // Phase 7 Wave 4 (FN-09 / 07-04) extension: also supports the
+    // single-string-path form
+    //   doc(db, 'rateLimits/uid/buckets/win')            -> single string
+    // matching firebase/firestore's overloaded `doc(db, path)` API. The
+    // path is split on '/' and must have an even number of segments
+    // (alternating collection/id).
     doc: vi.fn(/** @param {any} _db @param {...string} args */ (_db, ...args) => {
+      // Single-string-path form: split into alternating segments.
+      if (args.length === 1 && typeof args[0] === "string" && args[0].includes("/")) {
+        const segments = args[0].split("/");
+        if (segments.length < 2 || segments.length % 2 !== 0) {
+          throw new Error(`doc(path): path must have even segment count; got "${args[0]}"`);
+        }
+        const id = segments[segments.length - 1];
+        const collPath = segments.slice(0, -1).join("/");
+        return { __path: `${collPath}/${id}`, __coll: collPath, __id: id };
+      }
       if (args.length < 2 || args.length % 2 !== 0) {
         throw new Error(`doc() requires alternating collection/id pairs; got ${args.length} args`);
       }
@@ -129,6 +146,35 @@ export function makeFirestoreMock(opts = {}) {
     where: vi.fn(/** @param {string} field @param {string} op @param {any} value */ (field, op, value) => ({ __where: [field, op, value] })),
     orderBy: vi.fn(/** @param {string} field @param {string} dir */ (field, dir) => ({ __orderBy: [field, dir] })),
     limit: vi.fn(/** @param {number} n */ (n) => ({ __limit: n })),
+    // Phase 7 Wave 4 (FN-09 / 07-04): runTransaction shim for src/data/rate-limit.js.
+    // Provides a tx with get/set/update/delete that shares the same `seed` map.
+    // No real-Firestore optimistic-concurrency emulation — single-threaded test
+    // shim only; tests verify the helper's increment/write composition logic,
+    // not contention semantics. Conflict semantics are exercised in
+    // tests/rules/rate-limit.test.js against the real emulator.
+    runTransaction: vi.fn(/** @param {any} _db @param {(tx: any) => Promise<any>} updater */ async (_db, updater) => {
+      const tx = {
+        get: vi.fn(/** @param {any} ref */ async (ref) => {
+          if (opts.failGetDoc) throw new Error("mock-getDoc-fail");
+          const data = seed[ref.__path];
+          return {
+            exists: () => data !== undefined,
+            data: () => data,
+            id: ref.__id,
+          };
+        }),
+        set: vi.fn(/** @param {any} ref @param {any} data */ (ref, data) => {
+          seed[ref.__path] = data;
+        }),
+        update: vi.fn(/** @param {any} ref @param {any} patch */ (ref, patch) => {
+          seed[ref.__path] = { ...(seed[ref.__path] || {}), ...patch };
+        }),
+        delete: vi.fn(/** @param {any} ref */ (ref) => {
+          delete seed[ref.__path];
+        }),
+      };
+      return updater(tx);
+    }),
     // src/firebase/db.js subscribeDoc wrapper (matches the adapter's signature)
     subscribeDoc: vi.fn(/** @param {any} ref @param {{ onChange: (snap:any) => void, onError: (err:Error) => void }} cb */ (ref, cb) => {
       const data = seed[ref.__path];

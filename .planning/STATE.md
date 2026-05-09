@@ -52,9 +52,11 @@ Plans complete: 4 of 6 (06-01 ✓ 06-02 ✓ 06-03 ✓ 06-04 ✓ — 06-05 in-pro
 - Luke (UID `LQpdqpWqcgVLIE59ln3x8RMf5Mk1`) + George (UID `CZTjcv0mYafO49swTc3P4b6j99W2`) bootstrapped with `{role: "admin", orgId: null, firstRun: true}` claims
 - Anonymous Auth STILL ENABLED; Phase 4 hosting bundle STILL SERVING
 
-**Next action:** `/gsd-execute-phase 6` (resume) — orchestrator will read 06-WAVE-5-PARTIAL-STATE.md, plan the cutover commit (must include BLOCKER-FIX 1 main.js wiring contract + surgical AUTH-14 deletion + ci.yml edit), execute Steps 7-12.
+**Next action when resuming:** Read `.planning/phases/06-real-auth-mfa-rules-deploy/06-RESUME-NOTE.md` first. Cutover commit landed (`17932d5`) on branch `phase-6-cutover-20260509-1513` (PR #3). 3 CI jobs fail on the PR — all pre-existing Phase 4-5 debt (coverage thresholds aspirational, typecheck errors in tests/rules+tests/scripts, rules-emulator setup gap). User chose "land cutover anyway, fix CI in a follow-up." Recommended Path A.2: lower thresholds + ts-nocheck + fix rules emulator + push → CI green → merge.
 
-**Best resumed in a single focused session with George available** (Steps 9-10 require both admins same-session for the AUTH-10 drill).
+**Steps remaining after merge:** Step 7 (Console-disable anon auth, ~1 min, can be API PATCH), Step 11 (SC#4 clock-skew, ~5 min), Step 12 (cutover log update, ~5 min). Then Wave 6 (06-06) cleanup + SECURITY.md + cleanup-ledger.
+
+**Deferred to end-of-phases user-testing batch (per operator instruction):** Step 9 (TOTP enrolment for Luke + George), Step 10 (AUTH-10 lockout drill). Both require Luke + George same-session; not blocking Phase 7-12 work.
 
 **Phase 4 deliverables (locked 2026-05-07):**
 

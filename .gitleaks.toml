@@ -5,13 +5,9 @@ title = "Base Layers Diagnostic — gitleaks config"
 # Extend the default gitleaks ruleset (covers AWS keys, GitHub tokens, generic API patterns, etc.)
 useDefault = true
 
-[[rules]]
-id = "sha256-hex-literal-regression"
-description = "SHA-256 hex literal (64 chars) in source — regression check for C2 INTERNAL_PASSWORD_HASH pattern"
-regex = '''(?i)(password|hash|secret|key|token|credential)[^=\n]{0,20}[=:]\s*["\']?[a-f0-9]{64}["\']?'''
-secretGroup = 0
-tags = ["custom", "c2-regression"]
-severity = "CRITICAL"
+# Phase 6 Wave 5 (AUTH-14 / D-04): the custom `sha256-hex-literal-regression`
+# rule was retired alongside the deletion of INTERNAL_PASSWORD_HASH from
+# src/main.js — its target is gone; the cleanup-ledger row closes here.
 
 [allowlist]
 description = "Allow legitimate hex strings in test fixtures, runbooks, and project planning docs"

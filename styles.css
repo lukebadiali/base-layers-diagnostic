@@ -4,6 +4,51 @@
    consulting use and client-facing diagnostic sessions.
    ============================================================ */
 
+/* Phase 4 Wave 1 (D-08): self-hosted fonts replace fonts.googleapis.com /
+   fonts.gstatic.com. OFL — see assets/fonts/LICENSE.txt. */
+@font-face {
+  font-family: "Inter";
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  src: url("./assets/fonts/Inter-Light.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("./assets/fonts/Inter-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url("./assets/fonts/Inter-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url("./assets/fonts/Inter-SemiBold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url("./assets/fonts/Inter-Bold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Bebas Neue";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("./assets/fonts/BebasNeue-Regular.woff2") format("woff2");
+}
+
 :root {
   /* ---- BeDeveloped brand palette ---- */
   --brand: #579ec0; /* primary brand blue (from overview deck) */
@@ -49,6 +94,78 @@
   /* Headings: Bebas Neue (Google Fonts) */
   --font-display:
     "Bebas Neue", "Aptos Display", "Impact", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /* Phase 4 Wave 2 (D-13): toast level tints. color-mix lets each level
+     pick up the brand/green/amber/red token while staying surface-friendly. */
+  --toast-bg-info: color-mix(in srgb, var(--brand) 12%, var(--surface));
+  --toast-bg-success: color-mix(in srgb, var(--green) 12%, var(--surface));
+  --toast-bg-warn: color-mix(in srgb, var(--amber) 14%, var(--surface));
+  --toast-bg-error: color-mix(in srgb, var(--red) 12%, var(--surface));
+}
+
+/* Phase 4 Wave 2 (D-13 / D-14): toast container + level + close button.
+   Layout: top-right stack with 16px page edge insets; mobile breakpoint
+   (≤600px) shifts to top-center with full-width minus 16px (D-14). */
+.toast-root {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  pointer-events: auto;
+  max-width: 360px;
+}
+.toast-info {
+  background: var(--toast-bg-info);
+}
+.toast-success {
+  background: var(--toast-bg-success);
+}
+.toast-warn {
+  background: var(--toast-bg-warn);
+}
+.toast-error {
+  background: var(--toast-bg-error);
+}
+.toast-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+.toast-message {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.toast-close {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0 4px;
+  line-height: 1;
+}
+@media (max-width: 600px) {
+  .toast-root {
+    left: 16px;
+    right: 16px;
+    top: 16px;
+  }
+  .toast {
+    max-width: none;
+    width: 100%;
+  }
 }
 
 * {
@@ -2648,4 +2765,37 @@ a:hover {
   outline: none;
   border-color: var(--brand);
   box-shadow: 0 0 0 2px var(--brand-tint);
+}
+
+/* ============================================================
+   Phase 4 Wave 4 — CODE-06 (D-20): inline-style sweep classes
+   ============================================================
+   Replaces the 4 in-IIFE el.style.X = ... runtime mutations with
+   class-toggling, eliminating the need for direct .style mutation
+   in src/views/** + app.js. The remaining style="..." inline-attr
+   strings (132 sites) defer to Wave 5 per D-12 (Wave 3 Dev #1 precedent
+   — production rendering bodies remain in app.js IIFE until Wave 5
+   re-homes them, at which point the inline-attr sweep + CSP-strict
+   precondition land together with the body migration).
+   ============================================================ */
+.is-hidden {
+  display: none !important;
+}
+.is-shown-block {
+  display: block !important;
+}
+.roadmap-drop {
+  min-height: 42px;
+  padding: 8px;
+  border: 1px dashed var(--line-2);
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: var(--surface-muted);
+  margin-bottom: 10px;
+  transition: background 0.15s ease;
+}
+.roadmap-drop.is-dragover {
+  background: var(--brand-tint);
 }

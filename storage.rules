@@ -1,0 +1,44 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Auth predicates - storage rules don't share Firestore's predicate
+    // library; duplicate the auth check + tenant predicate.
+    function isAuthed() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider != "anonymous";
+    }
+    function inOrg(o) {
+      return isAuthed()
+        && (request.auth.token.role in ["internal", "admin"]
+            || request.auth.token.orgId == o);
+    }
+
+    // Phase 5 RULES-05 limits (mirror src/ui/upload.js MAX_BYTES + ALLOWED_MIME_TYPES)
+    function validSize() { return request.resource.size <= 25 * 1024 * 1024; }
+    function validMime() {
+      return request.resource.contentType.matches('application/pdf')
+          || request.resource.contentType.matches('image/jpeg')
+          || request.resource.contentType.matches('image/png')
+          || request.resource.contentType.matches(
+               'application/vnd\\.openxmlformats-officedocument\\.wordprocessingml\\.document')
+          || request.resource.contentType.matches(
+               'application/vnd\\.openxmlformats-officedocument\\.spreadsheetml\\.sheet')
+          || request.resource.contentType.matches('text/plain');
+    }
+
+    match /orgs/{orgId}/documents/{docId}/{filename} {
+      allow read:   if inOrg(orgId);
+      allow create: if inOrg(orgId) && validSize() && validMime();
+      allow update: if false;  // documents immutable once uploaded
+      allow delete: if isAuthed()
+                    && request.auth.token.role in ["internal", "admin"];
+    }
+
+    // Deny everything outside the documented scope (defense in depth)
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

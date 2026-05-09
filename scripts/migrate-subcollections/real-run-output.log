@@ -1,0 +1,39 @@
+
+=== Phase 5 subcollection migration (project=bedeveloped-base-layers) ===
+[PRE]
+  orgs         0
+  responses    0
+  comments     0
+  actions      0
+  documents    0
+  messages     0
+  readStates   0
+
+=== STEP responses-v1 (responses) ===
+[STEP responses-v1] orgs=0 skipped=0 written=0 dryRunWouldWrite=0
+
+=== STEP comments-v1 (comments) ===
+[STEP comments-v1] orgs=0 skipped=0 written=0 dryRunWouldWrite=0
+
+=== STEP actions-v1 (actions) ===
+[STEP actions-v1] orgs=0 skipped=0 written=0 dryRunWouldWrite=0
+
+=== STEP documents-v1 (documents) ===
+[STEP documents-v1] orgs=0 skipped=0 written=0 dryRunWouldWrite=0
+
+=== STEP messages-v1 (messages) ===
+[STEP messages-v1] orgs=0 skipped=0 written=0 dryRunWouldWrite=0
+
+=== STEP readStates-init (readStates) ===
+[STEP readStates-init] orgs=0 skipped=0 written=0 dryRunWouldWrite=0
+
+[POST]
+  orgs         0
+  responses    0
+  comments     0
+  actions      0
+  documents    0
+  messages     0
+  readStates   0
+
+[OK] Migration complete; pre/post assertions passed.

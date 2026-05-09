@@ -16,6 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-project-rules \"vitest run --config vitest.rules.config.js\"",
+    "test:migrate": "vitest run tests/scripts/migrate-subcollections/",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky || true"
@@ -30,7 +32,8 @@
     "@sentry/browser": "10.51.0",
     "chart.js": "4.5.1",
     "dompurify": "3.4.2",
-    "firebase": "12.12.1"
+    "firebase": "12.12.1",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -39,6 +42,7 @@
     "eslint": "10.3.0",
     "eslint-plugin-no-unsanitized": "4.1.5",
     "eslint-plugin-security": "4.0.0",
+    "firebase-admin": "^13.8.0",
     "firebase-tools": "15.16.0",
     "happy-dom": "20.9.0",
     "husky": "9.1.7",

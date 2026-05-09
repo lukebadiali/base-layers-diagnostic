@@ -16,9 +16,18 @@
   "exclude": [
     "node_modules",
     "dist",
-    "functions/lib",
+    "functions/**",
     "coverage",
     "vite.config.js",
-    "eslint.config.js"
+    "eslint.config.js",
+    "tests/fixtures/_generators",
+    "tests/crypto-parity.test.js",
+    "tests/firebase-config.test.js",
+    "tests/index-html-meta-csp.test.js",
+    "tests/main.test.js",
+    "tests/rules/**",
+    "tests/scripts/migrate-subcollections/**",
+    "vitest.rules.config.js",
+    "scripts/admin-mfa-unenroll/run.js"
   ]
 }

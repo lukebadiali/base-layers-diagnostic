@@ -28,16 +28,16 @@ Each requirement is mapped to: (a) the CONCERNS.md finding it closes (where appl
 
 ### Testing (TEST)
 
-- [ ] **TEST-01**: Vitest 4 + `@vitest/coverage-v8` + `happy-dom` configured and runnable via `npm test`
-- [ ] **TEST-02**: Unit tests cover `pillarScoreForRound` + `pillarStatus` + `bandLabel` boundary conditions (closes scoring-regression risk in CONCERNS Test Coverage Gaps)
-- [ ] **TEST-03**: Unit tests cover `userCompletionPct` + `orgSummary` math
-- [ ] **TEST-04**: Unit tests cover v1→v2 migration (`migrateV1IfNeeded`) and `clearOldScaleResponsesIfNeeded` for idempotency (silent-data-corruption risks)
-- [ ] **TEST-05**: Unit tests cover comment unread tracking (`unreadCountForPillar`, `markPillarRead`) and chat unread total (`unreadChatTotal`)
-- [ ] **TEST-06**: Unit tests cover `syncFromCloud` bail-on-error logic (cloud sync conflict resolution)
-- [ ] **TEST-07**: Unit tests cover auth state machine (`verifyInternalPassword`, `verifyOrgClientPassphrase`, `verifyUserPassword`) — captures behaviour BEFORE replacement in TOOL/AUTH phases
+- [x] **TEST-01**: Vitest 4 + `@vitest/coverage-v8` + `happy-dom` configured and runnable via `npm test` (validated Phase 2 — 14 files / 149 tests; coverage 100%/98.94%/100%/100%)
+- [x] **TEST-02**: Unit tests cover `pillarScoreForRound` + `pillarStatus` + `bandLabel` boundary conditions (closes scoring-regression risk in CONCERNS Test Coverage Gaps) (validated Phase 2 — `tests/domain/{banding,scoring}.test.js`, 47 boundary cases)
+- [x] **TEST-03**: Unit tests cover `userCompletionPct` + `orgSummary` math (validated Phase 2 — `tests/domain/completion.test.js`, 11 cases)
+- [x] **TEST-04**: Unit tests cover v1→v2 migration (`migrateV1IfNeeded`) and `clearOldScaleResponsesIfNeeded` for idempotency (silent-data-corruption risks) (validated Phase 2 — `tests/data/migration.test.js` with v1-localStorage / v2-org fixtures)
+- [x] **TEST-05**: Unit tests cover comment unread tracking (`unreadCountForPillar`, `markPillarRead`) and chat unread total (`unreadChatTotal`) (validated Phase 2 — `tests/domain/unread.test.js`, H7/Pitfall 20 regression baseline)
+- [x] **TEST-06**: Unit tests cover `syncFromCloud` bail-on-error logic (cloud sync conflict resolution) (validated Phase 2 — `tests/data/cloud-sync.test.js`, H8/Pitfall 20 regression baseline; will break by design when Phase 5 lands the H8 fix)
+- [x] **TEST-07**: Unit tests cover auth state machine (`verifyInternalPassword`, `verifyOrgClientPassphrase`, `verifyUserPassword`) — captures behaviour BEFORE replacement in TOOL/AUTH phases (validated Phase 2 — `tests/auth/state-machine.test.js` with `tests/fixtures/auth-passwords.js` SHA-256 fixtures; Phase 6 AUTH-14 deletion baseline)
 - [ ] **TEST-08**: `@firebase/rules-unit-testing` 5 suite covers every Firestore + Storage Rules collection × every role × allowed/denied path against the local emulator (closes H2 rules slice)
 - [ ] **TEST-09**: `firebase-functions-test` 3 suite covers every Cloud Function callable + trigger
-- [ ] **TEST-10**: Snapshot tests exist for the dashboard, diagnostic, and report rendered HTML — used as regression baseline during the modular split
+- [x] **TEST-10**: Snapshot tests exist for the dashboard, diagnostic, and report rendered HTML — used as regression baseline during the modular split (validated Phase 2 — `tests/__snapshots__/views/{dashboard,diagnostic,report}.html` committed via `toMatchFileSnapshot` per D-13; stable across consecutive runs verified by MD5)
 
 ### Hosting & Headers (HOST)
 
@@ -250,13 +250,13 @@ Acknowledged but deferred — not in this milestone's roadmap.
 | Requirement                              | Phase                                  | Status  | Notes                                                                                                                               |
 | ---------------------------------------- | -------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | TOOL-01 to TOOL-12                       | Phase 1                                | Pending | —                                                                                                                                   |
-| TEST-01 to TEST-07                       | Phase 2                                | Pending | Tests-first regression baseline (Pitfall 9)                                                                                         |
+| TEST-01 to TEST-07                       | Phase 2                                | Validated 2026-05-06 | Tests-first regression baseline (Pitfall 9) — 14 files / 149 tests / coverage 100/98.94/100/100; H7+H8 + Phase 6 deletion baselines locked |
 | TEST-08                                  | Phase 5                                | Pending | Rules-unit-test suite written alongside the rules (committed in Phase 5; deployed in Phase 6)                                       |
 | TEST-09                                  | Phase 7                                | Pending | `firebase-functions-test` suite written alongside Cloud Functions                                                                   |
-| TEST-10                                  | Phase 2                                | Pending | Snapshot tests as the regression baseline for the Phase 4 modular split                                                             |
+| TEST-10                                  | Phase 2                                | Validated 2026-05-06 | Snapshot tests as the regression baseline for the Phase 4 modular split — toMatchFileSnapshot per D-13                              |
 | HOST-01 to HOST-05, HOST-08              | Phase 3                                | Pending | Hosting cutover + report-only CSP + per-PR previews                                                                                 |
 | HOST-06, HOST-07                         | Phase 10                               | Pending | HSTS preload submission + strict CSP after Phase 4 inline-style sweep                                                               |
-| CODE-01 to CODE-13                       | Phase 4                                | Pending | Modular split + quick wins, gated by Phase 2 tests being green                                                                      |
+| CODE-01 to CODE-13                       | Phase 4                                | Validated 2026-05-07 (CODE-06 partial — 132 static `style=""` strings deferred to 4.1) | Modular split + quick wins; verifier 4/4 SC + 14/14 requirements; 3 UI smoke checks pending in 04-HUMAN-UAT.md           |
 | DATA-01 to DATA-07                       | Phase 5                                | Pending | Subcollection migration + H7 fix folded in (DATA-07)                                                                                |
 | RULES-01 to RULES-06                     | Phase 5                                | Pending | Authored, unit-tested, committed — NOT deployed (deploy gate held for Phase 6)                                                      |
 | RULES-07                                 | Phase 6                                | Pending | Production deploy + rollback plan; the load-bearing cutover step                                                                    |

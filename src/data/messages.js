@@ -18,14 +18,23 @@
 //
 // D-03 invariant: every write carries `legacyAuthorId: message.authorId` so
 // Phase 6 (AUTH-15) can backfill firebaseUid in-place.
+//
+// Phase 7 Wave 4 (FN-09 / 07-04): addMessage now routes through
+// incrementBucketAndWrite so each message write atomically increments the
+// per-uid 60s rate-limit bucket counter. The rules-side `rateLimitOk(uid)`
+// predicate denies the 31st write within the window (Phase 7 SC#5). The
+// `uid` for the bucket IS the message.authorId — rules already enforce
+// `request.resource.data.authorId == request.auth.uid`, so the two values
+// must equal anyway. Doc id generated via crypto.randomUUID() — eslint
+// `security/detect-pseudoRandomBytes` forbids Math.random() (CSPRNG only).
 import {
   db,
   collection,
-  addDoc,
   getDocs,
   onSnapshot,
   serverTimestamp,
 } from "../firebase/db.js";
+import { incrementBucketAndWrite } from "./rate-limit.js";
 
 /**
  * @param {*} a
@@ -54,21 +63,40 @@ export async function listMessages(orgId) {
 }
 
 /**
+ * Add a message to orgs/{orgId}/messages subcollection. Routes through
+ * incrementBucketAndWrite so the per-uid 60s rate-limit bucket increments
+ * atomically with the message write — the rules-side `rateLimitOk(uid)`
+ * predicate denies the 31st write within the window. Caller MUST handle
+ * permission-denied (rate-limit hit) errors via the unified-error wrapper
+ * surface (Phase 6 D-13).
+ *
+ * Doc id generated client-side via crypto.randomUUID() so the helper can
+ * compose a fully-qualified protectedDocPath.
+ *
  * @param {string} orgId
  * @param {*} message
  * @returns {Promise<string>}
  */
 export async function addMessage(orgId, message) {
-  const ref = await addDoc(
-    collection(db, "orgs", orgId, "messages"),
+  const uid = message?.authorId;
+  if (!uid) {
+    // Defensive — rules-side will reject anyway (authorId must equal
+    // request.auth.uid), but failing fast surfaces the misuse without a
+    // round-trip.
+    throw new Error("addMessage: message.authorId is required");
+  }
+  const msgId = crypto.randomUUID();
+  await incrementBucketAndWrite(
+    uid,
+    `orgs/${orgId}/messages/${msgId}`,
     {
-      authorId: message?.authorId,
-      legacyAuthorId: message?.authorId, // D-03 inline legacy field
+      authorId: uid,
+      legacyAuthorId: uid, // D-03 inline legacy field
       body: message?.body,
       createdAt: serverTimestamp(),
     },
   );
-  return ref.id;
+  return msgId;
 }
 
 /**

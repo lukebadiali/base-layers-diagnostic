@@ -41,6 +41,16 @@ export const auditEventType = z.enum([
   "ratelimit.exceeded",
   "appcheck.failure",
   "rules.deployed",
+  // Phase 7 Wave 2 (FN-01 / AUDIT-04): mirror enum values written by the
+  // Firestore-trigger defence-in-depth writers (onOrgDelete / onUserDelete /
+  // onDocumentDelete). The mirror writers are the canonical producer; a
+  // client COULD submit one via auditWrite, but actor.{uid,email,role,orgId}
+  // is overwritten from request.auth.token (Pitfall 17), so a forged
+  // "system" actor on a mirror event is structurally impossible. The enum
+  // widening is therefore safe.
+  "data.org.delete.mirror",
+  "data.user.delete.mirror",
+  "data.document.delete.mirror",
 ]);
 
 export type AuditEventType = z.infer<typeof auditEventType>;

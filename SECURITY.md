@@ -751,6 +751,122 @@ This is a one-stop pointer for an auditor walking Phase 6's controls. Each row m
 - **Phase 10** (HOST-06) — drops temporary CSP allowlist for Firebase Auth popups (Phase 3 added preemptively in D-07).
 - **Phase 11** (DOC-04) — customises Firebase password-reset email sender domain to `noreply@bedeveloped.com`.
 
+## § Cloud Functions Workspace
+
+Phase 7 (FN-01..06): All trusted-server work flows through 2nd-generation Cloud Functions in the `functions/` workspace, region-pinned to `europe-west2` (matches Firestore region per Pitfall 5 — minimises cross-region egress and simplifies the data-residency narrative for `PRIVACY.md`). The workspace ships its own `package.json`, TypeScript config, and Vitest test runner; root vitest does not load functions sources.
+
+**Standard callable shape** (Pattern A): Every onCall enforces App Check (`enforceAppCheck: true`), Zod-validates input via `validateInput()`, writes a 5-minute idempotency-marker doc keyed by `(actor:type:target:clientReqId)`, captures errors to `@sentry/node` with PII-scrubbed `beforeSend` (Pitfall 18), and runs as its own minimal-IAM service account.
+
+**Per-function service accounts** (FN-04 / Pitfall 13 / Pattern 7): provisioned via the idempotent `scripts/provision-function-sas/run.js` Pattern E script (ADC; no SA JSON in repo).
+
+| SA | Roles | Bound to |
+|----|-------|----------|
+| `audit-writer-sa` | `roles/datastore.user` | `auditWrite` |
+| `audit-mirror-sa` | `roles/datastore.user`, `roles/eventarc.eventReceiver` | `onOrgDelete`, `onUserDelete`, `onDocumentDelete` |
+| `claims-admin-sa` | `roles/firebaseauth.admin`, `roles/datastore.user` | `setClaims` |
+| `auth-blocking-sa` | `roles/firebaseauth.viewer`, `roles/datastore.viewer` | `beforeUserCreatedHandler`, `beforeUserSignedInHandler` (rebind deferred to sub-wave 7.1 per Branch B) |
+| `ratelimit-sa` | `roles/datastore.user` | `checkRateLimit` |
+| `csp-sink-sa` | `roles/logging.logWriter` | `cspReportSink` |
+
+**Secrets management** (FN-05): All runtime secrets declared via `defineSecret()` from `firebase-functions/params`; never read from `process.env` outside the controlled `withSentry()` init path. `SENTRY_DSN` is the only Phase 7 secret. Operator-set via `firebase functions:secrets:set SENTRY_DSN`.
+
+**Cold-start guarantee** (FN-06 / Pitfall 12): Auth-blocking handlers (`beforeUserCreated`, `beforeUserSignedIn`) ship Phase 7 WITHOUT `minInstances: 1` because the D-22 ToS gate (`firebaseauth.googleapis.com`) is still operator-deferred at Phase 7 close — IdP signs blocking-handler invocations as `gcp-sa-firebaseauth` SA which does not yet exist on the project. **Substrate-honest** (Pitfall 19): the FN-06 `minInstances:1` + cold-start p99 ≤ 4s baseline is queued in `runbooks/phase-7-cleanup-ledger.md` sub-wave 7.1 with documented closure path. Branch B selected at Wave 5; Branch A would have closed FN-06 inline.
+
+Framework citations: ASVS V4.1 / V11.1 / V13 / V14, ISO 27001:2022 A.5.18 / A.8.15 / A.8.24, SOC2 CC6.1 / CC6.6 / CC7.2 / CC8.1, GDPR Art. 32(1)(b) + 32(1)(d).
+
+## § App Check
+
+Phase 7 (FN-07 / FN-08): App Check is enrolled via reCAPTCHA Enterprise in `src/firebase/check.js`, the unique permitted import site for `firebase/app-check` per the Phase 4 ESLint Wave 3 boundary (error-level).
+
+**Per-environment site keys**: `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` pulled from `.env.local` (gitignored, verified via `git check-ignore`). Production build fails fast in `vite.config.js` if the key is absent — closes the silent-bypass risk (Pitfall 8 mitigation #3).
+
+**Debug tokens**: Live ONLY in `.env.local` per environment (dev / staging / scratch / CI). Per-environment registration via Firebase Console → App Check → Apps → Manage debug tokens. Pitfall 1 mitigation enumerated in `runbooks/phase-7-app-check-rollout.md` §Stage A.
+
+**Staged rollout** (Pitfall 8 / Pattern 3):
+
+| Stage | What | Status |
+|-------|------|--------|
+| A — Enrolment (Wave 3) | Production deploy with App Check token attached on every Firebase SDK call; enforcement OFF for all services | Substrate shipped (Wave 3 commit 3bc2c6f); Console-side enrolment is operator-paced (`07-HUMAN-UAT.md` Test 1) |
+| B — Quota alert | 70% of free tier (10k assessments/month for reCAPTCHA Enterprise) | Substrate documented (`runbooks/phase-7-app-check-rollout.md` §Stage B); Console alert config is operator-paced (Test 2) |
+| C — 7-day soak | ≥95% verified ratio for ≥7 consecutive days, all enforcement OFF | Operator-paced calendar window (Test 3) |
+| D — Storage enforcement | Day 8+ — first stage where App Check denies traffic | Operator-paced (Test 4) |
+| E — Firestore enforcement (collection-by-collection) | Day 9+ — auditLog → internalAllowlist → softDeleted → messages → comments → documents → responses → actions | Operator-paced (Test 5) |
+| F — Cloud Functions enforcement | Day 14+ — final stage; un-attested calls return `unauthenticated` HttpsError | Operator-paced (Test 6) |
+
+**Cleanup-ledger gate**: `runbooks/phase-7-app-check-enforcement.md` records soak-day ratios, per-service enforcement flip dates, and screenshots. Wave 6 close gate accepts PASS-PARTIAL when Stages A+B+C land + Stages D-F are queued in `07-HUMAN-UAT.md`. Full PASS requires the operator to flip Stages D-F per their schedule.
+
+Framework citations: OWASP A05:2025 (Security Misconfiguration), SOC2 CC6.6, ISO 27001:2022 A.13.1, GDPR Art. 32(1)(b).
+
+## § Audit Log Infrastructure
+
+Phase 7 (AUDIT-01..04 / AUDIT-06..07): Two-tier architecture — application-tier `auditLog/{eventId}` Firestore collection + infrastructure-tier Cloud Logging Data Access logs sunk to BigQuery `audit_logs_bq` (7-year retention). Closes Pitfall 17 ("audit log written from Cloud Functions only") at both tiers.
+
+**Application tier** (`auditLog/{eventId}` Firestore collection):
+
+- **Write authority**: Server-only via `auditWrite` callable using Admin SDK. Firestore Rules `allow write: if false` denies all client writes (Phase 5 baseline; rules-unit-test cells 1-4 in `tests/rules/auditLog.test.js` pin the 4-role × write matrix).
+- **Read authority**: `allow read: if isAdmin()` only. Internal users cannot read their own audit records (AUDIT-07 — pinned by rules-unit-test cell 7).
+- **Schema** (AUDIT-02): `auditEventInput` Zod schema in `functions/src/audit/auditEventSchema.ts` validates incoming payload; server-set fields (`eventId`, `actor`, `at`, `ip`, `userAgent`, `idempotencyKey`, `schemaVersion`) overlay the validated input — never trusted from payload (Pitfall 17).
+- **Mirror triggers** (AUDIT-04): Three Firestore/Auth-trigger writers (`onOrgDelete` v2, `onUserDelete` v1, `onDocumentDelete` v2) provide defence-in-depth. Each fires on the corresponding delete event and writes a `*.delete.mirror` audit row IF no primary `auditWrite` event exists for the same target within the last 60s (Pattern 4b — avoids stampede on bulk delete cascades per Pitfall 7).
+
+**Infrastructure tier** (BigQuery sink):
+
+- Cloud Logging Data Access logs (Firestore + Storage + Auth + Functions) sunk to BigQuery dataset `bedeveloped-base-layers:audit_logs_bq` in `europe-west2` (matches Firestore region per Pitfall 5).
+- 7-year retention via `default_table_expiration_ms: 220_752_000_000` (per AUDIT-06).
+- Partitioned daily (`use_partitioned_tables: true`) for efficient queries.
+- IAM `roles/bigquery.dataViewer` to internalAllowlist admin emails only; sink writer SA has `roles/bigquery.dataEditor` (least-privilege per T-07-05-01).
+- Provisioning via idempotent `scripts/enable-bigquery-audit-sink/run.js` (Pattern E + Pitfall 13 ADC-only).
+
+**Retention policy** (AUDIT-06): 12 months online (Firestore `auditLog/`) + 7 years archive (BigQuery). Documented in `docs/RETENTION.md`.
+
+Framework citations: SOC2 CC7.2 / CC7.3, ISO 27001:2022 A.8.15 / A.12.4.1, GDPR Art. 32(1)(d), ASVS V4 / V11.1.
+
+## § Rate Limiting
+
+Phase 7 (FN-09): Per-user 60-second sliding-window token bucket enforcing 30 writes/window across `messages` + `comments` collections combined.
+
+**Primary path** — Firestore Rules `request.time` predicate (`firestore.rules` `rateLimitOk(uid)` helper) against `rateLimits/{uid}/buckets/{windowStart}` doc. Zero per-write Cloud Function cost (Pitfall 4 — single `get()` budget honoured). Predicate is ordered LAST in the conjunction so cheap predicates short-circuit first.
+
+**Fallback path** — `checkRateLimit` callable in `functions/src/ratelimit/checkRateLimit.ts` (Pattern 5b). Deployed but not live-wired in Phase 7; provides operator hot-swap capability if the rules-side hits a cost ceiling under future predicate composition. Activation requires: (a) wire `src/cloud/checkRateLimit.js` (Wave 6) into `src/data/{messages,comments}.js`, (b) drop the `&& rateLimitOk(uid)` conjunct from rules, (c) selective deploy.
+
+**Client wiring** — `src/data/rate-limit.js` `incrementBucketAndWrite()` runs the protected write inside a `runTransaction` so the bucket counter increments atomically with the protected doc create. If the rules predicate denies, runTransaction throws `permission-denied`; caller surfaces "rate limit hit" via the AUTH-12 unified-error wrapper (no raw Firebase error code leak).
+
+**Threshold** — 30/60s. Documented in `docs/RETENTION.md` as adjustable-via-rules-redeploy. Conservative-but-non-disruptive for chat-style SaaS use case (Open Question #3 in `07-RESEARCH.md`); revisit at engagement re-start if BeDeveloped consultancy use-case has bursts.
+
+**Test coverage**: `tests/rules/rate-limit.test.js` 15 cells covering bucket-direct (cells 1-11) + composed-predicate (cells 12-15), including the 31-write synthetic burst (cell 13) which is the Phase 7 SC#5 evidence row.
+
+Framework citations: OWASP A04:2021 (Insecure Design — rate limiting), ASVS V11.1.
+
+## § Phase 7 Audit Index
+
+This is the auditor walk-through pointer for Phase 7. Each row maps a Phase 7 control to (a) the section + decision that defines it, (b) the code path that implements it, (c) the test that verifies it, and (d) the framework citations it addresses. Mirrors §Phase 6 Audit Index density.
+
+| Audit row | Control | Code path | Test | Framework |
+|-----------|---------|-----------|------|-----------|
+| auditWrite callable + Pattern A hardening | FN-01 / FN-03 / FN-07 / AUDIT-01 / AUDIT-02 | `functions/src/audit/auditWrite.ts` (App Check + Zod + idempotency + Sentry + audit-writer-sa) | `functions/test/audit/auditWrite.unit.test.ts` (12) + `functions/test/integration/auditWrite.integration.test.ts` (4) | ASVS V11.1 / SOC2 CC7.2 / ISO A.8.15 / GDPR Art. 32(1)(d) |
+| auditLog Firestore predicate (write-deny + audited-self read-deny) | AUDIT-01 / AUDIT-07 | `firestore.rules` (`allow write: if false; allow read: if isAdmin()` on auditLog/) | `tests/rules/auditLog.test.js` (cells 1-8; cell 7 = AUDIT-07 audited-self) | ASVS V4 / SOC2 CC7.2 |
+| Firestore-trigger audit mirrors (org + document) | AUDIT-04 / FN-01 | `functions/src/audit/triggers/onOrgDelete.ts` + `functions/src/audit/triggers/onDocumentDelete.ts` (v2 onDocumentDeleted; 60s primary-event dedup) | `functions/test/audit/triggers/mirrorTriggers.unit.test.ts` (10) + `functions/test/integration/{onOrgDelete,onDocumentDelete}.integration.test.ts` (4) | SOC2 CC7.2 / ISO A.8.15 |
+| Auth-trigger audit mirror (user) | AUDIT-04 / FN-01 | `functions/src/audit/triggers/onUserDelete.ts` (v1 fallback — v2/identity has no onUserDeleted in firebase-functions 7.2.5) | `functions/test/audit/triggers/mirrorTriggers.unit.test.ts` (3) + `functions/test/integration/onUserDelete.integration.test.ts` (2) | SOC2 CC7.2 |
+| Cloud Logging → BigQuery 7y sink | AUDIT-03 / AUDIT-06 | `scripts/enable-bigquery-audit-sink/run.js` (Pattern F — ADC + spawn gcloud / bq); dataset `audit_logs_bq` europe-west2 | `runbooks/phase-7-bigquery-sink-bootstrap.md` (T+1h `bq query COUNT(*) > 0` operator gate; pending operator) | SOC2 CC7.2 / CC7.3 / ISO A.12.4.1 / GDPR Art. 32(1)(d) |
+| Per-user rate limit (rules predicate primary) | FN-09 | `firestore.rules` `rateLimitOk(uid)` composed on messages + comments create | `tests/rules/rate-limit.test.js` (cells 1-15; cell 13 = 31-write burst SC#5) | OWASP A04:2021 / ASVS V11.1 |
+| Per-user rate limit (callable fallback) | FN-09 / Pattern 5b | `functions/src/ratelimit/checkRateLimit.ts` + `src/cloud/checkRateLimit.js` (Wave 6 wrapper, deployed-but-unwired) | `functions/test/ratelimit/checkRateLimit.unit.test.ts` (10) + `functions/test/integration/checkRateLimit.integration.test.ts` (2) | OWASP A04:2021 |
+| App Check enrolment (reCAPTCHA Enterprise) | FN-07 | `src/firebase/check.js` + `vite.config.js` build-time guard | `tests/firebase/app.test.js` (initAppCheck contract) + 07-HUMAN-UAT.md Test 1 (Console enrolment, operator-paced) | OWASP A05:2025 / SOC2 CC6.6 |
+| App Check staged enforcement | FN-07 / FN-08 | (Firebase Console toggles per service; runbook + UAT items) | `runbooks/phase-7-app-check-rollout.md` Stages A-F + `07-HUMAN-UAT.md` Tests 1-6 | SOC2 CC6.6 / ISO A.13.1 |
+| Idempotency-key marker (5-min window) | FN-03 | `functions/src/util/idempotency.ts` `ensureIdempotent(key, scope, windowSec)` | `functions/test/util/idempotency.unit.test.ts` (8) + idempotency-replay cells in auditWrite + setClaims integration tests | SOC2 CC7.2 / ISO A.8.24 |
+| Zod input validation on every callable | FN-03 / AUDIT-02 | `functions/src/util/zod-helpers.ts` `validateInput()` (`ZodError → HttpsError("invalid-argument")`) | `functions/test/util/zod-helpers.unit.test.ts` (4) + invalid-input cells in auditWrite + setClaims integration tests | ASVS V5 / OWASP A03:2021 |
+| Per-function minimal-IAM service accounts | FN-04 / Pitfall 13 / Pattern 7 | `scripts/provision-function-sas/run.js` (6 SAs); `serviceAccount: <name>` declared on every onCall / trigger | runbook section "6 SAs — Operator-Run Evidence" + `07-HUMAN-UAT.md` (operator-paced provisioning) | ASVS V4.1 / SOC2 CC6.1 / ISO A.5.15 |
+| Secret management via defineSecret() | FN-05 / Pitfall 13 | `defineSecret("SENTRY_DSN")` in setClaims, auditWrite, checkRateLimit; `withSentry()` reads only via `.value()` | `functions/test/util/sentry.unit.test.ts` (7 — including init no-op when DSN empty) | ASVS V2.10 / SOC2 CC6.1 / ISO A.8.24 |
+| Auth-blocking minInstances:1 + cold-start p99 ≤ 4s | FN-06 / Pitfall 12 | `functions/src/auth/{beforeUserCreated,beforeUserSignedIn}.ts` (carry-forward to sub-wave 7.1 — Branch B; D-22 gated) | `runbooks/phase-7-cold-start-baseline.md` (deferred — Branch B) | ASVS V11.1 / SOC2 CC7.2 |
+| firebase-functions-test v3 integration coverage | TEST-09 | `functions/test/integration/*.integration.test.ts` (8 files / 20 tests) + shared mock `functions/test/_mocks/admin-sdk.ts` | `cd functions && npm test` (133/133 pass; 20 new in Wave 6) | (test infrastructure — gates SC#3) |
+| D-22 ToS gate resolution (Phase 6 sub-wave 6.1 carry-forward) | (audit-narrative integrity / Pitfall 19) | (operator Console click — `firebaseauth.googleapis.com` ToS acceptance) | `runbooks/phase-7-d22-tos-gate-resolution.md` Branch B (deferred to sub-wave 7.1; `07-HUMAN-UAT.md` Test 9) | (substrate-honest closure) |
+
+**Cross-phase plug-ins this index will feed:**
+
+- **Phase 8** (LIFE-01..06 / GDPR-01..04 / BACKUP-01..07) — soft-delete + 30-day restore; GDPR rights wired via `src/cloud/{soft-delete,gdpr}.js` body fills (Phase 4 stub seams); pre-migration export bucket lifecycle.
+- **Phase 9** (AUDIT-05 / OBS-01..08) — view-side `auditWrite` wiring on every sign-in / sign-out / role change / delete / export / MFA enrol / password change; Sentry browser SDK init paired with the Phase 7 server-side DSN.
+- **Phase 10** (HOST-06) — drops temporary CSP allowlist for Firebase Auth popup origin.
+- **Phase 11** (DOC-02 / DOC-04) — `PRIVACY.md` documents BigQuery audit dataset region (europe-west2) + retention (7y) + sub-processor entry; password-reset email sender domain customisation.
+- **Phase 12** (WALK-02 / WALK-03) — audit-walkthrough report cites Phase 7 trusted-server boundary, audit log, rate limit, and App Check sections as ground truth.
+
 ---
 
 ## Compliance posture statement

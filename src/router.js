@@ -103,24 +103,22 @@ export function renderRoute(main, user, org, deps) {
     main.appendChild(deps.renderForgotMfa());
     return;
   }
-  // Phase 6 Wave 5 cutover-recovery (2026-05-09): MFA-enrol gate temporarily
-  // bypassed so Step 11 SC#4 clock-skew drill can run. The deferred Wave-5
-  // wiring items (enrollTotp + qrcodeDataUrl in src/firebase/auth.js) plus
-  // mfa.state DISABLED at IdP level (matching this client-side bypass) make
-  // the gate moot today. Restore the gate once the post-Wave-5 verification
-  // batch (TOTP enrol + AUTH-10 drill) wires in. Tracked in Wave 6 06-06
-  // cleanup-ledger.
-  // ORIGINAL GATE BELOW — DO NOT DELETE; restore by removing the `false &&` short-circuit.
-  if (user && deps.renderMfaEnrol) {
-    const role = user.appClaims && user.appClaims.role;
-    const enrolled = user.appEnrolledFactors;
-    const hasMfa = enrolled && enrolled.length > 0;
-    // eslint-disable-next-line no-constant-condition, no-constant-binary-expression
-    if (false && (role === "admin" || role === "internal") && !hasMfa) {
-      main.appendChild(deps.renderMfaEnrol());
-      return;
-    }
-  }
+  // Phase 6 Wave 5 cutover-recovery (2026-05-09): the MFA-enrol gate that lived
+  // here was duplicated at main.js:805 (renderRoute path). main.js's bypass
+  // returns BEFORE this router function is invoked when MFA enrol would have
+  // fired, so the gate here is moot today. Restoring this block is part of the
+  // same Wave 6 / 06-06 work that restores main.js's gate (alongside the
+  // enrollTotp + qrcodeDataUrl wiring in src/firebase/auth.js).
+  // ORIGINAL GATE (commented for restoration — DO NOT DELETE):
+  //   if (user && deps.renderMfaEnrol) {
+  //     const role = user.appClaims && user.appClaims.role;
+  //     const enrolled = user.appEnrolledFactors;
+  //     const hasMfa = enrolled && enrolled.length > 0;
+  //     if ((role === "admin" || role === "internal") && !hasMfa) {
+  //       main.appendChild(deps.renderMfaEnrol());
+  //       return;
+  //     }
+  //   }
 
   // Existing route ladder unchanged from here.
   const isClient = deps.isClientView(user);

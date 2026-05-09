@@ -229,7 +229,10 @@ import {
 
   const formatDate = (when) => {
     if (!when) return "";
-    return new Date(when).toLocaleDateString(undefined, {
+    // en-GB pinned: snapshot tests run on Linux CI (en-US default) but
+    // committed baselines were captured in UK locale ("1 Dec 2025"). BeDeveloped
+    // is a UK consultancy so en-GB is also the product-correct format.
+    return new Date(when).toLocaleDateString("en-GB", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -2620,7 +2623,7 @@ import {
       h(
         "div",
         { class: "sub" },
-        `${isClient ? "Client view" : "Internal view"} · ${round?.label || "Current round"} · Generated ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`,
+        `${isClient ? "Client view" : "Internal view"} · ${round?.label || "Current round"} · Generated ${new Date().toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" })}`,
       ),
     );
 
@@ -3442,7 +3445,7 @@ import {
             ]),
           );
           row.appendChild(h("div", {}, d.uploaderName || d.uploaderEmail || "—"));
-          row.appendChild(h("div", {}, d.createdAt?.toDate?.().toLocaleString?.() || ""));
+          row.appendChild(h("div", {}, d.createdAt?.toDate?.().toLocaleString?.("en-GB") || ""));
           const canDelete = isInternal || d.uploaderId === user.id;
           const actions = h(
             "div",

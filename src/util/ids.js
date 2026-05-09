@@ -35,7 +35,8 @@ export const formatWhen = (when) => {
   if (mins < 60) return `${mins}m ago`;
   if (mins < 60 * 24) return `${Math.floor(mins / 60)}h ago`;
   if (mins < 60 * 24 * 7) return `${Math.floor(mins / (60 * 24))}d ago`;
-  return d.toLocaleDateString();
+  // en-GB pinned for CI snapshot determinism (CI runners default en-US).
+  return d.toLocaleDateString("en-GB");
 };
 
 /** @param {string} [name=""] */

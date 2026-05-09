@@ -43,9 +43,7 @@ export function renderConversation(opts) {
   const root = h("section", { class: `conversation conversation--${collection}` });
 
   if (list.length === 0) {
-    root.appendChild(
-      h("p", { class: "conversation__empty" }, placeholder || "No messages yet."),
-    );
+    root.appendChild(h("p", { class: "conversation__empty" }, placeholder || "No messages yet."));
   } else {
     const ul = h("ul", { class: "conversation__list" });
     for (const m of list) {
@@ -60,11 +58,7 @@ export function renderConversation(opts) {
         firstNameFromAuthor({ authorName: m.author }) ===
           firstNameFromAuthor({ authorName: currentUser.name })
       ) {
-        const del = h(
-          "button",
-          { class: "conversation__delete", "aria-label": "Delete" },
-          "x",
-        );
+        const del = h("button", { class: "conversation__delete", "aria-label": "Delete" }, "x");
         del.addEventListener("click", () => {
           void onDelete(m.id);
         });
@@ -91,7 +85,6 @@ export function renderConversation(opts) {
 
   return root;
 }
-
 
 /**
  * Production-shape bubble helper — emits a single message bubble in the
@@ -125,7 +118,7 @@ export function renderConversationBubble(opts) {
     delClass,
     onDelete,
   } = opts;
-  const ts = m.createdAt?.toDate?.().toLocaleString?.() || "";
+  const ts = m.createdAt?.toDate?.().toLocaleString?.("en-GB") || "";
   const who = firstNameFromAuthor(m);
   const bubble = h(
     "div",
@@ -133,10 +126,7 @@ export function renderConversationBubble(opts) {
       class: bubbleClass,
       style: `align-self:${isSelf ? "flex-end" : "flex-start"}; background:${bg}; border-color:${bg};`,
     },
-    [
-      h("div", { class: metaClass }, `${who} · ${ts}`),
-      h("div", { class: textClass }, m.text),
-    ],
+    [h("div", { class: metaClass }, `${who} · ${ts}`), h("div", { class: textClass }, m.text)],
   );
   if (canDelete) {
     const del = h(

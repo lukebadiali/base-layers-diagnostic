@@ -22,6 +22,21 @@
 //
 // Always responds 204. Browser ignores the body; 204 is the conventional
 // acknowledgement for a fire-and-forget violation report.
+//
+// Phase 7 Wave 5 (FN-04 / Pitfall 8 — selective deploy): explicit per-function
+// service account `csp-sink-sa` (created by Wave 1
+// `scripts/provision-function-sas/run.js` with `roles/logging.logWriter`).
+// REDEPLOY MUST BE SELECTIVE: `firebase deploy --only functions:cspReportSink`
+// — a workspace-wide deploy would reset the manual `gcp-sa-identitytoolkit`
+// invoker bindings on the auth-blocking handlers (Pitfall 8). The `allUsers`
+// invoker binding on this function is INTENTIONAL — browsers POST CSP reports
+// without auth; abuse defence is the content-type allowlist + 64 KiB body cap
+// above. Operator post-deploy verification:
+//   gcloud run services describe cspreportsink --region=europe-west2 \
+//     --project=bedeveloped-base-layers \
+//     --format="value(spec.template.spec.serviceAccountName)"
+// Expected: csp-sink-sa@bedeveloped-base-layers.iam.gserviceaccount.com
+// Closes Phase 6 sub-wave 6.1 carry-forward "cspReportSink wiring follow-through".
 
 import { onRequest } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/logger";
@@ -32,7 +47,10 @@ import { isDuplicate, markSeen, fingerprint } from "./dedup.js";
 const MAX_BODY_BYTES = 64 * 1024;
 
 export const cspReportSink = onRequest(
-  { region: "europe-west2" },
+  {
+    region: "europe-west2",
+    serviceAccount: "csp-sink-sa", // FN-04 (Wave 1 SA inventory)
+  },
   (req, res) => {
     // Step 1 — content-type gate (D-12 / T-3-3).
     const contentType = String(req.headers["content-type"] ?? "");

@@ -1,9 +1,9 @@
 ---
 status: partial
 phase: 07-cloud-functions-app-check-trusted-server-layer
-source: [07-03-PLAN.md, 07-03-SUMMARY.md]
+source: [07-03-PLAN.md, 07-03-SUMMARY.md, 07-05-PLAN.md, 07-05-SUMMARY.md]
 started: 2026-05-09T22:07:51Z
-updated: 2026-05-09T22:07:51Z
+updated: 2026-05-09T (Wave 5 — BigQuery sink + D-22 verification operator items appended)
 ---
 
 ## Current Test
@@ -76,19 +76,57 @@ depends_on: Test 5 (Stage E Firestore enforcement complete for all 8 collections
 
 closes_roadmap_sc: Phase 7 SC#2 (full per-service enforcement landed)
 
+### 7. Wave 5 (07-05) — BigQuery audit sink bootstrap script run + T+1h verification
+
+expected: Operator runs `gcloud auth application-default login` (Pitfall 13 — no SA JSON in repo); runs `node scripts/enable-bigquery-audit-sink/run.js --project=bedeveloped-base-layers`; script exits 0 with summary table showing dataset created in europe-west2 with default_table_expiration=220752000s (7 years), sink `audit-logs-bq` created with `--use-partitioned-tables`, sink writer SA bound to `roles/bigquery.dataEditor`. Operator pastes the run output into `runbooks/phase-7-bigquery-sink-bootstrap.md` Run evidence section. At T+1h, operator runs the verification BQ query (`SELECT COUNT(*) FROM cloudaudit_googleapis_com_data_access_*`) and confirms `row_count > 0`; pastes result into the runbook Verification section; gate result PASS.
+
+result: [pending]
+
+why_human: Requires operator ADC + project IAM admin role; calls `gcloud projects set-iam-policy` (auditConfigs merge) + `bq mk` + `gcloud logging sinks create`. Substrate-honest: Wave 5 ships the script + runbook; the actual run requires operator presence at the local CLI with valid ADC token.
+
+closes_substrate: AUDIT-03 + AUDIT-06 (infrastructure-tier audit log; Pitfall 17 closure)
+
+closes_roadmap_sc: Phase 7 SC#4 (BigQuery sink + 7y retention live; T+1h verification confirms ingest)
+
+### 8. Wave 5 (07-05) — Admin dataViewer bindings on BigQuery dataset
+
+expected: Operator lists internalAllowlist `role:"admin"` emails (Firebase Console -> Firestore -> internalAllowlist filter); for each admin email runs `gcloud projects add-iam-policy-binding bedeveloped-base-layers --member=user:<email> --role=roles/bigquery.dataViewer`; updates `runbooks/phase-7-bigquery-sink-bootstrap.md` "Admin dataViewer bindings" section with bound emails + timestamps + total count.
+
+result: [pending]
+
+why_human: Operator-paced Firestore inspection + per-email IAM binding; the script intentionally does not pull firebase-admin as a dep (mirrors `scripts/provision-function-sas` shell-out-only pattern).
+
+depends_on: Test 7 (sink bootstrap script run + verification PASS)
+
+closes_threat: T-07-05-02 mitigation (BigQuery audit data accessed only by authorised reviewers)
+
+### 9. Wave 5 (07-05) — D-22 ToS gate resolution (operator Console click — DEFERRED to sub-wave 7.1)
+
+expected: Operator visits https://console.cloud.google.com/apis/library/firebaseauth.googleapis.com?project=bedeveloped-base-layers; clicks Enable; accepts ToS as `business@bedeveloped.com` Workspace admin; waits ~30s for `gcp-sa-firebaseauth` SA auto-provisioning; runs verification gcloud commands documented in `runbooks/phase-7-d22-tos-gate-resolution.md` "Resolution path" section; rebinds the SA to `roles/run.invoker` on the 4 Cloud Run services; re-PATCHes IdP `blockingFunctions.triggers` to restore the 4 verified URLs preserved in `06-PREFLIGHT.md ## Cutover Log`. Once D-22 resolved, sub-wave 7.1 lands the deferred Wave 5 Task 5 work (minInstances:1 restoration + cold-start p99 measurement).
+
+result: [pending — Wave 5 selected Branch B substrate-honest fallback]
+
+why_human: Requires Workspace admin role on `business@bedeveloped.com`; ToS acceptance click is not programmatically scriptable; gcloud SDK ADC + project IAM admin needed for SA invoker rebinding.
+
+closes_substrate: Phase 6 sub-wave 6.1 row "D-22 ToS gate" + Phase 7 sub-wave 7.1 carry-forward row (minInstances + cold-start p99)
+
+closes_roadmap_sc: Phase 7 SC#6 (deferred from Wave 5 to sub-wave 7.1 per Branch B selection)
+
 ## Summary
 
-total: 6
+total: 9
 passed: 0
 issues: 0
-pending: 6
+pending: 9
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-- All 6 tests are operator-execution. Phase 7 Wave 6 cleanup-ledger close gate (07-06) accepts `PASS-PARTIAL` for Phase 7 close when:
+- All 9 tests are operator-execution. Phase 7 Wave 6 cleanup-ledger close gate (07-06) accepts `PASS-PARTIAL` for Phase 7 close when:
   - Test 1 (Stage A) + Test 2 (Stage B) + Test 3 (Stage C) all `PASS` AND
-  - Tests 4 + 5 + 6 (Stages D / E / F) `PENDING-OPERATOR-EXECUTION` (this file's rows).
-- Full `PASS` (zero pending rows) requires operator to flip Stages D + E + F per their schedule (Day 8+ to Day 14+ window in `runbooks/phase-7-app-check-rollout.md` §Stage Table).
+  - Tests 4 + 5 + 6 (Stages D / E / F) `PENDING-OPERATOR-EXECUTION` AND
+  - Tests 7 + 8 (BigQuery sink + dataViewer bindings) `PENDING-OPERATOR-EXECUTION` AND
+  - Test 9 (D-22 ToS gate) `PENDING-OPERATOR-EXECUTION` carrying to sub-wave 7.1 (Branch B selection).
+- Full `PASS` (zero pending rows) requires operator to flip Stages D + E + F per their schedule (Day 8+ to Day 14+ window in `runbooks/phase-7-app-check-rollout.md` §Stage Table) AND run BigQuery sink bootstrap + dataViewer bindings AND resolve D-22 ToS gate (sub-wave 7.1).
 - This file mirrors the Phase 3 `03-HUMAN-UAT.md` and Phase 6 `06-HUMAN-UAT.md` deferred-operator-execution shape — the standard pattern for operator-paced Console-UI work that Claude cannot execute non-interactively.

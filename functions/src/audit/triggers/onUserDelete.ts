@@ -33,9 +33,18 @@ import { writeAuditEvent } from "../auditLogger.js";
 
 if (!getApps().length) initializeApp();
 
+// Phase 7 Wave 6 (TEST-09 / Rule 1 auto-fix): firebase-functions v1 runtime
+// validation requires `serviceAccount` to be `'default'`, an Expression, or a
+// string containing '@' (assertRuntimeOptionsValid in
+// node_modules/firebase-functions/lib/esm/v1/function-builder.mjs:38).
+// The `'{name}@'` shorthand expands to
+// `{name}@<projectId>.iam.gserviceaccount.com` at deploy time. v2 (used by
+// onOrgDelete + onDocumentDelete) accepts the bare name; v1 is stricter. The
+// bare-name form shipped in Wave 2 throws at module-load time under
+// firebase-functions-test wrap(), so Wave 6 hardens to the v1-compliant form.
 export const onUserDelete = functionsV1
   .runWith({
-    serviceAccount: "audit-mirror-sa",
+    serviceAccount: "audit-mirror-sa@",
   })
   .region("europe-west2")
   .auth.user()

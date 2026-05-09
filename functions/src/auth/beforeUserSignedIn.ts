@@ -4,15 +4,15 @@
 // writer + back-fills sign-in events from Cloud Logging (Pitfall 17 — audit
 // log written from Cloud Functions only, not from this trigger directly).
 //
-// Region europe-west2 + minInstances:1 (D-09 + Pitfall 12 — even though this
-// trigger is observation-only, cold-start would still breach the 7s
-// auth-blocking deadline).
+// Region europe-west2. minInstances:1 stripped at Wave 5 cutover time per
+// operator decision (cost concern). Cleanup-ledger row queued — see
+// runbooks/phase-6-cleanup-ledger.md (Wave 6 deliverable).
 
 import { beforeUserSignedIn } from "firebase-functions/v2/identity";
 import { logger } from "firebase-functions/logger";
 
 export const beforeUserSignedInHandler = beforeUserSignedIn(
-  { region: "europe-west2", minInstances: 1 },
+  { region: "europe-west2" },
   async (event) => {
     logger.info("auth.user.signin", {
       uid: event.data?.uid,

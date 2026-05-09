@@ -4,7 +4,10 @@
 // dance for bootstrap admins).
 //
 // 7s deadline (Pitfall 12) — single doc-by-id read; never list-walk.
-// Region europe-west2 + minInstances:1 (D-09 + Pitfall 12 cold-start).
+// Region europe-west2.
+// minInstances:1 stripped at Wave 5 cutover time per operator decision (cost
+// concern, ~$6/mo per instance). Cleanup-ledger row queued for Phase 7+ to
+// reconsider — see runbooks/phase-6-cleanup-ledger.md (Wave 6 deliverable).
 // Phase 7 (TEST-09) adds firebase-functions-test integration coverage; Phase 6
 // unit-tests claim-builder.ts only (the pure-logic seam this module calls).
 
@@ -17,7 +20,7 @@ import { buildClaims, type AllowlistEntry } from "./claim-builder.js";
 if (!getApps().length) initializeApp();
 
 export const beforeUserCreatedHandler = beforeUserCreated(
-  { region: "europe-west2", minInstances: 1 },
+  { region: "europe-west2" },
   async (event) => {
     const email = event.data?.email?.toLowerCase();
     if (!email) {

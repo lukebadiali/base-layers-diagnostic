@@ -1,18 +1,79 @@
 # Security — Base Layers Diagnostic
 
-**Last updated:** 2026-05-04 (Phase 1 close)
+**Last updated:** 2026-05-10 (Phase 11 Wave 1 — canonical pass)
 **Disclosure contact:** security@bedeveloped.com
 **Supported versions:** main branch only (no released versions yet).
 
-## Vulnerability disclosure policy
+## Table of Contents
 
-> Phase 11 finalises the policy wording. Current placeholder:
->
-> If you believe you have found a security vulnerability in this codebase
-> or in the deployed application, please email `security@bedeveloped.com`.
-> We will acknowledge your report within 5 business days. We do not take
-> legal action against good-faith security researchers acting under the
-> terms of this policy.
+- [§ Vulnerability Disclosure Policy](#-vulnerability-disclosure-policy)
+- [§ Build & Supply Chain](#-build--supply-chain)
+- [§ Data Handling](#-data-handling)
+- [§ Code Quality + Module Boundaries](#-code-quality--module-boundaries)
+- [§ Dependency Monitoring](#-dependency-monitoring)
+- [§ Secret Scanning](#-secret-scanning)
+- [§ Rotation Schedule](#-rotation-schedule)
+- [§ HTTP Security Headers](#-http-security-headers)
+- [§ Content Security Policy (enforced)](#-content-security-policy-enforced)
+- [§ HSTS Preload Status](#-hsts-preload-status)
+- [§ Hosting & Deployment](#-hosting--deployment)
+- [§ Phase 3 Audit Index](#-phase-3-audit-index)
+- [§ Firestore Data Model](#-firestore-data-model)
+- [§ Firestore Security Rules — Authored, Not Yet Deployed](#-firestore-security-rules--authored-not-yet-deployed)
+- [§ Storage Rules](#-storage-rules)
+- [§ Phase 5 Audit Index](#-phase-5-audit-index)
+- [§ Authentication & Sessions](#-authentication--sessions)
+- [§ Multi-Factor Authentication](#-multi-factor-authentication)
+- [§ MFA Recovery Procedure](#-mfa-recovery-procedure)
+- [§ Anonymous Auth Disabled](#-anonymous-auth-disabled)
+- [§ Production Rules Deployment](#-production-rules-deployment)
+- [§ Phase 6 Audit Index](#-phase-6-audit-index)
+- [§ Cloud Functions Workspace](#-cloud-functions-workspace)
+- [§ App Check](#-app-check)
+- [§ Audit Log Infrastructure](#-audit-log-infrastructure)
+- [§ Rate Limiting](#-rate-limiting)
+- [§ Phase 7 Audit Index](#-phase-7-audit-index)
+- [§ Data Lifecycle (Soft-Delete + Purge)](#-data-lifecycle-soft-delete--purge)
+- [§ GDPR (Export + Erasure)](#-gdpr-export--erasure)
+- [§ Backups + DR + PITR + Storage Versioning](#-backups--dr--pitr--storage-versioning)
+- [§ Phase 8 Audit Index](#-phase-8-audit-index)
+- [§ Observability — Sentry](#-observability--sentry)
+- [§ Audit-Event Wiring (AUDIT-05)](#-audit-event-wiring-audit-05)
+- [§ Anomaly Alerting (OBS-05)](#-anomaly-alerting-obs-05)
+- [§ Out-of-band Monitors (OBS-04 / OBS-06 / OBS-07 / OBS-08)](#-out-of-band-monitors-obs-04--obs-06--obs-07--obs-08)
+- [§ Phase 9 Audit Index](#-phase-9-audit-index)
+- [§ Phase 10 Audit Index](#-phase-10-audit-index)
+
+---
+
+## § Vulnerability Disclosure Policy
+
+If you believe you have found a security vulnerability in this codebase
+or in the deployed application at https://baselayers.bedeveloped.com,
+please email **security@bedeveloped.com**. We will:
+
+1. Acknowledge your report within **5 business days**.
+2. Provide a substantive update within 10 business days.
+3. Credit you in `docs/evidence/acknowledgments.md` (with your permission).
+
+We will NOT take legal action against good-faith security researchers
+who:
+
+- Avoid privacy violations, destruction of data, and interruption or
+  degradation of our services.
+- Only interact with accounts you own or with explicit permission of
+  the account holder.
+- Do not exploit a finding beyond the minimum necessary to demonstrate it.
+- Give us a reasonable time to respond before disclosure.
+
+**In scope:** the production application + this source repository.
+
+**Out of scope:** third-party services we use (Google / Firebase + Sentry —
+report directly to those vendors); social engineering of staff;
+denial-of-service testing.
+
+This policy is referenced from `/.well-known/security.txt` per RFC 9116
+(Wave 5 ships the file).
 
 ---
 
@@ -38,9 +99,9 @@ Phase 3's hosting cutover).
 
 **Framework citations:**
 
-- OWASP ASVS L2 V14.4.2 — all client-side resources are served from a
+- OWASP ASVS L2 v5.0 V14.4.2 — all client-side resources are served from a
   controlled origin (substrate; Phase 3 deploys `dist/` to Firebase Hosting)
-- OWASP ASVS L2 V14.2.1 — all components kept up to date; Dependabot
+- OWASP ASVS L2 v5.0 V14.2.1 — all components kept up to date; Dependabot
   automates monitoring (see § Dependency Monitoring)
 - ISO/IEC 27001:2022 A.8.25 — secure development life cycle
 - ISO/IEC 27001:2022 A.8.28 — secure coding (Vite build enforces ESM
@@ -264,9 +325,9 @@ The forward-tracking section in the cleanup-ledger retains rows for Phase 5 (D-0
 
 **Framework citations:**
 
-- OWASP ASVS L2 V14.2.1 — components up to date and free from known
+- OWASP ASVS L2 v5.0 V14.2.1 — components up to date and free from known
   vulnerabilities
-- OWASP ASVS L2 V14.2.4 — risk-based dependency review (Dependabot PRs
+- OWASP ASVS L2 v5.0 V14.2.4 — risk-based dependency review (Dependabot PRs
   require human review)
 - ISO/IEC 27001:2022 A.8.8 — management of technical vulnerabilities
 - ISO/IEC 27001:2022 A.8.30 — outsourced development (supply chain
@@ -323,7 +384,7 @@ real Firebase Auth replaces the shared-password substrate. Tracked in
 
 **Framework citations:**
 
-- OWASP ASVS L2 V14.3.2 — application source code does not contain
+- OWASP ASVS L2 v5.0 V14.3.2 — application source code does not contain
   secrets
 - ISO/IEC 27001:2022 A.10.1 — use of cryptographic controls (ensures
   secrets remain secret)
@@ -333,6 +394,28 @@ real Firebase Auth replaces the shared-password substrate. Tracked in
   cannot be committed to repo)
 - GDPR Art. 32(1)(a) — appropriate technical measures for protection of
   personal data
+
+---
+
+## § Rotation Schedule
+
+| Secret / Credential | Cadence | Mechanism | Owner | Citation |
+|---------------------|---------|-----------|-------|----------|
+| `GDPR_PSEUDONYM_SECRET` (Phase 8 GDPR-02 erasure pseudonym salt) | Annually OR on suspected leak | Google Secret Manager rotate via `gcloud secrets versions add` then redeploy `gdprEraseUser` | Hugh | OWASP ASVS L2 v5.0 V2.10.4; ISO/IEC 27001:2022 Annex A.8.24; SOC 2 CC6.1 |
+| Sentry DSN (`vite.config.js` env reference) | On suspected leak (no scheduled rotation — DSN is non-secret per Sentry docs but treat as secret out of caution) | Regenerate via Sentry Project Settings → Client Keys; update GitHub Actions secret + local `.env`; redeploy | Hugh | OWASP ASVS L2 v5.0 V14.3.2; ISO/IEC 27001:2022 Annex A.8.24; SOC 2 CC6.1 |
+| Slack webhook URL (`SLACK_WEBHOOK_URL` Secret Manager — Phase 9 OBS-05) | On suspected leak | Regenerate via Slack App config → revoke-and-recreate; update Secret Manager via `gcloud secrets versions add`; redeploy `authAnomalyAlert` | Hugh | OWASP ASVS L2 v5.0 V14.3.2; ISO/IEC 27001:2022 Annex A.8.24; SOC 2 CC6.1 |
+| BigQuery sink service-account JSON | NONE — uses Workload Identity Federation (Phase 7 BigQuery sink bootstrap) | n/a | n/a | OIDC pattern — no JSON to rotate |
+| Firebase deploy service-account JSON | NONE — uses GitHub Actions OIDC (Phase 1 firebase-oidc-bootstrap) | n/a — short-lived tokens issued per CI run | n/a | OIDC pattern — no JSON to rotate |
+| `audit-alert-sa` service account (Phase 9 monitors) | NONE — Workload Identity Federation; no JSON | n/a | n/a | OIDC pattern |
+| TLS certificate (`baselayers.bedeveloped.com`) | Automatic (Firebase Hosting) | Firebase-managed Let's Encrypt rotation | Firebase | Managed substrate |
+
+**Operator runbook references:**
+
+- `runbooks/phase-7-bigquery-sink-bootstrap.md` — BigQuery sink WIF setup (no rotation)
+- `runbooks/phase-9-monitors-bootstrap.md` — `SLACK_WEBHOOK_URL` + `SENTRY_DSN` Secret Manager bootstrap; rotation procedure mirrors bootstrap with `gcloud secrets versions add` then redeploy
+- `runbooks/firebase-oidc-bootstrap.md` — GitHub Actions OIDC federation (no rotation)
+
+**Framework citations:** OWASP ASVS L2 v5.0 V14.3.2 (secrets management); ISO/IEC 27001:2022 Annex A.8.24 (use of cryptography) + Annex A.5.17 (authentication information); SOC 2 CC6.1; GDPR Art. 32(1)(d).
 
 ---
 
@@ -612,7 +695,7 @@ The CONCERNS.md H7 (clock skew on unread tracking) and H8 (last-writer-wins clou
 
 **Framework citations:**
 
-- OWASP ASVS L2 V4.1.5 — data-model authorisation aligned with rules engine
+- OWASP ASVS L2 v5.0 V4.1.5 — data-model authorisation aligned with rules engine
 - ISO/IEC 27001:2022 A.8.10 — information deletion (the legacy nested-map fields stay during Phase 5 as the rollback substrate; a Phase 6+ cleanup wave deletes them)
 - SOC 2 CC6.1 — logical access (subcollection-scoped match blocks make access decisions explicit per resource)
 - GDPR Art. 32(1)(b) — ongoing confidentiality + integrity (subcollection migration enables per-resource access controls without 1 MiB doc-size cliff)
@@ -657,7 +740,7 @@ A table-driven `@firebase/rules-unit-testing` v5 matrix at `tests/rules/firestor
 
 **Framework citations:**
 
-- OWASP ASVS L2 V4.1 — general access control; V4.2 — operation-level access control; V4.3 — other access control considerations
+- OWASP ASVS L2 v5.0 V4.1 — general access control; V4.2 — operation-level access control; V4.3 — other access control considerations
 - ISO/IEC 27001:2022 A.5.15 — access control; A.5.18 — access rights; A.8.3 — information access restriction
 - SOC 2 CC6.1 — logical access; CC6.2 — new/modified access; CC6.3 — access modification
 - GDPR Art. 32(1)(b) — ongoing confidentiality; Art. 32(2) — level of security appropriate to risk
@@ -684,7 +767,7 @@ The MIME allowlist is deliberately duplicated between `src/ui/upload.js` and `st
 
 **Framework citations:**
 
-- OWASP ASVS L2 V12.1 — file upload; V13.1 — web service security
+- OWASP ASVS L2 v5.0 V12.1 — file upload; V13.1 — web service security
 - ISO/IEC 27001:2022 A.8.24 — use of cryptography (covers content-type integrity); A.8.7 — protection against malware (MIME allowlist limits attack surface)
 - SOC 2 CC6.7 — boundary protection
 - GDPR Art. 32(1)(b) — integrity
@@ -750,6 +833,37 @@ Phase 6 Wave 5 Step 9 (TOTP enrolment) and Step 10 (AUTH-10 lockout drill) are d
 **Tradeoff:** email-account compromise is the recovery substrate; this is acceptable because email is also the primary sign-in identifier and identity recovery substrate. The additional risk surface is bounded.
 
 **AUTH-10 drill substrate:** `runbooks/phase6-mfa-recovery-drill.md` skeleton present; populated when the drill runs end-of-phases-batch. Pitfall 19 closure ("claim only what was rehearsed") is partial at phase close — the substrate is honest (script + runbook + admin un-enrol path), drill execution deferred per operator instruction. Tracked in `runbooks/phase-6-cleanup-ledger.md` Phase 6 sub-wave 6.1 row.
+
+## § MFA Recovery Procedure
+
+Recovery codes (AUTH-09) were superseded by **email-link recovery** per Phase 6
+D-07. Two tiers:
+
+### Tier 1 — User-side email-link recovery
+
+If a user loses their TOTP device, they invoke email-link recovery via
+`sendSignInLinkToEmail` (`src/firebase/auth.js`); the link, sent to the
+registered email, completes a one-time sign-in via `signInWithEmailLink`,
+after which the user re-enrols TOTP from their account settings.
+
+- Code: `src/firebase/auth.js` (helper exports)
+- Test: `tests/firebase/auth-audit-emit.test.js` (Test 5 — email-link path)
+- Auth event: `auth.recovery.requested` audited via the standard pipeline
+
+### Tier 2 — Operator-side Admin SDK un-enrol
+
+Used when email access itself is compromised. Operator runs the documented
+`runbooks/phase6-mfa-recovery-drill.md` procedure, calling Admin SDK
+`admin.auth().updateUser(uid, { multiFactor: { enrolledFactors: [] } })` from a
+trusted environment. The audit-log entry `auth.mfa.unenrolled.byAdmin` MUST be
+written by the same operator session.
+
+- Runbook: `runbooks/phase6-mfa-recovery-drill.md`
+- Evidence: `docs/evidence/phase-6-mfa-recovery-drill-pass.png` — **PENDING-OPERATOR** (Phase 6 user-testing batch; see `.planning/phases/06-real-auth-mfa-rules-deploy/06-RESUME-NOTE.md`)
+
+**Framework citations:** OWASP ASVS L2 v5.0 V2.5.4 (alternative authenticator);
+ISO/IEC 27001:2022 Annex A.5.16 (identity management); SOC 2 CC6.1; GDPR
+Art. 32(1)(b).
 
 ## § Anonymous Auth Disabled
 
@@ -929,7 +1043,7 @@ Phase 8 (LIFE-01..06): Admin-mediated soft-delete and 30-day restore window impl
 
 **Framework citations:**
 
-- OWASP ASVS L2 V8.3.1 — data lifecycle controls (defined retention, controlled deletion)
+- OWASP ASVS L2 v5.0 V8.3.1 — data lifecycle controls (defined retention, controlled deletion)
 - ISO/IEC 27001:2022 A.5.30 (ICT readiness) + A.8.10 (information deletion)
 - SOC 2 CC6.5 — logical access; controlled deletion enforced server-side
 - GDPR Art. 5(1)(e) — storage limitation; soft-delete + 30-day purge is the mechanism
@@ -960,7 +1074,7 @@ Phase 8 (GDPR-01..05): Two admin-callable Cloud Functions implement Art. 15 and 
 
 **Framework citations:**
 
-- OWASP ASVS L2 V8.1 — data classification and handling; V6 — cryptography (sha256 pseudonymisation)
+- OWASP ASVS L2 v5.0 V8.1 — data classification and handling; V6 — cryptography (sha256 pseudonymisation)
 - ISO/IEC 27001:2022 A.5.34 (privacy protection) + A.8.11 (data masking) + A.8.12 (data leakage prevention)
 - SOC 2 P5.1 — privacy notice; privacy rights honoured
 - GDPR Art. 15 (right of access), Art. 17 (right to erasure), Art. 25 (data protection by design — pseudonymisation), Art. 30 (record of processing — audit trail), Art. 32 (security of processing)
@@ -997,7 +1111,7 @@ Phase 8 (BACKUP-01..07): Multi-layer backup and recovery substrate.
 
 **Framework citations:**
 
-- OWASP ASVS L2 V14.1 (build and deployment) + V8.3 (data protection at rest / storage security)
+- OWASP ASVS L2 v5.0 V14.1 (build and deployment) + V8.3 (data protection at rest / storage security)
 - ISO/IEC 27001:2022 A.5.29 (information security during disruption) + A.5.30 (ICT readiness) + A.8.13 (information backup) + A.8.14 (redundancy)
 - SOC 2 CC9.1 (risk mitigation) + A1.2 (environmental protections) + A1.3 (recovery and restoration procedures)
 - GDPR Art. 32(1)(b) (resilience of systems) + Art. 32(1)(c) (restoration of data)
@@ -1080,7 +1194,7 @@ Drift between the two arrays is gated by `functions/test/util/pii-scrubber-parit
 
 **Framework citations:**
 
-- OWASP ASVS L2 V8.3.4 (log-content PII handling) + V8.4.4 (event rate-limiting) + V14.2.4 (release artefact integrity / hidden source maps)
+- OWASP ASVS L2 v5.0 V8.3.4 (log-content PII handling) + V8.4.4 (event rate-limiting) + V14.2.4 (release artefact integrity / hidden source maps)
 - ISO/IEC 27001:2022 A.5.10 (information classification) + A.5.34 (privacy protection) + A.8.15 (logging) + A.8.16 (monitoring activities) + A.5.6 (budget / quota controls)
 - SOC 2 CC7.2 (system operations monitoring)
 - GDPR Art. 32 (security of processing) + Art. 44 (international transfers — EU residency mitigates Schrems II)
@@ -1126,7 +1240,7 @@ Phase 9 (AUDIT-05): Every sensitive op emits a server-verified-actor audit event
 
 **Framework citations:**
 
-- OWASP ASVS L2 V8.4.x (audit content + retention + tamper resistance)
+- OWASP ASVS L2 v5.0 V8.4.x (audit content + retention + tamper resistance)
 - ISO/IEC 27001:2022 A.8.15 (logging) + A.8.16 (monitoring activities)
 - SOC 2 CC4.1 (monitoring) + CC7.2 (system operations)
 - GDPR Art. 30 (record of processing) + Art. 32(1)(d) (regular testing of effectiveness)
@@ -1180,7 +1294,7 @@ Phase 9 (OBS-05): `functions/src/observability/authAnomalyAlert.ts` is an `onDoc
 
 - ISO/IEC 27001:2022 A.5.25 (assessment of information security events) + A.8.16 (monitoring activities)
 - SOC 2 CC7.2 (system operations) + CC7.3 (event evaluation)
-- OWASP ASVS L2 V11.1 (anomaly detection)
+- OWASP ASVS L2 v5.0 V11.1 (anomaly detection)
 
 ---
 
@@ -1214,7 +1328,7 @@ Phase 9: GCP-tier monitors and Sentry-side quota alert — defence-in-depth obse
 
 **Framework citations:**
 
-- OWASP ASVS L2 V14.2.4 (release artefact integrity / hidden source maps)
+- OWASP ASVS L2 v5.0 V14.2.4 (release artefact integrity / hidden source maps)
 - ISO/IEC 27001:2022 A.5.6 (budget / quota controls) + A.8.16 (monitoring activities)
 - SOC 2 CC7.2 (system operations monitoring)
 
@@ -1253,8 +1367,8 @@ Auditor walk-through pointer for Phase 10. Each row maps a Phase 10 control to i
 
 | Requirement | Control | Code | Test / Evidence | Framework |
 |-------------|---------|------|-----------------|-----------|
-| HOST-07 | CSP enforced (no Report-Only) + `style-src 'self'` (no `'unsafe-inline'`) + `frame-src 'self'` (no firebaseapp.com) + `base-uri 'self'` + `form-action 'self'` + `connect-src` extended with `https://de.sentry.io` for Phase 9 OBS-04 | `firebase.json` `hosting.headers[0]` Content-Security-Policy header value + key (single-knob flip from `-Report-Only`); `src/main.js` zero static inline-style attrs; `styles.css` Wave 1 utility-class block (104 named classes) | `tests/firebase-config.test.js` 6 Phase 10 enforced-shape assertions in `firebase.json — Phase 10 enforced CSP shape (HOST-07)` describe; `runbooks/csp-enforcement-cutover.md` 7-step single-session operator runbook (Plan 10-04); `runbooks/phase-10-csp-soak-bootstrap.md` Stage B 7-day soak; `10-PREFLIGHT.md ## Cutover Log` Rows A-E PASS; `docs/evidence/phase-10-securityheaders-rating.png` (A+); `docs/evidence/phase-10-enforcement-smoke-console.png` (5-target smoke matrix) | OWASP ASVS L2 V14.4; ISO/IEC 27001:2022 A.8.23 + A.13.1; SOC 2 CC6.6; GDPR Art. 32(1)(b) |
-| HOST-06 | HSTS preload submitted to hstspreload.org for `baselayers.bedeveloped.com` (subdomain-only path — apex `bedeveloped.com` deliberately NOT submitted per `runbooks/hsts-preload-submission.md` Step 2 decision tree) | `firebase.json` `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` (Phase 3 substrate, unchanged through Phase 10) | `tests/firebase-config.test.js` HSTS-preload-eligibility assertion (max-age >= 31536000 + includeSubDomains + preload); `runbooks/hsts-preload-submission.md` Steps 1-4 (operator); `docs/evidence/phase-10-hsts-preload-submission.png`; listing-status forward-tracked PENDING per Pitfall 19 in `runbooks/phase-10-cleanup-ledger.md` Row F1 (closure path: weekly status check; flip to CLOSED when status returns `preloaded` + `docs/evidence/phase-10-hsts-preload-listed.png` lands) | OWASP ASVS L2 V14.4; GDPR Art. 32(1)(a); SOC 2 CC6.7 |
+| HOST-07 | CSP enforced (no Report-Only) + `style-src 'self'` (no `'unsafe-inline'`) + `frame-src 'self'` (no firebaseapp.com) + `base-uri 'self'` + `form-action 'self'` + `connect-src` extended with `https://de.sentry.io` for Phase 9 OBS-04 | `firebase.json` `hosting.headers[0]` Content-Security-Policy header value + key (single-knob flip from `-Report-Only`); `src/main.js` zero static inline-style attrs; `styles.css` Wave 1 utility-class block (104 named classes) | `tests/firebase-config.test.js` 6 Phase 10 enforced-shape assertions in `firebase.json — Phase 10 enforced CSP shape (HOST-07)` describe; `runbooks/csp-enforcement-cutover.md` 7-step single-session operator runbook (Plan 10-04); `runbooks/phase-10-csp-soak-bootstrap.md` Stage B 7-day soak; `10-PREFLIGHT.md ## Cutover Log` Rows A-E PASS; `docs/evidence/phase-10-securityheaders-rating.png` (A+); `docs/evidence/phase-10-enforcement-smoke-console.png` (5-target smoke matrix) | OWASP ASVS L2 v5.0 V14.4; ISO/IEC 27001:2022 A.8.23 + A.13.1; SOC 2 CC6.6; GDPR Art. 32(1)(b) |
+| HOST-06 | HSTS preload submitted to hstspreload.org for `baselayers.bedeveloped.com` (subdomain-only path — apex `bedeveloped.com` deliberately NOT submitted per `runbooks/hsts-preload-submission.md` Step 2 decision tree) | `firebase.json` `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` (Phase 3 substrate, unchanged through Phase 10) | `tests/firebase-config.test.js` HSTS-preload-eligibility assertion (max-age >= 31536000 + includeSubDomains + preload); `runbooks/hsts-preload-submission.md` Steps 1-4 (operator); `docs/evidence/phase-10-hsts-preload-submission.png`; listing-status forward-tracked PENDING per Pitfall 19 in `runbooks/phase-10-cleanup-ledger.md` Row F1 (closure path: weekly status check; flip to CLOSED when status returns `preloaded` + `docs/evidence/phase-10-hsts-preload-listed.png` lands) | OWASP ASVS L2 v5.0 V14.4; GDPR Art. 32(1)(a); SOC 2 CC6.7 |
 | DOC-10 | Phase 10 incremental SECURITY.md (Pitfall 19) — § Content Security Policy (Report-Only) REPLACED by § Content Security Policy (enforced) + new § HSTS Preload Status + this 3-row Phase 10 Audit Index; § Phase 3 Audit Index gains maintenance annotations noting "soak window CLOSED Phase 10 Wave 4" + the enforcement-flip commits in the Implemented-in + Verified-by + Commit-SHA columns | This file | this commit; Phase 11 owns the canonical DOC-10 pass | ISO/IEC 27001:2022 A.5.36 |
 
 **Substrate-honest disclosure (Pitfall 19):** HOST-07 is closed in-phase (CSP enforced + 7-day post-enforcement soak clean + securityheaders.com A+ rating captured). HOST-06 is **substrate-complete with calendar-deferred listing-status** — the hstspreload.org submission is filed (in-phase deliverable), but Chrome's preload-list propagation takes weeks to months (forward-tracked deliverable). This mirrors the Phase 8 BACKUP-07 drill-evidence-deferred pattern + the Phase 9 OBS-02/04/05/06/07/08 operator-deferred pattern. The single combined Phase 10 deferred-operator session bundles all four pending actions (Plan 10-03 Task 2 7-day Stage B soak / Plan 10-04 Task 2 enforcement flip / Plan 10-05 Task 2 HSTS submission + securityheaders.com / Plan 10-05 Task 4 phase-close human-verify) into one session via `.planning/phases/10-csp-tightening-second-sweep/10-DEFERRED-CHECKPOINT.md`.
@@ -1271,7 +1385,7 @@ Auditor walk-through pointer for Phase 10. Each row maps a Phase 10 control to i
 ## Compliance posture statement
 
 This codebase aims for **credible, not certified** compliance with
-SOC 2 Common Criteria 2017, ISO/IEC 27001:2022 Annex A, GDPR Article 32,
+SOC 2 Common Criteria 2017, ISO/IEC 27001:2022 Annex A, GDPR Art. 32,
 and OWASP ASVS 5.0 Level 2. Certification is a separate workstream
 (see `.planning/PROJECT.md` "Out of Scope"). Each section above maps
 controls to the specific framework citations they address; the canonical

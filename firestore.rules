@@ -141,6 +141,15 @@ service cloud.firestore {
       allow write: if false;       // server-only (Phase 8)
     }
 
+    // ── redactionList/{userId} (GDPR-05 — Phase 8 Wave 4) ────────────────
+    // Server-only writes via gdprEraseUser callable; admin-readable so
+    // backup-rotation scripts (BACKUP-07 restore drill) can re-apply
+    // tombstone tokens after database restore. Pitfall 17 — never client-writable.
+    match /redactionList/{userId} {
+      allow read:  if isAdmin();
+      allow write: if false;
+    }
+
     // ── rateLimits (FN-09 — replaces Phase 5 D-17 deny-block; Phase 7 W4) ─
     // Per-uid 60s sliding-window bucket. Self-readable for UI affordance
     // ("you've sent N/30"). Create requires count==1 + windowStart matches

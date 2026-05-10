@@ -8,8 +8,7 @@
 // D-04 lint rule: import from ../firebase/functions.js adapter, not
 // directly from "firebase/functions".
 
-import { httpsCallable } from "../firebase/functions.js";
-import { functions } from "../firebase/functions.js";
+import { httpsCallable, functions } from "../firebase/functions.js";
 
 const exportUserCallable = httpsCallable(functions, "gdprExportUser");
 const eraseUserCallable = httpsCallable(functions, "gdprEraseUser");

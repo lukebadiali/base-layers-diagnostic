@@ -36,10 +36,10 @@ Phase 8 — Data Lifecycle (Soft-Delete + GDPR + Backups)
 ## Current Position
 
 Phase: 8 (Data Lifecycle (Soft-Delete + GDPR + Backups)) — EXECUTING
-Plan: 1 of 6 — PAUSED at Task 5 (operator checkpoint: run setup-backup-bucket script)
-Plans complete: 0 of 6 (08-01 in-progress — Tasks 1-4 committed, Task 5 awaiting operator)
-**Status:** Executing Phase 8 — 08-01 paused at human-verify checkpoint
-**Progress:** 7/12 phases complete; Phase 8 plan 1 Tasks 1-4 done
+Plan: 3 of 6 (08-01 paused at operator checkpoint, 08-02 COMPLETE)
+Plans complete: 1 of 6 (08-02 complete; 08-01 paused awaiting operator)
+**Status:** Executing Phase 8 — 08-02 complete; 08-01 paused at human-verify checkpoint (operator must run setup-backup-bucket script)
+**Progress:** 7/12 phases complete; Phase 8 plan 02 done (5 tasks: 4 code tasks + 1 vitest isolation fix)
 
 ```
 [########........] 42%
@@ -163,6 +163,13 @@ These persist in `/gsd-progress` + `/gsd-audit-uat` until resolved. Cleanup ledg
 - **Use `SECURITY_AUDIT.md` as audit framework** — translate Vercel/Supabase sections to Firebase (PROJECT.md, decided 2026-05-03)
 - **12-phase plan, not 5-8** — standard granularity overridden because four load-bearing sequencing constraints cannot be collapsed (ROADMAP.md "Granularity Rationale", validated 2026-05-03)
 
+### Phase 8 Plan 02 Decisions (2026-05-10)
+
+- **retryCount:2 flat on ScheduleOptions** — firebase-functions 7.2.5 uses top-level `retryCount`, not `retryConfig: { retryCount }` nested object
+- **Vitest pool:forks + maxForks:4 + testTimeout:15000** — vi.mock('@google-cloud/firestore') leaked across files in thread pool; forks pool + concurrency cap + timeout headroom fixes intermittent integration test timeouts
+- **Constructor-function for FirestoreAdminClient mock** — vi.fn().mockImplementation() is not newable; plain `function MockFirestoreAdminClient()` returns the mock instance correctly
+- **storage-reader-sa provisioning deferred to 08-06** — callable is deploy-ready; SA queued for cleanup wave
+
 ### Outstanding Todos / Open Questions for Future Phases
 
 These came out of research and need attention during the noted phase planning:
@@ -210,7 +217,9 @@ Additional non-negotiables:
 
 ## Session Continuity
 
-**Last session (2026-05-10):** Phase 8 plan 01 (backup substrate) — Tasks 1-4 executed and committed. Paused at Task 5 (operator checkpoint). Commits: 1809c1e (chore: @google-cloud/firestore@8.5.0), f6f3566 (feat: setup-backup-bucket script), 6ca6a9f (docs: phase-8-backup-setup.md runbook), cbff8b6 (feat: admin-sdk.ts Storage + FirestoreAdminClient mocks). Operator must run scripts/setup-backup-bucket/run.js and provision backup-sa before Wave 2 (08-02) can deploy.
+**Last session (2026-05-10):** Phase 8 plan 02 (backup Cloud Functions) — all 4 tasks executed and committed. Commits: 9fb299d (feat: scheduledFirestoreExport + 5 unit tests), 43b4b0b (feat: getDocumentSignedUrl + 7 unit tests), 628e0eb (feat: index.ts exports + integration tests), 40d7ebe (feat: src/cloud/signed-url.js seam), eb56590 (fix: vitest pool:forks isolation). 08-02-SUMMARY.md created. 08-01 still paused at operator Task 5. Next plan: 08-03 (soft-delete CFs + Rules + client seam).
+
+**Previous session (2026-05-10):** Phase 8 plan 01 (backup substrate) — Tasks 1-4 executed and committed. Paused at Task 5 (operator checkpoint). Commits: 1809c1e (chore: @google-cloud/firestore@8.5.0), f6f3566 (feat: setup-backup-bucket script), 6ca6a9f (docs: phase-8-backup-setup.md runbook), cbff8b6 (feat: admin-sdk.ts Storage + FirestoreAdminClient mocks). Operator must run scripts/setup-backup-bucket/run.js and provision backup-sa before Wave 2 (08-02) can deploy.
 
 **Last session (2026-05-04 — resumed mid-day):** Phase 1 execution continued. Waves 0-3 complete and pushed to `origin/main`. Wave 3 checkpoint resolved.
 

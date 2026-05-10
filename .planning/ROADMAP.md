@@ -192,7 +192,14 @@ Plans:
   4. A daily Firestore export lands in `gs://bedeveloped-base-layers-backups/firestore/{YYYY-MM-DD}/` with the 30d Standard / 90d Nearline / 365d Archive lifecycle policy applied; Firestore PITR is enabled (7-day rolling); Storage bucket has Object Versioning + 90-day soft-delete enabled
   5. Storage signed URLs for documents are issued with TTL â‰¤ 1h and refresh-on-download; the prior unbounded `getDownloadURL` paths are gone
   6. One restore drill has been **performed and documented** in `runbooks/restore-drill-<date>.md` with timing, evidence, and any gaps; quarterly cadence is documented for ongoing
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 08-01-backup-substrate-PLAN.md — Wave 1: GCS backups bucket + lifecycle.json + Firestore PITR + uploads bucket versioning/soft-delete + extended admin-sdk mocks + @google-cloud/firestore@8.5.0 install + operator runbook (BACKUP-02/03/04, DOC-10)
+- [x] 08-02-backup-cloud-functions-PLAN.md — Wave 1: scheduledFirestoreExport + getDocumentSignedUrl callables + src/cloud/signed-url.js seam + functions/src/index.ts wiring + 4 test files (BACKUP-01, BACKUP-05)
+- [ ] 08-03-soft-delete-PLAN.md — Wave 2: softDelete + restoreSoftDeleted + scheduledPurge + resolveDocRef helper + 5 firestore.rules notDeleted conjuncts + 5 data-wrapper where(deletedAt) edits + src/cloud/soft-delete.js fill + src/views/admin.js LIFE-06 minimal + getDownloadURL sweep across src/main.js + src/data/documents.js (LIFE-01..06)
+- [ ] 08-04-gdpr-export-PLAN.md — Wave 3: gdprExportUser callable + assembleUserBundle pure helper + collectionGroup mock extension + src/cloud/gdpr.js#exportUser fill + 3 test files (GDPR-01)
+- [ ] 08-05-gdpr-erase-PLAN.md [autonomous: false] — Wave 4: pseudonymToken + eraseCascade pure helpers + gdprEraseUser callable + redactionList rules + tests/rules/redaction-list.test.js + scripts/post-erasure-audit/run.js + src/cloud/gdpr.js#eraseUser fill + GDPR_PSEUDONYM_SECRET + 4 SAs operator checkpoint (GDPR-02..05)
+- [ ] 08-06-restore-drill-and-docs-PLAN.md [autonomous: false] — Wave 5: deploy 7 Phase 8 CFs + rules to production + perform restore drill + author runbooks/restore-drill-<date>.md + runbooks/phase-8-restore-drill-cadence.md + SECURITY.md DOC-10 (4 sections + Phase 8 Audit Index) + REQUIREMENTS.md row updates + runbooks/phase-8-cleanup-ledger.md zero-out (BACKUP-06, BACKUP-07, DOC-10)
 **UI hint**: yes
 
 ### Phase 9: Observability + Audit-Event Wiring
@@ -265,7 +272,7 @@ Plans:
 | 5. Firestore Data Model Migration + Rules Authoring | 6/6 | Complete (1 deferred item in 05-HUMAN-UAT.md â€” live SC#4 clock-skew exercise lands in Phase 6) | 2026-05-08 |
 | 6. Real Auth + MFA + Rules Deploy (Cutover) | 0/0 | Not started | - |
 | 7. Cloud Functions + App Check | 0/0 | Not started | - |
-| 8. Data Lifecycle (Soft-Delete + GDPR + Backups) | 0/0 | Not started | - |
+| 8. Data Lifecycle (Soft-Delete + GDPR + Backups) | 1/6 | In progress (08-01 paused at operator checkpoint; 08-02 complete) | - |
 | 9. Observability + Audit-Event Wiring | 0/0 | Not started | - |
 | 10. CSP Tightening (Second Sweep) | 0/0 | Not started | - |
 | 11. Documentation Pack (Evidence Pack) | 0/0 | Not started | - |

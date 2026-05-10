@@ -290,6 +290,39 @@ function makeTx() {
   };
 }
 
+// ─── Batch write helper (Phase 8 Wave 2 — softDelete / restoreSoftDeleted) ───
+
+function makeBatch() {
+  type Op =
+    | { kind: "set"; path: string; data: Record<string, unknown> }
+    | { kind: "update"; path: string; data: Record<string, unknown> }
+    | { kind: "delete"; path: string };
+  const ops: Op[] = [];
+  return {
+    set(ref: { path: string }, data: Record<string, unknown>) {
+      ops.push({ kind: "set", path: ref.path, data: { ...data } });
+    },
+    update(ref: { path: string }, data: Record<string, unknown>) {
+      ops.push({ kind: "update", path: ref.path, data: { ...data } });
+    },
+    delete(ref: { path: string }) {
+      ops.push({ kind: "delete", path: ref.path });
+    },
+    async commit() {
+      for (const op of ops) {
+        if (op.kind === "set") {
+          docStore.set(op.path, { ...op.data });
+        } else if (op.kind === "update") {
+          const cur = docStore.get(op.path) ?? {};
+          docStore.set(op.path, { ...cur, ...op.data });
+        } else if (op.kind === "delete") {
+          docStore.delete(op.path);
+        }
+      }
+    },
+  };
+}
+
 // ─── Phase 7 public mock factories ───────────────────────────────────────────
 
 export function getFirestoreMock() {
@@ -299,6 +332,9 @@ export function getFirestoreMock() {
     },
     collection(prefix: string) {
       return buildQuery(prefix, [], null);
+    },
+    batch() {
+      return makeBatch();
     },
     async runTransaction<T>(fn: (tx: ReturnType<typeof makeTx>) => Promise<T>): Promise<T> {
       const tx = makeTx();

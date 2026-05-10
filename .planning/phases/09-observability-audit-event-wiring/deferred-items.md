@@ -59,3 +59,21 @@ Discovered out-of-scope issues (pre-existing, NOT caused by Phase 9 plans). Trac
 2. Migrate IIFE body into views/* so the boot path shrinks (load-bearing fix; tracked by Phase 4 sub-wave 4.1).
 
 Path 1 is the recommended Phase-9-close-gate action — Plan 09-06 should add the `hookTimeout: 30000` config. Out of scope for Plan 09-01 substrate, but flagging for Plan 09-06 cleanup.
+
+## 2026-05-10 — Discovered during 09-03a Task 1
+
+**Full-suite test pollution flakes (5 integration test failures):**
+
+When running `cd functions && npm test -- --run` (full suite), 5 tests intermittently fail. Each one passes deterministically when run in isolation:
+
+- `test/backup/getDocumentSignedUrl.unit.test.ts > Test 1: unauthenticated request throws HttpsError('unauthenticated')`
+- `test/integration/auditWrite.integration.test.ts > happy path: writes auditLog/{eventId} and returns {ok:true, eventId:<uuid>}`
+- `test/integration/checkRateLimit.integration.test.ts > happy path: count under limit returns {ok:true, count:1, limit:30} on first call`
+- `test/integration/getDocumentSignedUrl.integration.test.ts > Test 1 (happy path admin): returns signed URL + expiresAt`
+- `test/integration/setClaims.integration.test.ts > happy path: admin caller sets claims + writes _pokes doc + returns {ok:true}`
+
+**Root cause:** Phase 8 Plan 02 already documented this — vitest test-file isolation in the `forks` pool is best-effort; the in-memory admin-sdk mock state is shared at the module level (intentional, per `_mocks/admin-sdk.ts:36`). When ~40 test files run in parallel, occasional state-bleed between integration tests causes flakes. Plan 02 added `pool:forks + maxForks:4 + testTimeout:15000` which reduced but did not eliminate the flake rate.
+
+**Verified pre-existing:** `git stash && cd functions && npm test -- --run` reproduces 5 of the same failures on the pre-Plan-09-03a working tree. None are caused by Plan 09-03a's enum-extension change (which is purely additive — adds 33 string literals to the `auditEventType` Zod enum). All 5 tests pass when run isolated post-Plan-09-03a.
+
+**Disposition:** Phase 9 substrate plans intentionally do not touch the test infrastructure or the admin-sdk mock. Resolution is a vitest config refactor (per-file fork isolation, or fully reset module state in afterEach) — out of scope for the audit-event substrate work. Tracking for Plan 09-06 cleanup-ledger close-gate sweep.

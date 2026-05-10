@@ -43,6 +43,7 @@
 - [§ Out-of-band Monitors (OBS-04 / OBS-06 / OBS-07 / OBS-08)](#-out-of-band-monitors-obs-04--obs-06--obs-07--obs-08)
 - [§ Phase 9 Audit Index](#-phase-9-audit-index)
 - [§ Phase 10 Audit Index](#-phase-10-audit-index)
+- [§ Phase 11 Audit Index](#-phase-11-audit-index)
 
 ---
 
@@ -1215,8 +1216,8 @@ Phase 9 (AUDIT-05): Every sensitive op emits a server-verified-actor audit event
 | password reset | `src/firebase/auth.js` `sendPasswordResetEmail` | POST | `auth.password.reset` (`target.id="unknown"` — caller pre-auth) | n/a |
 | email-link recovery | `src/firebase/auth.js` `signInWithEmailLink` | POST | `auth.signin.success` (payload `{method: "emailLink"}`) | n/a |
 | claims set | `src/cloud/claims-admin.js` `setClaims` | POST | `iam.claims.set.requested` | `functions/src/auth/setClaims.ts` (Plan 03a) → `iam.claims.set` bare |
-| GDPR export | `src/cloud/gdpr.js` `exportUser` | POST | `compliance.export.user.requested` | `functions/src/gdpr/gdprExportUser.ts:197` (Phase 8) → `compliance.export.user` |
-| GDPR erase | `src/cloud/gdpr.js` `eraseUser` | POST | `compliance.erase.user.requested` | `functions/src/gdpr/gdprEraseUser.ts:289` (Phase 8) → `compliance.erase.user` |
+| GDPR export | `src/cloud/gdpr.js` `exportUser` | POST | `compliance.export.user.requested` | `functions/src/gdpr/gdprExportUser.ts` (Phase 8) → `compliance.export.user` |
+| GDPR erase | `src/cloud/gdpr.js` `eraseUser` | POST | `compliance.erase.user.requested` | `functions/src/gdpr/gdprEraseUser.ts` (Phase 8) → `compliance.erase.user` |
 | soft-delete / restore / permanently-delete | `src/cloud/soft-delete.js` (3 functions × 5 types) | POST | `data.<type>.{softDelete,restore,permanentlyDelete}.requested` | `functions/src/lifecycle/{softDelete,restoreSoftDeleted,permanentlyDeleteSoftDeleted}.ts` (Plan 03a) → bare `data.<type>.<op>` |
 | beforeUserSignedIn rejection | n/a (substrate only) | catch | `auth.signin.failure` | `functions/src/auth/beforeUserSignedIn.ts` (Plan 03a, DORMANT until a rejection rule lands) |
 
@@ -1226,7 +1227,7 @@ Phase 9 (AUDIT-05): Every sensitive op emits a server-verified-actor audit event
 
 **Best-effort emission (Pattern 5 #2):** All 11 client-side `emitAuditEvent` calls are wrapped in try/catch (defensive double-wrap — the proxy at `src/observability/audit-events.js` already swallows internally per Plan 09-01). A failed emission must NEVER block the originating op. Tested in `tests/firebase/auth-audit-emit.test.js` (any swallowed audit failure does NOT propagate to the auth-state-change callback).
 
-**Substrate-honest disclosure (Pitfall 19) — MFA emit DEFERRED:** MFA enrol / un-enrol audit emission is bound to landing of `enrollTotp` and `unenrollAllMfa` deps in `src/main.js:916-917`, which are currently `// deferred to user-testing phase`. The `auth.mfa.enrol` + `auth.mfa.unenrol` enum literals (Phase 7 baseline) remain valid and ready for emission. Plan 09-04 anomaly Rule 2 (MFA disenrolment alert) trigger code stays DORMANT — observation is zero until those deps land. Carry-forward row in `runbooks/phase-9-cleanup-ledger.md`.
+**Substrate-honest disclosure (Pitfall 19) — MFA emit DEFERRED:** MFA enrol / un-enrol audit emission is bound to landing of `enrollTotp` and `unenrollAllMfa` deps in `src/main.js`, which are currently `// deferred to user-testing phase`. The `auth.mfa.enrol` + `auth.mfa.unenrol` enum literals (Phase 7 baseline) remain valid and ready for emission. Plan 09-04 anomaly Rule 2 (MFA disenrolment alert) trigger code stays DORMANT — observation is zero until those deps land. Carry-forward row in `runbooks/phase-9-cleanup-ledger.md`.
 
 **Substrate-honest disclosure (Pitfall 19) — `auth.signin.failure` substrate DORMANT:** `functions/src/auth/beforeUserSignedIn.ts` emits `auth.signin.failure` only on internal handler errors (logger throw, malformed event.data) today — there are NO rejection rules in `beforeUserSignedIn` at Phase 9 close. The substrate is wired so that the moment any business rejection rule lands (Phase 10+ probable), `auth.signin.failure` events flow and Plan 09-04 anomaly Rule 1 (auth-fail burst — `>5/IP/5min`) activates without trigger-code change. Plan 09-05 deploy-checkpoint Step D is explicitly DORMANT at Phase 9 close (passes by design — DORMANT, not skipped).
 
@@ -1379,6 +1380,36 @@ Auditor walk-through pointer for Phase 10. Each row maps a Phase 10 control to i
 - **Phase 12** (WALK-02 / WALK-03) — audit-walkthrough cites Phase 10 § CSP (enforced) + § HSTS Preload Status as ground truth for the network-security + transport-encryption ASVS V14.4 control rows.
 
 **Index self-check:** if Row F1 in `runbooks/phase-10-cleanup-ledger.md` (hstspreload.org listing-status flips to `preloaded`) is still open (calendar-deferred to weeks-months), this index is current. Once the listing-status row closes (Chrome propagation lands), this index needs a maintenance commit appending the listing date + screenshot path to the HOST-06 row above.
+
+---
+
+## § Phase 11 Audit Index
+
+Auditor walk-through pointer for Phase 11 (Documentation Pack / Evidence Pack). Each row maps a Phase 11 control to its requirement ID, the code/config that implements it, the test or operator evidence that verifies it, and the framework citations it satisfies. Mirrors the §Phase 7 + §Phase 8 + §Phase 9 + §Phase 10 Audit Index shape. Phase 11 is the canonical owner of the DOC-10 final pass — line-number drift sweep + every-cited-path-exists gate + `## § Phase 11 Audit Index` (this section) live here.
+
+| Requirement | Control | Code | Test / Evidence | Framework |
+|-------------|---------|------|-----------------|-----------|
+| DOC-01 | SECURITY.md canonical pass — ToC + § Vulnerability Disclosure Policy + § MFA Recovery Procedure + § Rotation Schedule + citation-format normalised | `SECURITY.md` | `tests/security-md-toc.test.js`; `tests/security-md-citation-format.test.js`; `tests/security-md-paths-exist.test.js` | OWASP ASVS L2 v5.0 V14.1; ISO/IEC 27001:2022 Annex A.5.1 + A.5.36; SOC 2 CC2.3; GDPR Art. 32(1)(d) |
+| DOC-02 | PRIVACY.md — sub-processors verified (Google + Sentry; Google Fonts disclaimed) + residency verified + DSR flow + Art. 12(3) 30-day SLA + SCCs | `PRIVACY.md` | `tests/privacy-md-shape.test.js`; `.planning/phases/11-documentation-pack-evidence-pack/11-02-VERIFICATION-LOG.md` | OWASP ASVS L2 v5.0 V8.3; ISO/IEC 27001:2022 Annex A.5.34 + A.8.11; SOC 2 CC2.3; GDPR Art. 13 + Art. 14 + Art. 30 |
+| DOC-03 | THREAT_MODEL.md — 4 trust boundaries + 6 STRIDE categories + 6-row defence-in-depth summary table | `THREAT_MODEL.md` | `tests/threat-model-shape.test.js` | OWASP ASVS L2 v5.0 V1.1 + V1.2; ISO/IEC 27001:2022 Annex A.5.7; SOC 2 CC3.2; GDPR Art. 32(1)(d) |
+| DOC-04 | CONTROL_MATRIX.md — every REQ-ID has Code Path + Test / Evidence + Framework citation; line-number drift swept (Pitfall 4) | `docs/CONTROL_MATRIX.md` | `tests/control-matrix-paths-exist.test.js` (>= 30 rows + every cited path exists + zero `:NN` suffixes) | OWASP ASVS L2 v5.0 V14.1; ISO/IEC 27001:2022 Annex A.5.36; SOC 2 CC2.3 |
+| DOC-05 | RETENTION.md expanded to 8+ data classes × 5-axis structure (period / basis / deletion mechanism / threat coverage / implementation cross-reference) | `docs/RETENTION.md` | `tests/retention-md-shape.test.js` | OWASP ASVS L2 v5.0 V8.3.5; ISO/IEC 27001:2022 Annex A.5.33; GDPR Art. 5(1)(e) + Art. 17 |
+| DOC-06 | IR_RUNBOOK.md — 5 Scenario sections + Comms templates + RCA template + 3 net-new skeleton runbooks under `runbooks/ir-*.md` | `docs/IR_RUNBOOK.md`; `runbooks/ir-credential-compromise.md`; `runbooks/ir-dependency-cve.md`; `runbooks/ir-supply-chain-compromise.md` | `tests/ir-runbook-shape.test.js` (Pitfall 6 cross-reference existence gate per cited runbook path) | OWASP ASVS L2 v5.0 V7.4; ISO/IEC 27001:2022 Annex A.5.24 + A.5.25 + A.5.26; SOC 2 CC7.3; GDPR Art. 33 + Art. 34 |
+| DOC-07 | DATA_FLOW.md — Mermaid `flowchart LR` with 8 nodes / 10 edges + 4-row classifications table + 4-bullet processing regions (`europe-west2` 9 hits) | `docs/DATA_FLOW.md` | `tests/data-flow-shape.test.js` | OWASP ASVS L2 v5.0 V1.1; ISO/IEC 27001:2022 Annex A.5.9; SOC 2 CC3.2; GDPR Art. 30 |
+| DOC-08 | `/.well-known/security.txt` RFC 9116 (Contact + Expires + Preferred-Languages + Canonical + Policy) + `firebase.json` `/.well-known/**` Cache-Control 24h (NOT immutable) | `public/.well-known/security.txt`; `firebase.json` | `tests/build/security-txt-fresh.test.js`; `tests/build/security-txt-served.test.js` | OWASP ASVS L2 v5.0 V14.5; ISO/IEC 27001:2022 Annex A.6.8; SOC 2 CC2.3 |
+| DOC-09 | `docs/evidence/README.md` inventory — PRESENT / PENDING-OPERATOR with explicit pointers to deferred-checkpoint documents (Pitfall 19 substrate-honest) | `docs/evidence/README.md`; `docs/evidence/branch-protection-screenshot.png`; `docs/evidence/socket-install.png` | `tests/evidence-readme-shape.test.js`; PENDING-OPERATOR rows cross-referenced in `.planning/phases/08-data-lifecycle-soft-delete-gdpr-backups/08-06-DEFERRED-CHECKPOINT.md`, `.planning/phases/09-observability-audit-event-wiring/09-06-DEFERRED-CHECKPOINT.md`, `.planning/phases/10-csp-tightening-second-sweep/10-DEFERRED-CHECKPOINT.md`, and `.planning/phases/06-real-auth-mfa-rules-deploy/06-RESUME-NOTE.md` | OWASP ASVS L2 v5.0 V14.1; ISO/IEC 27001:2022 Annex A.5.36; SOC 2 CC2.3 |
+| DOC-10 | SECURITY.md canonical pass owner — Phase 11 final pass: line-number drift sweep + every-cited-path-exists gate + `## § Phase 11 Audit Index` appended (this section) | `SECURITY.md` | `tests/security-md-paths-exist.test.js`; `tests/security-md-toc.test.js`; `tests/security-md-citation-format.test.js` | OWASP ASVS L2 v5.0 V14.1; ISO/IEC 27001:2022 Annex A.5.36; SOC 2 CC2.3 |
+
+**Substrate-honest disclosure (Pitfall 19):** DOC-09 rows 3 through 22 are PENDING-OPERATOR per `docs/evidence/README.md`. They are NOT silent omissions — each row cites the specific deferred-checkpoint document and step where the operator capture will land. When an operator session completes a capture, the matching row in `docs/evidence/README.md` flips `PENDING-OPERATOR` → `PRESENT` in the same commit that adds the screenshot to `docs/evidence/`. This index does NOT need a maintenance commit per evidence flip — `docs/evidence/README.md` is the canonical inventory.
+
+**Phase 11 close gate:** All DOC-01 through DOC-09 rows above flipped to `[x]` in `.planning/REQUIREMENTS.md` (with `Closed Phase 11 — Plans 11-01..11-06` annotation). DOC-10 row carries Phase 11 Wave 6 canonical-pass annotation appended to the existing per-phase increment trail. `runbooks/phase-11-cleanup-ledger.md` zero-out gate `phase_11_active_rows: 0`.
+
+**Cross-phase plug-ins this index will feed:**
+
+- **Phase 12** (WALK-01 / WALK-02 / WALK-03) — `SECURITY_AUDIT_TRANSLATION` per-section Vercel/Supabase → Firebase translation map cites every Phase 11 doc + this Audit Index as the ground-truth control catalogue; `SECURITY_AUDIT_REPORT.md` Pass / Partial / N/A entries cite specific rows in this index by REQ-ID.
+- **Maintenance (post-Phase 11):** when upstream operator sessions land their captures (`08-06` / `09-06` / `10-DEFERRED-CHECKPOINT.md`), the matching rows in `docs/evidence/README.md` flip `PENDING-OPERATOR` → `PRESENT`; this Audit Index does NOT need a per-flip maintenance commit (the inventory is the canonical source of truth).
+
+**Index self-check:** if any row above cites a path that does not exist on disk OR a `:NN` line-number suffix, `tests/security-md-paths-exist.test.js` fails. The CI gate keeps this index honest.
 
 ---
 

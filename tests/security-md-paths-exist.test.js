@@ -74,9 +74,18 @@ describe("SECURITY.md — DOC-10 path-existence sweep (Phase 11 Wave 6)", () => 
     const missing = [];
     cited.forEach((p) => {
       if (p.includes("*")) {
-        const globRegex = new RegExp(
-          "^" + p.replace(/\./g, "\\.").replace(/\*\*/g, ".+").replace(/\*/g, "[^/]+") + "$",
-        );
+        // Glob handling: `**/` matches zero-or-more path components,
+        // `*` matches a single component. Use placeholders to prevent the
+        // single-`*` replacement from clobbering the `*` regex quantifier
+        // emitted by the `**/` replacement.
+        const globPattern = p
+          .replace(/\./g, "\\.")
+          .replace(/\*\*\//g, "<<DOUBLESLASH>>")
+          .replace(/\*\*/g, "<<DOUBLE>>")
+          .replace(/\*/g, "[^/]*")
+          .replace(/<<DOUBLESLASH>>/g, "(?:[^/]+/)*")
+          .replace(/<<DOUBLE>>/g, ".*");
+        const globRegex = new RegExp("^" + globPattern + "$");
         const anyMatch = [...tracked].some((t) => globRegex.test(t));
         if (!anyMatch) missing.push(p);
       } else {

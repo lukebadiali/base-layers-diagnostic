@@ -233,7 +233,7 @@ Plans:
   4. `securityheaders.com` rating is "A+"
 **Plans**: 5 plans
 Plans:
-- [ ] 10-01-PLAN.md — Wave 1: mechanical inline-style → utility class migration (130 → 0 in src/main.js); cache-buster bump ?v=52 → ?v=53; closes Phase 4 sub-wave 4.1 inline-style carryover (HOST-06 substrate)
+- [x] 10-01-PLAN.md — Wave 1: mechanical inline-style → utility class migration (Rule 3 expanded scope: 162 static sites → 0 in src/main.js, covering 130 single-line + 32 multi-line plain-string patterns; 9 template-literal sites preserved per plan); Wave 1 utility-class block in styles.css (24 atom `.u-*` + ~80 semantic compound classes, 646 lines appended); cache-buster bump ?v=52 → ?v=53 on 3 sites; 3 view snapshots updated (mechanical attr-renaming, no content drift); 478/478 vitest green; closes Phase 4 sub-wave 4.1 inline-style carryover. Commits: 89b1140 (Task 1 — utility-class block) + ec0afa7 (Task 2 — migration + cache-buster + snapshots). (HOST-07, CODE-06 inline-style portion) (2026-05-10)
 - [ ] 10-02-PLAN.md — Wave 2: firebase.json CSP-RO tighten (drop unsafe-inline + add https://de.sentry.io to connect-src + drop bedeveloped-base-layers.firebaseapp.com from frame-src); tests/firebase-config.test.js +6 Phase 10 assertions (HOST-06)
 - [ ] 10-03-PLAN.md — Wave 3: [autonomous: false] Production selective deploy of tightened CSP-RO + 7-day calendar soak (Stage B per Pitfall 16); runbooks/phase-10-csp-soak-bootstrap.md + 10-PREFLIGHT.md Soak Log (HOST-06 substrate)
 - [ ] 10-04-PLAN.md — Wave 4: [autonomous: false] Single-knob enforcement flip (Content-Security-Policy-Report-Only → Content-Security-Policy); runbooks/csp-enforcement-cutover.md + 5-target smoke matrix (sign-in/dashboard/charts/upload/chat); Cutover Log rows A/B/C (HOST-06)

@@ -47,7 +47,7 @@ Each requirement is mapped to: (a) the CONCERNS.md finding it closes (where appl
 - [ ] **HOST-04**: CSP rolled out in `Content-Security-Policy-Report-Only` mode first (closes H4 baseline)
 - [ ] **HOST-05**: A `csp-violations` Cloud Function endpoint receives + filters CSP violation reports
 - [ ] **HOST-06**: HSTS preload submitted to hstspreload.org once policy stable for ≥7 days
-- [ ] **HOST-07**: Strict CSP rolled to enforced + `style-src 'self'` (no `'unsafe-inline'`) after Phase 4 inline-style sweep is complete (closes H4 fully)
+- [~] **HOST-07**: Strict CSP rolled to enforced + `style-src 'self'` (no `'unsafe-inline'`) after Phase 4 inline-style sweep is complete (closes H4 fully) — Wave 1 substrate COMPLETE 2026-05-10 via Plan 10-01 (162 static inline-style attrs migrated to utility classes; src/main.js grep `style:\s*"` returns 0); enforcement flip lands in Plan 10-04
 - [ ] **HOST-08**: CI deploys to Firebase Hosting from `main` automatically; per-PR preview channels configured
 
 ### Code Quality / Refactor (CODE)
@@ -57,7 +57,7 @@ Each requirement is mapped to: (a) the CONCERNS.md finding it closes (where appl
 - [ ] **CODE-03**: `Math.random()` id generator is replaced by `crypto.randomUUID()` for every callsite (~30 places); ESLint security rule blocks reintroduction (closes H5)
 - [ ] **CODE-04**: The `html:` escape hatch in `h()` is deleted; XSS regression test pins `<script>` and `<img onerror>` payloads as text content (closes C4)
 - [ ] **CODE-05**: All 17 `el.innerHTML = ""` clearing sites are replaced with `el.replaceChildren()` (closes M2)
-- [ ] **CODE-06**: All inline `style="..."` strings in `views/*` are migrated to CSS classes (closes M5; precondition for HOST-07)
+- [~] **CODE-06**: All inline `style="..."` strings in `views/*` are migrated to CSS classes (closes M5; precondition for HOST-07) — inline-style portion CLOSED 2026-05-10 via Plan 10-01 (162 static `style: "..."` h()-attrs in src/main.js → 0; styles.css Wave 1 utility-class block). 9 template-literal `style: \`...${expr}...\`` h()-attrs remain (genuinely dynamic); plus IIFE body migration (Phase 4 sub-wave 4.1) deferred to v2 per 10-cleanup-ledger F2.
 - [ ] **CODE-07**: All 7 `alert()` error sites are replaced with a centralised non-blocking `notify(level, message)` toast helper (closes M3)
 - [ ] **CODE-08**: Chat (`renderChat`) and funnel comments (`renderFunnel`'s comment block) share a single `renderConversation({collection, list, …})` helper (closes M8)
 - [ ] **CODE-09**: Client-side file upload validation: size ≤ 25 MB, MIME allowlist, filename sanitisation `String(name).replace(/[^\w.\- ]/g, '_').slice(0, 200)` (closes H6 client side)
@@ -255,8 +255,8 @@ Acknowledged but deferred — not in this milestone's roadmap.
 | TEST-09                                  | Phase 7                                | Validated 2026-05-10 (Phase 7 Wave 6 — 8 integration test files / 20 tests; see also FN/AUDIT row below for full evidence) | `firebase-functions-test` 3.5.0 suite under `functions/test/integration/`                                                          |
 | TEST-10                                  | Phase 2                                | Validated 2026-05-06 | Snapshot tests as the regression baseline for the Phase 4 modular split — toMatchFileSnapshot per D-13                              |
 | HOST-01 to HOST-05, HOST-08              | Phase 3                                | Pending | Hosting cutover + report-only CSP + per-PR previews                                                                                 |
-| HOST-06, HOST-07                         | Phase 10                               | Pending | HSTS preload submission + strict CSP after Phase 4 inline-style sweep                                                               |
-| CODE-01 to CODE-13                       | Phase 4                                | Validated 2026-05-07 (CODE-06 partial — 132 static `style=""` strings deferred to 4.1) | Modular split + quick wins; verifier 4/4 SC + 14/14 requirements; 3 UI smoke checks pending in 04-HUMAN-UAT.md           |
+| HOST-06, HOST-07                         | Phase 10                               | HOST-07 Wave 1 substrate Validated 2026-05-10 (Plan 10-01); HOST-06 Pending; HOST-07 enforcement Pending (Plan 10-04) | Plan 10-01 closed inline-style sweep (162 sites migrated); Plan 10-02..10-05 pending                                  |
+| CODE-01 to CODE-13                       | Phase 4 + Phase 10                     | Validated 2026-05-07 (CODE-06 inline-style portion Validated 2026-05-10 via Plan 10-01 — 162 static sites → 0; IIFE body sub-wave 4.1 still deferred to v2) | Modular split + quick wins; CODE-06 inline-style portion now closed; verifier 4/4 SC + 14/14 requirements; 3 UI smoke checks pending in 04-HUMAN-UAT.md           |
 | DATA-01 to DATA-07                       | Phase 5                                | Pending | Subcollection migration + H7 fix folded in (DATA-07)                                                                                |
 | RULES-01 to RULES-06                     | Phase 5                                | Pending | Authored, unit-tested, committed — NOT deployed (deploy gate held for Phase 6)                                                      |
 | RULES-07                                 | Phase 6                                | Pending | Production deploy + rollback plan; the load-bearing cutover step                                                                    |

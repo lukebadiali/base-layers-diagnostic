@@ -3,19 +3,21 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-10T19:25:00Z"
+last_updated: "2026-05-10T20:43:00Z"
 progress:
   total_phases: 12
   completed_phases: 7
   total_plans: 55
-  completed_plans: 52
-  percent: 95
+  completed_plans: 53
+  percent: 96
 ---
 
 # State: Base Layers Diagnostic — Hardening Pass
 
 **Initialized:** 2026-05-03
-**Last updated:** 2026-05-10 — Phase 9 Plan 09-06 Tasks 1, 2, 3 COMPLETE (autonomous portion of Wave 7); Task 4 (phase-close human-verify) operator-deferred per `09-06-DEFERRED-CHECKPOINT.md` (single combined operator session bundling Plan 09-05 Task 3b + Plan 09-06 Task 4). Plan 09-05 Tasks 1, 2, 3a previously COMPLETE. Wave 6 substrate landed: scripts/setup-uptime-check/run.js (idempotent gcloud monitoring uptime create wrapper; regions=USA,EUROPE,ASIA_PACIFIC for OBS-06 — 3-region gcloud minimum exceeds ≥2 success criterion per 09-RESEARCH.md §Pattern 7 line 670; describe-first-then-create idempotency with list-configs/list fallback for older gcloud versions) + scripts/setup-budget-alerts/run.js (idempotent gcloud billing budgets create wrapper; 50/80/100% thresholds on £100GBP default; BUDGET_AMOUNT + BUDGET_CURRENCY env overrides; Pitfall 19 substrate-honest banner that alerts NOTIFY only and v2 auto-disable is OUT OF SCOPE) + 2 READMEs (Phase 7/8 template style with dedicated Limitations sections). runbooks/phase-9-monitors-bootstrap.md (~20 KB, 6 operator steps: provision audit-alert-sa via Phase 7 scripts/provision-function-sas/run.js extension with roles=datastore.user+datastore.viewer + per-secret secretAccessor; SLACK_WEBHOOK_URL + SENTRY_DSN secrets via stdin pipe pattern; setup-uptime-check; setup-budget-alerts; Sentry 70% quota alert; verification gate; output handoff to deploy-checkpoint runbook to avoid two-log-split). runbooks/phase-9-deploy-checkpoint.md (~18 KB, 5 verification gates A/B/C/D/E with Pitfall 8 selective-deploy compliance; Cutover Log table with operator-fill {{ T+? }} markers; Row D explicitly DORMANT — defer per Plan 09-04 Rule 1 emit-source absence in beforeUserSignedIn; rollback procedure per-step; BLOCKING operator stop signal). Commits: 71e7d1b, 8088557, bc79fbb. **Task 3b PENDING:** operator follows runbooks/phase-9-deploy-checkpoint.md Steps A-E in single ~30-45 min session; Phase 9 close cannot advance until Cutover Log shows PASS for A/B/C/E + DORMANT for D.
+**Last updated:** 2026-05-10 — Phase 10 Plan 10-01 COMPLETE (CSP Tightening Wave 1 — inline-style migration). 162 static `style="..."` h()-attributes in src/main.js migrated to a Wave 1 utility-class block in styles.css (24 atom `.u-*` classes + ~80 semantic compound classes; 646 lines added at end-of-file with header comment citing Phase 10 Wave 1 + HOST-07 + closes-ledger-row pointer). 130 single-line + 32 multi-line static plain-string sites migrated (Rule 3 deviation: planner originally specified 130 single-line; 32 multi-line patterns were misclassified as template literals, but are also static plain strings with the same CSP failure mode — migrated together). 9 template-literal `style: \`...${expr}...\`` sites preserved as forward-tracking row (genuinely dynamic, deferred to v2 / sub-wave 4.1 IIFE body migration). index.html cache-buster bumped ?v=52→?v=53 on 3 sites. tests/__snapshots__/views/{dashboard,diagnostic,report}.html updated to capture mechanical attr-renaming (Rule 3 deviation: plan-literal "no snapshot updates" was incompatible with migration mechanic — visual fidelity preserved by class-block parity, snapshot diffs are clean attr swaps with zero content drift). 478/478 vitest suite green. Commits: 89b1140 (Task 1 — utility-class block), ec0afa7 (Task 2 — migration + cache-buster + snapshots). **Plan 10-02 (Wave 2 RO-tighten) is now safe** — dropping `'unsafe-inline'` from style-src will not surface 162+ silent layout-drop violations during the 7-day soak. Closes runbooks/phase-4-cleanup-ledger.md "132 static style=... inline-attr strings" row (formal close-out lands in Plan 10-05).
+
+**Prior context (preserved):** Phase 9 Plan 09-06 Tasks 1, 2, 3 COMPLETE (autonomous portion of Wave 7); Task 4 (phase-close human-verify) operator-deferred per `09-06-DEFERRED-CHECKPOINT.md` (single combined operator session bundling Plan 09-05 Task 3b + Plan 09-06 Task 4). Plan 09-05 Tasks 1, 2, 3a previously COMPLETE. Wave 6 substrate landed: scripts/setup-uptime-check/run.js (idempotent gcloud monitoring uptime create wrapper; regions=USA,EUROPE,ASIA_PACIFIC for OBS-06 — 3-region gcloud minimum exceeds ≥2 success criterion per 09-RESEARCH.md §Pattern 7 line 670; describe-first-then-create idempotency with list-configs/list fallback for older gcloud versions) + scripts/setup-budget-alerts/run.js (idempotent gcloud billing budgets create wrapper; 50/80/100% thresholds on £100GBP default; BUDGET_AMOUNT + BUDGET_CURRENCY env overrides; Pitfall 19 substrate-honest banner that alerts NOTIFY only and v2 auto-disable is OUT OF SCOPE) + 2 READMEs (Phase 7/8 template style with dedicated Limitations sections). runbooks/phase-9-monitors-bootstrap.md (~20 KB, 6 operator steps: provision audit-alert-sa via Phase 7 scripts/provision-function-sas/run.js extension with roles=datastore.user+datastore.viewer + per-secret secretAccessor; SLACK_WEBHOOK_URL + SENTRY_DSN secrets via stdin pipe pattern; setup-uptime-check; setup-budget-alerts; Sentry 70% quota alert; verification gate; output handoff to deploy-checkpoint runbook to avoid two-log-split). runbooks/phase-9-deploy-checkpoint.md (~18 KB, 5 verification gates A/B/C/D/E with Pitfall 8 selective-deploy compliance; Cutover Log table with operator-fill {{ T+? }} markers; Row D explicitly DORMANT — defer per Plan 09-04 Rule 1 emit-source absence in beforeUserSignedIn; rollback procedure per-step; BLOCKING operator stop signal). Commits: 71e7d1b, 8088557, bc79fbb. **Task 3b PENDING:** operator follows runbooks/phase-9-deploy-checkpoint.md Steps A-E in single ~30-45 min session; Phase 9 close cannot advance until Cutover Log shows PASS for A/B/C/E + DORMANT for D.
 
 ---
 
@@ -35,16 +37,16 @@ Phase 9 — Observability + Audit-Event Wiring (Waves 1-7 docs-and-code COMPLETE
 
 ## Current Position
 
-Phase: 9 (Observability + Audit-Event Wiring) — EXECUTING (autonomous portion of all 7 plans complete; combined operator session pending)
-Plan: 6 of 7 — Plans 09-01 + 09-02 + 09-03a + 09-03 + 09-04 COMPLETE; Plan 09-05 Tasks 1, 2, 3a complete (Task 3b BLOCKING operator checkpoint deferred); Plan 09-06 Tasks 1, 2, 3 complete (Task 4 phase-close human-verify deferred — bundled with 09-05 Task 3b)
-Plans complete (Phase 9): 6 of 7 autonomous (09-05 + 09-06 share a single combined operator session per `09-06-DEFERRED-CHECKPOINT.md`)
+Phase: 10 (CSP Tightening — Second Sweep) — EXECUTING (Plan 10-01 COMPLETE)
+Plan: 1 of N (Wave 1 — inline-style migration COMPLETE; Plans 10-02 through 10-05 pending)
+Phase 9 status: 6 of 7 autonomous COMPLETE; combined operator session still pending per 09-06-DEFERRED-CHECKPOINT.md (Plan 09-05 Task 3b + Plan 09-06 Task 4 — does NOT block Phase 10 work).
 **Status:** Phase 9 Wave 7 DOCS-AND-CODE COMPLETE (Tasks 1, 2, 3 of Plan 09-06). SECURITY.md +207 lines (4 new Phase 9 sections — § Observability — Sentry + § Audit-Event Wiring + § Anomaly Alerting + § Out-of-band Monitors — and 10-row Phase 9 Audit Index covering OBS-01..08 + AUDIT-05 + DOC-10; 10 Substrate-honest disclosures + 9 DORMANT markers exceed planner spec). REQUIREMENTS.md row updates: OBS-01 + OBS-03 + DOC-10 flipped `[x]`; OBS-02 + OBS-04..08 + AUDIT-05 retain `[~]` (substrate-complete-operator-pending, matches Phase 8 BACKUP pattern); Traceability table OBS-01..08 + AUDIT-05 rows updated with Validated 2026-05-10 annotations + cross-references to 09-06-DEFERRED-CHECKPOINT.md. runbooks/phase-9-cleanup-ledger.md zero-out gate (`phase_9_active_rows: 0`) closes 3 Phase 8 forward-tracking rows + 11 in-phase rows + 10 bounded carry-forward rows + 9 forward-tracking rows queued (Phase 10/11/12/v2). CONTRIBUTING.md +64 lines (§ Error Message Discipline — Pitfall 8 anti-pattern + compliant patterns + SignInError exemplar + AUTH-12 chokepoint citation + quarterly audit row). .planning/phases/09-observability-audit-event-wiring/09-06-DEFERRED-CHECKPOINT.md authored — single-document operator session bundling Plan 09-05 Task 3b (BLOCKING deploy) + Plan 09-06 Task 4 (phase-close human-verify); mirrors 08-06-DEFERRED-CHECKPOINT.md pattern; saves operator interrupts (1 session not 2). 0 new tests (Wave 7 is docs-only). Commits: e48802b (Task 1 — SECURITY.md Phase 9 increment), 6b3378e (Task 2 — REQUIREMENTS.md + cleanup ledger), 87e2221 (Task 3 — CONTRIBUTING.md Error Message Discipline). **Task 4 PENDING + Task 3b PENDING:** operator follows `09-06-DEFERRED-CHECKPOINT.md` Steps 0-8 in single ~45-75 min combined session — deploy `authAnomalyAlert` + `firestore.rules` `authFailureCounters` block + synthetic Slack alert + 5 Cloud Console screenshots + DORMANT Step D + phase-close evidence sweep + `/gsd-verify-work 9` (preferred). Phase 9 close cannot advance until either operator approval OR sub-wave 9.1 sub-plan resolves any gap.
-**Progress:** [█████████▌] 95%
+**Progress:** [█████████▌] 96%
 
 ```
-[█████████ ] 91%
+[█████████▌] 96%
  1  2  3  4  5  6  7  8  9 10 11 12
- ✓  ✓  ✓  ✓  ✓  ✓  ✓  ▶  ▶  .  .  .   (▶ = Phase 8 operator-pending; Phase 9 Waves 1-3 done (substrate + client wiring), Waves 4-7 pending)
+ ✓  ✓  ✓  ✓  ✓  ✓  ✓  ▶  ▶  ▶  .  .   (▶ = Phase 8 operator-pending + Phase 9 operator-pending + Phase 10 Wave 1 done / Waves 2-5 pending)
 ```
 
 **Production state at pause (no live users — safe to remain in this state):**

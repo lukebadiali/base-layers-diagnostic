@@ -99,13 +99,17 @@ export const gdprExportUser = onCall(
     // DOCUMENT_AUTHOR_FIELDS = ["uploaderId", "uploadedBy", "legacyAppUserId"]
     // Each field requires a separate query (Firestore limitation: each collectionGroup
     // query can only filter on one field at a time).
+    // M-02: include legacyAuthorId queries for messages/comments to cover
+    // pre-D-03 records that may have legacyAuthorId but no authorId field.
     const [
       profileSnap,
       auditSnap,
       responsesSnap,
       commentsSnap,
+      commentsLegacySnap,
       actionsSnap,
       messagesSnap,
+      messagesLegacySnap,
       funnelCommentsSnap,
       // One snap per DOCUMENT_AUTHOR_FIELDS entry via collectionGroup
       ...documentsSnaps
@@ -114,8 +118,10 @@ export const gdprExportUser = onCall(
       db.collection("auditLog").where("actor.uid", "==", userId).get(),
       db.collectionGroup("responses").where("userId", "==", userId).get(),
       db.collectionGroup("comments").where("authorId", "==", userId).get(),
+      db.collectionGroup("comments").where("legacyAuthorId", "==", userId).get(),
       db.collectionGroup("actions").where("ownerId", "==", userId).get(),
       db.collectionGroup("messages").where("authorId", "==", userId).get(),
+      db.collectionGroup("messages").where("legacyAuthorId", "==", userId).get(),
       db.collection("funnelComments").where("authorId", "==", userId).get(),
       // collectionGroup for subcollection orgs/{orgId}/documents/{docId} — 3 fields
       ...DOCUMENT_AUTHOR_FIELDS.map((field) =>
@@ -127,6 +133,19 @@ export const gdprExportUser = onCall(
       snap: FirebaseFirestore.QuerySnapshot,
     ): Array<{ path: string; data: Record<string, unknown> }> =>
       snap.docs.map((d) => ({ path: d.ref.path, data: (d.data() ?? {}) as Record<string, unknown> }));
+
+    // De-dupe messages and comments by path across authorId + legacyAuthorId queries (M-02).
+    const mergeEntries = (
+      ...snaps: FirebaseFirestore.QuerySnapshot[]
+    ): Array<{ path: string; data: Record<string, unknown> }> => {
+      const byPath = new Map<string, { path: string; data: Record<string, unknown> }>();
+      for (const s of snaps) {
+        for (const e of toEntries(s)) {
+          if (!byPath.has(e.path)) byPath.set(e.path, e);
+        }
+      }
+      return [...byPath.values()];
+    };
 
     // Merge subcollection document results (assembleUserBundle de-dupes by path)
     const documents = documentsSnaps.flatMap(toEntries);
@@ -144,8 +163,8 @@ export const gdprExportUser = onCall(
       profile: profileSnap.exists ? ((profileSnap.data() ?? null) as Record<string, unknown> | null) : null,
       auditEvents: auditSnap.docs.map((d) => (d.data() ?? {}) as Record<string, unknown>),
       responses: toEntries(responsesSnap),
-      comments: toEntries(commentsSnap),
-      messages: toEntries(messagesSnap),
+      comments: mergeEntries(commentsSnap, commentsLegacySnap),
+      messages: mergeEntries(messagesSnap, messagesLegacySnap),
       actions: toEntries(actionsSnap),
       documents,
       funnelComments: toEntries(funnelCommentsSnap),

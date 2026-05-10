@@ -88,11 +88,15 @@ export const gdprEraseUser = onCall(
 
     // ── Parallel pre-fetch of all user-linked data ──────────────────────────
     // Mirrors gdprExportUser query layout.
+    // M-02: include legacyAuthorId queries for messages/comments to cover
+    // pre-D-03 records that may have legacyAuthorId but no authorId field.
     const [
       profileSnap,
       auditSnap,
       messagesSnap,
+      messagesLegacySnap,
       commentsSnap,
+      commentsLegacySnap,
       actionsSnap,
       funnelCommentsSnap,
       // One snap per DOCUMENT_AUTHOR_FIELDS entry via collectionGroup
@@ -101,7 +105,9 @@ export const gdprEraseUser = onCall(
       db.doc(`users/${userId}`).get(),
       db.collection("auditLog").where("actor.uid", "==", userId).get(),
       db.collectionGroup("messages").where("authorId", "==", userId).get(),
+      db.collectionGroup("messages").where("legacyAuthorId", "==", userId).get(),
       db.collectionGroup("comments").where("authorId", "==", userId).get(),
+      db.collectionGroup("comments").where("legacyAuthorId", "==", userId).get(),
       db.collectionGroup("actions").where("ownerId", "==", userId).get(),
       db.collection("funnelComments").where("authorId", "==", userId).get(),
       // collectionGroup for subcollection orgs/{orgId}/documents/{docId}
@@ -120,6 +126,17 @@ export const gdprEraseUser = onCall(
     const toInput = (snap: FirebaseFirestore.QuerySnapshot): InputDoc[] =>
       snap.docs.map((d) => ({ path: d.ref.path, data: (d.data() ?? {}) as Record<string, unknown> }));
 
+    // De-dupe messages and comments by path across authorId + legacyAuthorId queries (M-02).
+    const mergeByPath = (...snaps: FirebaseFirestore.QuerySnapshot[]): InputDoc[] => {
+      const byPath = new Map<string, InputDoc>();
+      for (const s of snaps) {
+        for (const d of toInput(s)) {
+          if (!byPath.has(d.path)) byPath.set(d.path, d);
+        }
+      }
+      return [...byPath.values()];
+    };
+
     // De-dupe documents by path across the 3 field queries.
     const docsByPath = new Map<string, InputDoc>();
     for (const s of documentsSnaps) {
@@ -134,6 +151,9 @@ export const gdprEraseUser = onCall(
       }
     }
 
+    const allMessages = mergeByPath(messagesSnap, messagesLegacySnap);
+    const allComments = mergeByPath(commentsSnap, commentsLegacySnap);
+
     // ── Build cascade ops (pure helper — Pattern C) ─────────────────────────
     const ops = buildCascadeOps(userId, tombstone, {
       userDoc: profileSnap.exists
@@ -145,8 +165,8 @@ export const gdprEraseUser = onCall(
             data: (profileSnap.data() ?? {}) as Record<string, unknown>,
           }
         : null,
-      messages: toInput(messagesSnap),
-      comments: toInput(commentsSnap),
+      messages: allMessages,
+      comments: allComments,
       actions: toInput(actionsSnap),
       documentsSubcoll: [...docsByPath.values()],
       documentsLegacy: [...legacyByPath.values()],
@@ -254,8 +274,8 @@ export const gdprEraseUser = onCall(
     // ── Single summary audit event (Pitfall 7 — never per-doc) ──────────────
     const eventId = randomUUID();
     const counts = {
-      messages: messagesSnap.size,
-      comments: commentsSnap.size,
+      messages: allMessages.length,
+      comments: allComments.length,
       actions: actionsSnap.size,
       documentsSubcoll: docsByPath.size,
       documentsLegacy: legacyByPath.size,

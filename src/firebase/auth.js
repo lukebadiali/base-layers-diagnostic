@@ -18,6 +18,19 @@
 // after their password change. Closes the manual `accounts:update` operator
 // patch that Phase 6 cutover-recovery used as a one-off (Phase 6 cleanup-ledger
 // sub-wave 6.1 row "BLOCKER-FIX 1 setClaims wiring after password update").
+//
+// Phase 9 Wave 4 (AUDIT-05): try/finally emitAuditEvent at six call sites:
+// signInEmailPassword (POST, both outcomes — failure feeds OBS-05 anomaly
+// counter alongside the SERVER-side substrate from Plan 03a beforeUserSignedIn),
+// signOut (PRE — App Check token revoked after), updatePassword (POST),
+// sendPasswordResetEmail (POST, NO email in payload), signInWithEmailLink
+// (POST, payload.method:"emailLink"). Best-effort emission via emitAuditEvent —
+// failures swallowed (Pattern 5 #2 — never block auth flow on audit failure).
+// NOTE on auth.signin.failure: the auditWrite callable rejects unauthenticated
+// callers, so a wrong-password attempt's client emit may itself be rejected —
+// emitAuditEvent's internal swallow handles that gracefully. Wave 4 Rule 1
+// reads from BOTH the client `.failure` rows (post-auth) AND the server
+// `auth.signin.failure` rows from Plan 03a beforeUserSignedIn substrate.
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -32,6 +45,7 @@ import {
 } from "firebase/auth";
 import { auth } from "./app.js";
 import { setClaims } from "../cloud/claims-admin.js";
+import { emitAuditEvent } from "../observability/audit-events.js";
 
 export { auth, onAuthStateChanged };
 
@@ -59,8 +73,11 @@ const AUTH_CRED_ERROR_CODES = new Set([
 
 /** @param {string} email @param {string} password */
 export async function signInEmailPassword(email, password) {
+  let outcome = "failure";
   try {
-    return await signInWithEmailAndPassword(auth, email, password);
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    outcome = "success";
+    return result;
   } catch (err) {
     const code = (err && /** @type {*} */ (err).code) || "";
     if (AUTH_CRED_ERROR_CODES.has(code)) {
@@ -68,11 +85,37 @@ export async function signInEmailPassword(email, password) {
     }
     // Unexpected - let it bubble for observability (Phase 9 Sentry will catch).
     throw err;
+  } finally {
+    // Phase 9 (AUDIT-05) best-effort emission — never block the auth flow on
+    // audit failure. emitAuditEvent's internal try/catch swallows on failure;
+    // we wrap again here so a thrown emit (e.g. throw inside the proxy itself)
+    // also cannot escape the finally block.
+    try {
+      emitAuditEvent(
+        outcome === "success" ? "auth.signin.success" : "auth.signin.failure",
+        { type: "user", id: auth.currentUser?.uid ?? "unknown", orgId: null },
+        {},
+      );
+    } catch (_emitErr) {
+      // Pattern 5 #2 — best-effort. Never block auth flow on audit failure.
+    }
   }
 }
 
 /** @returns {Promise<void>} */
 export async function signOut() {
+  // Phase 9 (AUDIT-05) PRE-emit: App Check token + ID-token are revoked by
+  // fbSignOut, so auditWrite would reject after — emit BEFORE the side effect.
+  // Best-effort: emitAuditEvent's internal try/catch swallows on failure.
+  try {
+    await emitAuditEvent(
+      "auth.signout",
+      { type: "user", id: auth.currentUser?.uid ?? "unknown", orgId: null },
+      {},
+    );
+  } catch (_emitErr) {
+    // Pattern 5 #2 — best-effort. Never block sign-out on audit failure.
+  }
   await fbSignOut(auth);
 }
 
@@ -123,10 +166,8 @@ export async function updatePassword(newPassword) {
     const idTokenResult = await user.getIdTokenResult();
     const claims = /** @type {Record<string, unknown>} */ (idTokenResult.claims);
     if (claims.firstRun === true) {
-      const role =
-        typeof claims.role === "string" ? /** @type {string} */ (claims.role) : null;
-      const orgId =
-        typeof claims.orgId === "string" ? /** @type {string} */ (claims.orgId) : null;
+      const role = typeof claims.role === "string" ? /** @type {string} */ (claims.role) : null;
+      const orgId = typeof claims.orgId === "string" ? /** @type {string} */ (claims.orgId) : null;
       await setClaims({ uid: user.uid, role, orgId });
       // Force ID-token refresh — picks up the server-side setCustomUserClaims
       // mutation immediately so the next claim read sees firstRun absent.
@@ -137,6 +178,15 @@ export async function updatePassword(newPassword) {
     // state change or _pokes listener event (Pitfall 2 mitigation #3).
     // Phase 9 Sentry will capture if observability is wired by then.
     /** @type {*} */ (claimsErr);
+  }
+
+  // Phase 9 (AUDIT-05) POST-emit — both firebase update + setClaims have
+  // settled (or failed/swallowed). Best-effort: never roll back the successful
+  // password update on audit failure. Empty payload — no PII (Pitfall 17).
+  try {
+    emitAuditEvent("auth.password.change", { type: "user", id: user.uid, orgId: null }, {});
+  } catch (_emitErr) {
+    // Pattern 5 #2 — best-effort. Never block password change on audit failure.
   }
 }
 
@@ -158,7 +208,20 @@ export function isSignInWithEmailLink(url) {
 
 /** @param {string} email @param {string} url */
 export async function signInWithEmailLink(email, url) {
-  return fbSignInWithEmailLink(auth, email, url);
+  const result = await fbSignInWithEmailLink(auth, email, url);
+  // Phase 9 (AUDIT-05) POST-emit. payload.method distinguishes from
+  // password sign-in for downstream analysis (Tier-1 recovery flow).
+  // NO email in payload — actor.email is server-set from verified ID-token.
+  try {
+    emitAuditEvent(
+      "auth.signin.success",
+      { type: "user", id: auth.currentUser?.uid ?? "unknown", orgId: null },
+      { method: "emailLink" },
+    );
+  } catch (_emitErr) {
+    // Pattern 5 #2 — best-effort.
+  }
+  return result;
 }
 
 // Phase 6 Wave 5 (BLOCKER-FIX 1 wiring): re-exports consumed by views/auth.js
@@ -173,5 +236,17 @@ export async function sendEmailVerification(user) {
 
 /** @param {string} email */
 export async function sendPasswordResetEmail(email) {
-  return fbSendPasswordResetEmail(auth, email);
+  const result = await fbSendPasswordResetEmail(auth, email);
+  // Phase 9 (AUDIT-05) POST-emit. NO email in payload — caller is by
+  // definition not yet authenticated, so target.id is "unknown" (server cannot
+  // resolve a uid pre-sign-in). actor.email is server-set from request.auth
+  // when the auditWrite callable is invoked from an authenticated session;
+  // for this unauthenticated path emitAuditEvent's internal swallow handles
+  // the predictable callable rejection (Pitfall 17).
+  try {
+    emitAuditEvent("auth.password.reset", { type: "user", id: "unknown", orgId: null }, {});
+  } catch (_emitErr) {
+    // Pattern 5 #2 — best-effort.
+  }
+  return result;
 }

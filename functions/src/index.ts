@@ -20,3 +20,8 @@ export { checkRateLimit } from "./ratelimit/checkRateLimit.js";
 // Phase 8 Wave 1 (08-02): backup substrate Cloud Functions.
 export { scheduledFirestoreExport } from "./backup/scheduledFirestoreExport.js";
 export { getDocumentSignedUrl } from "./backup/getDocumentSignedUrl.js";
+// Phase 8 Wave 2 (08-03): soft-delete lifecycle Cloud Functions.
+export { softDelete } from "./lifecycle/softDelete.js";
+export { restoreSoftDeleted } from "./lifecycle/restoreSoftDeleted.js";
+export { scheduledPurge } from "./lifecycle/scheduledPurge.js";
+export { permanentlyDeleteSoftDeleted } from "./lifecycle/permanentlyDeleteSoftDeleted.js";

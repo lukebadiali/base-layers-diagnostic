@@ -3356,7 +3356,8 @@ import {
           progressBar.textContent = `Uploading ${file.name}… ${pct}%`;
         });
         await task;
-        const url = await storageOps.getDownloadURL(r);
+        // Phase 8 Wave 2 (BACKUP-05 sweep): getDownloadURL removed — clients
+        // fetch signed URLs on demand via getDocumentSignedUrl callable.
         await firestore.setDoc(firestore.doc(db, "documents", docId), {
           orgId: org.id,
           uploaderId: user.id,
@@ -3366,7 +3367,6 @@ import {
           size: file.size,
           contentType: file.type,
           storagePath: path,
-          downloadURL: url,
           visibility: privateChk.checked ? "private" : "org",
           allowedUserIds: privateChk.checked ? [user.id] : [],
           createdAt: firestore.serverTimestamp(),
@@ -3455,15 +3455,22 @@ import {
             { style: "display:flex; gap:6px;" },
             [
               h(
-                "a",
+                "button",
                 {
                   class: "btn secondary sm",
-                  href: d.downloadURL,
-                  target: "_blank",
-                  // CODE-12 (D-20): noreferrer added — opener-phishing mitigation
-                  // (CWE-1021). Pairs with target=_blank to prevent the new
-                  // tab from accessing window.opener.
-                  rel: "noopener noreferrer",
+                  // Phase 8 Wave 2 (BACKUP-05 sweep): fetch signed URL on
+                  // demand via getDocumentSignedUrl callable — no cached
+                  // downloadURL in Firestore. URL is valid for 1 hour; caller
+                  // MUST NOT cache it (server enforces TTL).
+                  onclick: async () => {
+                    try {
+                      const { getDocumentSignedUrl } = await import("./cloud/signed-url.js");
+                      const { url } = await getDocumentSignedUrl(org.id, d.id, d.filename);
+                      window.open(url, "_blank", "noopener,noreferrer");
+                    } catch (e) {
+                      notify("error", "Couldn't fetch download link: " + (e.message || e));
+                    }
+                  },
                 },
                 "Download",
               ),

@@ -54,7 +54,9 @@ export default defineConfig(({ command, mode }) => {
     // with environment: "node" + emulator-bound. Excluding it from the default
     // unit suite so `npm test` doesn't try to run rules tests in happy-dom
     // without the Firestore + Storage emulators.
-    exclude: ["**/node_modules/**", "**/dist/**", "**/.git/**", "tests/rules/**"],
+    // functions/** is tested by its own workspace runner (cd functions && npm test)
+    // — it has its own deps (firebase-functions, etc.) that root npm doesn't install.
+    exclude: ["**/node_modules/**", "**/dist/**", "**/.git/**", "tests/rules/**", "functions/**", ".claude/worktrees/**"],
     coverage: {
       provider: "v8",
       reportsDirectory: "coverage",

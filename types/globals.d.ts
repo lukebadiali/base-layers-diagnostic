@@ -12,3 +12,17 @@ declare interface Window {
   FB: unknown;
   Chart: unknown;
 }
+
+// Phase 7 Wave 3: Vite-injected ImportMeta.env (FN-07 reCAPTCHA Enterprise).
+// Minimal shape — narrower than "vite/client" which would also pull HMR types.
+interface ImportMetaEnv {
+  readonly DEV: boolean;
+  readonly PROD: boolean;
+  readonly MODE: string;
+  readonly VITE_RECAPTCHA_ENTERPRISE_SITE_KEY?: string;
+  readonly [key: string]: string | boolean | undefined;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

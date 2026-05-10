@@ -10,16 +10,23 @@
 // T-08-03-01: admin role gate via token.role check (not request.data).
 // T-08-03-02: Zod input validation; resolveDocPath exhaustive switch.
 // T-08-03-07: already-deleted check before batch; idempotency 5-min window.
+//
+// Phase 9 Wave 3 (BLOCKER 3 fix): server-side `data.<type>.softDelete` audit
+// emission landed AFTER the batch commit. Wave 4 Rule 3 + AUDIT-05 mirror-
+// trigger collision dedup (Pitfall 7) read from these rows. The dual-emit
+// pair is satisfied here + at the client wrapper (src/cloud/soft-delete.js).
 
 import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/logger";
 import { defineSecret } from "firebase-functions/params";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { withSentry } from "../util/sentry.js";
 import { validateInput } from "../util/zod-helpers.js";
 import { ensureIdempotent } from "../util/idempotency.js";
+import { writeAuditEvent } from "../audit/auditLogger.js";
 import { SOFT_DELETABLE_TYPES, resolveDocPath, resolveSnapshotPath } from "./resolveDocRef.js";
 
 if (!getApps().length) initializeApp();
@@ -80,6 +87,53 @@ export const softDelete = onCall(
       originalOrgId: data.orgId,
     });
     await batch.commit();
+
+    // Phase 9 Wave 3 (BLOCKER 3 / AUDIT-05): server-side bare emission of
+    // data.<type>.softDelete. Client wrapper (src/cloud/soft-delete.js —
+    // Plan 03) emits the .requested companion.
+    // Best-effort: log + swallow on emit failure — do NOT block the underlying
+    // soft-delete (Pattern 5 #2). The Firestore batch already committed; we
+    // can't roll back the data mutation just because the audit emit fails.
+    try {
+      const token = (request.auth.token ?? {}) as Record<string, unknown>;
+      await writeAuditEvent(
+        {
+          type: `data.${data.type}.softDelete` as
+            | "data.action.softDelete"
+            | "data.comment.softDelete"
+            | "data.document.softDelete"
+            | "data.message.softDelete"
+            | "data.funnelComment.softDelete",
+          target: { type: data.type, id: data.id, orgId: data.orgId },
+          clientReqId: data.clientReqId,
+          payload: {},
+        },
+        {
+          now: Date.now(),
+          eventId: randomUUID(),
+          ip: null,
+          userAgent: null,
+          actor: {
+            uid: request.auth.uid,
+            email: typeof token.email === "string" ? token.email : null,
+            role:
+              token.role === "admin" ||
+              token.role === "internal" ||
+              token.role === "client" ||
+              token.role === "system"
+                ? token.role
+                : null,
+            orgId: typeof token.orgId === "string" ? token.orgId : null,
+          },
+        },
+      );
+    } catch (auditErr) {
+      logger.warn("audit.emit.failed", {
+        type: `data.${data.type}.softDelete`,
+        id: data.id,
+        error: auditErr instanceof Error ? auditErr.message : String(auditErr),
+      });
+    }
 
     logger.info("lifecycle.softDelete", {
       type: data.type,

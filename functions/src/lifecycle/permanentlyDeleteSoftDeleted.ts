@@ -13,16 +13,25 @@
 //
 // T-08-03-09: admin role gate via token.role check (Pitfall 17).
 // T-08-03-10: ensureIdempotent on key prevents double-click hard-delete replay.
+//
+// Phase 9 Wave 3 (BLOCKER 3 fix): server-side `data.<type>.permanentlyDelete`
+// audit emission landed AFTER ref.delete(). Wave 4 anomaly rules read from
+// these rows. The dual-emit pair is satisfied here + at the client wrapper
+// (src/cloud/soft-delete.js — Plan 03 .requested companion). target.orgId is
+// null because the callable input has no orgId field (resource lives in
+// softDeleted/{type}/items/{id} — admin-scoped path).
 
 import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/logger";
 import { defineSecret } from "firebase-functions/params";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { withSentry } from "../util/sentry.js";
 import { validateInput } from "../util/zod-helpers.js";
 import { ensureIdempotent } from "../util/idempotency.js";
+import { writeAuditEvent } from "../audit/auditLogger.js";
 import { SOFT_DELETABLE_TYPES, resolveSnapshotPath } from "./resolveDocRef.js";
 
 if (!getApps().length) initializeApp();
@@ -65,6 +74,53 @@ export const permanentlyDeleteSoftDeleted = onCall(
     if (!snap.exists) throw new HttpsError("not-found", "Soft-deleted record not found");
 
     await ref.delete();
+
+    // Phase 9 Wave 3 (BLOCKER 3 / AUDIT-05): server-side bare emission of
+    // data.<type>.permanentlyDelete. Client wrapper (src/cloud/soft-delete.js
+    // — Plan 03) emits the .requested companion.
+    // Best-effort: log + swallow on emit failure — do NOT block the underlying
+    // hard-delete (Pattern 5 #2). target.orgId:null because the resource lives
+    // in softDeleted/{type}/items/{id} (admin-scoped, no orgId in input).
+    try {
+      const token = (request.auth.token ?? {}) as Record<string, unknown>;
+      await writeAuditEvent(
+        {
+          type: `data.${data.type}.permanentlyDelete` as
+            | "data.action.permanentlyDelete"
+            | "data.comment.permanentlyDelete"
+            | "data.document.permanentlyDelete"
+            | "data.message.permanentlyDelete"
+            | "data.funnelComment.permanentlyDelete",
+          target: { type: data.type, id: data.id, orgId: null },
+          clientReqId: data.clientReqId,
+          payload: {},
+        },
+        {
+          now: Date.now(),
+          eventId: randomUUID(),
+          ip: null,
+          userAgent: null,
+          actor: {
+            uid: request.auth.uid,
+            email: typeof token.email === "string" ? token.email : null,
+            role:
+              token.role === "admin" ||
+              token.role === "internal" ||
+              token.role === "client" ||
+              token.role === "system"
+                ? token.role
+                : null,
+            orgId: typeof token.orgId === "string" ? token.orgId : null,
+          },
+        },
+      );
+    } catch (auditErr) {
+      logger.warn("audit.emit.failed", {
+        type: `data.${data.type}.permanentlyDelete`,
+        id: data.id,
+        error: auditErr instanceof Error ? auditErr.message : String(auditErr),
+      });
+    }
 
     logger.info("lifecycle.permanentlyDeleteSoftDeleted", {
       type: data.type,

@@ -149,7 +149,15 @@ jobs:
           node-version: "22"
           cache: "npm"
       - run: npm ci
-      - run: npm run build
+      - name: Build (with reCAPTCHA Enterprise key — secret if set, placeholder otherwise)
+        # Phase 7 Wave 3 (FN-07): vite.config.js fail-closed guard requires
+        # VITE_RECAPTCHA_ENTERPRISE_SITE_KEY for production builds. PR-validation
+        # builds use a placeholder so the bundle structure is verified without
+        # leaking a real key into preview channels. The deploy job below sets
+        # the real key from secrets.
+        env:
+          VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY || 'ci-build-verification-placeholder' }}
+        run: npm run build
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dist
@@ -174,7 +182,10 @@ jobs:
           node-version: "22"
           cache: "npm"
       - run: npm ci
-      - run: npm run build
+      - name: Build (with reCAPTCHA Enterprise key from secrets)
+        env:
+          VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY || 'ci-build-verification-placeholder' }}
+        run: npm run build
       - name: Install + build functions/ workspace
         run: |
           cd functions
@@ -255,7 +266,10 @@ jobs:
           node-version: "22"
           cache: "npm"
       - run: npm ci
-      - run: npm run build
+      - name: Build (preview channel — placeholder reCAPTCHA key)
+        env:
+          VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY || 'ci-build-verification-placeholder' }}
+        run: npm run build
       - name: Install + build functions/ workspace
         run: |
           cd functions

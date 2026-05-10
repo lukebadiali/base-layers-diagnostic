@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-08T20:19:12.198Z"
+last_updated: "2026-05-10T11:58:00Z"
 progress:
   total_phases: 12
-  completed_phases: 5
-  total_plans: 36
-  completed_plans: 30
-  percent: 83
+  completed_phases: 7
+  total_plans: 48
+  completed_plans: 42
+  percent: 88
 ---
 
 # State: Base Layers Diagnostic — Hardening Pass
@@ -27,7 +27,7 @@ progress:
 Client diagnostic data must remain confidential, intact, and recoverable — and BeDeveloped must be able to honestly answer a prospect's security questionnaire about how that's enforced.
 
 **Current focus:**
-Phase 06 — real-auth-mfa-rules-deploy
+Phase 8 — Data Lifecycle (Soft-Delete + GDPR + Backups)
 
 **Compliance bar:** credible, **not** certified. Certification is a separate workstream.
 
@@ -35,10 +35,11 @@ Phase 06 — real-auth-mfa-rules-deploy
 
 ## Current Position
 
-Phase: 06 (real-auth-mfa-rules-deploy) — **WAVE 5 PAUSED** (production-state-changes landed; cutover commit pending)
-Plans complete: 4 of 6 (06-01 ✓ 06-02 ✓ 06-03 ✓ 06-04 ✓ — 06-05 in-progress, 06-06 not started)
-**Status:** Phase 06 paused mid-Wave-5 (2026-05-09T14:45:00Z) — see `.planning/phases/06-real-auth-mfa-rules-deploy/06-WAVE-5-PARTIAL-STATE.md` for full state-of-play, deviation log (11 entries), and resume procedure.
-**Progress:** 5/12 phases complete (Phase 6 partially executed; cutover commit + Steps 7-12 pending)
+Phase: 8 (Data Lifecycle (Soft-Delete + GDPR + Backups)) — EXECUTING
+Plan: 1 of 6 — PAUSED at Task 5 (operator checkpoint: run setup-backup-bucket script)
+Plans complete: 0 of 6 (08-01 in-progress — Tasks 1-4 committed, Task 5 awaiting operator)
+**Status:** Executing Phase 8 — 08-01 paused at human-verify checkpoint
+**Progress:** 7/12 phases complete; Phase 8 plan 1 Tasks 1-4 done
 
 ```
 [########........] 42%
@@ -47,6 +48,7 @@ Plans complete: 4 of 6 (06-01 ✓ 06-02 ✓ 06-03 ✓ 06-04 ✓ — 06-05 in-pro
 ```
 
 **Production state at pause (no live users — safe to remain in this state):**
+
 - Strict Phase 5 rules deployed to production (firestore + storage)
 - 3 Phase 6 auth Cloud Functions deployed in europe-west2 (degraded — `gcp-sa-firebaseauth` ToS gate blocks blocking-handler invocation; admin claims set via Admin SDK Path B instead)
 - Luke (UID `LQpdqpWqcgVLIE59ln3x8RMf5Mk1`) + George (UID `CZTjcv0mYafO49swTc3P4b6j99W2`) bootstrapped with `{role: "admin", orgId: null, firstRun: true}` claims
@@ -207,6 +209,8 @@ Additional non-negotiables:
 ---
 
 ## Session Continuity
+
+**Last session (2026-05-10):** Phase 8 plan 01 (backup substrate) — Tasks 1-4 executed and committed. Paused at Task 5 (operator checkpoint). Commits: 1809c1e (chore: @google-cloud/firestore@8.5.0), f6f3566 (feat: setup-backup-bucket script), 6ca6a9f (docs: phase-8-backup-setup.md runbook), cbff8b6 (feat: admin-sdk.ts Storage + FirestoreAdminClient mocks). Operator must run scripts/setup-backup-bucket/run.js and provision backup-sa before Wave 2 (08-02) can deploy.
 
 **Last session (2026-05-04 — resumed mid-day):** Phase 1 execution continued. Waves 0-3 complete and pushed to `origin/main`. Wave 3 checkpoint resolved.
 

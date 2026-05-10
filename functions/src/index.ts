@@ -28,3 +28,8 @@ export { permanentlyDeleteSoftDeleted } from "./lifecycle/permanentlyDeleteSoftD
 // Phase 8 Wave 3-4 (08-04, 08-05): GDPR Art. 15 export + Art. 17 erasure.
 export { gdprExportUser } from "./gdpr/gdprExportUser.js";
 export { gdprEraseUser } from "./gdpr/gdprEraseUser.js";
+// Phase 9 Wave 5 (OBS-05 / FN-01): authAnomalyAlert Firestore-trigger Slack
+// dispatcher. Reads auditLog/{eventId} creates and applies 4 anomaly rules
+// (auth-fail burst, MFA disenrol [DORMANT], role escalation, unusual-hour
+// GDPR export). Runs as audit-alert-sa in europe-west2.
+export { authAnomalyAlert } from "./observability/authAnomalyAlert.js";

@@ -40,6 +40,9 @@ module.exports = [
         console: "readonly",
         URL: "readonly",
         URLSearchParams: "readonly",
+        // Phase 9 Wave 5: Node 22 has built-in fetch (undici) — used by
+        // functions/src/observability/authAnomalyAlert.ts for the Slack POST.
+        fetch: "readonly",
       },
     },
     plugins: {

@@ -8,15 +8,14 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("../../src/firebase/functions.js", () => ({
   functions: { __mock: "functions" },
-  httpsCallable: vi.fn((_functions, name) => {
+  httpsCallable: vi.fn((_functions, _name) => {
     // Return a callable stub that resolves with { data: { ok: true } }
     return vi.fn(async (_input) => ({ data: { ok: true } }));
   }),
 }));
 
-const { softDelete, restoreSoftDeleted, permanentlyDeleteSoftDeleted } = await import(
-  "../../src/cloud/soft-delete.js"
-);
+const { softDelete, restoreSoftDeleted, permanentlyDeleteSoftDeleted } =
+  await import("../../src/cloud/soft-delete.js");
 
 describe("cloud/soft-delete.js (Phase 8 Wave 2 LIFE-04 — real httpsCallable wrappers)", () => {
   it("softDelete is a function", () => {

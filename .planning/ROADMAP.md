@@ -267,7 +267,13 @@ Plans:
   2. `SECURITY_AUDIT.md` LLM03 / LLM05 / LLM10 sections are explicitly judged N/A with documented rationale ("this app has no LLM surface") â€” not silently skipped
   3. `SECURITY_AUDIT_REPORT.md` documents every checklist item as Pass / Partial / N/A with citations into the codebase + `docs/`; sections without clean Firebase equivalents are explicitly flagged "N/A â€” Firebase architecture differs" with rationale
   4. The report's overall posture statement reads "credible / on track for SOC2 + ISO 27001 + GDPR Art. 32 / OWASP ASVS L2" â€” not "compliant" or "certified" (Pitfall 19 prevention)
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 12-01-PLAN.md — Wave 1: docs/SECURITY_AUDIT_TRANSLATION.md + tests/security-audit-translation-shape.test.js (WALK-01)
+- [ ] 12-02-PLAN.md — Wave 2: SECURITY_AUDIT_REPORT.md Discovery + Executive Summary + locked posture statement + §2 OWASP A01..A10 + §3 + §4 + §5 + tests/security-audit-report-shape.test.js (6 cases; WALK-02/03 substrate)
+- [ ] 12-03-PLAN.md — Wave 3: SECURITY_AUDIT_REPORT.md §6 OWASP LLM Top 10 2025 (11 enumerated N/A rows — WALK-04 anchor) + §7 + §10 + §13 Sign-off Checklist (46 enumerated rows: 14 Universal + 11 Supabase + 10 Vercel + 11 AI/LLM) + Tests 4 + 8 added to security-audit-report-shape.test.js (8 total) + tests/security-audit-report-paths-exist.test.js (WALK-04 closed)
+- [ ] 12-04-PLAN.md [autonomous: false] — Wave 4: SECURITY.md § Phase 12 Audit Index (DOC-10 final increment) + REQUIREMENTS.md WALK-01..04 + DOC-10 flips + ROADMAP.md Progress Table flip + runbooks/phase-12-cleanup-ledger.md zero-out + /gsd-verify-work 12
 
 ---
 

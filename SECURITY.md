@@ -44,6 +44,7 @@
 - [§ Phase 9 Audit Index](#-phase-9-audit-index)
 - [§ Phase 10 Audit Index](#-phase-10-audit-index)
 - [§ Phase 11 Audit Index](#-phase-11-audit-index)
+- [§ Phase 12 Audit Index](#-phase-12-audit-index)
 
 ---
 
@@ -1408,6 +1409,28 @@ Auditor walk-through pointer for Phase 11 (Documentation Pack / Evidence Pack). 
 
 - **Phase 12** (WALK-01 / WALK-02 / WALK-03) — `SECURITY_AUDIT_TRANSLATION` per-section Vercel/Supabase → Firebase translation map cites every Phase 11 doc + this Audit Index as the ground-truth control catalogue; `SECURITY_AUDIT_REPORT.md` Pass / Partial / N/A entries cite specific rows in this index by REQ-ID.
 - **Maintenance (post-Phase 11):** when upstream operator sessions land their captures (`08-06` / `09-06` / `10-DEFERRED-CHECKPOINT.md`), the matching rows in `docs/evidence/README.md` flip `PENDING-OPERATOR` → `PRESENT`; this Audit Index does NOT need a per-flip maintenance commit (the inventory is the canonical source of truth).
+
+**Index self-check:** if any row above cites a path that does not exist on disk OR a `:NN` line-number suffix, `tests/security-md-paths-exist.test.js` fails. The CI gate keeps this index honest.
+
+---
+
+## § Phase 12 Audit Index
+
+Auditor walk-through pointer for Phase 12 (Audit Walkthrough + Final Report). Each row maps a Phase 12 control to its requirement ID, the doc/test that implements it, the test or operator evidence that verifies it, and the framework citations it satisfies. Mirrors the §Phase 3..§Phase 11 Audit Index shape. Phase 12 is the canonical milestone close — `SECURITY_AUDIT_REPORT.md` is the closing artefact.
+
+| Requirement | Control | Code | Test / Evidence | Framework |
+|-------------|---------|------|-----------------|-----------|
+| WALK-01 | Per-§ Vercel/Supabase → Firebase translation map (RLS↔Firestore Rules / service_role↔custom claims + Cloud Functions / Edge Functions↔Cloud Functions / pgaudit↔Cloud Function audit log / PITR↔Firestore PITR / Vercel BotID/Firewall↔reCAPTCHA Enterprise / App Check / OIDC federation↔Firebase Auth tokens + GitHub Actions WIF / Vercel Audit Logs↔Cloud Logging + audit-log Cloud Function) | `docs/SECURITY_AUDIT_TRANSLATION.md` | `tests/security-audit-translation-shape.test.js` (4 cases — existence + §-coverage + N/A rationale presence + Pitfall 19 forbidden-words) | OWASP ASVS L2 v5.0 V14.1; ISO/IEC 27001:2022 Annex A.5.36; SOC 2 CC2.3 |
+| WALK-02 | End-to-end checklist run against hardened repo — every §13 Sign-off Checkbox + every §2–§7 + §10 numbered control surfaced for verdict | `SECURITY_AUDIT_REPORT.md` (§ Discovery + § §2 OWASP A01..A10 + § §3 Auth + § §4 Input + § §5 Network + § §6 LLM + § §7 Attack class + § §10 Toolchain + § §13 Sign-off × 4 sub-sections) | `tests/security-audit-report-shape.test.js` Test 8 (§13 Universal cardinality >= 14) + Test A01..A10 (10 OWASP rows minimum) | OWASP ASVS L2 v5.0 V14.1; ISO/IEC 27001:2022 Annex A.5.36; SOC 2 CC2.3 |
+| WALK-03 | Per-checklist-item Pass / Partial / N/A with citations — 6-column row format (Source ref / Control / Verdict / Citation / Framework / Evidence); PENDING-OPERATOR evidence → Partial verdict (Pitfall 19 substrate-honest) | `SECURITY_AUDIT_REPORT.md` (row format pinned in `## Executive Summary`) | `tests/security-audit-report-shape.test.js` Tests 1+2+3+6+7 + `tests/security-audit-report-paths-exist.test.js` (Pitfall 6 wishlist gate — every cited path resolves on disk or in git ls-files) | OWASP ASVS L2 v5.0 V14.1 / V14.5; ISO/IEC 27001:2022 Annex A.5.36; SOC 2 CC2.3 |
+| WALK-04 | LLM03 / LLM05 / LLM10 explicit N/A with "no LLM surface" rationale — full enumeration of all 10 LLM Top-10 rows + NCSC AI Guidelines row (11 enumerated N/A rows in `## §6 OWASP LLM Top 10 2025` + 11 enumerated N/A rows in `## §13 Sign-off Checklist — If AI / LLM` = 22 occurrences of the locked rationale string) | `SECURITY_AUDIT_REPORT.md` `## §6 OWASP LLM Top 10 2025` section + `## §13 Sign-off Checklist — If AI / LLM` section | `tests/security-audit-report-shape.test.js` Test 4 (LLM cardinality >= 10 `^\| §6 LLM\d+` rows) | OWASP LLM Top 10 2025; NCSC AI Guidelines (Aug 2023); OWASP ASVS L2 v5.0 V14.1 |
+| DOC-10 | Phase 12 final incremental SECURITY.md append — `## § Phase 12 Audit Index` (this section) + ToC anchor; Compliance posture statement footer preserved byte-for-byte | This file | This commit; Phase 11 is the canonical DOC-10 final-pass owner (line-number drift sweep + every-cited-path-exists gate); Phase 12 is the milestone close increment | ISO/IEC 27001:2022 Annex A.5.36 |
+
+**Substrate-honest disclosure (Pitfall 19):** This Audit Index closes the cross-cutting DOC-10 work. The milestone posture is "credible, not certified" per the `## Compliance posture statement` footer; this Audit Index does NOT inflate the posture. `SECURITY_AUDIT_REPORT.md` is **evidence of internal review**, not external pen test — the prospect-questionnaire-readiness artefact. SOC 2 Type I/II + ISO/IEC 27001:2022 certification + third-party pen test are tracked under `.planning/ROADMAP.md` v2 Requirements (OPS-V2-01 / OPS-V2-02 / OPS-V2-03).
+
+**Cross-document index closure:** `docs/SECURITY_AUDIT_TRANSLATION.md` + `SECURITY_AUDIT_REPORT.md` + this Audit Index together constitute the WALK-01..04 + DOC-10 final-pass artefact set. `runbooks/phase-12-cleanup-ledger.md` zero-out gate (`phase_12_active_rows: 0`) confirms no carry-forward rows remain at milestone close.
+
+**Phase 12 close gate:** All WALK-01..04 rows above flipped to `[x]` in `.planning/REQUIREMENTS.md` (with `Closed Phase 12 — Plan 12-XX` annotation per row). DOC-10 row appended with Phase 12 final-increment annotation. `runbooks/phase-12-cleanup-ledger.md` zero-out gate `phase_12_active_rows: 0`.
 
 **Index self-check:** if any row above cites a path that does not exist on disk OR a `:NN` line-number suffix, `tests/security-md-paths-exist.test.js` fails. The CI gate keeps this index honest.
 

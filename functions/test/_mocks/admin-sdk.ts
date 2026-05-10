@@ -178,19 +178,43 @@ interface WhereClause {
   value: unknown;
 }
 
-function buildQuery(prefix: string, clauses: WhereClause[], limit: number | null): any {
+// Phase 8 Wave 2: extended buildQuery signature with orderByField + startAfterDoc
+// to support scheduledPurge's paginated startAfter loop (Pitfall B).
+function buildQuery(
+  prefix: string,
+  clauses: WhereClause[],
+  limit: number | null,
+  orderByField: string | null = null,
+  startAfterDoc: { id: string; data: () => Record<string, unknown> } | null = null,
+): any {
   return {
     where(field: string, op: string, value: unknown) {
-      return buildQuery(prefix, [...clauses, { field, op, value }], limit);
+      return buildQuery(prefix, [...clauses, { field, op, value }], limit, orderByField, startAfterDoc);
     },
     limit(n: number) {
-      return buildQuery(prefix, clauses, n);
+      return buildQuery(prefix, clauses, n, orderByField, startAfterDoc);
+    },
+    orderBy(field: string) {
+      return buildQuery(prefix, clauses, limit, field, startAfterDoc);
+    },
+    startAfter(doc: { id: string; data: () => Record<string, unknown> }) {
+      return buildQuery(prefix, clauses, limit, orderByField, doc);
     },
     async get() {
       const matches: Array<{
         id: string;
+        ref: { path: string };
         data: () => Record<string, unknown>;
       }> = [];
+
+      // Collect all matching docs first (before limit/startAfter)
+      const allMatches: Array<{
+        id: string;
+        ref: { path: string };
+        data: () => Record<string, unknown>;
+        orderVal: number;
+      }> = [];
+
       for (const [path, data] of docStore.entries()) {
         if (!path.startsWith(prefix + "/")) continue;
         const tail = path.slice(prefix.length + 1);
@@ -205,33 +229,52 @@ function buildQuery(prefix: string, clauses: WhereClause[], limit: number | null
             break;
           }
           if (clause.op === ">") {
-            if (v === undefined || v === null) {
-              ok = false;
-              break;
-            }
+            if (v === undefined || v === null) { ok = false; break; }
             const cur = v instanceof Date ? v.getTime() : Number(v);
-            const cmp =
-              clause.value instanceof Date
-                ? clause.value.getTime()
-                : Number(clause.value);
-            if (!(cur > cmp)) {
-              ok = false;
-              break;
-            }
+            const cmp = clause.value instanceof Date ? clause.value.getTime() : Number(clause.value);
+            if (!(cur > cmp)) { ok = false; break; }
+          }
+          if (clause.op === "<") {
+            if (v === undefined || v === null) { ok = false; break; }
+            const cur = v instanceof Date ? v.getTime() : Number(v);
+            const cmp = clause.value instanceof Date ? clause.value.getTime() : Number(clause.value);
+            if (!(cur < cmp)) { ok = false; break; }
           }
         }
         if (!ok) continue;
-        matches.push({
-          id: tail,
-          data: () => ({ ...data }),
-        });
+        const orderVal = orderByField
+          ? (() => {
+              const ov = readField(data, orderByField);
+              return ov instanceof Date ? ov.getTime() : Number(ov ?? 0);
+            })()
+          : 0;
+        allMatches.push({ id: tail, ref: { path }, data: () => ({ ...data }), orderVal });
+      }
+
+      // Sort by orderBy field if specified
+      if (orderByField) {
+        allMatches.sort((a, b) => a.orderVal - b.orderVal);
+      }
+
+      // Apply startAfter cursor
+      let startIdx = 0;
+      if (startAfterDoc) {
+        const cursorId = startAfterDoc.id;
+        const cursorIdx = allMatches.findIndex((m) => m.id === cursorId);
+        if (cursorIdx !== -1) startIdx = cursorIdx + 1;
+      }
+
+      const sliced = allMatches.slice(startIdx);
+      for (const m of sliced) {
+        matches.push({ id: m.id, ref: m.ref, data: m.data });
         if (limit !== null && matches.length >= limit) break;
       }
+
       return {
         empty: matches.length === 0,
         size: matches.length,
         docs: matches,
-        forEach(fn: (d: { id: string; data: () => Record<string, unknown> }) => void) {
+        forEach(fn: (d: { id: string; ref: { path: string }; data: () => Record<string, unknown> }) => void) {
           matches.forEach(fn);
         },
       };

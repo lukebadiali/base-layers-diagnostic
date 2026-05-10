@@ -6,16 +6,25 @@
 // "offline mode preferred"). This complements (does not replace) the
 // pure-mocked unit tests under test/{auth,audit,ratelimit}/*.unit.test.ts.
 //
-// Surface modelled (just enough for Phase 7 callables + triggers):
+// Surface modelled (Phase 7 — Firestore + Auth):
 //   - getFirestore().doc(path).get() / set() / update() / delete()
 //   - getFirestore().collection(prefix).where(field, op, value).limit(n).get()
 //   - getFirestore().runTransaction(fn) — single-shot snapshot, last-write-wins
 //   - FieldValue.serverTimestamp() — sentinel marker
 //   - getAuth().setCustomUserClaims(uid, claims) — records into a map
 //
-// State is module-level so the integration tests share one logical Firestore
-// per test run; each `beforeEach` should call `_reset()` to clear it. This
-// mirrors functions/src/util/idempotency.ts's `_resetForTest` seam pattern.
+// Phase 8 Wave 1 additions (getStorageMock + getFirestoreAdminClientMock):
+//   - getStorageMock()              — bucket().file().save() / getSignedUrl() / delete() / exists()
+//                                     + bucket().getFiles()
+//   - getFirestoreAdminClientMock() — databasePath() + exportDocuments()
+//   - _seedStorageObject()          — seed helper (mirrors _seedDoc shape)
+//   - _allStorageObjects()          — inspector for tests
+//   - _allSignedUrls()              — inspector for issued signed URLs
+//   - _allExportCalls()             — inspector for exportDocuments calls
+//
+// State is module-level so the integration tests share one logical store per
+// test run; each `beforeEach` should call `_reset()` to clear it. This mirrors
+// functions/src/util/idempotency.ts's `_resetForTest` seam pattern.
 //
 // ESLint @typescript-eslint/no-explicit-any: this mock is opt-in `any`-heavy
 // at boundaries because it stands in for the broad firebase-admin/firestore
@@ -24,14 +33,41 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+// ─── Phase 7 state ────────────────────────────────────────────────────────────
+
 const docStore = new Map<string, Record<string, unknown>>();
 const customClaims = new Map<string, Record<string, unknown>>();
 const SERVER_TIMESTAMP = { __isServerTs: true } as const;
 
+// ─── Phase 8 Wave 1 state ─────────────────────────────────────────────────────
+
+const storageObjects = new Map<
+  string,
+  { body: string | Buffer; contentType: string; savedAt: number }
+>();
+const issuedSignedUrls: Array<{
+  bucket: string;
+  path: string;
+  expires: number;
+  action: string;
+}> = [];
+const exportCalls: Array<{
+  name: string;
+  outputUriPrefix: string;
+  collectionIds: string[];
+}> = [];
+
+// ─── Reset (clears all state — Phase 7 + Phase 8) ────────────────────────────
+
 export function _reset(): void {
   docStore.clear();
   customClaims.clear();
+  storageObjects.clear();
+  issuedSignedUrls.length = 0;
+  exportCalls.length = 0;
 }
+
+// ─── Phase 7 seed / inspect helpers ──────────────────────────────────────────
 
 export function _seedDoc(path: string, data: Record<string, unknown>): void {
   docStore.set(path, data);
@@ -49,6 +85,43 @@ export function _allClaims(): Map<string, Record<string, unknown>> {
   return new Map(customClaims);
 }
 
+// ─── Phase 8 Wave 1 seed / inspect helpers ────────────────────────────────────
+
+export function _seedStorageObject(
+  bucketName: string,
+  path: string,
+  body: string | Buffer,
+  contentType = "application/octet-stream",
+): void {
+  storageObjects.set(`${bucketName}/${path}`, { body, contentType, savedAt: Date.now() });
+}
+
+export function _allStorageObjects(): Map<
+  string,
+  { body: string | Buffer; contentType: string; savedAt: number }
+> {
+  return new Map(storageObjects);
+}
+
+export function _allSignedUrls(): Array<{
+  bucket: string;
+  path: string;
+  expires: number;
+  action: string;
+}> {
+  return [...issuedSignedUrls];
+}
+
+export function _allExportCalls(): Array<{
+  name: string;
+  outputUriPrefix: string;
+  collectionIds: string[];
+}> {
+  return [...exportCalls];
+}
+
+// ─── Shared state object ──────────────────────────────────────────────────────
+
 export const adminMockState = {
   _reset,
   _seedDoc,
@@ -56,6 +129,11 @@ export const adminMockState = {
   _allDocs,
   _allClaims,
   SERVER_TIMESTAMP,
+  // Phase 8 additions
+  _seedStorageObject,
+  _allStorageObjects,
+  _allSignedUrls,
+  _allExportCalls,
 };
 
 // ─── Doc reference helpers ────────────────────────────────────────────────────
@@ -212,7 +290,7 @@ function makeTx() {
   };
 }
 
-// ─── Public mock factory ──────────────────────────────────────────────────────
+// ─── Phase 7 public mock factories ───────────────────────────────────────────
 
 export function getFirestoreMock() {
   return {
@@ -245,3 +323,83 @@ export function getAuthMock() {
 export const FieldValueMock = {
   serverTimestamp: () => SERVER_TIMESTAMP,
 };
+
+// ─── Phase 8 Wave 1 public mock factories ─────────────────────────────────────
+
+export function getStorageMock() {
+  return {
+    bucket(bucketName: string) {
+      return {
+        file(filePath: string) {
+          const key = `${bucketName}/${filePath}`;
+          return {
+            async save(
+              data: string | Buffer,
+              opts: { contentType?: string } = {},
+            ): Promise<void> {
+              storageObjects.set(key, {
+                body: data,
+                contentType: opts.contentType ?? "application/octet-stream",
+                savedAt: Date.now(),
+              });
+            },
+            async getSignedUrl(opts: {
+              version?: string;
+              action?: string;
+              expires: number;
+            }): Promise<[string]> {
+              issuedSignedUrls.push({
+                bucket: bucketName,
+                path: filePath,
+                expires: opts.expires,
+                action: opts.action ?? "read",
+              });
+              return [
+                `https://signed.example/${bucketName}/${encodeURIComponent(filePath)}?expires=${opts.expires}`,
+              ];
+            },
+            async delete(): Promise<void> {
+              storageObjects.delete(key);
+            },
+            async exists(): Promise<[boolean]> {
+              return [storageObjects.has(key)];
+            },
+          };
+        },
+        async getFiles(
+          opts: { prefix?: string } = {},
+        ): Promise<[Array<{ name: string; delete(): Promise<void> }>]> {
+          const matches = [...storageObjects.entries()]
+            .filter(([k]) => k.startsWith(`${bucketName}/${opts.prefix ?? ""}`))
+            .map(([k]) => ({
+              name: k.slice(bucketName.length + 1),
+              async delete(): Promise<void> {
+                storageObjects.delete(k);
+              },
+            }));
+          return [matches];
+        },
+      };
+    },
+  };
+}
+
+export function getFirestoreAdminClientMock() {
+  return {
+    databasePath(projectId: string, db: string): string {
+      return `projects/${projectId}/databases/${db}`;
+    },
+    async exportDocuments(req: {
+      name: string;
+      outputUriPrefix: string;
+      collectionIds?: string[];
+    }): Promise<[{ name: string }]> {
+      exportCalls.push({
+        name: req.name,
+        outputUriPrefix: req.outputUriPrefix,
+        collectionIds: req.collectionIds ?? [],
+      });
+      return [{ name: `operations/export-${Date.now()}` }];
+    },
+  };
+}

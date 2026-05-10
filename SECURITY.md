@@ -994,6 +994,213 @@ Auditor walk-through pointer for Phase 8. Each row maps a Phase 8 control to its
 
 ---
 
+## § Observability — Sentry
+
+Phase 9 (OBS-01 / OBS-02 / OBS-03 / OBS-08): Browser + Cloud Functions error capture with shared PII scrubber, EU residency, and free-tier guardrails.
+
+**Browser init (OBS-01):** `@sentry/browser@10.52.0` initialised in `src/observability/sentry.js` and booted from `src/main.js` inside the `fbOnAuthStateChanged` callback — AFTER claims hydration but BEFORE first render (Pitfall 3 — initialise after auth so the `user` context carries verified claims, not anonymous-session noise). `sendDefaultPii: false`; `tracesSampleRate: 0` (no performance monitoring in v1 — Sentry free-tier event budget is reserved for error events).
+
+**Cloud Functions init (OBS-01):** `functions/src/util/sentry.ts` exposes `withSentry()` wrapper used by every Phase 7+8+9 callable (setClaims, auditWrite, checkRateLimit, gdprExportUser, gdprEraseUser, lifecycle callables, authAnomalyAlert). DSN read from `defineSecret("SENTRY_DSN")` — never `process.env`. Empty-DSN kill-switch: when `SENTRY_DSN` resolves to empty string, init becomes a silent no-op (local dev + emergency disable path).
+
+**Shared PII scrubber (OBS-01 / Pitfall 18 / Pitfall 7):** Browser and node share an identical PII_KEYS dictionary across two source files:
+
+- `src/observability/pii-scrubber.js` (browser dictionary)
+- `functions/src/util/pii-scrubber.ts` (node dictionary)
+
+Drift between the two arrays is gated by `functions/test/util/pii-scrubber-parity.test.ts` — the test reads both files at PR time and fails if any key differs. The `beforeSend` hook in each SDK redacts matching extras + contexts to the literal string `"<redacted>"` (preserves SRE visibility that the slot WAS populated without leaking the value); headers continue to use `delete` since header presence itself is not security-sensitive.
+
+**EU residency (OBS-02 / GDPR Art. 32 / Schrems II):** DSN format `https://<key>@<id>.ingest.de.sentry.io/<project>` encodes the region — operators MUST select an EU project at Sentry create time (`runbooks/phase-9-sentry-bootstrap.md` Step 2). Source-map upload also targets `https://de.sentry.io/` (Wave 2 `@sentry/vite-plugin@5.2.1` config). Sentry EU residency is documented as a sub-processor entry in PRIVACY.md (Phase 11 owner).
+
+**Fingerprint rate-limit (OBS-03):** `fingerprintRateLimit()` runs INSIDE `beforeSend` BEFORE `scrubPii()` — events sharing the same SDK fingerprint above 10 per 60s window are dropped at SDK boundary (return `null`). Prevents free-tier exhaustion during error storms and keeps scrub cost zero for dropped events. Tested in `tests/observability/sentry-init.test.js` Test 6.
+
+**Sentry 70% quota alert (OBS-08):** Operator-set in the Sentry web UI at `Settings → Subscription → Usage Alerts` (5000 events/month free tier → alert at 3500). Not scriptable from gcloud; pinned in `runbooks/phase-9-sentry-bootstrap.md` Step 6 + verified at the Wave 6 close-gate via `runbooks/phase-9-deploy-checkpoint.md` Step E screenshot.
+
+**Substrate-honest disclosures (Pitfall 19):**
+
+- `sendDefaultPii: false` + `tracesSampleRate: 0` — no performance monitoring (deferred to v2 if/when a paid plan lands)
+- Empty-DSN init is a silent no-op (kill-switch + local dev path) — log an info-level line but do NOT throw
+- Fingerprint rate-limit drops 11+ events/fp/60s BEFORE transport — by design, an error storm at >10/min/fingerprint will silently truncate (alternative would be paid-tier upgrade)
+
+**Evidence:**
+
+- Browser SDK init: `src/observability/sentry.js`; boot wiring: `src/main.js` (inside `fbOnAuthStateChanged`)
+- Browser PII scrubber: `src/observability/pii-scrubber.js`
+- Node SDK init: `functions/src/util/sentry.ts` (`withSentry()` wrapper)
+- Node PII scrubber: `functions/src/util/pii-scrubber.ts`
+- Parity test: `functions/test/util/pii-scrubber-parity.test.ts`
+- Browser tests: `tests/observability/sentry-init.test.js` (9 tests) + `tests/observability/pii-scrubber.test.js` (7 tests)
+- Operator runbook: `runbooks/phase-9-sentry-bootstrap.md` (6 steps — Sentry org/project/EU region/DSN/auth-token/GitHub secrets/70% quota alert)
+- Source-map upload (OBS-04): `vite.config.js` `@sentry/vite-plugin` registered conditionally on `SENTRY_AUTH_TOKEN && command === "build"`; `filesToDeleteAfterUpload: ["dist/**/*.map"]`; CI `Assert no .map files` step in `.github/workflows/ci.yml` (deploy + preview jobs); static drift test `tests/build/source-map-gate.test.js` (5 assertions over `vite.config.js`)
+
+**Framework citations:**
+
+- OWASP ASVS L2 V8.3.4 (log-content PII handling) + V8.4.4 (event rate-limiting) + V14.2.4 (release artefact integrity / hidden source maps)
+- ISO/IEC 27001:2022 A.5.10 (information classification) + A.5.34 (privacy protection) + A.8.15 (logging) + A.8.16 (monitoring activities) + A.5.6 (budget / quota controls)
+- SOC 2 CC7.2 (system operations monitoring)
+- GDPR Art. 32 (security of processing) + Art. 44 (international transfers — EU residency mitigates Schrems II)
+
+---
+
+## § Audit-Event Wiring (AUDIT-05)
+
+Phase 9 (AUDIT-05): Every sensitive op emits a server-verified-actor audit event. Phase 7 shipped the substrate (`auditWrite` callable + 3 mirror triggers + 28-entry `auditEventType` enum). Phase 9 Plan 03a (Wave 3) extended the enum by 33 literals — 15 server-side bare data-domain flavours (`data.{action,comment,document,message,funnelComment}.{softDelete,restore,permanentlyDelete}`) and 18 client-side `.requested` companions — AND added server-side bare emissions in `setClaims`, the `beforeUserSignedIn` substrate, and 3 lifecycle callables. Phase 9 Plan 03 (Wave 4) wired client-side emissions at 9 view-side sites for the `.requested` companions and bare auth-event literals.
+
+**Wiring inventory:**
+
+| Op | Client emit site | PRE/POST | Audit type | Server bare emit |
+|----|------------------|----------|-----------|------------------|
+| sign-in (success + failure) | `src/firebase/auth.js` `signInEmailPassword` (try/finally outcome flag) | POST | `auth.signin.success` / `auth.signin.failure` | n/a (Identity Platform issues ID token; no callable involved) |
+| sign-out | `src/firebase/auth.js` `signOut` | **PRE** (App Check + ID-token revoked by `fbSignOut`; post-emit would 401) | `auth.signout` | n/a |
+| password change | `src/firebase/auth.js` `updatePassword` | POST | `auth.password.change` | n/a |
+| password reset | `src/firebase/auth.js` `sendPasswordResetEmail` | POST | `auth.password.reset` (`target.id="unknown"` — caller pre-auth) | n/a |
+| email-link recovery | `src/firebase/auth.js` `signInWithEmailLink` | POST | `auth.signin.success` (payload `{method: "emailLink"}`) | n/a |
+| claims set | `src/cloud/claims-admin.js` `setClaims` | POST | `iam.claims.set.requested` | `functions/src/auth/setClaims.ts` (Plan 03a) → `iam.claims.set` bare |
+| GDPR export | `src/cloud/gdpr.js` `exportUser` | POST | `compliance.export.user.requested` | `functions/src/gdpr/gdprExportUser.ts:197` (Phase 8) → `compliance.export.user` |
+| GDPR erase | `src/cloud/gdpr.js` `eraseUser` | POST | `compliance.erase.user.requested` | `functions/src/gdpr/gdprEraseUser.ts:289` (Phase 8) → `compliance.erase.user` |
+| soft-delete / restore / permanently-delete | `src/cloud/soft-delete.js` (3 functions × 5 types) | POST | `data.<type>.{softDelete,restore,permanentlyDelete}.requested` | `functions/src/lifecycle/{softDelete,restoreSoftDeleted,permanentlyDeleteSoftDeleted}.ts` (Plan 03a) → bare `data.<type>.<op>` |
+| beforeUserSignedIn rejection | n/a (substrate only) | catch | `auth.signin.failure` | `functions/src/auth/beforeUserSignedIn.ts` (Plan 03a, DORMANT until a rejection rule lands) |
+
+**Pitfall 17 invariant (server-determined actor):** Client emissions pass only `type`, `target`, and `payload` (and a `clientReqId` injected by the `src/cloud/audit.js` wrapper). The `auditWrite` callable server-side overlays `actor` from `request.auth.token` (uid / email / role / orgId / email_verified). The view CANNOT spoof `actor` — the callable schema rejects any `actor` field in payload; a regression would fail `tests/audit-wiring.test.js` PII-scrub assertions. For the unauthenticated `beforeUserSignedIn` path, server-side emit sets `actor=null` (or a `system` sentinel where the wrapper requires non-null).
+
+**Pitfall 7 (mirror-trigger collision):** Phase 7 mirror triggers (`onOrgDelete`, `onUserDelete`, `onDocumentDelete`) fire only if no primary `auditWrite` event exists for the same target within the prior 60s window. Plan 03a server-side bare emissions on `softDelete` / `restoreSoftDeleted` / `permanentlyDeleteSoftDeleted` satisfy primary-event existence for the 60s window, so cascade delete operations emit ONE audit row, not N. Client-side `.requested` emissions on soft-delete callables land BEFORE the server callable resolves; the bare `data.<type>.softDelete` server emit lands AFTER the batch commit — both satisfy mirror dedup (`.requested` carries `type="data.<type>.softDelete.requested"`, mirror trigger keys off the bare `data.<type>.softDelete` literal, so neither aliases the other).
+
+**Best-effort emission (Pattern 5 #2):** All 11 client-side `emitAuditEvent` calls are wrapped in try/catch (defensive double-wrap — the proxy at `src/observability/audit-events.js` already swallows internally per Plan 09-01). A failed emission must NEVER block the originating op. Tested in `tests/firebase/auth-audit-emit.test.js` (any swallowed audit failure does NOT propagate to the auth-state-change callback).
+
+**Substrate-honest disclosure (Pitfall 19) — MFA emit DEFERRED:** MFA enrol / un-enrol audit emission is bound to landing of `enrollTotp` and `unenrollAllMfa` deps in `src/main.js:916-917`, which are currently `// deferred to user-testing phase`. The `auth.mfa.enrol` + `auth.mfa.unenrol` enum literals (Phase 7 baseline) remain valid and ready for emission. Plan 09-04 anomaly Rule 2 (MFA disenrolment alert) trigger code stays DORMANT — observation is zero until those deps land. Carry-forward row in `runbooks/phase-9-cleanup-ledger.md`.
+
+**Substrate-honest disclosure (Pitfall 19) — `auth.signin.failure` substrate DORMANT:** `functions/src/auth/beforeUserSignedIn.ts` emits `auth.signin.failure` only on internal handler errors (logger throw, malformed event.data) today — there are NO rejection rules in `beforeUserSignedIn` at Phase 9 close. The substrate is wired so that the moment any business rejection rule lands (Phase 10+ probable), `auth.signin.failure` events flow and Plan 09-04 anomaly Rule 1 (auth-fail burst — `>5/IP/5min`) activates without trigger-code change. Plan 09-05 deploy-checkpoint Step D is explicitly DORMANT at Phase 9 close (passes by design — DORMANT, not skipped).
+
+**Evidence:**
+
+- Server-side substrate: `functions/src/audit/auditEventSchema.ts` (61-entry enum); `functions/src/auth/{setClaims,beforeUserSignedIn}.ts`; `functions/src/lifecycle/{softDelete,restoreSoftDeleted,permanentlyDeleteSoftDeleted}.ts`; existing Phase 8 `functions/src/gdpr/{gdprExportUser,gdprEraseUser}.ts`
+- Server-side tests: `functions/test/audit/auditEventSchema.unit.test.ts` (18) + `functions/test/auth/{setClaims-audit-emit,beforeUserSignedIn-audit-emit}.test.ts` + `functions/test/lifecycle/*-audit-emit.test.ts` (5 files, 25 tests total)
+- Client-side wiring: `src/firebase/auth.js` (5 emit sites); `src/cloud/{claims-admin,gdpr,soft-delete}.js` (6 emit sites — 1 + 2 + 3)
+- Client proxy: `src/observability/audit-events.js` (best-effort emit; never throws); `src/cloud/audit.js` (`writeAuditEvent` wrapper; injects `clientReqId` via `crypto.randomUUID()`)
+- Client tests: `tests/firebase/auth-audit-emit.test.js` + `tests/audit-wiring.test.js` (14 tests total)
+
+**Framework citations:**
+
+- OWASP ASVS L2 V8.4.x (audit content + retention + tamper resistance)
+- ISO/IEC 27001:2022 A.8.15 (logging) + A.8.16 (monitoring activities)
+- SOC 2 CC4.1 (monitoring) + CC7.2 (system operations)
+- GDPR Art. 30 (record of processing) + Art. 32(1)(d) (regular testing of effectiveness)
+
+---
+
+## § Anomaly Alerting (OBS-05)
+
+Phase 9 (OBS-05): `functions/src/observability/authAnomalyAlert.ts` is an `onDocumentCreated('auditLog/{eventId}')` Firestore trigger in `europe-west2` running as `audit-alert-sa`. It evaluates 4 anomaly rules over the audit-event stream and dispatches Slack webhook messages on threshold-crossing events. Rolling auth-failure counters live at `authFailureCounters/{ipHash}` — a server-only Firestore collection that clients cannot read or write.
+
+**The 4 rules:**
+
+1. **Auth-fail burst** — fires when an IP exceeds 5 sign-in failures in a 5-minute rolling window; EXACTLY ONCE per `(ipHash, window)` on the threshold-crossing event (`count === FAIL_LIMIT + 1`). **DORMANT** — `beforeUserSignedIn` substrate emits no failures yet (no rejection rules exist). Trigger code is functional and the observation pipeline activates the moment any rejection rule lands.
+
+2. **MFA disenrolment** — fires on every `auth.mfa.unenrol` event. **DORMANT** — no current MFA emit source (see § Audit-Event Wiring above; bound to `enrollTotp` / `unenrollAllMfa` dep landing).
+
+3. **Role escalation** — fires when a `iam.claims.set` event carries `payload.newRole === "admin"` AND `payload.previousRole !== "admin"`. **FUNCTIONAL** — feeds from Plan 03a `setClaims` server-side bare emission.
+
+4. **Unusual-hour GDPR export** — fires when a `compliance.export.user` event UTC hour ∈ `{0..5, 22..23}`. **FUNCTIONAL** — feeds from Phase 8 baseline `gdprExportUser` server-side emission.
+
+**Counter shape (Pattern 10):** `authFailureCounters/{ipHash}` document carries `{count: number, windowStart: Timestamp}`. The handler runs a Firestore transaction that (a) re-reads the doc, (b) resets `count=1` if `now - windowStart >= 5min` OR the doc doesn't exist (`tx.set` collapses both branches — `tx.update` on a missing doc errors), (c) otherwise increments `count`, (d) calls `postToSlack` exactly when the new count equals `FAIL_LIMIT + 1` (= 6). IP is hashed via `node:crypto.createHash("sha256")` — raw IP never lands in Firestore.
+
+**Authorisation:**
+
+- Runs as `audit-alert-sa` SA: `roles/datastore.user` (authFailureCounters read/write) + `roles/datastore.viewer` (auditLog read) at project level; `roles/secretmanager.secretAccessor` on individual secrets only (`SLACK_WEBHOOK_URL`, `SENTRY_DSN`) — NOT project-wide
+- `firestore.rules` adds a `match /authFailureCounters/{ipHash}` block: `allow read: if false; allow write: if false` (server-only via Admin SDK)
+- `tests/rules/authFailureCounters.test.js` — 4 deny cells (client read deny + client write deny + admin read deny + admin write deny)
+
+**Slack post (Pattern 6):** `postToSlack` is best-effort — never throws. Logs `slack.skip.no-webhook` when `SLACK_WEBHOOK_URL` resolves to empty; logs `slack.post.failed` with HTTP status on Slack 4xx/5xx; logs `slack.post.error` on network failure. `retry: false` (not v1-style `retryConfig.retryCount: 1` — the v2 Firestore-trigger DocumentOptions exposes `retry: boolean`); intent is "best-effort, do not retry-storm Slack."
+
+**Substrate-honest disclosures (Pitfall 19):**
+
+- **2 of 4 rules DORMANT at Phase 9 close** — Rule 1 (auth-fail burst) awaits any rejection rule in `beforeUserSignedIn`; Rule 2 (MFA disenrol) awaits MFA dep landing in `src/main.js`. Substrate is functional + tested; observation pipeline is gated on emission-source landing. Phase 9 close does NOT claim Rules 1+2 are firing today.
+- **Synthetic alert verification** — `scripts/test-slack-alert/run.js` lets the operator post a synthetic message to the configured webhook at Wave 6 close-gate (`runbooks/phase-9-deploy-checkpoint.md` Step C) to verify Slack reception independently of the real anomaly stream.
+- **`#ops-warn` vs `#ops-page` channel split deferred to v2** — operator policy decision, not a code-level row. Today all 4 rules post to a single Slack channel (operator-configured webhook URL).
+
+**Defence-in-depth (Pitfall 4 secret discipline):** `.gitleaks.toml` extended with a Slack-webhook-URL regex (`https://hooks.slack.com/services/[A-Z0-9]+/[A-Z0-9]+/[a-zA-Z0-9]+`) so a future PR that accidentally commits the webhook URL fails pre-commit + CI. This row was MOVED from Plan 09-06 Task 3 to Plan 09-04 Task 4 (planner WARNING 7 fix — defence-in-depth belongs WITH the secret introduction, not in a downstream docs increment).
+
+**Evidence:**
+
+- Trigger module: `functions/src/observability/authAnomalyAlert.ts` (222 lines)
+- Trigger tests: `functions/test/observability/authAnomalyAlert.test.ts` (6 behaviour tests — 3 for Rule 1 counter shape + Rules 3 + Rules 4 + escalation negative case)
+- Counter rules: `firestore.rules` `authFailureCounters/{ipHash}` block + `tests/rules/authFailureCounters.test.js` (4 cells)
+- Synthetic verify: `scripts/test-slack-alert/run.js` + `scripts/test-slack-alert/README.md`
+- Gitleaks: `.gitleaks.toml` `slack-webhook-url` rule (Plan 09-04 Task 4)
+- Secret management: `defineSecret("SLACK_WEBHOOK_URL")` + `defineSecret("SENTRY_DSN")` — never `process.env`; never GitHub Actions secrets
+- Operator runbook: `runbooks/phase-9-monitors-bootstrap.md` Step 1 (`audit-alert-sa` SA provisioning) + Step 2 (Secret Manager secrets)
+- Close-gate: `runbooks/phase-9-deploy-checkpoint.md` Step C (synthetic Slack alert) + Step D (Rule 1 burst test — explicitly DORMANT)
+
+**Framework citations:**
+
+- ISO/IEC 27001:2022 A.5.25 (assessment of information security events) + A.8.16 (monitoring activities)
+- SOC 2 CC7.2 (system operations) + CC7.3 (event evaluation)
+- OWASP ASVS L2 V11.1 (anomaly detection)
+
+---
+
+## § Out-of-band Monitors (OBS-04 / OBS-06 / OBS-07 / OBS-08)
+
+Phase 9: GCP-tier monitors and Sentry-side quota alert — defence-in-depth observability outside the Sentry SDK boundary.
+
+**OBS-04 — Source-map upload + hidden source maps:** `@sentry/vite-plugin@5.2.1` registered conditionally in `vite.config.js` (`env.SENTRY_AUTH_TOKEN && command === "build"`) — short-circuits before plugin allocation on PR-validation runs (forks have no `SENTRY_AUTH_TOKEN`). EU region pinned at `url: "https://de.sentry.io/"`. `filesToDeleteAfterUpload: ["dist/**/*.map"]` cleans `.map` files post-upload; CI deploy + preview jobs add a second-layer `Assert no .map files served from dist (OBS-04 / Pitfall 6)` step that fails the deploy if any `.map` file survives (Pitfall 6 two-layer defence: plugin misconfig OR missing token both fail closed). Release-tagged with `process.env.GITHUB_SHA`.
+
+**OBS-06 — GCP uptime check:** `scripts/setup-uptime-check/run.js` is an idempotent ADC-only script that shells out to `gcloud monitoring uptime create base-layers-diagnostic-prod --regions=USA,EUROPE,ASIA_PACIFIC --period=60s --timeout=10s --resource-type=uptime-url --resource-labels=host=baselayers.bedeveloped.com,project_id=bedeveloped-base-layers --protocol=https --request-method=get --path=/`. Idempotency via describe-first-then-create flow (`gcloud monitoring uptime list-configs` with `gcloud monitoring uptime list` fallback for older gcloud versions). Alerting policy posts to Slack via the same webhook channel as `authAnomalyAlert` (operator-paced — Step 3 of `runbooks/phase-9-monitors-bootstrap.md`).
+
+**OBS-07 — GCP budget alerts:** `scripts/setup-budget-alerts/run.js` shells out to `gcloud billing budgets create` with 50% / 80% / 100% thresholds on a £100 GBP/month default (`BUDGET_AMOUNT` + `BUDGET_CURRENCY` env overrides). Alerts route to the billing-account-admin email.
+
+**OBS-08 — Sentry quota alert:** Operator-set in the Sentry web UI at `Settings → Subscription → Usage Alerts` (3500 of 5000 events/month = 70% of the free-tier limit). Not scriptable from gcloud. Pinned in `runbooks/phase-9-sentry-bootstrap.md` Step 6 and verified at Wave 6 close-gate (`runbooks/phase-9-deploy-checkpoint.md` Step E screenshot).
+
+**Substrate-honest disclosures (Pitfall 19):**
+
+- **3-region uptime minimum** — `gcloud monitoring uptime create --regions` minimum is 3 (per Pattern 7 in 09-RESEARCH.md line 670); OBS-06's success criterion is ≥2. The script uses 3 (`USA,EUROPE,ASIA_PACIFIC`) — exceeds both. Surfaced in `scripts/setup-uptime-check/README.md` Limitations section + monitors-bootstrap runbook Step 3.
+- **Budget alerts NOTIFY only — they do NOT cap spend.** Per Firebase + GCP documentation, billing budgets are an alerting mechanism, not a hard ceiling. Auto-disable via Pub/Sub-driven Cloud Function (the "avoid-surprise-bills" Firebase pattern) is OUT OF SCOPE for v1 (deferred to v2 per Pitfall 19). Surfaced in 3 places: `scripts/setup-budget-alerts/run.js` banner + README Limitations section + monitors-bootstrap runbook Step 4.
+- **Sentry tunnel / ad-blocker workaround deferred to v2** — Sentry events may be blocked at the network layer by privacy-focused browser extensions. The `tunnel` config option (proxies events through a same-origin endpoint) is OUT OF SCOPE for v1; re-evaluate after first quarter of metrics shows ad-block ratio.
+
+**Evidence:**
+
+- Source-map plugin: `vite.config.js` `@sentry/vite-plugin` conditional registration
+- Source-map CI gate: `.github/workflows/ci.yml` deploy + preview jobs `Assert no .map files` step
+- Source-map drift test: `tests/build/source-map-gate.test.js` (5 static-source regex assertions)
+- Uptime check script: `scripts/setup-uptime-check/run.js` + `scripts/setup-uptime-check/README.md`
+- Budget alerts script: `scripts/setup-budget-alerts/run.js` + `scripts/setup-budget-alerts/README.md`
+- Operator runbooks: `runbooks/phase-9-monitors-bootstrap.md` (6 steps for OBS-04/06/07/08) + `runbooks/phase-9-deploy-checkpoint.md` (5 verification gates A/B/C/D/E)
+- Sentry quota alert: operator-set in Sentry web UI; Wave 6 close-gate screenshot evidence
+
+**Framework citations:**
+
+- OWASP ASVS L2 V14.2.4 (release artefact integrity / hidden source maps)
+- ISO/IEC 27001:2022 A.5.6 (budget / quota controls) + A.8.16 (monitoring activities)
+- SOC 2 CC7.2 (system operations monitoring)
+
+---
+
+## § Phase 9 Audit Index
+
+Auditor walk-through pointer for Phase 9. Each row maps a Phase 9 control to its requirement ID, the code/config that implements it, the test or operator evidence that verifies it, and the framework citations it satisfies. Mirrors the §Phase 7 + §Phase 8 Audit Index shape. Substrate-honest (Pitfall 19): every Validated row has evidence pointers; PENDING-OPERATOR rows for OBS-04..08 are explicitly annotated — code + runbooks are committed, but operator deploy evidence (Slack reception screenshot, Cloud Console screenshots, `gcloud function describe` output, CI deploy logs) is gated on the single combined Wave 6 + Wave 7 operator session documented in `.planning/phases/09-observability-audit-event-wiring/09-06-DEFERRED-CHECKPOINT.md` (bundles Plan 09-05 Task 3b + Plan 09-06 Task 4).
+
+| Requirement | Control | Code | Test / Evidence | Framework |
+|-------------|---------|------|-----------------|-----------|
+| OBS-01 | Sentry browser + node init with shared PII scrubber + `<redacted>` redaction contract | `src/observability/sentry.js`, `src/observability/pii-scrubber.js`, `functions/src/util/sentry.ts`, `functions/src/util/pii-scrubber.ts` | `tests/observability/sentry-init.test.js` (9), `tests/observability/pii-scrubber.test.js` (7), `functions/test/util/pii-scrubber-parity.test.ts` (parity gate), `functions/test/util/sentry.unit.test.ts` (Phase 7 contract updated) | ASVS V8.3.4; ISO A.5.10 + A.5.34; GDPR Art. 32 |
+| OBS-02 | Sentry EU residency — DSN `*.ingest.de.sentry.io` + source-map upload to `https://de.sentry.io/` | `runbooks/phase-9-sentry-bootstrap.md` Step 2 (operator selects EU project); `vite.config.js` plugin `url: "https://de.sentry.io/"` | `runbooks/phase-9-deploy-checkpoint.md` Step E (Sentry Console screenshot showing EU region — **PENDING-OPERATOR DEPLOY** — see `09-06-DEFERRED-CHECKPOINT.md`) | GDPR Art. 32 + Art. 44 / Schrems II |
+| OBS-03 | Fingerprint rate-limit at SDK boundary (10 events/fp/60s) before scrub | `src/observability/sentry.js` `fingerprintRateLimit()` | `tests/observability/sentry-init.test.js` Test 6 | ASVS V8.4.4 |
+| OBS-04 | Source-map upload via `@sentry/vite-plugin` + hidden source maps two-layer defence | `vite.config.js` (conditional plugin); `.github/workflows/ci.yml` (deploy + preview jobs); `filesToDeleteAfterUpload: ["dist/**/*.map"]` | `tests/build/source-map-gate.test.js` (5 static assertions); CI deploy run log "Assert no .map files served from dist (OBS-04 / Pitfall 6)" step — **PENDING-OPERATOR DEPLOY** — see `09-06-DEFERRED-CHECKPOINT.md` for first deploy log evidence | ASVS V14.2.4 |
+| OBS-05 | Auth-anomaly Slack alert via Cloud Function (4 rules; 2 FUNCTIONAL + 2 DORMANT) | `functions/src/observability/authAnomalyAlert.ts` (Rules 3+4 functional; Rules 1+2 DORMANT) | `functions/test/observability/authAnomalyAlert.test.ts` (6 behaviour tests); `tests/rules/authFailureCounters.test.js` (4 cells); `runbooks/phase-9-deploy-checkpoint.md` Step C synthetic Slack alert + Step D DORMANT Rule 1 burst test — **PENDING-OPERATOR DEPLOY** — see `09-06-DEFERRED-CHECKPOINT.md` for Slack reception screenshot | ISO A.5.25 + A.8.16; SOC2 CC7.2 + CC7.3; OWASP ASVS V11.1 |
+| OBS-06 | GCP uptime check 3 regions / 60s / HTTPS GET / 10s timeout | `scripts/setup-uptime-check/run.js`; `runbooks/phase-9-monitors-bootstrap.md` Step 3 | `runbooks/phase-9-deploy-checkpoint.md` Step E (Cloud Console uptime-checks screenshot) — **PENDING-OPERATOR DEPLOY** — see `09-06-DEFERRED-CHECKPOINT.md` | ISO A.8.16; SOC2 CC7.2 |
+| OBS-07 | GCP budget alerts 50% / 80% / 100% thresholds (£100 GBP default) | `scripts/setup-budget-alerts/run.js`; `runbooks/phase-9-monitors-bootstrap.md` Step 4 | `runbooks/phase-9-deploy-checkpoint.md` Step E (Cloud Console budgets screenshot); substrate-honest disclosure "alerts NOTIFY only; do not cap spend" — **PENDING-OPERATOR DEPLOY** — see `09-06-DEFERRED-CHECKPOINT.md` | ISO A.5.6 |
+| OBS-08 | Sentry-side 70% free-tier quota alert (3500/5000 events/month) | `runbooks/phase-9-sentry-bootstrap.md` Step 6; `runbooks/phase-9-monitors-bootstrap.md` Step 5 | `runbooks/phase-9-deploy-checkpoint.md` Step E (Sentry Settings → Subscription → Usage Alerts screenshot) — **PENDING-OPERATOR DEPLOY** — see `09-06-DEFERRED-CHECKPOINT.md` | ISO A.5.6 |
+| AUDIT-05 | View-side audit-event wiring (9 sites; client `.requested`) + server-side bare substrate (Plan 03a; 4 sites) + auditEventSchema 28 → 61 enum extension | `src/firebase/auth.js`, `src/cloud/{claims-admin,gdpr,soft-delete}.js`; `functions/src/audit/auditEventSchema.ts`; `functions/src/auth/{setClaims,beforeUserSignedIn}.ts`; `functions/src/lifecycle/{softDelete,restoreSoftDeleted,permanentlyDeleteSoftDeleted}.ts` | `tests/firebase/auth-audit-emit.test.js`; `tests/audit-wiring.test.js`; `functions/test/audit/auditEventSchema.unit.test.ts` (18); `functions/test/auth/{setClaims-audit-emit,beforeUserSignedIn-audit-emit}.test.ts`; `functions/test/lifecycle/*-audit-emit.test.ts` (5 files) | ASVS V8.4.x; ISO A.8.15 + A.8.16; SOC2 CC4.1 + CC7.2; GDPR Art. 30 + Art. 32(1)(d) |
+| DOC-10 | Phase 9 incremental SECURITY.md (Pitfall 19) — 4 new sections + this 10-row Phase 9 Audit Index | This file — § Observability — Sentry + § Audit-Event Wiring + § Anomaly Alerting + § Out-of-band Monitors + § Phase 9 Audit Index | this commit; Phase 11 owns the canonical DOC-10 pass | ISO A.5.36 |
+
+**Substrate-honest disclosure (Pitfall 19):** OBS-02 / OBS-04 / OBS-05 / OBS-06 / OBS-07 / OBS-08 are **code-and-docs complete** at Phase 9 close. Production deploy + first deploy log evidence + Slack reception screenshot + Cloud Console screenshots + Sentry Console screenshot are operator-deferred per the Wave 6 + Wave 7 batching pattern (mirrors `08-06-DEFERRED-CHECKPOINT.md`). The single combined operator session is documented in `.planning/phases/09-observability-audit-event-wiring/09-06-DEFERRED-CHECKPOINT.md`. Status reflects "code + substrate + runbooks authored; operator action pending for production evidence" — the same shape Phase 8 BACKUP-01..04 + BACKUP-07 used. Rules 1+2 of `authAnomalyAlert` are explicitly DORMANT (not skipped) — substrate is functional + tested; observation pipeline awaits emission-source landing (rejection-rule landing for Rule 1; MFA dep landing for Rule 2).
+
+**Cross-phase plug-ins this index will feed:**
+
+- **Phase 10** (HOST-06 / HOST-07 strict CSP) — mirror-trigger collision verification (1 alert per soft-delete cascade) deferred to Phase 10 synthetic-tests sub-wave (one observation per phase saves operator time); Sentry-tagged source-map stack traces land in Sentry once deploy runs, benefiting CSP tightening triage.
+- **Phase 11** (DOC-02 / DOC-04 / DOC-09 evidence pack) — `PRIVACY.md` Sentry sub-processor row (EU residency); `CONTROL_MATRIX.md` rows for OBS-01..08 + AUDIT-05; `docs/evidence/` Sentry quota alert screenshot + Slack alert screenshot + uptime check screenshot + budget alert screenshot + first deploy log.
+- **Phase 12** (WALK-02 / WALK-03) — audit-walkthrough cites Phase 9 Observability + Audit-Event Wiring + Anomaly Alerting + Out-of-band Monitors sections as ground truth.
+
+---
+
 ## Compliance posture statement
 
 This codebase aims for **credible, not certified** compliance with

@@ -250,7 +250,13 @@ Plans:
   3. `PRIVACY.md` lists Google/Firebase, Sentry, and Google Fonts as sub-processors with Google Cloud DPA + Standard Contractual Clauses references; the verified Firestore data residency region is documented
   4. `docs/evidence/` contains screenshots: MFA enrolment for Luke + George, sample audit-log entry (PII redacted), backup-policy console, Firestore region, App Check enforcement state per service, rules deployment timestamp, latest CI green run, latest `npm audit` clean output
   5. A reviewer reading only `SECURITY.md` + `CONTROL_MATRIX.md` can answer every claim by following the citations into the codebase or `docs/`
-**Plans**: TBD
+**Plans**: 6 plans
+  - [ ] 11-01-PLAN.md — Wave 1: SECURITY.md ToC + § Vulnerability Disclosure Policy + § MFA Recovery Procedure + § Rotation Schedule + citation-format normalisation + docs/CONTROL_MATRIX.md skeleton (DOC-01 + DOC-04 substrate)
+  - [ ] 11-02-PLAN.md — Wave 2: PRIVACY.md authoring with A1 (Cloud Storage region) + A3 (Identity Platform region) gcloud verification log + Google Fonts negative verification + Sentry EU + DPA URLs (DOC-02)
+  - [ ] 11-03-PLAN.md — Wave 3: THREAT_MODEL.md (STRIDE 4 trust boundaries + 6 categories + defence-in-depth) + docs/DATA_FLOW.md (Mermaid + classifications + processing regions) (DOC-03 + DOC-07)
+  - [ ] 11-04-PLAN.md — Wave 4: docs/RETENTION.md expansion to 8+ data classes (preserving FN-09 verbatim) + docs/IR_RUNBOOK.md (5 scenarios) + 3 skeleton ir-*.md runbooks (DOC-05 + DOC-06)
+  - [ ] 11-05-PLAN.md — Wave 5: public/.well-known/security.txt RFC 9116 + firebase.json /.well-known/** Cache-Control 24h entry + 2 build tests (DOC-08)
+  - [ ] 11-06-PLAN.md — Wave 6: docs/CONTROL_MATRIX.md row population (30+ rows) + docs/evidence/README.md inventory + SECURITY.md § Phase 11 Audit Index + REQUIREMENTS.md DOC-01..09 [x] + runbooks/phase-11-cleanup-ledger.md zero-out + cross-phase ledger surgery + /gsd-verify-work 11 (DOC-04 + DOC-09 + DOC-10) [autonomous: false]
 
 ### Phase 12: Audit Walkthrough + Final Report
 **Goal**: `SECURITY_AUDIT.md`'s Vercel/Supabase-shaped checklist becomes a Firebase-shaped checklist run end-to-end against the hardened repo, producing the milestone's closing artefact: `SECURITY_AUDIT_REPORT.md`.
@@ -289,7 +295,7 @@ Plans:
 | 8. Data Lifecycle (Soft-Delete + GDPR + Backups) | 2/6 | In Progress|  |
 | 9. Observability + Audit-Event Wiring | 7/7 | Code-and-docs complete; combined operator session pending per `09-06-DEFERRED-CHECKPOINT.md` (bundles 09-05 Task 3b + 09-06 Task 4) | 2026-05-10 (autonomous portion) |
 | 10. CSP Tightening (Second Sweep) | 5/5 | Code-and-docs complete; combined operator session pending per `10-DEFERRED-CHECKPOINT.md` (bundles Plan 10-03 Task 2 Stage B soak + Plan 10-04 Task 2 enforcement flip + Plan 10-05 Task 2 HSTS submission + Plan 10-05 Task 4 phase-close human-verify over 14+ calendar days). Plans 10-01+10-02 autonomous COMPLETE; 10-03 Task 1 autonomous COMPLETE; 10-04 Task 1 autonomous COMPLETE (runbooks/csp-enforcement-cutover.md + describe.skip pre-stage); 10-05 Tasks 1 + 3 autonomous COMPLETE (HSTS submission runbook + SECURITY.md DOC-10 increment + REQUIREMENTS.md row updates + phase-10-cleanup-ledger zero-out + cross-phase ledger surgery + 10-DEFERRED-CHECKPOINT.md). HOST-07 + HOST-06 + DOC-10 substrate complete; HOST-06 listing-status forward-tracked F1 per Pitfall 19. | 2026-05-10 (autonomous portion — 10-01/10-02/10-03 T1/10-04 T1/10-05 T1+T3) |
-| 11. Documentation Pack (Evidence Pack) | 0/0 | Not started | - |
+| 11. Documentation Pack (Evidence Pack) | 0/6 | Plans authored 2026-05-10 (Wave 1+2+3+4+5 autonomous; Wave 6 ends with /gsd-verify-work 11 operator gate) | - |
 | 12. Audit Walkthrough + Final Report | 0/0 | Not started | - |
 
 ---

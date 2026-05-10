@@ -15,6 +15,8 @@ import {
   db,
   collection,
   doc,
+  query,
+  where,
   getDocs,
   setDoc,
   deleteDoc,
@@ -26,7 +28,12 @@ import {
  * @returns {Promise<Array<any>>}
  */
 export async function listActions(orgId) {
-  const snap = await getDocs(collection(db, "orgs", orgId, "actions"));
+  const snap = await getDocs(
+    query(
+      collection(db, "orgs", orgId, "actions"),
+      where("deletedAt", "==", null),
+    ),
+  );
   /** @type {Array<any>} */
   const out = [];
   snap.forEach((/** @type {any} */ d) => out.push({ id: d.id, ...d.data() }));

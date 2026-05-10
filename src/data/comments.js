@@ -37,6 +37,7 @@ export async function listComments(orgId, pillarId) {
   const q = query(
     collection(db, "orgs", orgId, "comments"),
     where("pillarId", "==", String(pillarId)),
+    where("deletedAt", "==", null),
   );
   const snap = await getDocs(q);
   /** @type {Array<any>} */

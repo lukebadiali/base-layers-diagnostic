@@ -433,34 +433,80 @@ Wave 1 also closed CODE-03 (CWE-330 mitigation): `src/util/ids.js` `uid()` swapp
 
 ---
 
-## § Content Security Policy (Report-Only)
+## § Content Security Policy (enforced)
 
-**Control:** A two-tier CSP is shipped in `Content-Security-Policy-Report-Only` mode this phase. The tight tier covers `script-src`, `connect-src`, `frame-src`, `object-src`, `base-uri`, `form-action`, and `frame-ancestors 'none'`. The temporary permissive tier is `style-src 'self' 'unsafe-inline'` — Phase 4 sweeps inline `style="..."` strings across the views (CODE-06 / M5) and Phase 10 (HOST-07) drops `'unsafe-inline'` to enforce the strict policy. Reports are dual-channeled — legacy `report-uri /api/csp-violations` plus modern `Reporting-Endpoints` / `report-to csp-endpoint`, both pointing at the same same-origin path served by the `cspReportSink` Cloud Function (built in Phase 3 Plan 03; deployed by Phase 3 Plan 04 / 05). The function filters extension and synthetic origins and dedupes within a 5-minute in-memory window before emitting structured `severity=WARNING` entries to Cloud Logging.
+**Control:** A strict CSP is enforced via the `Content-Security-Policy` HTTP header (no longer Report-Only) covering `script-src 'self'`, `style-src 'self'` (no `'unsafe-inline'`), `connect-src` allowlisting the Firebase backplane + Sentry EU, `frame-src 'self'`, `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`, `object-src 'none'`, plus `upgrade-insecure-requests` and dual reporting via `report-uri /api/csp-violations` + `report-to csp-endpoint`. The Phase 3 substrate (`cspReportSink` 2nd-gen Cloud Function in `europe-west2` + `Reporting-Endpoints` header + `firebase.json` rewrite at `/api/csp-violations`) is unchanged and READ-ONLY through Phase 10 per Pitfall 8 selective-deploy discipline. The Phase 10 enforcement flip (Plan 10-04 single-knob key change from `Content-Security-Policy-Report-Only` to `Content-Security-Policy`) closed H4 fully and unblocks the A+ securityheaders.com rating verified in Plan 10-05.
 
-**Temporary CDN allowlist (Phase 3 only — removed in Phase 4):** Wave 1 pre-flight (`03-PREFLIGHT.md ## dist/index.html font-CDN scan`) confirmed the Vite-built `dist/index.html` retains three external loads that the CDN→npm migration documented in source as a Phase 4 task has not yet eliminated. To avoid drowning the Phase 3 CSP soak in known-benign violations, the Phase-3-only Report-Only CSP carries:
+**Per-directive matrix:**
 
-- `script-src` adds `https://cdn.jsdelivr.net` (Chart.js 4.4.1 UMD CDN)
-- `style-src` adds `https://fonts.googleapis.com` (Google Fonts CSS)
-- `font-src` adds `https://fonts.gstatic.com` (Google Fonts woff2 binaries)
-- `connect-src` adds `https://securetoken.google.com` (Firebase Auth refresh-token endpoint not covered by `*.googleapis.com` wildcard)
+| Directive | Value | Justification |
+|-----------|-------|---------------|
+| `default-src` | `'self'` | Root fallback — same-origin only |
+| `script-src` | `'self'` | Vite produces hashed-filename ESM only; zero inline scripts |
+| `style-src` | `'self'` | Plan 10-01 migrated 162 static inline `style="..."` attrs in `src/main.js` to utility classes (Phase 4 sub-wave 4.1 inline-style portion CLOSED); `'unsafe-inline'` dropped Plan 10-02 |
+| `connect-src` | `'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firebasestorage.googleapis.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://securetoken.google.com https://de.sentry.io` | Firebase backplane (auth + Firestore + Storage + tokens) + Sentry EU ingest (Phase 9 OBS-04 — added Plan 10-02 ahead of enforcement per Pitfall 10B) |
+| `frame-src` | `'self'` | App uses `signInWithEmailLink` (Phase 6 D-09) — `signInWithPopup` / `signInWithRedirect` returns zero hits under `src/`; Plan 10-02 dropped firebaseapp.com origin |
+| `img-src` | `'self' data: https:` | `data:` for inline avatars; `https:` for future external assets |
+| `font-src` | `'self' data:` | Self-hosted Inter + Bebas Neue woff2 (Phase 4 D-08 — CDN allowlist dropped) |
+| `object-src` | `'none'` | Closes legacy plugin attack surface |
+| `base-uri` | `'self'` | HOST-07 SC#1 — base-tag injection defence |
+| `form-action` | `'self'` | HOST-07 SC#1 — form-action hijack defence |
+| `frame-ancestors` | `'none'` | Click-jacking defence (CSP supersedes X-Frame-Options) |
+| `upgrade-insecure-requests` | (present) | Defence-in-depth — coerces stray http: refs to https: |
+| `report-uri` | `/api/csp-violations` | Legacy reporting fallback (rewritten to `cspReportSink` in `europe-west2`) |
+| `report-to` | `csp-endpoint` | Modern Reporting API (paired with `Reporting-Endpoints` header) |
 
-Cleanup ledger: revisit in Phase 4 cleanup ledger row "CSP CDN allowlist" — Phase 4 self-hosts Chart.js + Google Fonts via the npm bundler, after which these three additions are deleted from `firebase.json`. Phase 10 (HOST-07) verifies they are gone before flipping CSP to enforced mode.
+**Staged rollout (Pitfall 16 — three-stage):**
+
+- **Stage A** (Phase 3 — landed): Report-Only with `'unsafe-inline'` in `style-src` to accommodate Phase 4 inline-style remnants; soak observability via `cspReportSink`.
+- **Stage B** (Plan 10-02 + Plan 10-03 — landed): tightened Report-Only — `style-src 'self'` only; `connect-src` extended with `https://de.sentry.io`; `frame-src 'self'` (firebaseapp.com dropped). 7-day soak observed via Cloud Logging filter `severity=WARNING jsonPayload.message="csp.violation" jsonPayload.report.disposition="report"`.
+- **Stage C** (Plan 10-04 — landed): single-knob enforcement flip — header KEY changed from `Content-Security-Policy-Report-Only` to `Content-Security-Policy`; directive value unchanged from Stage B. 5-target smoke matrix (sign-in / dashboard / radar+donut chart / document upload / chat) verified under enforcement; 7-day post-enforcement soak with filter `jsonPayload.report.disposition="enforce"` ran zero violations.
+
+**Soak evidence:**
+
+- Stage B (RO tightened): `gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="cspreportsink" AND severity=WARNING AND jsonPayload.message="csp.violation" AND jsonPayload.report.disposition="report"' --freshness=7d` — recorded in `10-PREFLIGHT.md ## Soak Log Cycle 1` (Plan 10-03 close-out).
+- Stage C (enforcement): same query swapped to `jsonPayload.report.disposition="enforce"` for the 7-day post-flip soak — recorded in `10-PREFLIGHT.md ## Cutover Log Row E` (Plan 10-05 close-out).
 
 **Evidence:**
 
-- Policy configuration: `firebase.json` `hosting.headers[0]` (source: `**`) — header keys `Reporting-Endpoints` + `Content-Security-Policy-Report-Only` — Phase 3 Plan 02 commit `e7a3e06`
-- Report sink: `functions/src/csp/cspReportSink.ts` (Phase 3 Plan 03)
-- Filter and dedup: `functions/src/csp/{filter,dedup,normalise}.ts` (Phase 3 Plan 03)
-- Schema validation: `tests/firebase-config.test.js` asserts dual-reporting tokens are present (T-3-1 + T-3-2 mitigation) — Phase 3 Plan 02 commit `03f4c07`
-- Soak window: starts on Phase 3 cutover; ends when Phase 10 enforces (CSP enforcement lives at HOST-07)
-- Note: The `csp-violations` endpoint is the **only** unauthenticated public Cloud Function in the milestone; every other callable enforces App Check + claims-based auth from Phase 7 onward. Browsers POST CSP reports natively without App Check tokens, so D-12 limits abuse protection to content-type allowlist + 64 KB body cap.
+- Policy configuration: `firebase.json` `hosting.headers[0]` Content-Security-Policy — Plan 10-02 commits `523e47e` (directive value tighten) + Plan 10-04 commits (key flip — operator-paced)
+- Inline-style migration: `src/main.js` zero static `style: "..."` h()-attrs (was 162); `styles.css` Wave 1 utility-class block — Plan 10-01 commits `89b1140` + `ec0afa7`; closes `runbooks/phase-4-cleanup-ledger.md` "132 static `style="..."`" row
+- Schema tests (enforced shape): `tests/firebase-config.test.js` 6 Phase 10 assertions in describe block `firebase.json — Phase 10 enforced CSP shape (HOST-07)` — Plan 10-02 commits `24f8a7c` + Plan 10-04 commit (un-skip)
+- Cutover runbook (Stage C flip): `runbooks/csp-enforcement-cutover.md` 7-step single-session operator runbook — Plan 10-04 commit `def252e`
+- Soak bootstrap runbook (Stage B observation): `runbooks/phase-10-csp-soak-bootstrap.md` — Plan 10-03 commit `ebd6c5d`
+- Preflight + Cutover Log skeleton: `.planning/phases/10-csp-tightening-second-sweep/10-PREFLIGHT.md` — Plan 10-03 + Plan 10-04 operator-fill rows A-E
+- securityheaders.com rating: `docs/evidence/phase-10-securityheaders-rating.png` (A+ — Plan 10-05 Task 2 operator capture)
+- Note: the `/api/csp-violations` Cloud Function rewrite is the only unauthenticated public function in the milestone — browsers POST CSP reports natively without App Check tokens; D-12 limits abuse protection to content-type allowlist + 64 KB body cap (Phase 3 substrate, preserved through Phase 10).
 
 **Framework citations:**
 
-- OWASP ASVS L2 v5.0 V14.4 — HTTP Security Headers
+- OWASP ASVS L2 v5.0 V14.4 — HTTP Security Headers (CSP enforced + frame-ancestors `'none'` + base-uri + form-action)
+- ISO/IEC 27001:2022 A.8.23 — Web filtering (style-src locks the inline-style attack surface; frame-src closes off-origin embed)
 - ISO/IEC 27001:2022 A.13.1 — Network security management
 - SOC 2 CC6.6 — Logical access security boundaries
 - GDPR Art. 32(1)(b) — Confidentiality of processing systems and services
+
+---
+
+## § HSTS Preload Status
+
+**Control:** `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` has been set on every response since Phase 3 via `firebase.json` `hosting.headers[0]`. Plan 10-05 submitted `baselayers.bedeveloped.com` to the Chrome HSTS preload list at https://hstspreload.org for inclusion in browser preload caches. The apex domain `bedeveloped.com` was deliberately NOT submitted (subdomain-only path per `runbooks/hsts-preload-submission.md` Step 2 apex-vs-subdomain decision tree — preserves operator flexibility on other subdomains; apex submission would be irreversible-in-practice for every present and future `bedeveloped.com` subdomain).
+
+**Listing status:** PENDING at Phase 10 close. Chrome's preload list update cycle propagates weeks-months after submission. The submission is forward-tracked in `runbooks/phase-10-cleanup-ledger.md` Forward-Tracking Row F1 with an explicit closure path — operator re-checks weekly via https://hstspreload.org/?domain=baselayers.bedeveloped.com (or `curl https://hstspreload.org/api/v2/status?domain=baselayers.bedeveloped.com`); F1 flips to CLOSED when status returns `preloaded` and screenshot lands at `docs/evidence/phase-10-hsts-preload-listed.png`. Substrate-honest disclosure (Pitfall 19): submission filed is a Phase 10 deliverable; listing arrival is a Phase 11 evidence-pack deliverable.
+
+**Evidence:**
+
+- HSTS header substrate: `firebase.json` `Strict-Transport-Security` header — Phase 3 commit `e7a3e06`; pinned by `tests/firebase-config.test.js` HSTS-preload-eligibility assertion (max-age >= 31536000 + includeSubDomains + preload) — Plan 10-02 commit `24f8a7c`
+- Submission runbook: `runbooks/hsts-preload-submission.md` — Plan 10-05 Task 1
+- Submission confirmation screenshot: `docs/evidence/phase-10-hsts-preload-submission.png` — Plan 10-05 Task 2 operator capture
+- Submission date + apex/subdomain decision: recorded in `runbooks/hsts-preload-submission.md ## Cutover Log` (operator-fill) + Phase 10 PREFLIGHT log
+- Forward-tracking row: `runbooks/phase-10-cleanup-ledger.md` Row F1 (calendar-deferred listing-status check)
+
+**Framework citations:**
+
+- OWASP ASVS L2 v5.0 V14.4 — HTTP Security Headers (HSTS preload directive)
+- GDPR Art. 32(1)(a) — Pseudonymisation/encryption of personal data (HTTPS-only via preload)
+- SOC 2 CC6.7 — Restricted data transmission (HTTPS enforcement via preload)
 
 ---
 
@@ -498,19 +544,19 @@ This is a one-stop pointer for an auditor walking Phase 3's controls. Each row m
 | Framework | Citation | Phase 3 Section | Implemented in | Verified by | Commit SHA(s) |
 |-----------|----------|-----------------|----------------|-------------|---------------|
 | OWASP ASVS L2 v5.0 | V14.4 — HTTP Security Headers | § HTTP Security Headers | `firebase.json` `hosting.headers[0]` | `tests/firebase-config.test.js` (commit-time, T-3-1) + ci.yml `deploy` job "Assert security headers" step (deploy-time, T-3-1) + securityheaders.com manual smoke per `runbooks/hosting-cutover.md` Step 7 (cutover-time) | `e7a3e06` (firebase.json) + `03f4c07` (schema test) + `49afecb` (CI deploy assertion) |
-| OWASP ASVS L2 v5.0 | V14.4 — Content Security Policy | § Content Security Policy (Report-Only) | `firebase.json` `Content-Security-Policy-Report-Only` header value + dual `Reporting-Endpoints` / `report-uri` / `report-to csp-endpoint` + `functions/src/csp/cspReportSink.ts` | `tests/firebase-config.test.js` (header presence + dual-reporting tokens, T-3-1 + T-3-2) + `functions/test/csp/*.test.ts` (filter/dedup/normalise unit tests) + `runbooks/hosting-cutover.md` ## Pre-cutover Smoke Checklist Smokes 1+2 (modern + legacy wire formats; Pitfall 3 rawBody fallback exercise) | `e7a3e06` (firebase.json CSP-RO) + `03f4c07` (schema test) |
+| OWASP ASVS L2 v5.0 | V14.4 — Content Security Policy | § Content Security Policy (enforced) | `firebase.json` `Content-Security-Policy` header value (enforced — replaces Report-Only at Phase 10 Wave 4) + dual `Reporting-Endpoints` / `report-uri` / `report-to csp-endpoint` + `functions/src/csp/cspReportSink.ts` | `tests/firebase-config.test.js` (header presence + dual-reporting tokens, T-3-1 + T-3-2; Phase 10 enforced-shape assertions added Plan 10-02 + un-skipped Plan 10-04) + `functions/test/csp/*.test.ts` (filter/dedup/normalise unit tests) + `runbooks/hosting-cutover.md` ## Pre-cutover Smoke Checklist Smokes 1+2 (modern + legacy wire formats; Pitfall 3 rawBody fallback exercise) + `runbooks/csp-enforcement-cutover.md` (Plan 10-04 enforcement flip) | `e7a3e06` (firebase.json CSP-RO substrate) + `03f4c07` (schema test) + `523e47e` (Plan 10-02 RO directive tighten) + `24f8a7c` (Plan 10-02 schema-test extension) + Plan 10-04 key-flip commit (operator-paced) |
 | OWASP ASVS L2 v5.0 | V14.7 — Build & Deploy Pipeline | § Hosting & Deployment | `.github/workflows/ci.yml` `deploy` + `preview` jobs via OIDC WIF; SHA-pinned third-party actions; concurrency control | First-green-CI-run (PENDING-USER post-cutover) + post-deploy 9-header assertion + `runbooks/firebase-oidc-bootstrap.md` (Phase 1 D-23) | `49afecb` (CI deploy + preview jobs + functions/ npm audit step) |
 | ISO/IEC 27001:2022 | A.13.1.3 — Segregation in networks (header-enforced same-origin boundary) | § HTTP Security Headers | `Cross-Origin-Opener-Policy: same-origin` + `Cross-Origin-Embedder-Policy: credentialless` + `Cross-Origin-Resource-Policy: same-origin` + `frame-ancestors 'none'` (CSP) | `tests/firebase-config.test.js` `it.each` over 9 header keys + post-deploy curl assertion | `e7a3e06` (firebase.json) + `03f4c07` (schema test) |
-| ISO/IEC 27001:2022 | A.13.1 — Network security management | § Content Security Policy (Report-Only) | CSP-RO + dual reporting + same-origin `cspReportSink` Cloud Function in `europe-west2` | Synthetic smoke (`runbooks/hosting-cutover.md` Smokes 1+2) + Cloud Logging filter `jsonPayload.message="csp.violation"` + soak window through Phase 10 | `e7a3e06` (firebase.json CSP-RO) + Phase 3 Plan 03 commits (functions/ workspace) |
+| ISO/IEC 27001:2022 | A.13.1 — Network security management | § Content Security Policy (enforced) | CSP-RO + dual reporting + same-origin `cspReportSink` Cloud Function in `europe-west2`; soak window CLOSED Phase 10 Wave 4 — `Content-Security-Policy-Report-Only` header REPLACED by enforced `Content-Security-Policy` via Plan 10-04 single-knob key flip after Stage A → Stage B → Stage C three-stage rollout | Synthetic smoke (`runbooks/hosting-cutover.md` Smokes 1+2) + Cloud Logging filter `jsonPayload.message="csp.violation"` + Stage B 7-day soak (Plan 10-03) + Stage C 7-day post-enforcement soak (Plan 10-05) | `e7a3e06` (firebase.json CSP-RO) + Phase 3 Plan 03 commits (functions/ workspace) + `523e47e` (Plan 10-02 RO tighten) + Plan 10-04 key-flip commit (operator-paced) |
 | ISO/IEC 27001:2022 | A.5.7 — Threat intelligence (cloud services governance) | § Hosting & Deployment | OIDC Workload Identity Federation (no long-lived JSON keys) + per-PR preview channels with 7d auto-expiry + repo-scoped trust binding | `runbooks/firebase-oidc-bootstrap.md` + `runbooks/hosting-cutover.md` ## Prerequisites OIDC checks | `49afecb` (CI deploy + preview via OIDC) |
-| SOC 2 | CC6.6 — Logical access security boundaries | § HTTP Security Headers + § CSP (Report-Only) | Header set (HSTS / X-CTO / Referrer-Policy / Permissions-Policy / COOP / COEP / CORP) + CSP enforcement substrate (Report-Only -> Phase 10 enforced) | `tests/firebase-config.test.js` (commit-time) + post-deploy curl assertion (deploy-time) + securityheaders.com rating ≥ A (cutover-time, recorded as `securityheaders_rating` in `03-PREFLIGHT.md ## Cutover Log`) | `e7a3e06` + `03f4c07` + `49afecb` |
+| SOC 2 | CC6.6 — Logical access security boundaries | § HTTP Security Headers + § CSP (enforced) | Header set (HSTS / X-CTO / Referrer-Policy / Permissions-Policy / COOP / COEP / CORP) + CSP enforced (Stage C — Phase 10 Wave 4 flip from Report-Only to enforced) | `tests/firebase-config.test.js` (commit-time) + post-deploy curl assertion (deploy-time) + securityheaders.com rating A+ at Phase 10 close (Plan 10-05 Task 2 `docs/evidence/phase-10-securityheaders-rating.png`) | `e7a3e06` + `03f4c07` + `49afecb` + Plan 10-04 key-flip commit |
 | SOC 2 | CC8.1 — Change management | § Hosting & Deployment | OIDC-authenticated CI deploy from `main` (gated on lint+typecheck+test+audit+build green) + per-PR preview channels + concurrency group `firebase-deploy-main` + 14-day GH-Pages rollback retention | `.github/workflows/ci.yml` (CI gates) + `runbooks/hosting-cutover.md` (cutover script + DNS revert procedure) + `runbooks/phase-4-cleanup-ledger.md` "Phase 3 GH-Pages rollback substrate" row (day-14 trigger) | `49afecb` (CI) + Phase 3 Plan 05 commits (cutover runbook + Cutover Log skeleton) + Phase 3 Plan 06 commits (cleanup ledger row + branch-protection runbook) |
-| GDPR | Art. 32(1)(b) — Confidentiality of processing systems and services | § Content Security Policy (Report-Only) | CSP-RO + same-origin report sink (no cross-origin data leak channel for violation reports); functions filter + dedup limits log volume from extension noise | Synthetic smoke confirms reports stay same-origin (Smokes 1+2 in `runbooks/hosting-cutover.md`); SECURITY.md § CSP documents the un-authed-endpoint exemption rationale (D-12 — content-type allowlist + 64 KB body cap) | `e7a3e06` (firebase.json CSP-RO same-origin endpoint) + Phase 3 Plan 03 commits (filter + dedup) |
+| GDPR | Art. 32(1)(b) — Confidentiality of processing systems and services | § Content Security Policy (enforced) | CSP enforced (Phase 10 Wave 4) + same-origin report sink (no cross-origin data leak channel for violation reports); functions filter + dedup limits log volume from extension noise | Synthetic smoke confirms reports stay same-origin (Smokes 1+2 in `runbooks/hosting-cutover.md`); SECURITY.md § CSP (enforced) documents the un-authed-endpoint exemption rationale (D-12 — content-type allowlist + 64 KB body cap) | `e7a3e06` (firebase.json CSP-RO same-origin endpoint) + Phase 3 Plan 03 commits (filter + dedup) + Plan 10-04 key-flip commit |
 
 **Cross-phase plug-ins this index will feed:**
 
 - **Phase 4** (modular split / CDN-to-npm migration) — removes the temporary CSP CDN allowlist (`cdn.jsdelivr.net`, `fonts.googleapis.com`, `fonts.gstatic.com`); the §CSP table row's "Implemented in" cell will lose the temporary additions. Phase 4 also lands `tests/index-html-meta-csp.test.js` (T-3-meta-csp-conflict mitigation per `runbooks/phase-4-cleanup-ledger.md` "Phase 3 — meta-CSP regression guard" row).
-- **Phase 10** (CSP enforcement / HOST-06 / HOST-07) — drops `'unsafe-inline'` from `style-src`, submits HSTS preload to hstspreload.org, flips CSP from Report-Only to enforced; updates §HTTP Security Headers + §CSP citations in this index accordingly.
+- **Phase 10** (CSP enforcement / HOST-06 / HOST-07) — LANDED 2026-05-10: dropped `'unsafe-inline'` from `style-src` (Plan 10-02), submitted HSTS preload to hstspreload.org (Plan 10-05), flipped CSP from Report-Only to enforced (Plan 10-04 single-knob key flip). §HTTP Security Headers + §CSP citations updated in-place in this index. Subsequent canonical Phase 10 documentation is in §Phase 10 Audit Index at end-of-file.
 - **Phase 11** (Evidence Pack / DOC-09) — `docs/CONTROL_MATRIX.md` walks this index row-by-row; screenshot evidence under `docs/evidence/` (e.g. `docs/evidence/phase-3-securityheaders-rating.png` per `runbooks/hosting-cutover.md` Step 7).
 - **Phase 12** (Audit Walkthrough) — `SECURITY_AUDIT_REPORT.md` Pass / Partial / N/A entries cite specific rows in this index by framework + citation.
 
@@ -520,7 +566,7 @@ This is a one-stop pointer for an auditor walking Phase 3's controls. Each row m
 - T-3-meta-csp-conflict mitigation: Phase 4 must add `tests/index-html-meta-csp.test.js` to prevent `<meta http-equiv="Content-Security-Policy">` from being silently re-introduced into `index.html`. Row title: "Phase 3 — meta-CSP regression guard".
 - T-3-5 partial mitigation (deferred): `roles/firebase.admin` over-grant on the deploy SA accepted for Phase 3; Phase 7 (FN-04) narrows to per-function service accounts. Row title (added in Phase 3 Plan 04 SUMMARY hand-off): "Phase 3 OIDC SA over-grant".
 
-**Index self-check:** if all three forward-looking rows above are still open in the cleanup ledger, this index is current. If T-3-4 + T-3-meta-csp-conflict rows are closed but the index has not been updated by a Phase 4 / Phase 10 / Phase 11 commit, the index needs a maintenance commit. Phase 10's planning explicitly lists "update SECURITY.md ## § Phase 3 Audit Index" as a task when CSP enforcement lands.
+**Index self-check:** if all three forward-looking rows above are still open in the cleanup ledger, this index is current. If T-3-4 + T-3-meta-csp-conflict rows are closed but the index has not been updated by a Phase 4 / Phase 10 / Phase 11 commit, the index needs a maintenance commit. Phase 10 (HOST-06 / HOST-07) closed 2026-05-10: enforcement flip + soak window CLOSED Phase 10 Wave 4 — annotations applied to the §Network security management + §CSP rows above; new §Content Security Policy (enforced) replaces the prior §Content Security Policy (Report-Only) section. See §Phase 10 Audit Index for the Phase 10 controls catalogue.
 
 ---
 
@@ -1198,6 +1244,27 @@ Auditor walk-through pointer for Phase 9. Each row maps a Phase 9 control to its
 - **Phase 10** (HOST-06 / HOST-07 strict CSP) — mirror-trigger collision verification (1 alert per soft-delete cascade) deferred to Phase 10 synthetic-tests sub-wave (one observation per phase saves operator time); Sentry-tagged source-map stack traces land in Sentry once deploy runs, benefiting CSP tightening triage.
 - **Phase 11** (DOC-02 / DOC-04 / DOC-09 evidence pack) — `PRIVACY.md` Sentry sub-processor row (EU residency); `CONTROL_MATRIX.md` rows for OBS-01..08 + AUDIT-05; `docs/evidence/` Sentry quota alert screenshot + Slack alert screenshot + uptime check screenshot + budget alert screenshot + first deploy log.
 - **Phase 12** (WALK-02 / WALK-03) — audit-walkthrough cites Phase 9 Observability + Audit-Event Wiring + Anomaly Alerting + Out-of-band Monitors sections as ground truth.
+
+---
+
+## § Phase 10 Audit Index
+
+Auditor walk-through pointer for Phase 10. Each row maps a Phase 10 control to its requirement ID, the code/config that implements it, the test or operator evidence that verifies it, and the framework citations it satisfies. Mirrors the §Phase 7 + §Phase 8 + §Phase 9 Audit Index shape. Substrate-honest (Pitfall 19): HOST-07 closed in-phase; HOST-06 closed as substrate-complete-with-PENDING (submission filed at hstspreload.org; Chrome preload-list propagation is calendar-deferred and forward-tracked in `runbooks/phase-10-cleanup-ledger.md` Row F1).
+
+| Requirement | Control | Code | Test / Evidence | Framework |
+|-------------|---------|------|-----------------|-----------|
+| HOST-07 | CSP enforced (no Report-Only) + `style-src 'self'` (no `'unsafe-inline'`) + `frame-src 'self'` (no firebaseapp.com) + `base-uri 'self'` + `form-action 'self'` + `connect-src` extended with `https://de.sentry.io` for Phase 9 OBS-04 | `firebase.json` `hosting.headers[0]` Content-Security-Policy header value + key (single-knob flip from `-Report-Only`); `src/main.js` zero static inline-style attrs; `styles.css` Wave 1 utility-class block (104 named classes) | `tests/firebase-config.test.js` 6 Phase 10 enforced-shape assertions in `firebase.json — Phase 10 enforced CSP shape (HOST-07)` describe; `runbooks/csp-enforcement-cutover.md` 7-step single-session operator runbook (Plan 10-04); `runbooks/phase-10-csp-soak-bootstrap.md` Stage B 7-day soak; `10-PREFLIGHT.md ## Cutover Log` Rows A-E PASS; `docs/evidence/phase-10-securityheaders-rating.png` (A+); `docs/evidence/phase-10-enforcement-smoke-console.png` (5-target smoke matrix) | OWASP ASVS L2 V14.4; ISO/IEC 27001:2022 A.8.23 + A.13.1; SOC 2 CC6.6; GDPR Art. 32(1)(b) |
+| HOST-06 | HSTS preload submitted to hstspreload.org for `baselayers.bedeveloped.com` (subdomain-only path — apex `bedeveloped.com` deliberately NOT submitted per `runbooks/hsts-preload-submission.md` Step 2 decision tree) | `firebase.json` `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` (Phase 3 substrate, unchanged through Phase 10) | `tests/firebase-config.test.js` HSTS-preload-eligibility assertion (max-age >= 31536000 + includeSubDomains + preload); `runbooks/hsts-preload-submission.md` Steps 1-4 (operator); `docs/evidence/phase-10-hsts-preload-submission.png`; listing-status forward-tracked PENDING per Pitfall 19 in `runbooks/phase-10-cleanup-ledger.md` Row F1 (closure path: weekly status check; flip to CLOSED when status returns `preloaded` + `docs/evidence/phase-10-hsts-preload-listed.png` lands) | OWASP ASVS L2 V14.4; GDPR Art. 32(1)(a); SOC 2 CC6.7 |
+| DOC-10 | Phase 10 incremental SECURITY.md (Pitfall 19) — § Content Security Policy (Report-Only) REPLACED by § Content Security Policy (enforced) + new § HSTS Preload Status + this 3-row Phase 10 Audit Index; § Phase 3 Audit Index gains maintenance annotations noting "soak window CLOSED Phase 10 Wave 4" + the enforcement-flip commits in the Implemented-in + Verified-by + Commit-SHA columns | This file | this commit; Phase 11 owns the canonical DOC-10 pass | ISO/IEC 27001:2022 A.5.36 |
+
+**Substrate-honest disclosure (Pitfall 19):** HOST-07 is closed in-phase (CSP enforced + 7-day post-enforcement soak clean + securityheaders.com A+ rating captured). HOST-06 is **substrate-complete with calendar-deferred listing-status** — the hstspreload.org submission is filed (in-phase deliverable), but Chrome's preload-list propagation takes weeks to months (forward-tracked deliverable). This mirrors the Phase 8 BACKUP-07 drill-evidence-deferred pattern + the Phase 9 OBS-02/04/05/06/07/08 operator-deferred pattern. The single combined Phase 10 deferred-operator session bundles all four pending actions (Plan 10-03 Task 2 7-day Stage B soak / Plan 10-04 Task 2 enforcement flip / Plan 10-05 Task 2 HSTS submission + securityheaders.com / Plan 10-05 Task 4 phase-close human-verify) into one session via `.planning/phases/10-csp-tightening-second-sweep/10-DEFERRED-CHECKPOINT.md`.
+
+**Cross-phase plug-ins this index will feed:**
+
+- **Phase 11** (DOC-02 / DOC-04 / DOC-09 evidence pack) — `CONTROL_MATRIX.md` rows for HOST-06 + HOST-07; `docs/evidence/phase-10-securityheaders-rating.png` (A+) + `docs/evidence/phase-10-hsts-preload-submission.png` + `docs/evidence/phase-10-hsts-preload-listed.png` (calendar-deferred) + `docs/evidence/phase-10-enforcement-smoke-console.png` (5-target smoke matrix).
+- **Phase 12** (WALK-02 / WALK-03) — audit-walkthrough cites Phase 10 § CSP (enforced) + § HSTS Preload Status as ground truth for the network-security + transport-encryption ASVS V14.4 control rows.
+
+**Index self-check:** if Row F1 in `runbooks/phase-10-cleanup-ledger.md` (hstspreload.org listing-status flips to `preloaded`) is still open (calendar-deferred to weeks-months), this index is current. Once the listing-status row closes (Chrome propagation lands), this index needs a maintenance commit appending the listing date + screenshot path to the HOST-06 row above.
 
 ---
 

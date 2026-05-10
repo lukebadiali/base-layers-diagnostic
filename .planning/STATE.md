@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-10T16:33:32Z"
+last_updated: "2026-05-10T16:57:36Z"
 progress:
   total_phases: 12
   completed_phases: 7
   total_plans: 54
-  completed_plans: 47
-  percent: 87
+  completed_plans: 48
+  percent: 89
 ---
 
 # State: Base Layers Diagnostic — Hardening Pass
 
 **Initialized:** 2026-05-03
-**Last updated:** 2026-05-10 — Phase 9 plan 01 COMPLETE (Sentry init substrate + shared PII_KEYS dictionary parity-tested + emitAuditEvent proxy seam + Sentry boot in src/main.js after claims hydration + phase-9-sentry-bootstrap operator runbook). 22/22 root observability tests + 237/237 functions tests green. 4 commits 4a0aafc..de2a2cc.
+**Last updated:** 2026-05-10 — Phase 9 plan 02 COMPLETE (@sentry/vite-plugin registered conditionally in vite.config.js with EU region URL + filesToDeleteAfterUpload hidden source-maps invariant; CI build/deploy/preview env wiring (VITE_SENTRY_DSN, VITE_GIT_SHA, SENTRY_AUTH_TOKEN, GITHUB_SHA); post-build .map deletion gate on deploy + preview; tests/build/source-map-gate.test.js 5/5 green; OBS-04 substrate code-complete, operator-deploy-pending). Commits: fc29a4f, f3978eb. ~16 minutes execution.
 
 ---
 
@@ -36,15 +36,15 @@ Phase 9 — Observability + Audit-Event Wiring (Wave 1 substrate landed; Waves 2
 ## Current Position
 
 Phase: 9 (Observability + Audit-Event Wiring) — EXECUTING
-Plan: 1 of 6 — Plan 09-01 COMPLETE (Wave 1 substrate); Plans 09-02..09-06 pending
-Plans complete (Phase 9): 1 of 6
-**Status:** Phase 9 Wave 1 substrate landed at code level — @sentry/browser init, shared PII_KEYS dictionary parity-tested, emitAuditEvent proxy seam, Sentry boot in src/main.js, phase-9-sentry-bootstrap operator runbook. Phase 8 operator session still pending (08-06-DEFERRED-CHECKPOINT.md). Phase 9 Wave 2 (09-02 — @sentry/vite-plugin source-map upload) can proceed immediately.
-**Progress:** [█████████ ] 87%
+Plan: 2 of 6 — Plans 09-01 + 09-02 COMPLETE; Plans 09-03..09-06 pending
+Plans complete (Phase 9): 2 of 6
+**Status:** Phase 9 Wave 2 substrate landed — @sentry/vite-plugin registered conditionally in vite.config.js (EU region; filesToDeleteAfterUpload: ["dist/**/*.map"]); CI build/deploy/preview env wiring + post-build .map deletion gate (Pitfall 6 two-layer defence). OBS-04 substrate code-complete. Operator must set GitHub Actions secrets `SENTRY_AUTH_TOKEN` + `VITE_SENTRY_DSN` per `runbooks/phase-9-sentry-bootstrap.md` Step 5 before first deploy actually uploads source maps; first-deploy verification gates the Plan 09-05 close-gate. Phase 8 operator session still pending (08-06-DEFERRED-CHECKPOINT.md). Phase 9 Wave 3 (09-03 — AUDIT-05 view wiring) can proceed immediately (no dependency on Wave 2 operator action).
+**Progress:** [█████████ ] 89%
 
 ```
-[█████████ ] 87%
+[█████████ ] 89%
  1  2  3  4  5  6  7  8  9 10 11 12
- ✓  ✓  ✓  ✓  ✓  ✓  ✓  ▶  ▶  .  .  .   (▶ = Phase 8 operator-pending; Phase 9 Wave 1 done, Waves 2-7 pending)
+ ✓  ✓  ✓  ✓  ✓  ✓  ✓  ▶  ▶  .  .  .   (▶ = Phase 8 operator-pending; Phase 9 Waves 1-2 done, Waves 3-7 pending)
 ```
 
 **Production state at pause (no live users — safe to remain in this state):**
@@ -163,6 +163,15 @@ These persist in `/gsd-progress` + `/gsd-audit-uat` until resolved. Cleanup ledg
 - **Use `SECURITY_AUDIT.md` as audit framework** — translate Vercel/Supabase sections to Firebase (PROJECT.md, decided 2026-05-03)
 - **12-phase plan, not 5-8** — standard granularity overridden because four load-bearing sequencing constraints cannot be collapsed (ROADMAP.md "Granularity Rationale", validated 2026-05-03)
 
+### Phase 9 Plan 02 Decisions (2026-05-10)
+
+- **Plugin telemetry disabled (`telemetry: false`)** — no plugin self-telemetry to Sentry; only release-finalize + sourcemap-upload API calls fire. Aligns with project's "no third-party telemetry" disposition.
+- **`.map` gate omitted from PR-validation build job** — that job runs without `SENTRY_AUTH_TOKEN` (forks have no secrets), plugin no-ops by design, `.map` files survive in `dist/` by design. Adding the gate there would false-positive on every fork PR. Deploy + preview gates are the operative defence layer.
+- **Test uses `path.resolve(process.cwd(), "vite.config.js")`** instead of `new URL(..., import.meta.url)` — happy-dom test env (vitest default in this repo) sets `import.meta.url` to an `http://` URL, which `readFileSync(URL)` rejects. `process.cwd()` resolves cleanly because vitest always runs from project root.
+- **Hard-coded `org: "bedeveloped"` + `project: "base-layers-diagnostic"`** — Sentry org/project slugs are public-ish identifiers (visible in DSN URLs and event metadata); only `authToken` is the secret. No need to plumb non-secrets through env vars.
+- **Conditional ordering: `env.SENTRY_AUTH_TOKEN && command === "build" && sentryVitePlugin(...)`** — short-circuit semantics drop plugin allocation when either guard is false; `plugins: [...].filter(Boolean)` strips the resulting `false` so vite never sees a non-plugin entry.
+- **OBS-04 marked `[~]` (substrate-complete, operator-pending) in REQUIREMENTS.md** — code lands on this commit; activation is gated on operator setting `SENTRY_AUTH_TOKEN` + `VITE_SENTRY_DSN` in GitHub Actions secrets per `runbooks/phase-9-sentry-bootstrap.md` Step 5. First-deploy verification gates Plan 09-05 close-gate.
+
 ### Phase 9 Plan 01 Decisions (2026-05-10)
 
 - **Versions strict-pinned (no caret)** — `@sentry/browser@10.52.0` + `@sentry/vite-plugin@5.2.1` follow the project TOOL-01 supply-chain pinning convention; npm install default `^` carets manually stripped
@@ -261,7 +270,9 @@ Additional non-negotiables:
 
 ## Session Continuity
 
-**Last session (2026-05-10):** Phase 9 plan 01 (Sentry init substrate + shared PII scrubber + audit-events proxy) — all 4 tasks executed and committed. Task 1: install @sentry/browser@10.52.0 (bumped from 10.51.0) + @sentry/vite-plugin@5.2.1 devDep + new src/observability/pii-scrubber.js + functions/src/util/pii-scrubber.ts twin + parity test (drift contract). Task 2: src/observability/sentry.js body filled (initSentryBrowser + setUser + captureError + addBreadcrumb + fingerprint rate-limit; empty-DSN no-op kill-switch); 9 vitest behaviour tests. Task 3: src/observability/audit-events.js body filled (AUDIT_EVENTS frozen 25-entry table + best-effort emitAuditEvent proxy); functions/src/util/sentry.ts beforeSend extended to use shared PII_KEYS + redaction contract changed delete -> "<redacted>"; 6 audit-events tests + 2 new sentry-scrub tests. Task 4: src/main.js Sentry boot wired in fbOnAuthStateChanged after claims hydration (Pitfall 3) + runbooks/phase-9-sentry-bootstrap.md (7-section operator runbook for Sentry org / EU project / DSN / 70 percent quota alert OBS-08). Commits: 4a0aafc..de2a2cc (4 commits). Root observability tests 22/22 green; functions tests 237/237 green. Pre-existing tsc + view-snapshot failures (Phase 8 inheritance) tracked in deferred-items.md. 09-01-SUMMARY.md created. Next plan: 09-02 (@sentry/vite-plugin source-map upload + CI env wiring).
+**Last session (2026-05-10):** Phase 9 plan 02 (@sentry/vite-plugin source-map upload + CI env wiring) — both tasks executed and committed. Task 1: vite.config.js plugin registration (`env.SENTRY_AUTH_TOKEN && command === "build"` guard, EU region URL `https://de.sentry.io/`, `filesToDeleteAfterUpload: ["dist/**/*.map"]`, telemetry off) + `tests/build/source-map-gate.test.js` 5-assertion drift detector (5/5 green). Task 2: `.github/workflows/ci.yml` build/deploy/preview env wiring (VITE_SENTRY_DSN, VITE_GIT_SHA, SENTRY_AUTH_TOKEN, GITHUB_SHA) + post-build "Assert no .map files" gate on deploy + preview jobs (NOT on PR-validation build by design). Two auto-fixed bugs in test-file: (1) URL-form `readFileSync` rejected by happy-dom; switched to `path.resolve(process.cwd(), ...)`. (2) `/* global process */` redeclared an ESLint built-in global; dropped the comment. ~16 minutes execution. Commits: `fc29a4f`, `f3978eb`. 09-02-SUMMARY.md authored. OBS-04 marked `[~]` (substrate code-complete, operator-pending GitHub Actions secrets per `runbooks/phase-9-sentry-bootstrap.md` Step 5). Next plan: 09-03 (AUDIT-05 view wiring across `src/firebase/auth.js` + `src/cloud/{claims-admin,gdpr,soft-delete}.js`).
+
+**Previous session (2026-05-10):** Phase 9 plan 01 (Sentry init substrate + shared PII scrubber + audit-events proxy) — all 4 tasks executed and committed. Task 1: install @sentry/browser@10.52.0 (bumped from 10.51.0) + @sentry/vite-plugin@5.2.1 devDep + new src/observability/pii-scrubber.js + functions/src/util/pii-scrubber.ts twin + parity test (drift contract). Task 2: src/observability/sentry.js body filled (initSentryBrowser + setUser + captureError + addBreadcrumb + fingerprint rate-limit; empty-DSN no-op kill-switch); 9 vitest behaviour tests. Task 3: src/observability/audit-events.js body filled (AUDIT_EVENTS frozen 25-entry table + best-effort emitAuditEvent proxy); functions/src/util/sentry.ts beforeSend extended to use shared PII_KEYS + redaction contract changed delete -> "<redacted>"; 6 audit-events tests + 2 new sentry-scrub tests. Task 4: src/main.js Sentry boot wired in fbOnAuthStateChanged after claims hydration (Pitfall 3) + runbooks/phase-9-sentry-bootstrap.md (7-section operator runbook for Sentry org / EU project / DSN / 70 percent quota alert OBS-08). Commits: 4a0aafc..de2a2cc (4 commits). Root observability tests 22/22 green; functions tests 237/237 green. Pre-existing tsc + view-snapshot failures (Phase 8 inheritance) tracked in deferred-items.md. 09-01-SUMMARY.md created. Next plan: 09-02 (@sentry/vite-plugin source-map upload + CI env wiring).
 
 **Previous session (2026-05-10):** Phase 8 plan 06 (restore drill + docs + close-gate) — Tasks 3-6 executed and committed; Tasks 1+2+7 (deploy + drill + close-gate) DEFERRED to operator session per 08-06-DEFERRED-CHECKPOINT.md. Task 3: restore-drill-2026-05-13.md template + phase-8-restore-drill-cadence.md (BACKUP-06 + BACKUP-07). Task 4: SECURITY.md +4 sections + 19-row Phase 8 Audit Index (DOC-10). Task 5: 18 LIFE/GDPR/BACKUP rows [x] + DOC-10 updated + 3 traceability rows validated. Task 6: phase-8-cleanup-ledger.md zero-out (phase_8_active_rows: 0). Commits: 88b086d..90c4c4c (5 commits). 08-06-SUMMARY.md created. Phase 8 code+docs complete; operator session required for production deploy + restore drill before Phase 8 is fully closed.
 
@@ -297,4 +308,4 @@ Additional non-negotiables:
 ---
 
 *State initialized: 2026-05-03 after roadmap creation*
-*Last updated: 2026-05-10 — Phase 9 plan 01 COMPLETE (commits 4a0aafc..de2a2cc); ready for /gsd-execute-phase 9 (Plan 09-02)*
+*Last updated: 2026-05-10 — Phase 9 plan 02 COMPLETE (commits fc29a4f, f3978eb); ready for /gsd-execute-phase 9 (Plan 09-03)*

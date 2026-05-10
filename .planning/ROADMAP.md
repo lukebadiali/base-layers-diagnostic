@@ -215,7 +215,7 @@ Plans:
 **Plans**: 6 plans
 Plans:
 - [x] 09-01-PLAN.md — Wave 1: Sentry init substrate + shared PII_KEYS dictionary (browser + node parity-tested) + audit-events.js proxy seam + Sentry boot wiring in src/main.js + runbooks/phase-9-sentry-bootstrap.md (OBS-01, OBS-02, OBS-03, OBS-08 substrate, DOC-10)
-- [ ] 09-02-PLAN.md — Wave 2: @sentry/vite-plugin source-map upload in vite.config.js + CI env wiring (build/deploy/preview) + post-build .map deletion gate (OBS-04)
+- [x] 09-02-PLAN.md — Wave 2: @sentry/vite-plugin source-map upload in vite.config.js + CI env wiring (build/deploy/preview) + post-build .map deletion gate; tests/build/source-map-gate.test.js 5/5 green; OBS-04 substrate code-complete (operator must set GitHub Actions secrets per runbooks/phase-9-sentry-bootstrap.md Step 5 before first deploy actually uploads source maps) (OBS-04) (2026-05-10)
 - [ ] 09-03-PLAN.md — Wave 3: AUDIT-05 view wiring across 9 sites (src/firebase/auth.js + src/cloud/{claims-admin,gdpr,soft-delete}.js) + auditEventSchema enum +18 .requested literals + parity tests (AUDIT-05, OBS-02 partial)
 - [ ] 09-04-PLAN.md — Wave 4: authAnomalyAlert onDocumentCreated trigger (4 anomaly rules + Slack webhook + audit-alert-sa) + authFailureCounters server-only collection + tests/rules + scripts/test-slack-alert/run.js (OBS-05)
 - [ ] 09-05-PLAN.md [autonomous: false] — Wave 5: GCP-tier monitors — scripts/setup-uptime-check (3-region 60s) + scripts/setup-budget-alerts (50/80/100) + Sentry quota alert (operator) + audit-alert-sa SA provisioning + Secret Manager secrets + Wave 4 deploy (OBS-04, OBS-06, OBS-07, OBS-08)
@@ -280,7 +280,7 @@ Plans:
 | 6. Real Auth + MFA + Rules Deploy (Cutover) | 0/0 | Not started | - |
 | 7. Cloud Functions + App Check | 0/0 | Not started | - |
 | 8. Data Lifecycle (Soft-Delete + GDPR + Backups) | 2/6 | In Progress|  |
-| 9. Observability + Audit-Event Wiring | 0/6 | Planned | - |
+| 9. Observability + Audit-Event Wiring | 2/6 | In Progress | - |
 | 10. CSP Tightening (Second Sweep) | 0/0 | Not started | - |
 | 11. Documentation Pack (Evidence Pack) | 0/0 | Not started | - |
 | 12. Audit Walkthrough + Final Report | 0/0 | Not started | - |

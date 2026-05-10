@@ -15,7 +15,7 @@ progress:
 # State: Base Layers Diagnostic — Hardening Pass
 
 **Initialized:** 2026-05-03
-**Last updated:** 2026-05-10 — Phase 8 plan 05 COMPLETE (GDPR erasure — gdprEraseUser callable + pseudonymToken + eraseCascade + redactionList rules + post-erasure-audit script + eraseUser seam filled; Task 7 operator provisioning DEFERRED to Wave 6 batch)
+**Last updated:** 2026-05-10 — Phase 8 plan 06 COMPLETE (docs close — restore drill runbook template + quarterly cadence + SECURITY.md 4-section DOC-10 increment + 19-row Phase 8 Audit Index + 18 LIFE/GDPR/BACKUP requirements validated + cleanup-ledger zero-out; Tasks 1+2+7 operator deploy+drill+close-gate DEFERRED to single operator session per 08-06-DEFERRED-CHECKPOINT.md)
 
 ---
 
@@ -35,10 +35,10 @@ Phase 8 — Data Lifecycle (Soft-Delete + GDPR + Backups)
 
 ## Current Position
 
-Phase: 8 (Data Lifecycle (Soft-Delete + GDPR + Backups)) — EXECUTING
-Plan: 6 of 6 (08-01 paused at operator checkpoint, 08-02 + 08-03 + 08-04 + 08-05 COMPLETE)
-Plans complete: 4 of 6 (08-02 + 08-03 + 08-04 + 08-05 complete; 08-01 paused awaiting operator)
-**Status:** Executing Phase 8 — 08-05 GDPR erasure complete; next plan 08-06 (restore drill + docs); operator must provision 4 SAs + GDPR_PSEUDONYM_SECRET before Wave 6 deploy
+Phase: 8 (Data Lifecycle (Soft-Delete + GDPR + Backups)) — CODE_AND_DOCS_COMPLETE; OPERATOR_DEPLOY_PENDING
+Plan: 6 of 6 — ALL PLANS AUTHORED (08-01 paused at operator checkpoint; 08-02 + 08-03 + 08-04 + 08-05 + 08-06 COMPLETE at code+docs level)
+Plans complete: 6 of 6 (all plans authored; operator production session pending for 08-01 substrate + 08-06 deploy + drill)
+**Status:** Phase 8 code + docs complete — operator must execute 08-06-DEFERRED-CHECKPOINT.md (single session: backup-sa + GDPR_PSEUDONYM_SECRET + 4 SAs + firebase deploy 8 CFs + rules + restore drill + close-gate review). Phase 9 planning can begin immediately.
 **Progress:** [██████████] 96%
 
 ```
@@ -163,6 +163,14 @@ These persist in `/gsd-progress` + `/gsd-audit-uat` until resolved. Cleanup ledg
 - **Use `SECURITY_AUDIT.md` as audit framework** — translate Vercel/Supabase sections to Firebase (PROJECT.md, decided 2026-05-03)
 - **12-phase plan, not 5-8** — standard granularity overridden because four load-bearing sequencing constraints cannot be collapsed (ROADMAP.md "Granularity Rationale", validated 2026-05-03)
 
+### Phase 8 Plan 06 Decisions (2026-05-10)
+
+- **Tasks 1+2+7 DEFERRED to single operator session** — deploy commands + restore drill procedure + close-gate checklist authored in 08-06-DEFERRED-CHECKPOINT.md; code + docs complete; operator execution batches 08-01 + 08-05 + 08-06 deferred actions into one session
+- **Restore drill runbook uses timestamp placeholders** — operator-fill `{{ T+0 }}` pattern per Pitfall 19 substrate-honest disclosure; fake timestamps would violate compliance credibility
+- **BACKUP-02 lifecycle phrasing canonical** — "GCS lifecycle: Standard at upload → Nearline at day 30 from creation → Archive at day 365 from creation (335-day Nearline dwell, exceeds BACKUP-02 90d Nearline minimum)"
+- **phase_8_active_rows: 0** — 4 Phase 7 forward-tracking rows closed; 2 in-phase carry-forward rows have explicit bounded closure paths (getDownloadURL re-export → Phase 10; post-erasure-audit first run → operator follow-up)
+- **Phase 9 unblocked at code level** — Phase 9 planning can begin without waiting for operator Phase 8 deploy session
+
 ### Phase 8 Plan 05 Decisions (2026-05-10)
 
 - **ERASED_AT_SENTINEL substituted at batch-write time** — keeps eraseCascade.ts pure (Pattern C); gdprEraseUser substitutes `__ERASED_AT__` with `FieldValue.serverTimestamp()` when committing each batch chunk
@@ -242,7 +250,9 @@ Additional non-negotiables:
 
 ## Session Continuity
 
-**Last session (2026-05-10):** Phase 8 plan 05 (GDPR erasure) — Tasks 1-6 executed and committed; Task 7 (operator provisioning) DEFERRED to Wave 6 batch. Task 1: pseudonymToken.ts pure helper + 12 unit tests. Task 2: eraseCascade.ts pure helper + 7 unit tests (Pitfall 11 auditLog retention, 500-op batch chunking). Task 3: gdprEraseUser.ts callable + 8 unit + 1 integration tests + admin-sdk.ts updateUser tracking. Task 4: firestore.rules redactionList match block + 10 rules tests. Task 5: scripts/post-erasure-audit/run.js (GDPR-03 evidence, ADC, exit 0/1/2) + README. Task 6: index.ts +1 export (→17), src/cloud/gdpr.js eraseUser seam filled (both Phase 4 stubs closed). functions tests: 205 → 233 (+28). Commits: dce9c20..1e881b0 (8 commits). 08-05-SUMMARY.md created. Next plan: 08-06 (restore drill + docs; operator must provision 4 SAs + GDPR_PSEUDONYM_SECRET first).
+**Last session (2026-05-10):** Phase 8 plan 06 (restore drill + docs + close-gate) — Tasks 3-6 executed and committed; Tasks 1+2+7 (deploy + drill + close-gate) DEFERRED to operator session per 08-06-DEFERRED-CHECKPOINT.md. Task 3: restore-drill-2026-05-13.md template + phase-8-restore-drill-cadence.md (BACKUP-06 + BACKUP-07). Task 4: SECURITY.md +4 sections + 19-row Phase 8 Audit Index (DOC-10). Task 5: 18 LIFE/GDPR/BACKUP rows [x] + DOC-10 updated + 3 traceability rows validated. Task 6: phase-8-cleanup-ledger.md zero-out (phase_8_active_rows: 0). Commits: 88b086d..90c4c4c (5 commits). 08-06-SUMMARY.md created. Phase 8 code+docs complete; operator session required for production deploy + restore drill before Phase 8 is fully closed.
+
+**Previous session (2026-05-10):** Phase 8 plan 05 (GDPR erasure) — Tasks 1-6 executed and committed; Task 7 (operator provisioning) DEFERRED to Wave 6 batch. Task 1: pseudonymToken.ts pure helper + 12 unit tests. Task 2: eraseCascade.ts pure helper + 7 unit tests (Pitfall 11 auditLog retention, 500-op batch chunking). Task 3: gdprEraseUser.ts callable + 8 unit + 1 integration tests + admin-sdk.ts updateUser tracking. Task 4: firestore.rules redactionList match block + 10 rules tests. Task 5: scripts/post-erasure-audit/run.js (GDPR-03 evidence, ADC, exit 0/1/2) + README. Task 6: index.ts +1 export (→17), src/cloud/gdpr.js eraseUser seam filled (both Phase 4 stubs closed). functions tests: 205 → 233 (+28). Commits: dce9c20..1e881b0 (8 commits). 08-05-SUMMARY.md created. Next plan: 08-06 (restore drill + docs; operator must provision 4 SAs + GDPR_PSEUDONYM_SECRET first).
 
 **Previous session (2026-05-10):** Phase 8 plan 04 (GDPR export) — all 4 tasks executed and committed. Task 0: documents field audit (Assumption A1 closed — uploaderId for top-level, legacyAppUserId for subcollection). Task 1: assembleUserBundle.ts pure helper + 6 unit tests (Pattern C, zero firebase-admin imports). Task 2: gdprExportUser.ts callable + 7 unit + 3 integration tests + collectionGroup() mock added. Task 3: index.ts +1 export (→16), src/cloud/gdpr.js exportUser filled. functions tests: 189 → 205 (+16). Commits: 51ea605..2497159 (4 commits). 08-04-SUMMARY.md created. Next plan: 08-05 (GDPR erasure — gdprEraseUser + GDPR_PSEUDONYM_SECRET + redactionList).
 

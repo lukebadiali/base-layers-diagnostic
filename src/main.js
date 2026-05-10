@@ -67,6 +67,14 @@ import {
 } from "./firebase/auth.js";
 import { createAuthView } from "./views/auth.js";
 
+// Phase 9 Wave 1 (OBS-01 + Pitfall 3): @sentry/browser boot. initSentryBrowser
+// is called inside the fbOnAuthStateChanged callback below — AFTER claims
+// hydration so setUser carries the verified UID + role (never PII like email).
+// Empty VITE_SENTRY_DSN coalesces to "" and the init becomes a silent no-op
+// (kill-switch + local-dev path; mirrors the FN-07 reCAPTCHA placeholder
+// pattern in vite.config.js).
+import { initSentryBrowser, setUser as sentrySetUser } from "./observability/sentry.js";
+
 // Application state singleton — extracted byte-identical to src/state.js
 // (D-02). The IIFE closure references the imported binding directly; no
 // shape change.
@@ -4190,6 +4198,17 @@ import {
       // will deny access. Phase 9 Sentry will catch the underlying error.
       claims = {};
     }
+
+    // Phase 9 Wave 1 (OBS-01 + Pitfall 3): init Sentry AFTER claims hydration
+    // so setUser carries the verified UID + role (never PII like email).
+    // Empty VITE_SENTRY_DSN -> "" -> initSentryBrowser becomes a silent no-op
+    // (kill-switch + local-dev path; Wave 2 ships the secrets path that puts
+    // the DSN into CI/preview/prod builds).
+    initSentryBrowser(
+      /** @type {string} */ (import.meta.env.VITE_SENTRY_DSN ?? ""),
+      /** @type {string} */ (import.meta.env.VITE_GIT_SHA ?? "local"),
+    );
+    sentrySetUser({ id: fbUser.uid, role: claims.role || "internal" });
 
     // Hydrate enrolled MFA factors (used by router for renderMfaEnrol guard).
     /** @type {Array<*>} */

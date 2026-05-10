@@ -40,3 +40,22 @@ Discovered out-of-scope issues (pre-existing, NOT caused by Phase 9 plans). Trac
 **Verified pre-existing:** `git stash && cd functions && npm run typecheck` reproduces the same 5 errors. None caused by Phase 9 plan 09-01 changes.
 
 **Disposition:** dependency-tier issue. Resolution likely requires `overrides` in `functions/package.json` to dedupe `@google-cloud/firestore`, OR pinning firebase-admin to a version whose nested dep matches the top-level pin. Out of scope for Phase 9 substrate work; tracking for Phase 10/11 dependency cleanup.
+
+## 2026-05-10 — Discovered during 09-01 Task 4
+
+**Root view-snapshot test pre-existing flakes (3 hook timeouts):**
+
+- `tests/views/dashboard.test.js > Dashboard view (TEST-10) > matches the dashboard snapshot` — `Hook timed out in 10000ms` in `beforeEach`.
+- `tests/views/diagnostic.test.js > Diagnostic view (TEST-10) > matches the diagnostic snapshot` — same shape.
+- `tests/views/report.test.js > Report view (TEST-10) > matches the report snapshot` — same shape.
+
+**Root cause:** the snapshot tests `await import("../../src/main.js")` after `vi.resetModules()`; main.js bootstraps the IIFE which has been growing since Phase 4 sub-wave 4.1 (~5,000 lines). Hook timeout at 10s is no longer enough headroom for the boot path on a Windows CI runner.
+
+**Verified pre-existing:** `git stash && npm test -- --run tests/views/dashboard.test.js` reproduces the same timeout on the pre-Plan-09-01 working tree (15.08s with my Phase 9 changes stashed; 16.41s with them applied — same failure mode, similar magnitude). Phase 9 Plan 09-01 Task 4 (Sentry boot wiring) adds ~1.5s on top of the boot, but the test was already over the 10s hook budget BEFORE Phase 9 touched main.js.
+
+**Disposition:** Phase 4 sub-wave 4.1 cleanup-ledger row already tracks the IIFE-body-migration debt that drives this. Two remediation paths:
+
+1. Raise `hookTimeout: 30000` in vitest.config.js for the views/ directory (cheap; restores green).
+2. Migrate IIFE body into views/* so the boot path shrinks (load-bearing fix; tracked by Phase 4 sub-wave 4.1).
+
+Path 1 is the recommended Phase-9-close-gate action — Plan 09-06 should add the `hookTimeout: 30000` config. Out of scope for Plan 09-01 substrate, but flagging for Plan 09-06 cleanup.

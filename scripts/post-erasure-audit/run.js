@@ -42,7 +42,7 @@
 //   Pattern F — ADC + Admin SDK script pattern
 //   Pitfall 13 — ADC only; no JSON SA in repo
 
-import { argv, exit, env } from "node:process";
+import { argv, exit } from "node:process";
 
 // ─── Constants (mirrors assembleUserBundle.ts source of truth) ──────────────
 
@@ -159,11 +159,12 @@ async function main() {
       if (residual.length === 0 && hasErasedAt && hasErasedTo) {
         printRow(`users/${uid}`, "PASS", `email=null, name=null, erasedTo=${data.erasedTo}`);
       } else {
-        const reason = residual.length > 0
-          ? `residual PII fields: ${residual.join(", ")}`
-          : !hasErasedAt
-            ? "erasedAt not set"
-            : "erasedTo is not a tombstone token";
+        const reason =
+          residual.length > 0
+            ? `residual PII fields: ${residual.join(", ")}`
+            : !hasErasedAt
+              ? "erasedAt not set"
+              : "erasedTo is not a tombstone token";
         printRow(`users/${uid}`, "FAIL", reason);
         allPass = false;
         failures.push({ check: `users/${uid}`, reason });
@@ -185,11 +186,17 @@ async function main() {
         // But if we're here, the query matched uid exactly, meaning the token isn't in place.
         printRow("auditLog (about user)", "FAIL", `${snap.size} docs still reference raw uid`);
         allPass = false;
-        failures.push({ check: "auditLog (about user)", reason: `${snap.size} untombstoned audit docs` });
+        failures.push({
+          check: "auditLog (about user)",
+          reason: `${snap.size} untombstoned audit docs`,
+        });
       } else {
         printRow("auditLog (about user)", "FAIL", `${snap.size} docs still reference raw uid`);
         allPass = false;
-        failures.push({ check: "auditLog (about user)", reason: `${snap.size} untombstoned audit docs` });
+        failures.push({
+          check: "auditLog (about user)",
+          reason: `${snap.size} untombstoned audit docs`,
+        });
       }
     }
   }
@@ -291,7 +298,11 @@ async function main() {
         failures.push({ check: `redactionList/${uid}`, reason });
       }
     } else {
-      printRow(`redactionList/${uid}`, "FAIL", "doc does not exist — gdprEraseUser may not have completed");
+      printRow(
+        `redactionList/${uid}`,
+        "FAIL",
+        "doc does not exist — gdprEraseUser may not have completed",
+      );
       allPass = false;
       failures.push({ check: `redactionList/${uid}`, reason: "doc does not exist" });
     }

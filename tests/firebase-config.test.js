@@ -136,3 +136,58 @@ describe("firebase.json — Phase 10 tightened CSP shape (HOST-07)", () => {
     expect(v).toContain("preload");
   });
 });
+
+// ============================================================
+// PLAN 10-04 WAVE 4 NOTE: Task 2 operator session un-skips the
+// following block (delete `.skip` on the next describe call) in
+// the SAME commit that flips firebase.json line 21 from
+// "Content-Security-Policy-Report-Only" to "Content-Security-Policy".
+// Also DELETE the Wave 2 describe above (it asserts the RO key
+// shape which no longer ships after the flip). Net delta: -1 RO
+// describe, +1 enforced describe (skip removed), 6 assertions
+// shift from RO to enforced.
+// ============================================================
+
+// PLAN 10-04 WAVE 4 (HOST-07 enforcement flip): pre-staged assertions for
+// the ENFORCED CSP key. Skipped until Task 2's operator session runs the
+// firebase.json line 21 flip — at that point the operator deletes `.skip`
+// (single knob) and the existing Wave 2 describe is removed (cspKey moves
+// from the RO key to the enforced key in the same commit).
+describe.skip("firebase.json — Phase 10 enforced CSP shape (HOST-07) — Wave 4 un-skip", () => {
+  const cspKey = "Content-Security-Policy";
+
+  it("style-src is locked to 'self' — no 'unsafe-inline' (enforced)", () => {
+    const csp = headerByKey(cspKey)?.value ?? "";
+    expect(csp).toMatch(/style-src 'self'(?!\s*'unsafe-inline')/);
+    expect(csp).not.toMatch(/style-src[^;]*'unsafe-inline'/);
+  });
+
+  it("connect-src includes Sentry EU origin (https://de.sentry.io) — enforced", () => {
+    const csp = headerByKey(cspKey)?.value ?? "";
+    expect(csp).toContain("https://de.sentry.io");
+  });
+
+  it("frame-src is 'self' (no firebaseapp.com popup origin) — enforced", () => {
+    const csp = headerByKey(cspKey)?.value ?? "";
+    expect(csp).toMatch(/frame-src 'self'/);
+    expect(csp).not.toMatch(/firebaseapp\.com/);
+  });
+
+  it("base-uri 'self' and form-action 'self' present (HOST-07 SC#1) — enforced", () => {
+    const csp = headerByKey(cspKey)?.value ?? "";
+    expect(csp).toContain("base-uri 'self'");
+    expect(csp).toContain("form-action 'self'");
+  });
+
+  it("default-src + object-src + frame-ancestors retain Phase 3 substrate — enforced", () => {
+    const csp = headerByKey(cspKey)?.value ?? "";
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("object-src 'none'");
+    expect(csp).toContain("frame-ancestors 'none'");
+  });
+
+  it("Content-Security-Policy-Report-Only header is REMOVED (enforced shipped — Plan 10-04)", () => {
+    expect(headerByKey("Content-Security-Policy-Report-Only")).toBeUndefined();
+    expect(headerByKey("Content-Security-Policy")).toBeDefined();
+  });
+});

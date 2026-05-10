@@ -366,6 +366,110 @@ function makeBatch() {
   };
 }
 
+// ─── collectionGroup helper (Phase 8 Wave 3 / 08-04) ─────────────────────────
+// Mimics Firestore's collectionGroup(name) semantics: matches all docs whose
+// path has a segment matching `name`. For example, collectionGroup("comments")
+// matches orgs/o1/comments/c1, orgs/o2/comments/c2, funnelComments/f1 would
+// NOT match (different collection name). The implementation scans docStore for
+// all paths that contain a /<name>/ segment (or end in /<name>/<docId>).
+//
+// The returned query object supports .where() / .limit() / .orderBy() /
+// .startAfter() chains — it delegates to buildCollectionGroupQuery below.
+
+function buildCollectionGroupQuery(
+  groupName: string,
+  clauses: WhereClause[],
+  limit: number | null,
+  orderByField: string | null = null,
+  startAfterDoc: { id: string; data: () => Record<string, unknown> } | null = null,
+): any {
+  return {
+    where(field: string, op: string, value: unknown) {
+      return buildCollectionGroupQuery(groupName, [...clauses, { field, op, value }], limit, orderByField, startAfterDoc);
+    },
+    limit(n: number) {
+      return buildCollectionGroupQuery(groupName, clauses, n, orderByField, startAfterDoc);
+    },
+    orderBy(field: string) {
+      return buildCollectionGroupQuery(groupName, clauses, limit, field, startAfterDoc);
+    },
+    startAfter(doc: { id: string; data: () => Record<string, unknown> }) {
+      return buildCollectionGroupQuery(groupName, clauses, limit, orderByField, doc);
+    },
+    async get() {
+      const matches: Array<{
+        id: string;
+        ref: { path: string };
+        data: () => Record<string, unknown>;
+        orderVal: number;
+      }> = [];
+
+      for (const [path, data] of docStore.entries()) {
+        // Match: path must have a segment equal to groupName immediately before the doc id.
+        // e.g. for groupName="comments", path="orgs/o1/comments/c1" → segments[-2]==="comments"
+        const segments = path.split("/");
+        if (segments.length < 2) continue;
+        const collectionSegment = segments[segments.length - 2];
+        if (collectionSegment !== groupName) continue;
+
+        const docId = segments[segments.length - 1];
+
+        let ok = true;
+        for (const clause of clauses) {
+          const v = readField(data, clause.field);
+          if (clause.op === "==" && v !== clause.value) {
+            ok = false;
+            break;
+          }
+          if (clause.op === ">") {
+            if (v === undefined || v === null) { ok = false; break; }
+            const cur = v instanceof Date ? v.getTime() : Number(v);
+            const cmp = clause.value instanceof Date ? clause.value.getTime() : Number(clause.value);
+            if (!(cur > cmp)) { ok = false; break; }
+          }
+          if (clause.op === "<") {
+            if (v === undefined || v === null) { ok = false; break; }
+            const cur = v instanceof Date ? v.getTime() : Number(v);
+            const cmp = clause.value instanceof Date ? clause.value.getTime() : Number(clause.value);
+            if (!(cur < cmp)) { ok = false; break; }
+          }
+        }
+        if (!ok) continue;
+
+        const orderVal = orderByField
+          ? (() => {
+              const ov = readField(data, orderByField);
+              return ov instanceof Date ? ov.getTime() : Number(ov ?? 0);
+            })()
+          : 0;
+        matches.push({ id: docId, ref: { path }, data: () => ({ ...data }), orderVal });
+      }
+
+      if (orderByField) {
+        matches.sort((a, b) => a.orderVal - b.orderVal);
+      }
+
+      let startIdx = 0;
+      if (startAfterDoc) {
+        const cursorId = startAfterDoc.id;
+        const cursorIdx = matches.findIndex((m) => m.id === cursorId);
+        if (cursorIdx !== -1) startIdx = cursorIdx + 1;
+      }
+
+      const sliced = limit !== null ? matches.slice(startIdx, startIdx + limit) : matches.slice(startIdx);
+
+      return {
+        empty: sliced.length === 0,
+        size: sliced.length,
+        docs: sliced.map((m) => ({ id: m.id, ref: m.ref, data: m.data })),
+        forEach(fn: (d: { id: string; ref: { path: string }; data: () => Record<string, unknown> }) => void) {
+          sliced.forEach((m) => fn({ id: m.id, ref: m.ref, data: m.data }));
+        },
+      };
+    },
+  };
+}
+
 // ─── Phase 7 public mock factories ───────────────────────────────────────────
 
 export function getFirestoreMock() {
@@ -375,6 +479,9 @@ export function getFirestoreMock() {
     },
     collection(prefix: string) {
       return buildQuery(prefix, [], null);
+    },
+    collectionGroup(name: string) {
+      return buildCollectionGroupQuery(name, [], null);
     },
     batch() {
       return makeBatch();

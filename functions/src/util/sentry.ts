@@ -11,9 +11,16 @@
 //
 // Pattern C purity caveat: this module talks to Sentry only — does NOT import
 // firebase-admin/*. Safe to load from any callable / trigger module.
+//
+// Phase 9 Wave 1 (OBS-01): beforeSend extended to scrub via the shared
+// PII_KEYS dictionary in ./pii-scrubber.ts (parity-tested with the browser
+// twin at src/observability/pii-scrubber.js). Free-form request bodies are
+// also clipped to "<redacted-body>" to defend against chat/comment payload
+// leaks (Pitfall 18 #4).
 
 import * as Sentry from "@sentry/node";
 import { logger } from "firebase-functions/logger";
+import { PII_KEYS } from "./pii-scrubber.js";
 
 let inited = false;
 
@@ -37,16 +44,31 @@ function init(dsn: string): void {
       // Pitfall 18 #1 — strip auth + cookie headers.
       if (event.request?.headers) {
         const headers = event.request.headers as Record<string, unknown>;
-        delete headers["authorization"];
-        delete headers["Authorization"];
-        delete headers["cookie"];
-        delete headers["Cookie"];
+        for (const k of ["authorization", "Authorization", "cookie", "Cookie"]) {
+          delete headers[k];
+        }
       }
-      // Strip user-identifying fields from extra context.
+      // Phase 9 (extend) — strip extras + contexts via shared dictionary.
+      const bags: Record<string, unknown>[] = [];
       if (event.extra && typeof event.extra === "object") {
-        const extra = event.extra as Record<string, unknown>;
-        for (const k of ["email", "name", "ip"]) {
-          if (k in extra) delete extra[k];
+        bags.push(event.extra as Record<string, unknown>);
+      }
+      if (event.contexts && typeof event.contexts === "object") {
+        for (const c of Object.values(event.contexts)) {
+          if (c && typeof c === "object") bags.push(c as Record<string, unknown>);
+        }
+      }
+      for (const bag of bags) {
+        for (const k of PII_KEYS) {
+          if (k in bag) bag[k] = "<redacted>";
+        }
+      }
+      // Phase 9 (NEW) — clip free-form request bodies (chat/comment payload
+      // defence — Pitfall 18 #4).
+      if (event.request && typeof event.request === "object") {
+        const req = event.request as Record<string, unknown>;
+        for (const k of ["data", "body"]) {
+          if (typeof req[k] === "string") req[k] = "<redacted-body>";
         }
       }
       return event;
@@ -81,21 +103,40 @@ export function withSentry<TIn, TOut>(
 /**
  * Test-only export of beforeSend behaviour so unit tests can exercise the
  * scrub logic directly without spinning up Sentry's transport.
+ *
+ * Phase 9 (OBS-01) extended: now uses the shared PII_KEYS dictionary, applies
+ * to extras AND each contexts bag, and clips free-form request.data/body
+ * strings to "<redacted-body>". The redaction contract changed from `delete`
+ * (Phase 7) to `"<redacted>"` assignment — keeps the field present so SRE can
+ * still see "this PII slot WAS populated" without leaking the value.
  */
 export function _scrubEventForTest(event: Record<string, unknown>): Record<string, unknown> {
   const e = event as {
-    request?: { headers?: Record<string, unknown> };
+    request?: { headers?: Record<string, unknown>; data?: unknown; body?: unknown } & Record<string, unknown>;
     extra?: Record<string, unknown>;
+    contexts?: Record<string, unknown>;
   };
   if (e.request?.headers) {
-    delete e.request.headers["authorization"];
-    delete e.request.headers["Authorization"];
-    delete e.request.headers["cookie"];
-    delete e.request.headers["Cookie"];
+    for (const k of ["authorization", "Authorization", "cookie", "Cookie"]) {
+      delete e.request.headers[k];
+    }
   }
-  if (e.extra && typeof e.extra === "object") {
-    for (const k of ["email", "name", "ip"]) {
-      if (k in e.extra) delete e.extra[k];
+  const bags: Record<string, unknown>[] = [];
+  if (e.extra && typeof e.extra === "object") bags.push(e.extra);
+  if (e.contexts && typeof e.contexts === "object") {
+    for (const c of Object.values(e.contexts)) {
+      if (c && typeof c === "object") bags.push(c as Record<string, unknown>);
+    }
+  }
+  for (const bag of bags) {
+    for (const k of PII_KEYS) {
+      if (k in bag) bag[k] = "<redacted>";
+    }
+  }
+  if (e.request && typeof e.request === "object") {
+    const req = e.request as Record<string, unknown>;
+    for (const k of ["data", "body"]) {
+      if (typeof req[k] === "string") req[k] = "<redacted-body>";
     }
   }
   return event;

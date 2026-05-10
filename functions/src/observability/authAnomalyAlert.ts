@@ -117,8 +117,17 @@ export async function _handleAuditEvent(
       const snap = await tx.get(ref);
       const cur = snap.exists
         ? (snap.data() as { count: number; windowStart: number })
-        : { count: 0, windowStart: now };
-      if (now - cur.windowStart > FAIL_WINDOW_MS) {
+        : null;
+      // Three branches:
+      // 1) doc doesn't exist yet → tx.set fresh counter at count=1
+      // 2) doc exists but window expired → tx.set fresh counter at count=1
+      //    (overwrites stale window — equivalent to a reset)
+      // 3) doc exists and window open → tx.update with FieldValue.increment(1)
+      // Branches 1 + 2 collapse to the same `tx.set` write because Firestore's
+      // `tx.update` REQUIRES the doc to exist. RESEARCH.md §Pattern 6 conflated
+      // these two cases and would crash on the first-ever failure for a given
+      // ipHash; fixed here.
+      if (cur === null || now - cur.windowStart > FAIL_WINDOW_MS) {
         tx.set(ref, {
           count: 1,
           windowStart: now,

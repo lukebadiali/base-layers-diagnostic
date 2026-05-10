@@ -7,8 +7,16 @@
 //
 // D-04 lint rule: import from ../firebase/functions.js adapter, not
 // directly from "firebase/functions".
+//
+// Phase 9 Wave 4 (AUDIT-05): POST-emit `compliance.{export,erase}.user.requested`
+// after each callable resolves. Server-side emits the bare flavour (Phase 8
+// baseline `compliance.export.user` + `compliance.erase.user`); client
+// `.requested` makes the pair latency-observable (Pattern 5 #4). Empty
+// payload — actor identity is server-overlaid from request.auth.token
+// (Pitfall 17).
 
 import { httpsCallable, functions } from "../firebase/functions.js";
+import { emitAuditEvent } from "../observability/audit-events.js";
 
 const exportUserCallable = httpsCallable(functions, "gdprExportUser");
 const eraseUserCallable = httpsCallable(functions, "gdprEraseUser");
@@ -25,6 +33,17 @@ const eraseUserCallable = httpsCallable(functions, "gdprEraseUser");
 export async function exportUser(input) {
   const clientReqId = crypto.randomUUID();
   const result = await exportUserCallable({ ...input, clientReqId });
+  // Phase 9 (AUDIT-05) POST-emit. Best-effort — never roll back the
+  // already-resolved server callable on audit failure.
+  try {
+    emitAuditEvent(
+      "compliance.export.user.requested",
+      { type: "user", id: input.userId, orgId: null },
+      {},
+    );
+  } catch (_emitErr) {
+    // Pattern 5 #2 — best-effort.
+  }
   return /** @type {{ url: string, expiresAt: number }} */ (result.data);
 }
 
@@ -41,5 +60,16 @@ export async function exportUser(input) {
 export async function eraseUser(input) {
   const clientReqId = crypto.randomUUID();
   const result = await eraseUserCallable({ ...input, clientReqId });
+  // Phase 9 (AUDIT-05) POST-emit. Best-effort — never roll back the
+  // already-resolved erasure on audit failure.
+  try {
+    emitAuditEvent(
+      "compliance.erase.user.requested",
+      { type: "user", id: input.userId, orgId: null },
+      {},
+    );
+  } catch (_emitErr) {
+    // Pattern 5 #2 — best-effort.
+  }
   return /** @type {{ ok: true, counts: Record<string, number> }} */ (result.data);
 }

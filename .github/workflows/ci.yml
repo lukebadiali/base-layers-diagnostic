@@ -155,8 +155,18 @@ jobs:
         # builds use a placeholder so the bundle structure is verified without
         # leaking a real key into preview channels. The deploy job below sets
         # the real key from secrets.
+        #
+        # Phase 9 Wave 2 (OBS-04): VITE_SENTRY_DSN + VITE_GIT_SHA + SENTRY_AUTH_TOKEN
+        # + GITHUB_SHA wired in. SENTRY_AUTH_TOKEN is empty for PR builds (forks
+        # do not get repo secrets); the @sentry/vite-plugin condition in
+        # vite.config.js is a silent no-op without it. Source-map upload only
+        # fires from the deploy + preview jobs below where the secret resolves.
         env:
           VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY || 'ci-build-verification-placeholder' }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          VITE_GIT_SHA: ${{ github.sha }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          GITHUB_SHA: ${{ github.sha }}
         run: npm run build
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -182,10 +192,38 @@ jobs:
           node-version: "22"
           cache: "npm"
       - run: npm ci
-      - name: Build (with reCAPTCHA Enterprise key from secrets)
+      - name: Build (with reCAPTCHA Enterprise key from secrets + Sentry source-map upload)
+        # Phase 9 Wave 2 (OBS-04): SENTRY_AUTH_TOKEN populated from secrets so
+        # the @sentry/vite-plugin uploads source maps to the EU Sentry instance
+        # and deletes dist/**/*.map post-upload (filesToDeleteAfterUpload). The
+        # gate step below asserts the cleanup ran (Pitfall 6 — hidden source
+        # maps invariant; deploy fails closed if any .map remains).
         env:
           VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY || 'ci-build-verification-placeholder' }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          VITE_GIT_SHA: ${{ github.sha }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          GITHUB_SHA: ${{ github.sha }}
         run: npm run build
+      - name: Assert no .map files served from dist (OBS-04 / Pitfall 6)
+        # Hidden-source-map invariant. The @sentry/vite-plugin
+        # filesToDeleteAfterUpload pattern should have deleted every .map after
+        # uploading to Sentry. If any survive, hosting would serve them and
+        # leak original source. Two failure modes both surface here:
+        #   1. plugin filesToDeleteAfterUpload misconfigured (vite.config.js drift)
+        #   2. SENTRY_AUTH_TOKEN missing/empty so plugin did not run at all
+        # Both are deploy-blocking. Token redaction: the gate never echoes the
+        # secret; GitHub Actions auto-masks any echoed value anyway.
+        run: |
+          set -euo pipefail
+          if find dist -name "*.map" -type f | grep -q .; then
+            echo "FAIL: dist/*.map files present after build."
+            echo "Cause: @sentry/vite-plugin filesToDeleteAfterUpload misconfigured,"
+            echo "       OR SENTRY_AUTH_TOKEN missing so plugin did not run."
+            find dist -name "*.map" -type f
+            exit 1
+          fi
+          echo "OK: no .map files in dist (hidden source-map invariant satisfied)"
       - name: Install + build functions/ workspace
         run: |
           cd functions
@@ -266,10 +304,33 @@ jobs:
           node-version: "22"
           cache: "npm"
       - run: npm ci
-      - name: Build (preview channel — placeholder reCAPTCHA key)
+      - name: Build (preview channel — placeholder reCAPTCHA key + Sentry source-map upload)
+        # Phase 9 Wave 2 (OBS-04): preview channel deploys also upload source
+        # maps so PR preview-channel error stacks resolve. Same env shape as
+        # the main deploy. If SENTRY_AUTH_TOKEN is unavailable on a fork PR,
+        # the plugin no-ops AND the gate below catches the leftover .map files
+        # — preview fails closed, mirroring deploy semantics.
         env:
           VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY || 'ci-build-verification-placeholder' }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          VITE_GIT_SHA: ${{ github.sha }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          GITHUB_SHA: ${{ github.sha }}
         run: npm run build
+      - name: Assert no .map files served from dist (OBS-04 / Pitfall 6)
+        # Same hidden-source-map invariant as the deploy job. Preview channels
+        # are publicly reachable URLs — leaking .map files there is the same
+        # information-disclosure risk as a production deploy.
+        run: |
+          set -euo pipefail
+          if find dist -name "*.map" -type f | grep -q .; then
+            echo "FAIL: dist/*.map files present after build."
+            echo "Cause: @sentry/vite-plugin filesToDeleteAfterUpload misconfigured,"
+            echo "       OR SENTRY_AUTH_TOKEN missing so plugin did not run."
+            find dist -name "*.map" -type f
+            exit 1
+          fi
+          echo "OK: no .map files in dist (hidden source-map invariant satisfied)"
       - name: Install + build functions/ workspace
         run: |
           cd functions

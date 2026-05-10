@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-10T16:57:36Z"
+last_updated: "2026-05-10T17:30:09Z"
 progress:
   total_phases: 12
   completed_phases: 7
-  total_plans: 54
-  completed_plans: 48
+  total_plans: 55
+  completed_plans: 49
   percent: 89
 ---
 
 # State: Base Layers Diagnostic — Hardening Pass
 
 **Initialized:** 2026-05-03
-**Last updated:** 2026-05-10 — Phase 9 plan 02 COMPLETE (@sentry/vite-plugin registered conditionally in vite.config.js with EU region URL + filesToDeleteAfterUpload hidden source-maps invariant; CI build/deploy/preview env wiring (VITE_SENTRY_DSN, VITE_GIT_SHA, SENTRY_AUTH_TOKEN, GITHUB_SHA); post-build .map deletion gate on deploy + preview; tests/build/source-map-gate.test.js 5/5 green; OBS-04 substrate code-complete, operator-deploy-pending). Commits: fc29a4f, f3978eb. ~16 minutes execution.
+**Last updated:** 2026-05-10 — Phase 9 plan 03a COMPLETE (server-side audit-event substrate: 33 new auditEventType enum literals (15 server bare data-domain flavours + 18 client .requested companions = 28→61 total); writeAuditEvent emissions added to setClaims (iam.claims.set after poke), beforeUserSignedIn try/catch substrate (auth.signin.failure on catch — DORMANT until rejection rules land), 3 lifecycle callables (softDelete/restoreSoftDeleted/permanentlyDeleteSoftDeleted emitting data.<type>.<op>); 25 new tests across 5 new test files + 1 extended; closes BLOCKER 1/2/3 from prior iteration). Commits: cf768d7, 4d625d7, aca4bd2. ~20 minutes execution.
 
 ---
 
@@ -36,9 +36,9 @@ Phase 9 — Observability + Audit-Event Wiring (Wave 1 substrate landed; Waves 2
 ## Current Position
 
 Phase: 9 (Observability + Audit-Event Wiring) — EXECUTING
-Plan: 2 of 6 — Plans 09-01 + 09-02 COMPLETE; Plans 09-03..09-06 pending
-Plans complete (Phase 9): 2 of 6
-**Status:** Phase 9 Wave 2 substrate landed — @sentry/vite-plugin registered conditionally in vite.config.js (EU region; filesToDeleteAfterUpload: ["dist/**/*.map"]); CI build/deploy/preview env wiring + post-build .map deletion gate (Pitfall 6 two-layer defence). OBS-04 substrate code-complete. Operator must set GitHub Actions secrets `SENTRY_AUTH_TOKEN` + `VITE_SENTRY_DSN` per `runbooks/phase-9-sentry-bootstrap.md` Step 5 before first deploy actually uploads source maps; first-deploy verification gates the Plan 09-05 close-gate. Phase 8 operator session still pending (08-06-DEFERRED-CHECKPOINT.md). Phase 9 Wave 3 (09-03 — AUDIT-05 view wiring) can proceed immediately (no dependency on Wave 2 operator action).
+Plan: 3 of 7 — Plans 09-01 + 09-02 + 09-03a COMPLETE; Plans 09-03..09-06 pending
+Plans complete (Phase 9): 3 of 7 (09-03a inserted as Wave 3 substrate; closes prior-iteration BLOCKER 1/2/3 — server-side bare audit emissions before Plan 03 client `.requested` wiring)
+**Status:** Phase 9 Wave 3 SUBSTRATE landed — auditEventType Zod enum extended from 28 to 61 entries (15 server-side bare data-domain flavours + 18 client-side .requested companions, including `iam.claims.set.requested`, `compliance.{export,erase}.user.requested`, and `data.{action,comment,document,message,funnelComment}.{softDelete,restore,permanentlyDelete}` × 2). `writeAuditEvent` calls now fire after the underlying op in `setClaims.ts` (iam.claims.set), `beforeUserSignedIn.ts` (auth.signin.failure substrate, DORMANT until rejection rules land), and the 3 lifecycle callables (softDelete + restoreSoftDeleted + permanentlyDeleteSoftDeleted). 25 new tests pass (107 total in audit/auth/lifecycle suites). Wave 4 anomaly rules (Plan 04) can now read from real data — Rule 1 (auth-fail burst), Rule 3 (role escalation), AUDIT-05 mirror-trigger Pitfall 7 dedup. Plan 09-03 (client `.requested` wiring) is now reduced to a pure consumer of this enum — no double-edit. Phase 8 operator session still pending (08-06-DEFERRED-CHECKPOINT.md). Phase 9 Wave 3 (09-03 client wiring) ready to execute next.
 **Progress:** [█████████ ] 89%
 
 ```
@@ -163,6 +163,17 @@ These persist in `/gsd-progress` + `/gsd-audit-uat` until resolved. Cleanup ledg
 - **Use `SECURITY_AUDIT.md` as audit framework** — translate Vercel/Supabase sections to Firebase (PROJECT.md, decided 2026-05-03)
 - **12-phase plan, not 5-8** — standard granularity overridden because four load-bearing sequencing constraints cannot be collapsed (ROADMAP.md "Granularity Rationale", validated 2026-05-03)
 
+### Phase 9 Plan 03a Decisions (2026-05-10)
+
+- **Atomic enum extension landed in 03a, not split between 03a + 03** — 33 new auditEventType literals (15 server bare + 18 client .requested) added in one Zod.enum() edit; Plan 03's enum-extension task is now reduced to a verify-only step (`grep -c '\.requested",'` returns 18). Avoids double-edit + race conditions.
+- **Server-side bare emission via direct `writeAuditEvent` Admin SDK call (NOT through auditWrite callable)** — `auditWrite.ts:51-53` rejects unauthenticated callers; this is the loop BLOCKER 1 fix specifically avoids. Each emit synthesises a `ServerContext` with actor sourced from `request.auth.token` (or `actor.uid:null + email from event.data` for unauthenticated `beforeUserSignedIn` path).
+- **`beforeUserSignedIn` substrate is DORMANT today** — handler does NOT currently REJECT sign-ins; the catch branch fires only on internal handler errors (logger throw, malformed event.data). Wave 4 Rule 1 (auth-fail burst) trigger code is functional + sees zero rows until a future plan adds a business-rule rejection (e.g. block disabled accounts at sign-in). Documented as substrate-honest (not broken).
+- **`permanentlyDeleteSoftDeleted` target.orgId:null** — callable input has no orgId field; resource lives in admin-scoped `softDeleted/{type}/items/{id}` path. Test pinned this explicitly so it doesn't drift.
+- **Best-effort try/catch on every emit (Pattern 5 #2)** — every `writeAuditEvent` is wrapped; on failure `logger.warn("audit.emit.failed", {type, id, error})` and continue. Underlying op (claim mutation, batch.commit, ref.delete) committed BEFORE the emit, so emit failure cannot roll back data.
+- **Pre-existing setClaims.unit.test.ts Test 2 fixed inline (Rule 1)** — Phase 9 wiring caused doc()/set() to fire twice (poke + audit); test expected `toHaveBeenCalledTimes(1)`. Updated to expect 2 with poke at index 0 + audit emit at index 1; pinned audit doc path to `auditLog/[uuid]`.
+- **Type literal narrowing in lifecycle callables** — TypeScript template-literal types: `\`data.${data.type}.softDelete\` as "data.action.softDelete" | "data.comment.softDelete" | ...`. Compile-time check that the synthesised string is a valid Zod enum literal; catches drift if `SOFT_DELETABLE_TYPES` ever expands without an enum extension.
+- **5 full-suite test-pollution flakes documented as deferred** — pre-existing, reproducible on bare branch tip. vitest forks pool sharing module-level state in `_mocks/admin-sdk.ts`. Each test passes deterministically in isolation. Tracking for Plan 09-06 cleanup-ledger close-gate sweep.
+
 ### Phase 9 Plan 02 Decisions (2026-05-10)
 
 - **Plugin telemetry disabled (`telemetry: false`)** — no plugin self-telemetry to Sentry; only release-finalize + sourcemap-upload API calls fire. Aligns with project's "no third-party telemetry" disposition.
@@ -270,7 +281,9 @@ Additional non-negotiables:
 
 ## Session Continuity
 
-**Last session (2026-05-10):** Phase 9 plan 02 (@sentry/vite-plugin source-map upload + CI env wiring) — both tasks executed and committed. Task 1: vite.config.js plugin registration (`env.SENTRY_AUTH_TOKEN && command === "build"` guard, EU region URL `https://de.sentry.io/`, `filesToDeleteAfterUpload: ["dist/**/*.map"]`, telemetry off) + `tests/build/source-map-gate.test.js` 5-assertion drift detector (5/5 green). Task 2: `.github/workflows/ci.yml` build/deploy/preview env wiring (VITE_SENTRY_DSN, VITE_GIT_SHA, SENTRY_AUTH_TOKEN, GITHUB_SHA) + post-build "Assert no .map files" gate on deploy + preview jobs (NOT on PR-validation build by design). Two auto-fixed bugs in test-file: (1) URL-form `readFileSync` rejected by happy-dom; switched to `path.resolve(process.cwd(), ...)`. (2) `/* global process */` redeclared an ESLint built-in global; dropped the comment. ~16 minutes execution. Commits: `fc29a4f`, `f3978eb`. 09-02-SUMMARY.md authored. OBS-04 marked `[~]` (substrate code-complete, operator-pending GitHub Actions secrets per `runbooks/phase-9-sentry-bootstrap.md` Step 5). Next plan: 09-03 (AUDIT-05 view wiring across `src/firebase/auth.js` + `src/cloud/{claims-admin,gdpr,soft-delete}.js`).
+**Last session (2026-05-10):** Phase 9 plan 03a (server-side audit-event substrate — closes prior-iteration BLOCKER 1/2/3) — all 3 tasks executed and committed. Task 1: auditEventSchema.ts enum extended 28 → 61 entries (15 server-side bare data-domain flavours `data.{action,comment,document,message,funnelComment}.{softDelete,restore,permanentlyDelete}` + 18 client-side .requested companions: `iam.claims.set.requested`, `compliance.{export,erase}.user.requested`, plus the 15 data-domain .requested variants). +10 schema tests (TDD RED → GREEN). Task 2: setClaims.ts emits `iam.claims.set` after the poke write (Pitfall 17: actor from `request.auth.token`); beforeUserSignedIn.ts wraps body in try/catch + emits `auth.signin.failure` on catch branch with `actor.uid:null + email from event.data + ip/userAgent from event` — SUBSTRATE-HONEST: dormant today (handler doesn't currently REJECT sign-ins; catch fires only on internal handler errors). +6 tests. Task 3: 3 lifecycle callables emit `data.<type>.<op>` after batch.commit/ref.delete with best-effort try/catch swallow + Pitfall 17 actor sourcing + type-literal narrowing for compile-time enum-literal check. +9 tests. Auto-fixed pre-existing setClaims.unit.test.ts Test 2 (Rule 1: now 2 doc()/set() calls — poke at index 0, audit at index 1). 5 full-suite test-pollution flakes confirmed pre-existing + tracked in deferred-items.md. ~20 minutes execution. Commits: `cf768d7`, `4d625d7`, `aca4bd2`. 09-03a-SUMMARY.md authored. Wave 4 anomaly rules (Plan 04: auth-fail burst, role escalation, AUDIT-05 mirror-trigger Pitfall 7 dedup) can now read from real data. Plan 09-03 (client `.requested` wiring) reduced to pure consumer of the enum landed here. Next plan: 09-03 (AUDIT-05 client view wiring across `src/firebase/auth.js` + `src/cloud/{claims-admin,gdpr,soft-delete}.js`).
+
+**Previous session (2026-05-10):** Phase 9 plan 02 (@sentry/vite-plugin source-map upload + CI env wiring) — both tasks executed and committed. Task 1: vite.config.js plugin registration (`env.SENTRY_AUTH_TOKEN && command === "build"` guard, EU region URL `https://de.sentry.io/`, `filesToDeleteAfterUpload: ["dist/**/*.map"]`, telemetry off) + `tests/build/source-map-gate.test.js` 5-assertion drift detector (5/5 green). Task 2: `.github/workflows/ci.yml` build/deploy/preview env wiring (VITE_SENTRY_DSN, VITE_GIT_SHA, SENTRY_AUTH_TOKEN, GITHUB_SHA) + post-build "Assert no .map files" gate on deploy + preview jobs (NOT on PR-validation build by design). Two auto-fixed bugs in test-file: (1) URL-form `readFileSync` rejected by happy-dom; switched to `path.resolve(process.cwd(), ...)`. (2) `/* global process */` redeclared an ESLint built-in global; dropped the comment. ~16 minutes execution. Commits: `fc29a4f`, `f3978eb`. 09-02-SUMMARY.md authored. OBS-04 marked `[~]` (substrate code-complete, operator-pending GitHub Actions secrets per `runbooks/phase-9-sentry-bootstrap.md` Step 5). Next plan: 09-03 (AUDIT-05 view wiring across `src/firebase/auth.js` + `src/cloud/{claims-admin,gdpr,soft-delete}.js`).
 
 **Previous session (2026-05-10):** Phase 9 plan 01 (Sentry init substrate + shared PII scrubber + audit-events proxy) — all 4 tasks executed and committed. Task 1: install @sentry/browser@10.52.0 (bumped from 10.51.0) + @sentry/vite-plugin@5.2.1 devDep + new src/observability/pii-scrubber.js + functions/src/util/pii-scrubber.ts twin + parity test (drift contract). Task 2: src/observability/sentry.js body filled (initSentryBrowser + setUser + captureError + addBreadcrumb + fingerprint rate-limit; empty-DSN no-op kill-switch); 9 vitest behaviour tests. Task 3: src/observability/audit-events.js body filled (AUDIT_EVENTS frozen 25-entry table + best-effort emitAuditEvent proxy); functions/src/util/sentry.ts beforeSend extended to use shared PII_KEYS + redaction contract changed delete -> "<redacted>"; 6 audit-events tests + 2 new sentry-scrub tests. Task 4: src/main.js Sentry boot wired in fbOnAuthStateChanged after claims hydration (Pitfall 3) + runbooks/phase-9-sentry-bootstrap.md (7-section operator runbook for Sentry org / EU project / DSN / 70 percent quota alert OBS-08). Commits: 4a0aafc..de2a2cc (4 commits). Root observability tests 22/22 green; functions tests 237/237 green. Pre-existing tsc + view-snapshot failures (Phase 8 inheritance) tracked in deferred-items.md. 09-01-SUMMARY.md created. Next plan: 09-02 (@sentry/vite-plugin source-map upload + CI env wiring).
 
@@ -308,4 +321,4 @@ Additional non-negotiables:
 ---
 
 *State initialized: 2026-05-03 after roadmap creation*
-*Last updated: 2026-05-10 — Phase 9 plan 02 COMPLETE (commits fc29a4f, f3978eb); ready for /gsd-execute-phase 9 (Plan 09-03)*
+*Last updated: 2026-05-10 — Phase 9 plan 03a COMPLETE (commits cf768d7, 4d625d7, aca4bd2); ready for /gsd-execute-phase 9 (Plan 09-03)*

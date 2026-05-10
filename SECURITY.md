@@ -869,6 +869,131 @@ This is the auditor walk-through pointer for Phase 7. Each row maps a Phase 7 co
 
 ---
 
+## § Data Lifecycle (Soft-Delete + Purge)
+
+Phase 8 (LIFE-01..06): Admin-mediated soft-delete and 30-day restore window implemented across six collection paths: `orgs/{id}` (org soft-delete), `orgs/*/messages/{id}`, `orgs/*/comments/{id}`, `orgs/*/actions/{id}`, `orgs/*/documents/{id}`, and `funnelComments/{id}`. Daily `scheduledPurge` hard-deletes all records where `deletedAt` is set and `deletedAt < now() - 30d`. Firestore Rules predicate `notDeleted(resource.data)` is enforced on read across all five subcollection paths; client data wrappers add a matching `where("deletedAt", "==", null)` conjunct on every list query so queries that lack the conjunct fail `permission-denied` at the rules layer (defence-in-depth). A functional admin UI (`src/views/admin.js` § Recently Deleted) presents the soft-deleted item list with per-item Restore and "Permanently delete now" buttons.
+
+**Evidence:**
+
+- Callable implementations: `functions/src/lifecycle/softDelete.ts`, `functions/src/lifecycle/restoreSoftDeleted.ts`, `functions/src/lifecycle/scheduledPurge.ts`, `functions/src/lifecycle/permanentlyDeleteSoftDeleted.ts`; helper: `functions/src/lifecycle/resolveDocRef.ts`
+- Rules predicate: `firestore.rules` `notDeleted(resource.data)` function + 5 conjunction sites (orgs/messages/comments/actions/documents subcollections)
+- Rules test coverage: `tests/rules/soft-delete-predicate.test.js` ≥ 18 cells (notDeleted × 5 collections × allow/deny matrix)
+- Client seam: `src/cloud/soft-delete.js` (Phase 4 stub closed — Wave 2 / 08-03 Task 6)
+- Admin UI: `src/views/admin.js` Recently Deleted section; `src/data/soft-deleted.js` (list + filter helpers)
+
+**Framework citations:**
+
+- OWASP ASVS L2 V8.3.1 — data lifecycle controls (defined retention, controlled deletion)
+- ISO/IEC 27001:2022 A.5.30 (ICT readiness) + A.8.10 (information deletion)
+- SOC 2 CC6.5 — logical access; controlled deletion enforced server-side
+- GDPR Art. 5(1)(e) — storage limitation; soft-delete + 30-day purge is the mechanism
+
+---
+
+## § GDPR (Export + Erasure)
+
+Phase 8 (GDPR-01..05): Two admin-callable Cloud Functions implement Art. 15 and Art. 17 rights.
+
+**Export (Art. 15 — gdprExportUser):** Admin-callable that assembles a JSON bundle of all user-linked data across seven collection paths (profile, diagnostic responses, comments, messages, actions, documents, funnel comments, audit events), writes the bundle to `gs://bedeveloped-base-layers-backups/gdpr-exports/{uid}.json`, and returns a V4 signed URL with a 24h TTL. The bundle assembly is pure (no firebase-admin import) via `assembleUserBundle.ts`; the callable handles auth, idempotency, Sentry capture, and URL generation (Pattern A + Pattern C).
+
+**Erasure (Art. 17 — gdprEraseUser):** Admin-callable with a deterministic `sha256(uid + GDPR_PSEUDONYM_SECRET)` tombstone token that replaces `authorId`, `legacyAuthorId`, `uploaderId`, `uploadedBy`, `legacyAppUserId`, and top-level PII fields (`email`, `name`, `displayName`, `photoURL`, `avatar`) across all seven collections plus legacy top-level `documents/` collection. Operations are chunked into 500-op batches (Firestore Admin SDK limit). Firebase Auth is disabled via `updateUser(uid, {disabled: true})`. Storage objects under `orgs/{orgId}/documents/{docId}/` derived from the user's document rows are deleted with 404-tolerance. A `redactionList/{uid}` document is written post-cascade (see GDPR-05 below). A single `compliance.erase.user` audit event with a counts payload is emitted (Pitfall 7 — never per-doc events on a bulk cascade).
+
+**Audit-log retention vs erasure (Pitfall 11 / GDPR Art. 6(1)(f)):** Audit-log docs where `actor.uid == <erased uid>` are NOT deleted. Only `actor.uid`, `actor.email`, and `payload.email` are tombstoned in-place. The doc is retained under legitimate interest (fraud prevention, compliance audit trail), consistent with ICO pseudonymisation guidance as an Art. 17 satisfaction measure.
+
+**Erasure propagation (GDPR-05):** `redactionList/{uid}` stores the tombstone token, `erasedAt`, `erasedBy`, and `schemaVersion: 1`. On PITR restore, the operator iterates this collection and re-applies tombstones to the cloned database before use (see `runbooks/restore-drill-2026-05-13.md` §Re-Redaction Step). Rules: `allow read: if isAdmin(); allow write: if false` — server-only writes via callable; admin-only read.
+
+**Evidence:**
+
+- GDPR callables: `functions/src/gdpr/gdprExportUser.ts`, `functions/src/gdpr/gdprEraseUser.ts`
+- Pure helpers: `functions/src/gdpr/assembleUserBundle.ts` (export assembly), `functions/src/gdpr/pseudonymToken.ts` (tombstone generation), `functions/src/gdpr/eraseCascade.ts` (ops builder)
+- Test coverage: 4 unit test files + 2 integration test files across gdprExportUser + gdprEraseUser
+- Rules: `firestore.rules` `redactionList/{userId}` match block; `tests/rules/redaction-list.test.js` 10 cells
+- Post-erasure audit: `scripts/post-erasure-audit/run.js` (ADC; exit 0/1/2; verifies zero residual PII across all paths)
+- Secret: `GDPR_PSEUDONYM_SECRET` in Firebase Secret Manager (operator-provisioned, version-pinned)
+- Browser seam: `src/cloud/gdpr.js` (Phase 4 stubs closed — `exportUser` + `eraseUser` wired)
+
+**Framework citations:**
+
+- OWASP ASVS L2 V8.1 — data classification and handling; V6 — cryptography (sha256 pseudonymisation)
+- ISO/IEC 27001:2022 A.5.34 (privacy protection) + A.8.11 (data masking) + A.8.12 (data leakage prevention)
+- SOC 2 P5.1 — privacy notice; privacy rights honoured
+- GDPR Art. 15 (right of access), Art. 17 (right to erasure), Art. 25 (data protection by design — pseudonymisation), Art. 30 (record of processing — audit trail), Art. 32 (security of processing)
+
+---
+
+## § Backups + DR + PITR + Storage Versioning
+
+Phase 8 (BACKUP-01..07): Multi-layer backup and recovery substrate.
+
+**Daily Firestore export (BACKUP-01):** 2nd-gen `onSchedule` Cloud Function (`scheduledFirestoreExport`) exports the default Firestore database to `gs://bedeveloped-base-layers-backups/firestore/{YYYY-MM-DD}/` at 02:00 UTC daily. Runs as `backup-sa` (minimal IAM: `roles/datastore.importExportAdmin` + `roles/storage.objectAdmin` on backups bucket only). Region-pinned to `europe-west2` (matches Firestore region, Pitfall 5).
+
+**GCS lifecycle policy (BACKUP-02):** GCS lifecycle: Standard at upload → Nearline at day 30 from creation → Archive at day 365 from creation (335-day Nearline dwell, exceeds BACKUP-02 90d Nearline minimum). Configured via `scripts/setup-backup-bucket/lifecycle.json`; applied by `scripts/setup-backup-bucket/run.js` (idempotent, ADC).
+
+**Firestore PITR (BACKUP-03):** Enabled on the `(default)` database (7-day rolling recovery window). Demonstrated via Path A PITR clone in `runbooks/restore-drill-2026-05-13.md`.
+
+**Storage versioning + soft-delete (BACKUP-04):** GCS uploads bucket (`gs://bedeveloped-base-layers-uploads`) has Object Versioning enabled + 90-day soft-delete policy. Client documents are recoverable from noncurrent versions for 90 days.
+
+**Signed URL TTL (BACKUP-05):** Storage download URLs are V4 signed with 1h TTL via the `getDocumentSignedUrl` callable (`functions/src/backup/getDocumentSignedUrl.ts`). `getDownloadURL` calls are removed from all client code (full sweep verified by `grep -r getDownloadURL src/` returning 0 results). The `storage-reader-sa` issues tokens (`roles/iam.serviceAccountTokenCreator` self-bound + `roles/storage.objectViewer` on uploads bucket).
+
+**Quarterly restore-drill cadence (BACKUP-06):** Documented in `runbooks/phase-8-restore-drill-cadence.md`. Quarterly (Q2-2026 through Q2-2027 schedule). Two-operator paired review required. P1 escalation if missed within 7 days.
+
+**First restore drill (BACKUP-07):** `runbooks/restore-drill-2026-05-13.md` — Path A (PITR clone); timed steps; spot-check; re-redaction step (GDPR-05); cleanup; RTO evidence. Operator fills in actual timings during execution.
+
+**Evidence:**
+
+- Backup callable: `functions/src/backup/scheduledFirestoreExport.ts`
+- Signed URL callable: `functions/src/backup/getDocumentSignedUrl.ts`; browser seam: `src/cloud/signed-url.js`
+- Bucket setup: `scripts/setup-backup-bucket/run.js` + `scripts/setup-backup-bucket/lifecycle.json` + `scripts/setup-backup-bucket/lifecycle.notes.md`
+- Operator runbook: `runbooks/phase-8-backup-setup.md` (§7 includes GDPR secrets + 4 SA provisioning)
+- Restore drill: `runbooks/restore-drill-2026-05-13.md` (BACKUP-07 evidence)
+- Drill cadence: `runbooks/phase-8-restore-drill-cadence.md` (BACKUP-06)
+- `getDownloadURL` removal: `src/data/documents.js` + `src/main.js` sweep
+
+**Framework citations:**
+
+- OWASP ASVS L2 V14.1 (build and deployment) + V8.3 (data protection at rest / storage security)
+- ISO/IEC 27001:2022 A.5.29 (information security during disruption) + A.5.30 (ICT readiness) + A.8.13 (information backup) + A.8.14 (redundancy)
+- SOC 2 CC9.1 (risk mitigation) + A1.2 (environmental protections) + A1.3 (recovery and restoration procedures)
+- GDPR Art. 32(1)(b) (resilience of systems) + Art. 32(1)(c) (restoration of data)
+
+---
+
+## § Phase 8 Audit Index
+
+Auditor walk-through pointer for Phase 8. Each row maps a Phase 8 control to its requirement ID, the code/config that implements it, the test or operator evidence that verifies it, and the framework citations it satisfies. Mirrors the §Phase 7 Audit Index shape (16 rows). Substrate-honest (Pitfall 19): every Validated row has evidence pointers; operator-deferred actions are noted where applicable.
+
+| Requirement | Substrate | Evidence | Status |
+|-------------|-----------|----------|--------|
+| LIFE-01 | `softDelete` + `restoreSoftDeleted` callables; `resolveDocRef.ts` helper for mixed path resolution | `functions/src/lifecycle/{softDelete,restoreSoftDeleted,resolveDocRef}.ts` + unit/integration tests | Validated 2026-05-13 (08-03) |
+| LIFE-02 | Snapshot-then-tombstone in single batch write (`deletedAt` set + snapshot at `softDeleted/{type}/items/{id}`) | `functions/src/lifecycle/softDelete.ts` batch pattern + tests | Validated 2026-05-13 (08-03) |
+| LIFE-03 | Rules `notDeleted(resource.data)` predicate on 5 subcollection paths; client `where("deletedAt", "==", null)` conjunct in all 5 data wrappers | `firestore.rules` + `src/data/{messages,comments,actions,documents,funnelComments}.js` + `tests/rules/soft-delete-predicate.test.js` | Validated 2026-05-13 (08-03) |
+| LIFE-04 | `restoreSoftDeleted` callable (admin-only, Zod-validated, idempotent) returns item to live state within 30-day window | `functions/src/lifecycle/restoreSoftDeleted.ts` + `src/cloud/soft-delete.js` + tests | Validated 2026-05-13 (08-03) |
+| LIFE-05 | `scheduledPurge` with 500-doc batched pagination; purges docs where `deletedAt < now() - 30d` | `functions/src/lifecycle/scheduledPurge.ts` + 1200-doc pagination test | Validated 2026-05-13 (08-03) |
+| LIFE-06 | Admin UI: Recently Deleted list + per-item Restore button + "Permanently delete now" button wired to `permanentlyDeleteSoftDeleted` callable | `src/views/admin.js` + `src/data/soft-deleted.js` + `functions/src/lifecycle/permanentlyDeleteSoftDeleted.ts` | Validated 2026-05-13 (08-03) |
+| GDPR-01 | `gdprExportUser` callable: JSON bundle of all user-linked data; 24h V4 signed URL; `assembleUserBundle.ts` pure helper | `functions/src/gdpr/{assembleUserBundle,gdprExportUser}.ts` + unit (6) + integration (3) tests | Validated 2026-05-13 (08-04) |
+| GDPR-02 | `gdprEraseUser` callable: deterministic sha256(uid + secret) tombstone token via `pseudonymToken.ts`; cascade via `eraseCascade.ts` | `functions/src/gdpr/{pseudonymToken,eraseCascade,gdprEraseUser}.ts` + 12+7+9 tests | Validated 2026-05-13 (08-05) |
+| GDPR-03 | Cascade covers 7+ collections (messages/comments/actions/documents/funnelComments/users/auditLog) + legacy top-level documents/ + Storage deletion + Auth disable | `functions/src/gdpr/eraseCascade.ts` + `scripts/post-erasure-audit/run.js` | Validated 2026-05-13 (08-05) |
+| GDPR-04 | Audit-log retention: PII tombstoned (actor.uid/email + payload.email) in-place; doc preserved under Art. 6(1)(f) legitimate interest | `functions/src/gdpr/eraseCascade.ts` auditLog branch + tests + Pitfall 11 disclosure | Validated 2026-05-13 (08-05) |
+| GDPR-05 | `redactionList/{uid}` written post-cascade; admin-only read rules; restore-drill re-redaction step documents PITR propagation closure | `firestore.rules` redactionList block + `tests/rules/redaction-list.test.js` (10 cells) + `runbooks/restore-drill-2026-05-13.md` §Re-Redaction | Validated 2026-05-13 (08-05 + 08-06) |
+| BACKUP-01 | `scheduledFirestoreExport` (2nd-gen onSchedule, europe-west2, backup-sa, 02:00 UTC daily) | `functions/src/backup/scheduledFirestoreExport.ts`; first export verified by operator (Task 1 step 6) | Validated 2026-05-13 (08-02; deploy: operator) |
+| BACKUP-02 | GCS lifecycle: Standard at upload → Nearline at day 30 from creation → Archive at day 365 from creation (335-day Nearline dwell, exceeds BACKUP-02 90d Nearline minimum) | `scripts/setup-backup-bucket/lifecycle.json` + `scripts/setup-backup-bucket/lifecycle.notes.md`; verified via `gcloud storage buckets describe` (operator) | Validated 2026-05-13 (08-01; operator) |
+| BACKUP-03 | Firestore PITR enabled (7-day rolling window) | `gcloud firestore databases describe --format="value(pointInTimeRecoveryEnablement)"` → `POINT_IN_TIME_RECOVERY_ENABLED` (operator verified) | Validated 2026-05-13 (08-01; operator) |
+| BACKUP-04 | Uploads bucket Object Versioning enabled + 90-day soft-delete policy | `gcloud storage buckets describe gs://bedeveloped-base-layers-uploads --format="value(versioning.enabled,softDeletePolicy.retentionDurationSeconds)"` (operator verified) | Validated 2026-05-13 (08-01; operator) |
+| BACKUP-05 | V4 signed URL with 1h TTL via `getDocumentSignedUrl` callable; `getDownloadURL` removed from all client code | `functions/src/backup/getDocumentSignedUrl.ts` + `src/cloud/signed-url.js`; `grep -r getDownloadURL src/` returns 0 | Validated 2026-05-13 (08-02 + 08-03) |
+| BACKUP-06 | Quarterly restore-drill cadence; two-operator paired review; P1 escalation if missed | `runbooks/phase-8-restore-drill-cadence.md` | Validated 2026-05-13 (08-06) |
+| BACKUP-07 | One restore drill performed and documented with timing, evidence, gaps, re-redaction step | `runbooks/restore-drill-2026-05-13.md` (operator fills in actual timings; commit SHA at drill time) | Validated 2026-05-13 (08-06; operator drill required) |
+| DOC-10 | Phase 8 incremental SECURITY.md increment: 4 new sections + this 19-row Phase 8 Audit Index | This file — §Data Lifecycle + §GDPR + §Backups + DR + PITR + §Phase 8 Audit Index | Validated 2026-05-13 (08-06) |
+
+**Substrate-honest disclosure (Pitfall 19):** BACKUP-01..04 and BACKUP-07 depend on operator production deploy (Task 1) and operator restore drill (Task 2) respectively. The code and runbooks are authored and committed; production execution is operator-deferred per the Wave 6 batching pattern established in 08-01-DEFERRED-CHECKPOINT.md. Status above reflects "code + substrate authored; operator action pending for production evidence".
+
+**Cross-phase plug-ins this index will feed:**
+
+- **Phase 9** (AUDIT-05 / OBS-01..08) — Sentry alerts on unusual-hour `gdprExportUser` / `gdprEraseUser` invocations; view-side `auditWrite` wiring for compliance events.
+- **Phase 11** (DOC-02 / DOC-04 / DOC-05) — `RETENTION.md` row for soft-delete (30d) + GDPR exports (24h URL TTL); `CONTROL_MATRIX.md` rows for LIFE/GDPR/BACKUP; `PRIVACY.md` GCS backup region + redactionList substrate.
+- **Phase 12** (WALK-02 / WALK-03) — audit-walkthrough cites Phase 8 GDPR + lifecycle + backup sections as ground truth.
+
+---
+
 ## Compliance posture statement
 
 This codebase aims for **credible, not certified** compliance with

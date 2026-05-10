@@ -127,7 +127,6 @@ describe("gdprEraseUser — integration test (Test 9)", () => {
       auth: adminAuth,
     } as never)) as {
       ok: boolean;
-      tombstoneToken: string;
       counts: {
         messages: number;
         comments: number;
@@ -145,13 +144,15 @@ describe("gdprEraseUser — integration test (Test 9)", () => {
     // ── Basic result shape ─────────────────────────────────────────────────────
 
     expect(result.ok).toBe(true);
-    expect(result.tombstoneToken).toMatch(/^deleted-user-[0-9a-f]{16}$/);
+    // tombstoneToken must NOT be in the response (M-01 security fix)
+    expect((result as Record<string, unknown>).tombstoneToken).toBeUndefined();
 
     // ── redactionList/{uid} shape ─────────────────────────────────────────────
 
     const redactionDoc = adminMockState._readDoc(`redactionList/${TARGET_UID}`);
     expect(redactionDoc).toBeDefined();
-    expect(redactionDoc?.tombstoneToken).toBe(result.tombstoneToken);
+    const tombstoneToken = redactionDoc?.tombstoneToken as string;
+    expect(tombstoneToken).toMatch(/^deleted-user-[0-9a-f]{16}$/);
     expect(redactionDoc?.erasedBy).toBe(ADMIN_UID);
     expect(redactionDoc?.schemaVersion).toBe(1);
     // erasedAt is the SERVER_TIMESTAMP sentinel (substituted at write time)
@@ -178,7 +179,7 @@ describe("gdprEraseUser — integration test (Test 9)", () => {
     const [, evData] = complianceEventEntry!;
     expect(evData.severity).toBe("alert");
     const evPayload = evData.payload as Record<string, unknown>;
-    expect(evPayload.tombstoneToken).toBe(result.tombstoneToken);
+    expect(evPayload.tombstoneToken).toBe(tombstoneToken);
     const evCounts = evPayload.counts as Record<string, number>;
     expect(evCounts.storageObjectsDeleted).toBeDefined();
     expect(evCounts.storageObjectsMissing).toBeDefined();

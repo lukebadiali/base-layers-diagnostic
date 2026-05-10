@@ -212,7 +212,14 @@ Plans:
   3. A Slack webhook fires for auth anomalies: >5 failed sign-ins from the same IP in 5 minutes, MFA disenrolment, role escalation, and unusual-hour `gdprExportUser` calls; an operator receives a synthetic test alert end-to-end
   4. An uptime monitor checks `https://baselayers.bedeveloped.com` every 1 minute from at least 2 regions; Firebase budget alerts fire at 50% / 80% / 100% of monthly budget; Sentry quota alert at 70% of monthly free-tier
   5. Source maps for production releases are uploaded to Sentry via `@sentry/vite-plugin` in CI and stack traces in Sentry resolve to the original source
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 09-01-PLAN.md — Wave 1: Sentry init substrate + shared PII_KEYS dictionary (browser + node parity-tested) + audit-events.js proxy seam + Sentry boot wiring in src/main.js + runbooks/phase-9-sentry-bootstrap.md (OBS-01, OBS-02, OBS-03, OBS-08 substrate, DOC-10)
+- [ ] 09-02-PLAN.md — Wave 2: @sentry/vite-plugin source-map upload in vite.config.js + CI env wiring (build/deploy/preview) + post-build .map deletion gate (OBS-04)
+- [ ] 09-03-PLAN.md — Wave 3: AUDIT-05 view wiring across 9 sites (src/firebase/auth.js + src/cloud/{claims-admin,gdpr,soft-delete}.js) + auditEventSchema enum +18 .requested literals + parity tests (AUDIT-05, OBS-02 partial)
+- [ ] 09-04-PLAN.md — Wave 4: authAnomalyAlert onDocumentCreated trigger (4 anomaly rules + Slack webhook + audit-alert-sa) + authFailureCounters server-only collection + tests/rules + scripts/test-slack-alert/run.js (OBS-05)
+- [ ] 09-05-PLAN.md [autonomous: false] — Wave 5: GCP-tier monitors — scripts/setup-uptime-check (3-region 60s) + scripts/setup-budget-alerts (50/80/100) + Sentry quota alert (operator) + audit-alert-sa SA provisioning + Secret Manager secrets + Wave 4 deploy (OBS-04, OBS-06, OBS-07, OBS-08)
+- [ ] 09-06-PLAN.md [autonomous: false] — Wave 6: SECURITY.md +4 sections + Phase 9 Audit Index 10-row table + REQUIREMENTS.md 9 row updates (OBS-01..08 + AUDIT-05) + runbooks/phase-9-cleanup-ledger.md zero-out + .gitleaks.toml Slack-webhook regex + CONTRIBUTING.md § Error Message Discipline + phase-close human-verify (DOC-10)
 
 ### Phase 10: CSP Tightening (Second Sweep)
 **Goal**: The CSP report-only headers from Phase 3 become enforced at the strictest level the app can run under, closing H4 fully and consuming the inline-style sweep done in Phase 4.
@@ -273,7 +280,7 @@ Plans:
 | 6. Real Auth + MFA + Rules Deploy (Cutover) | 0/0 | Not started | - |
 | 7. Cloud Functions + App Check | 0/0 | Not started | - |
 | 8. Data Lifecycle (Soft-Delete + GDPR + Backups) | 2/6 | In Progress|  |
-| 9. Observability + Audit-Event Wiring | 0/0 | Not started | - |
+| 9. Observability + Audit-Event Wiring | 0/6 | Planned | - |
 | 10. CSP Tightening (Second Sweep) | 0/0 | Not started | - |
 | 11. Documentation Pack (Evidence Pack) | 0/0 | Not started | - |
 | 12. Audit Walkthrough + Final Report | 0/0 | Not started | - |

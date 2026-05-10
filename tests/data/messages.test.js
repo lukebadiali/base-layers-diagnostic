@@ -52,6 +52,12 @@ describe("data/messages.js (Phase 5 subcollection rewrite + onSnapshot)", () => 
     expect(added.createdAt).toEqual({ __serverTimestamp: true });
   });
 
+  it("addMessage throws when authorId is missing (defensive branch — Phase 7 Wave 4)", async () => {
+    await expect(addMessage("o1", { body: "no-author" })).rejects.toThrow(
+      /authorId is required/,
+    );
+  });
+
   it("subscribeMessages subscribes to the SUBCOLLECTION (not parent doc) — H8-precursor", () => {
     /** @type {Array<any[]>} */
     const received = [];

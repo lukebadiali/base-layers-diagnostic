@@ -55,4 +55,10 @@ describe("data/comments.js (Phase 5 subcollection rewrite)", () => {
     const cs = await listComments("o1", "p1");
     expect(cs.find((/** @type {any} */ c) => c.id === "c1")).toBeFalsy();
   });
+
+  it("addComment throws when authorId is missing (defensive branch — Phase 7 Wave 4)", async () => {
+    await expect(addComment("o1", "p1", { body: "no-author" })).rejects.toThrow(
+      /authorId is required/,
+    );
+  });
 });

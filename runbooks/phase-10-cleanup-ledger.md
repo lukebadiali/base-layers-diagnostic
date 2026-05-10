@@ -83,8 +83,8 @@ These rows originated in Phase 10 work but are NOT in-phase deliverables; they a
 
 | Row | Description | Target Phase | Owner |
 |-----|-------------|--------------|-------|
-| F4 | `docs/CONTROL_MATRIX.md` rows for HOST-06 + HOST-07 + DOC-10 (Phase 10 increment) | Phase 11 | DOC-04 |
-| F5 | `docs/evidence/` Phase 10 screenshots collation — `phase-10-securityheaders-rating.png` (A+) + `phase-10-hsts-preload-submission.png` (submission confirmation) + `phase-10-enforcement-smoke-console.png` (5-target smoke) + `phase-10-hsts-preload-listed.png` (Chrome propagation; F1 close-out) | Phase 11 | DOC-09 |
+| F4 | `docs/CONTROL_MATRIX.md` rows for HOST-06 + HOST-07 + DOC-10 (Phase 10 increment) | Phase 11 | DOC-04 — **CLOSED Phase 11 Wave 6 (2026-05-10, commit `8a8de24`):** `docs/CONTROL_MATRIX.md` fully populated this Wave 6 (88 rows including HOST-06 + HOST-07 + DOC-10 rows). Cross-reference: `runbooks/phase-11-cleanup-ledger.md` Phase 10 cross-phase ledger surgery row F4. |
+| F5 | `docs/evidence/` Phase 10 screenshots collation — `phase-10-securityheaders-rating.png` (A+) + `phase-10-hsts-preload-submission.png` (submission confirmation) + `phase-10-enforcement-smoke-console.png` (5-target smoke) + `phase-10-hsts-preload-listed.png` (Chrome propagation; F1 close-out) | Phase 11 | DOC-09 — **CLOSED Phase 11 Wave 6 (2026-05-10, commit `8a8de24`):** `docs/evidence/README.md` inventory landed (22 rows: 2 PRESENT + 20 PENDING-OPERATOR with explicit pointers — rows 17-20 cover the 4 Phase 10 screenshots; each cites `10-DEFERRED-CHECKPOINT.md` Step 2 / 3 / `runbooks/phase-10-cleanup-ledger.md` Row F1 as the operator capture session). Captures themselves remain calendar-deferred per upstream phase close-out. Cross-reference: `runbooks/phase-11-cleanup-ledger.md` Phase 10 cross-phase ledger surgery row F5. |
 | F6 | `SECURITY_AUDIT.md` walkthrough — Phase 10 §Content Security Policy (enforced) + § HSTS Preload Status sections cited as ground truth | Phase 12 | WALK-02 / WALK-03 |
 
 ---

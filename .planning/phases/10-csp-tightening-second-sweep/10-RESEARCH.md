@@ -48,8 +48,8 @@ None — discuss phase skipped.
 
 | ID | Description | Research Support |
 |----|-------------|------------------|
-| HOST-06 | Strict CSP rolled to enforced + `style-src 'self'` (no `'unsafe-inline'`) after Phase 4 inline-style sweep is complete (closes H4 fully) | §Inline-Style Remnant Inventory + §CSP Directive Matrix + §Wave Structure |
-| HOST-07 | HSTS preload submitted to hstspreload.org once policy stable for ≥7 days | §HSTS Preload Submission Procedure |
+| HOST-07 | Strict CSP rolled to enforced + `style-src 'self'` (no `'unsafe-inline'`) after Phase 4 inline-style sweep is complete (closes H4 fully) | §Inline-Style Remnant Inventory + §CSP Directive Matrix + §Wave Structure |
+| HOST-06 | HSTS preload submitted to hstspreload.org once policy stable for ≥7 days | §HSTS Preload Submission Procedure |
 | DOC-10 | Each phase incrementally appends to `SECURITY.md` as it closes findings | §SECURITY.md Increment Plan |
 
 ---
@@ -122,8 +122,8 @@ Phase 10 introduces zero new npm packages. **`[VERIFIED: package.json reads fire
         ┌─────────────────────────────────────────────────────────────┐
         │           Firebase Hosting (CDN edge)                       │
         │  Reads hosting.headers from firebase.json:                  │
-        │   • Strict-Transport-Security  (HOST-07 source)             │
-        │   • Content-Security-Policy    (HOST-06 — ENFORCED)         │
+        │   • Strict-Transport-Security  (HOST-06 source)             │
+        │   • Content-Security-Policy    (HOST-07 — ENFORCED)         │
         │   • + 7 other security headers (Phase 3 substrate)          │
         │  Rewrite /api/csp-violations → cspReportSink (europe-west2) │
         └────────────┬─────────────────────────────────────────────┬──┘
@@ -309,7 +309,7 @@ This is the **paste-ready firebase.json snippet** the planner can copy into Wave
 ```text
 default-src 'self';
 script-src 'self';
-style-src 'self' 'unsafe-inline';                ← drop 'unsafe-inline' for HOST-06
+style-src 'self' 'unsafe-inline';                ← drop 'unsafe-inline' for HOST-07
 connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firebasestorage.googleapis.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://securetoken.google.com;
 frame-src https://bedeveloped-base-layers.firebaseapp.com;        ← decision: drop or retain
 img-src 'self' data: https:;
@@ -348,14 +348,14 @@ report-to csp-endpoint
 |-----------|---------------|---------------|-----------|
 | `default-src` | `'self'` | `'self'` | UNCHANGED — root fallback |
 | `script-src` | `'self'` | `'self'` | UNCHANGED — Vite produces hashed-filename bundles only; zero inline scripts. **`[VERIFIED: index.html lines 23-24 — the only script tags are `data/pillars.js?v=52` and `./src/main.js?v=52`, both same-origin]`** |
-| `style-src` | `'self' 'unsafe-inline'` | **`'self'`** (drop `'unsafe-inline'`) | **HOST-06 the headline change**. Requires Wave 1 inline-style migration to clear the 130 main.js attributes |
+| `style-src` | `'self' 'unsafe-inline'` | **`'self'`** (drop `'unsafe-inline'`) | **HOST-07 the headline change**. Requires Wave 1 inline-style migration to clear the 130 main.js attributes |
 | `connect-src` | 9 entries | **+ `https://de.sentry.io`** | **Phase 9 Wave 2 (OBS-04) source-map upload** uses Sentry EU. Without this, source-map upload from CI fails; without Sentry init at runtime fails too. **`[VERIFIED: vite.config.js line 36 — sentryVitePlugin is hard-coded to https://de.sentry.io/]`** |
 | `frame-src` | `https://bedeveloped-base-layers.firebaseapp.com` | **`'self'`** (drop the firebaseapp.com allowlist) | **Verified no `signInWithPopup` / `signInWithRedirect` in src/**. The app uses `signInEmailPassword` + `signInWithEmailLink` (Phase 6 D-07 email-link recovery). The Phase 6 + Phase 7 cleanup-ledgers explicitly queue this for Phase 10 with reason "popup flow not used". **`[VERIFIED: grep -r 'signInWithPopup\|signInWithRedirect' src/ returns 0 hits]`** |
 | `img-src` | `'self' data: https:` | `'self' data: https:` | UNCHANGED — `data:` for inline avatars; `https:` for any future external image |
 | `font-src` | `'self' data:` | `'self' data:` | UNCHANGED — Phase 4 self-hosted Inter + Bebas Neue (woff2 in `assets/fonts/`); CDN font allowlist already dropped in Phase 4 (verified at `tests/firebase-config.test.js:87-92`) |
 | `object-src` | `'none'` | `'none'` | UNCHANGED — closes legacy plugin attack surface |
-| `base-uri` | `'self'` | `'self'` | UNCHANGED — required by HOST-06 SC#1 |
-| `form-action` | `'self'` | `'self'` | UNCHANGED — required by HOST-06 SC#1 |
+| `base-uri` | `'self'` | `'self'` | UNCHANGED — required by HOST-07 SC#1 |
+| `form-action` | `'self'` | `'self'` | UNCHANGED — required by HOST-07 SC#1 |
 | `frame-ancestors` | `'none'` | `'none'` | UNCHANGED — already enforced (browsers don't gate on Report-Only mode for `frame-ancestors`) |
 | `upgrade-insecure-requests` | present | present | UNCHANGED — defence-in-depth |
 | `report-uri` | `/api/csp-violations` | `/api/csp-violations` | UNCHANGED — fallback for browsers that don't support `report-to` |
@@ -389,7 +389,7 @@ This is a **subtle Wave 1 gotcha**: the Phase 9 substrate landed correctly witho
 - [x] **`preload` directive present.** PASS.
 - [ ] **Apex/www consistency.** **`[ASSUMED]`**: `bedeveloped.com` apex serves over HTTPS with HSTS — **operator must verify before submission**. If apex serves with no HSTS, submitting `baselayers.bedeveloped.com` apex-includeSubDomains will commit subdomains the apex doesn't honour. Hostname `baselayers.bedeveloped.com` (subdomain) preload is the safest first step.
 - [x] **Custom-domain SSL provisioned.** Phase 3 cutover landed 2026-05-07 with verified A-rated securityheaders rating. PASS.
-- [ ] **Policy stable for ≥7 days post-tightening.** Per HOST-06 SC: this gate trips after Phase 10 Wave 3 enforcement flip + 7-day calendar window.
+- [ ] **Policy stable for ≥7 days post-tightening.** Per HOST-07 SC: this gate trips after Phase 10 Wave 3 enforcement flip + 7-day calendar window.
 
 ### Submission decision tree
 
@@ -397,7 +397,7 @@ This is a **subtle Wave 1 gotcha**: the Phase 9 substrate landed correctly witho
 |----------|----------|
 | Submit apex `bedeveloped.com` with `includeSubDomains`? | **NO recommended** — `bedeveloped.com` may host services we don't control (email, marketing site, etc.). Apex preload would force HTTPS on every subdomain forever. |
 | Submit subdomain `baselayers.bedeveloped.com` directly? | **YES recommended** — bounded scope; reversible (with effort) if BeDeveloped ever pivots. |
-| Wait until apex domain is hardened first? | **NO** — would block HOST-07 indefinitely. Subdomain submission is the standard pattern. |
+| Wait until apex domain is hardened first? | **NO** — would block HOST-06 indefinitely. Subdomain submission is the standard pattern. |
 
 `[ASSUMED]`: Subdomain-only submission is acceptable. **Operator must confirm during Wave 5 — do not auto-submit apex.**
 
@@ -567,11 +567,11 @@ Phase 3 verifier achieved "≥A" rating (Phase 3 close 2026-05-07). The Report-O
 ### Example 2: tests/firebase-config.test.js extension (Wave 2 deliverable)
 
 ```js
-// Phase 10 (HOST-06): assert ENFORCED CSP shape — no Report-Only suffix on the
+// Phase 10 (HOST-07): assert ENFORCED CSP shape — no Report-Only suffix on the
 // header key, no 'unsafe-inline' in style-src, frame-src locked to 'self',
 // connect-src includes Sentry EU.
 
-describe("firebase.json — Phase 10 enforced CSP shape (HOST-06)", () => {
+describe("firebase.json — Phase 10 enforced CSP shape (HOST-07)", () => {
   it("header key is 'Content-Security-Policy' (NOT Report-Only)", () => {
     expect(headerByKey("Content-Security-Policy")).toBeDefined();
     expect(headerByKey("Content-Security-Policy-Report-Only")).toBeUndefined();
@@ -594,13 +594,13 @@ describe("firebase.json — Phase 10 enforced CSP shape (HOST-06)", () => {
     expect(csp).toContain("https://de.sentry.io");
   });
 
-  it("base-uri 'self' and form-action 'self' present (HOST-06 SC#1)", () => {
+  it("base-uri 'self' and form-action 'self' present (HOST-07 SC#1)", () => {
     const csp = headerByKey("Content-Security-Policy")?.value ?? "";
     expect(csp).toContain("base-uri 'self'");
     expect(csp).toContain("form-action 'self'");
   });
 
-  // HOST-07 substrate test — actual submission verification is Wave 5 manual
+  // HOST-06 substrate test — actual submission verification is Wave 5 manual
   it("HSTS preload-eligible: max-age >= 31536000, includeSubDomains, preload", () => {
     const v = headerByKey("Strict-Transport-Security")?.value ?? "";
     const m = v.match(/max-age=(\d+)/);
@@ -662,7 +662,7 @@ gcloud logging read \
 | Old Approach | Current Approach | When Changed | Impact |
 |--------------|------------------|--------------|--------|
 | Meta-tag CSP (`<meta http-equiv="Content-Security-Policy">`) | HTTP-header CSP via `firebase.json` `hosting.headers` | Phase 3 (2026-05-07) | Enables `frame-ancestors`, `Strict-Transport-Security`, `Permissions-Policy` — none of which work via meta-tag |
-| `unsafe-inline` permanent | `'self'` only after class-migration | Phase 10 Wave 1 | Closes XSS-via-inline-style attack surface; HOST-06 |
+| `unsafe-inline` permanent | `'self'` only after class-migration | Phase 10 Wave 1 | Closes XSS-via-inline-style attack surface; HOST-07 |
 | Submit hstspreload via email/manual review | hstspreload.org self-service web form | hstspreload.org has been self-service since ~2017 | Operator-paced: form submission + verification weeks |
 | `'strict-dynamic'` for SPA bundlers | Plain `'self'` (modern bundlers do not need it for hashed-filename ESM) | CSP3 + bundler maturity | Vite 8 emits no inline scripts — `'strict-dynamic'` adds tradeoffs without benefit |
 | Chrome-only preload list | All major browsers (Chrome, Firefox, Safari, Edge) consume the Chrome-curated list | ~2020 | One submission covers all browser HSTS preload caches |
@@ -689,17 +689,17 @@ gcloud logging read \
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
-| HOST-06 | header key is "Content-Security-Policy" (not Report-Only) | unit (schema) | `npm test -- --run firebase-config` | EXTEND existing — `tests/firebase-config.test.js` |
-| HOST-06 | style-src locked to 'self' | unit (schema) | same | EXTEND existing |
-| HOST-06 | frame-src locked to 'self' (no firebaseapp.com) | unit (schema) | same | EXTEND existing |
-| HOST-06 | connect-src includes https://de.sentry.io | unit (schema) | same | EXTEND existing |
-| HOST-06 | base-uri 'self' + form-action 'self' | unit (schema) | same | EXTEND existing (asserted in Phase 3 partially via line 73-78) |
-| HOST-06 SC#2 | sign-in / dashboard / radar / donut / upload / chat work under enforcement on staging | manual smoke (operator runbook) | manual via `runbooks/csp-enforcement-cutover.md` | NEW — Wave 4 deliverable |
-| HOST-06 SC#2 | 7-day soak shows zero new violations | operator-paced | `gcloud logging read ... --freshness=7d` | NEW assertion in `runbooks/csp-enforcement-cutover.md` Wave 3 |
-| HOST-07 | HSTS header preload-eligible (max-age + includeSubDomains + preload) | unit (schema) | `npm test -- --run firebase-config` | EXTEND existing — already asserted at lines 60-66 (Phase 3) |
-| HOST-07 | hstspreload.org submission filed | manual (operator runbook) | manual — see `runbooks/hsts-preload-submission.md` | NEW — Wave 5 deliverable |
-| HOST-07 SC#3 | Domain appears in preload list | calendar-paced (weeks-months for inclusion) | manual: `https://hstspreload.org/?domain=baselayers.bedeveloped.com` | NEW assertion in runbook |
-| HOST-06 SC#4 | securityheaders.com rating "A+" | manual smoke | manual — visit URL + screenshot | NEW assertion in `runbooks/csp-enforcement-cutover.md` Wave 5 |
+| HOST-07 | header key is "Content-Security-Policy" (not Report-Only) | unit (schema) | `npm test -- --run firebase-config` | EXTEND existing — `tests/firebase-config.test.js` |
+| HOST-07 | style-src locked to 'self' | unit (schema) | same | EXTEND existing |
+| HOST-07 | frame-src locked to 'self' (no firebaseapp.com) | unit (schema) | same | EXTEND existing |
+| HOST-07 | connect-src includes https://de.sentry.io | unit (schema) | same | EXTEND existing |
+| HOST-07 | base-uri 'self' + form-action 'self' | unit (schema) | same | EXTEND existing (asserted in Phase 3 partially via line 73-78) |
+| HOST-07 SC#2 | sign-in / dashboard / radar / donut / upload / chat work under enforcement on staging | manual smoke (operator runbook) | manual via `runbooks/csp-enforcement-cutover.md` | NEW — Wave 4 deliverable |
+| HOST-07 SC#2 | 7-day soak shows zero new violations | operator-paced | `gcloud logging read ... --freshness=7d` | NEW assertion in `runbooks/csp-enforcement-cutover.md` Wave 3 |
+| HOST-06 | HSTS header preload-eligible (max-age + includeSubDomains + preload) | unit (schema) | `npm test -- --run firebase-config` | EXTEND existing — already asserted at lines 60-66 (Phase 3) |
+| HOST-06 | hstspreload.org submission filed | manual (operator runbook) | manual — see `runbooks/hsts-preload-submission.md` | NEW — Wave 5 deliverable |
+| HOST-06 SC#3 | Domain appears in preload list | calendar-paced (weeks-months for inclusion) | manual: `https://hstspreload.org/?domain=baselayers.bedeveloped.com` | NEW assertion in runbook |
+| HOST-07 SC#4 | securityheaders.com rating "A+" | manual smoke | manual — visit URL + screenshot | NEW assertion in `runbooks/csp-enforcement-cutover.md` Wave 5 |
 | Inline-style sweep | grep returns 0 `style: "..."` h()-properties in src/ | unit (regression) | `grep -c 'style:\\s*"' src/main.js` (assert 0 post-Wave-1) | NEW — Wave 1 ESLint rule + grep gate |
 
 ### Sampling Rate
@@ -739,7 +739,7 @@ gcloud logging read \
 | Pattern | STRIDE | Standard Mitigation |
 |---------|--------|---------------------|
 | XSS via injected `<style>` block | Tampering | `style-src 'self'` blocks all inline `<style>` and `style="..."` |
-| XSS via `style="..."` attribute on user-controlled DOM | Tampering | Same as above; HOST-06 |
+| XSS via `style="..."` attribute on user-controlled DOM | Tampering | Same as above; HOST-07 |
 | Click-jacking | Spoofing | `frame-ancestors 'none'` (already enforced — bypasses CSP-Report-Only-mode skip) |
 | Mixed-content downgrade | Information Disclosure | `upgrade-insecure-requests` + HSTS preload |
 | MITM downgrade attack | Tampering | HSTS preload — browser refuses to attempt HTTP for the domain |
@@ -785,7 +785,7 @@ Phase 10 Wave 5 closing task adds the following sections to `SECURITY.md`:
 |---------|---------|---------------|
 | § Content Security Policy (enforced) | Replace existing § CSP (Report-Only) section: directive-by-directive table; rationale per-directive; `'unsafe-inline'` removal narrative; soak window evidence | ~250 words |
 | § HSTS Preload Status | Submission date; preload-list inclusion status; eligibility check confirmation | ~80 words |
-| § Phase 10 Audit Index | 4-row Pattern G table: HOST-06, HOST-07, DOC-10, code-link/test-link/runbook-link/framework citations (ASVS V14.4, ISO 27001 A.8.23, SOC 2 CC6.6, GDPR Art. 32(1)(a)) | ~150 words |
+| § Phase 10 Audit Index | 4-row Pattern G table: HOST-07, HOST-06, DOC-10, code-link/test-link/runbook-link/framework citations (ASVS V14.4, ISO 27001 A.8.23, SOC 2 CC6.6, GDPR Art. 32(1)(a)) | ~150 words |
 
 **Pattern reference:** Phase 9 Wave 7 (`Plan 09-06`) landed § Observability — Sentry + § Audit-Event Wiring + § Anomaly Alerting + § Out-of-band Monitors + § Phase 9 Audit Index — same shape Phase 10 Wave 5 follows.
 
@@ -811,7 +811,7 @@ Phase 10 Wave 5 closing task adds the following sections to `SECURITY.md`:
 - **Header KEY remains `Content-Security-Policy-Report-Only`** at this wave — we want fresh observability with the new shape.
 - Extend `tests/firebase-config.test.js` with 6 new assertions (see §Code Examples Example 2 above).
 - Run Vitest, verify all 17+ existing assertions still pass + 6 new pass.
-- **Deliverable:** Commit `feat(10-02): tighten CSP-RO directives + extend schema test (HOST-06 substrate)`.
+- **Deliverable:** Commit `feat(10-02): tighten CSP-RO directives + extend schema test (HOST-07 substrate)`.
 
 ### Wave 3 — Production deploy of Wave 2 + 7-day soak (operator-paced; calendar time)
 - Operator runs `firebase deploy --only hosting` (selective deploy per Pitfall 8).
@@ -828,14 +828,14 @@ Phase 10 Wave 5 closing task adds the following sections to `SECURITY.md`:
   - Verification: `curl -I` shows the enforced header (no `-Report-Only` suffix)
   - Rollback: revert the firebase.json edit + redeploy if any of the smokes regress (~5 min)
 - Operator session: Run the runbook end-to-end during a quiet window; capture timestamps.
-- **Deliverable:** Commit `feat(10-04): flip CSP from Report-Only to enforced (HOST-06 closes)`.
+- **Deliverable:** Commit `feat(10-04): flip CSP from Report-Only to enforced (HOST-07 closes)`.
 
 ### Wave 5 — HSTS preload submission + securityheaders.com rating + DOC-10 increment (operator + autonomous; ~1 hour)
 - Authoring task (autonomous): Write `runbooks/hsts-preload-submission.md` (~80 lines).
 - Operator: Visit hstspreload.org, submit `baselayers.bedeveloped.com`, capture confirmation email.
 - Operator: Visit `https://securityheaders.com/?q=baselayers.bedeveloped.com&followRedirects=on`, capture A+ rating screenshot to `docs/evidence/phase-10-securityheaders-rating.png`.
 - Authoring task: Append to `SECURITY.md` per §SECURITY.md Increment Plan above.
-- Authoring task: Update `REQUIREMENTS.md` traceability — flip HOST-06 + HOST-07 + DOC-10 to `[x]` Validated + Phase 10 close date.
+- Authoring task: Update `REQUIREMENTS.md` traceability — flip HOST-07 + HOST-06 + DOC-10 to `[x]` Validated + Phase 10 close date.
 - Authoring task: Author `runbooks/phase-10-cleanup-ledger.md` zero-out gate (closes the Phase 10 forward-tracking row from `runbooks/phase-{6,7}-cleanup-ledger.md`).
 - **Deliverable:** Commits `docs(10-05): SECURITY.md Phase 10 increment + Audit Index` + `chore(10-05): close Phase 10 cleanup ledger`.
 

@@ -231,7 +231,13 @@ Plans:
   2. Sign-in, dashboard, radar/donut chart, document upload, and chat all function under enforced CSP (verified on staging before promotion); the `csp-violations` Cloud Function shows no new violations during a 7-day post-tightening soak
   3. HSTS preload submission is filed at `hstspreload.org` and the domain appears in the preload list
   4. `securityheaders.com` rating is "A+"
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 10-01-PLAN.md — Wave 1: mechanical inline-style → utility class migration (130 → 0 in src/main.js); cache-buster bump ?v=52 → ?v=53; closes Phase 4 sub-wave 4.1 inline-style carryover (HOST-06 substrate)
+- [ ] 10-02-PLAN.md — Wave 2: firebase.json CSP-RO tighten (drop unsafe-inline + add https://de.sentry.io to connect-src + drop bedeveloped-base-layers.firebaseapp.com from frame-src); tests/firebase-config.test.js +6 Phase 10 assertions (HOST-06)
+- [ ] 10-03-PLAN.md — Wave 3: [autonomous: false] Production selective deploy of tightened CSP-RO + 7-day calendar soak (Stage B per Pitfall 16); runbooks/phase-10-csp-soak-bootstrap.md + 10-PREFLIGHT.md Soak Log (HOST-06 substrate)
+- [ ] 10-04-PLAN.md — Wave 4: [autonomous: false] Single-knob enforcement flip (Content-Security-Policy-Report-Only → Content-Security-Policy); runbooks/csp-enforcement-cutover.md + 5-target smoke matrix (sign-in/dashboard/charts/upload/chat); Cutover Log rows A/B/C (HOST-06)
+- [ ] 10-05-PLAN.md — Wave 5: [autonomous: false] hstspreload.org submission + securityheaders.com A+ rating + SECURITY.md DOC-10 increment (§ CSP enforced + § HSTS Preload Status + Phase 10 Audit Index) + REQUIREMENTS.md traceability + runbooks/phase-10-cleanup-ledger.md zero-out (HOST-06 + HOST-07 + DOC-10)
 **UI hint**: yes
 
 ### Phase 11: Documentation Pack (Evidence Pack)

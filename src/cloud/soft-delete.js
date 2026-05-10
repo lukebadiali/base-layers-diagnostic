@@ -1,26 +1,51 @@
 // src/cloud/soft-delete.js
 // @ts-check
-// Phase 4 Wave 3 (D-11): empty stub seam. Phase 8 (LIFE-04) replaces the body
-// with httpsCallable("softDelete") + httpsCallable("restoreSoftDeleted"),
-// wired through src/firebase/functions.js. The exported function signatures
-// exist so views/* can call them today and the call lands at the real
-// callable Phase 8 — zero adapter-shape change.
+// Phase 8 Wave 2 (LIFE-04): browser seam — wraps the softDelete +
+// restoreSoftDeleted + permanentlyDeleteSoftDeleted callables
+// (functions/src/lifecycle/*). Phase 4 stub body REPLACED — cleanup-ledger
+// row CLOSES with this commit.
 //
-// Cleanup-ledger row: "Phase 8 (LIFE-04) replaces body with
-// httpsCallable('softDelete') + ('restoreSoftDeleted')" — closes at Phase 8.
+// The real Cloud Function callables enforce admin-only authorization
+// server-side via request.auth.token.role; the client wrapper is unaware
+// of the gate (caller catches HttpsError on permission-denied via the
+// Phase 6 D-13 unified-error wrapper surface).
+
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../firebase/functions.js";
+
+const softDeleteCallable = httpsCallable(functions, "softDelete");
+const restoreSoftDeletedCallable = httpsCallable(functions, "restoreSoftDeleted");
+const permanentlyDeleteCallable = httpsCallable(functions, "permanentlyDeleteSoftDeleted");
 
 /**
- * @param {{ type: string, id: string }} _input
- * @returns {Promise<void>}
+ * Soft-delete a record. Admin only (server-enforced).
+ * @param {{ type: "org"|"comment"|"document"|"message"|"funnelComment", orgId: string, id: string }} input
+ * @returns {Promise<{ ok: true }>}
  */
-export async function softDelete(_input) {
-  /* Phase 8 body lands here (LIFE-04) */
+export async function softDelete(input) {
+  const clientReqId = crypto.randomUUID();
+  const result = await softDeleteCallable({ ...input, clientReqId });
+  return /** @type {{ ok: true }} */ (result.data);
 }
 
 /**
- * @param {{ type: string, id: string }} _input
- * @returns {Promise<void>}
+ * Restore a soft-deleted record. Admin only (server-enforced).
+ * @param {{ type: "org"|"comment"|"document"|"message"|"funnelComment", orgId: string, id: string }} input
+ * @returns {Promise<{ ok: true }>}
  */
-export async function restoreSoftDeleted(_input) {
-  /* Phase 8 body lands here (LIFE-04) */
+export async function restoreSoftDeleted(input) {
+  const clientReqId = crypto.randomUUID();
+  const result = await restoreSoftDeletedCallable({ ...input, clientReqId });
+  return /** @type {{ ok: true }} */ (result.data);
+}
+
+/**
+ * Permanently delete (hard-delete) ONE soft-deleted record. Admin only.
+ * @param {{ type: "org"|"comment"|"document"|"message"|"funnelComment", id: string }} input
+ * @returns {Promise<{ ok: true }>}
+ */
+export async function permanentlyDeleteSoftDeleted(input) {
+  const clientReqId = crypto.randomUUID();
+  const result = await permanentlyDeleteCallable({ ...input, clientReqId });
+  return /** @type {{ ok: true }} */ (result.data);
 }

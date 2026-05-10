@@ -1,24 +1,25 @@
 // src/data/audit-events.js
 // @ts-check
-// Phase 4 Wave 3 (D-11): pass-through to cloud/audit.js (which is itself a
-// Phase 7 stub). Calls are no-ops today; Phase 7 (FN-04 / AUDIT-01) lands the
-// real auditWrite callable. The API surface defined here so that views/*
-// (Wave 4 onwards) can call recordAuditEvent today and the call lands on the
-// real callable in Phase 7 — zero re-extraction needed.
+// Phase 4 Wave 3 (D-11) → Phase 7 Wave 6 (FN-04 / AUDIT-01 / 07-06): the
+// cloud/audit.js seam now wires the real auditWrite callable (Wave 6 body
+// fill). recordAuditEvent forwards the input shape unchanged and returns the
+// callable's {ok, eventId} response. Phase 9 (AUDIT-05) will wire view-side
+// call sites; the API contract here matches the Wave 1 auditEventInput Zod
+// schema (functions/src/audit/auditEventSchema.ts).
 //
 // Cleanup-ledger row: "Phase 7 (FN-04 / AUDIT-01) wires recordAuditEvent →
-// cloud/audit.js → real auditWrite callable" — closes at Phase 7.
-//
-// Threat model anchor (T-4-3-5 / Repudiation): Phase 4 ships before audit-log
-// infrastructure exists (Phase 7). The seam exists so views/* can call
-// recordAuditEvent today; the call lands at the real callable Phase 7. The
-// audit gap is intentional and time-bounded.
+// cloud/audit.js → real auditWrite callable" — closes at Phase 7 Wave 6.
 import { writeAuditEvent } from "../cloud/audit.js";
 
 /**
- * @param {{ event: string, payload?: any }} input
- * @returns {Promise<void>}
+ * @param {{
+ *   type: string,
+ *   severity?: "info"|"warning"|"alert",
+ *   target: { type: string, id: string, orgId?: string|null, snapshot?: any },
+ *   payload?: any,
+ * }} input
+ * @returns {Promise<{ ok: true, eventId: string }>}
  */
 export async function recordAuditEvent(input) {
-  await writeAuditEvent(input);
+  return writeAuditEvent(input);
 }

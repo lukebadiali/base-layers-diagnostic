@@ -80,7 +80,9 @@ node scripts/test-slack-alert/run.js; echo "exit=$?"
 # Expected: stderr "ERROR: SLACK_WEBHOOK_URL not set" + exit=1
 
 # Exit 2: URL formed correctly but unreachable
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T0/B0/never_existed \
+# (use a non-Slack hostname so .gitleaks.toml's slack-webhook-url regex
+#  doesn't false-positive on this example — see Task 4 of Plan 09-04)
+SLACK_WEBHOOK_URL=https://hooks-fakehost.invalid/services/T.../B.../... \
   node scripts/test-slack-alert/run.js; echo "exit=$?"
-# Expected: stderr "ERROR: Slack POST returned status=..." + exit=2
+# Expected: stderr "ERROR: Slack POST threw: TypeError fetch failed" + exit=2
 ```

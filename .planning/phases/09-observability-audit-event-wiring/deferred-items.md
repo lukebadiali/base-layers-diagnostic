@@ -60,6 +60,33 @@ Discovered out-of-scope issues (pre-existing, NOT caused by Phase 9 plans). Trac
 
 Path 1 is the recommended Phase-9-close-gate action — Plan 09-06 should add the `hookTimeout: 30000` config. Out of scope for Plan 09-01 substrate, but flagging for Plan 09-06 cleanup.
 
+## 2026-05-10 — Discovered during 09-04 Task 2
+
+**Rules-emulator tests can't be executed locally — Java not installed:**
+
+- `tests/rules/authFailureCounters.test.js` (4 cells, this plan) — authored
+  per the plan's spec, but `npm run test:rules` shells out to
+  `firebase emulators:exec --only firestore,storage` which requires Java to
+  spawn the Firestore emulator. `java -version` returns "command not found"
+  in the operator's local Windows environment.
+
+**Verified:** the same gate applied to Phase 8 plan 05 `tests/rules/redactionList.test.js`
+(GDPR-05) — that plan's SUMMARY.md row reads `"rules tests (emulator) | authored
+(Java/emulator required for execution)"`. Established project convention is to
+land the rules test code; CI / a Java-installed environment runs it.
+
+**Disposition:** rules test is authored and matches the deny-matrix shape of
+the analog `tests/rules/auditLog.test.js`. Synthetic local validation:
+- `grep -c "authFailureCounters" firestore.rules` returns 2 (rule block
+  present + comment header).
+- The 4-cell deny matrix follows the same `assertFails(...)` shape as the 4
+  Phase-7 auditLog cells, which run green on Java-equipped CI.
+- No new emulator-only behaviour introduced; pure analog of an existing
+  passing test.
+
+CI rules-test run on the next PR will exercise the cells. If CI surfaces any
+cell failure the fix lands as a Plan 09-04 follow-up commit.
+
 ## 2026-05-10 — Discovered during 09-03a Task 1
 
 **Full-suite test pollution flakes (5 integration test failures):**

@@ -135,6 +135,18 @@ service cloud.firestore {
       allow write: if false;       // server-only via auditWrite callable (Phase 7)
     }
 
+    // ── authFailureCounters/{ipHash} (Phase 9 Wave 5 / OBS-05 / Pattern 10) ───
+    // Server-only rolling-window counter consumed by the auth-anomaly Slack
+    // alert (functions/src/observability/authAnomalyAlert.ts). Same Pattern as
+    // the auditLog block above (allow read+write: if false; Admin SDK is the
+    // only writer — specifically the audit-alert-sa SA from Wave 6 / Plan
+    // 09-05 SA inventory). Prevents client tampering that would bypass the
+    // EXACTLY-ONCE Slack-fire guarantee (T-9-04-6 mitigation).
+    match /authFailureCounters/{ipHash} {
+      allow read:  if false;
+      allow write: if false;
+    }
+
     // ── softDeleted/{type}/items/{id} ─────────────────────────────────
     match /softDeleted/{type}/items/{id} {
       allow read:  if isAdmin();

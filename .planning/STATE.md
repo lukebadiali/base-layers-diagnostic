@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-10T13:15:40.291Z"
+last_updated: "2026-05-10T16:33:32Z"
 progress:
   total_phases: 12
   completed_phases: 7
-  total_plans: 48
-  completed_plans: 46
-  percent: 96
+  total_plans: 54
+  completed_plans: 47
+  percent: 87
 ---
 
 # State: Base Layers Diagnostic — Hardening Pass
 
 **Initialized:** 2026-05-03
-**Last updated:** 2026-05-10 — Phase 8 plan 06 COMPLETE (docs close — restore drill runbook template + quarterly cadence + SECURITY.md 4-section DOC-10 increment + 19-row Phase 8 Audit Index + 18 LIFE/GDPR/BACKUP requirements validated + cleanup-ledger zero-out; Tasks 1+2+7 operator deploy+drill+close-gate DEFERRED to single operator session per 08-06-DEFERRED-CHECKPOINT.md)
+**Last updated:** 2026-05-10 — Phase 9 plan 01 COMPLETE (Sentry init substrate + shared PII_KEYS dictionary parity-tested + emitAuditEvent proxy seam + Sentry boot in src/main.js after claims hydration + phase-9-sentry-bootstrap operator runbook). 22/22 root observability tests + 237/237 functions tests green. 4 commits 4a0aafc..de2a2cc.
 
 ---
 
@@ -27,7 +27,7 @@ progress:
 Client diagnostic data must remain confidential, intact, and recoverable — and BeDeveloped must be able to honestly answer a prospect's security questionnaire about how that's enforced.
 
 **Current focus:**
-Phase 8 — Data Lifecycle (Soft-Delete + GDPR + Backups)
+Phase 9 — Observability + Audit-Event Wiring (Wave 1 substrate landed; Waves 2-7 pending)
 
 **Compliance bar:** credible, **not** certified. Certification is a separate workstream.
 
@@ -35,16 +35,16 @@ Phase 8 — Data Lifecycle (Soft-Delete + GDPR + Backups)
 
 ## Current Position
 
-Phase: 8 (Data Lifecycle (Soft-Delete + GDPR + Backups)) — CODE_AND_DOCS_COMPLETE; OPERATOR_DEPLOY_PENDING
-Plan: 6 of 6 — ALL PLANS AUTHORED (08-01 paused at operator checkpoint; 08-02 + 08-03 + 08-04 + 08-05 + 08-06 COMPLETE at code+docs level)
-Plans complete: 6 of 6 (all plans authored; operator production session pending for 08-01 substrate + 08-06 deploy + drill)
-**Status:** Phase 8 code + docs complete — operator must execute 08-06-DEFERRED-CHECKPOINT.md (single session: backup-sa + GDPR_PSEUDONYM_SECRET + 4 SAs + firebase deploy 8 CFs + rules + restore drill + close-gate review). Phase 9 planning can begin immediately.
-**Progress:** [██████████] 96%
+Phase: 9 (Observability + Audit-Event Wiring) — EXECUTING
+Plan: 1 of 6 — Plan 09-01 COMPLETE (Wave 1 substrate); Plans 09-02..09-06 pending
+Plans complete (Phase 9): 1 of 6
+**Status:** Phase 9 Wave 1 substrate landed at code level — @sentry/browser init, shared PII_KEYS dictionary parity-tested, emitAuditEvent proxy seam, Sentry boot in src/main.js, phase-9-sentry-bootstrap operator runbook. Phase 8 operator session still pending (08-06-DEFERRED-CHECKPOINT.md). Phase 9 Wave 2 (09-02 — @sentry/vite-plugin source-map upload) can proceed immediately.
+**Progress:** [█████████ ] 87%
 
 ```
-[██████████] 96%
+[█████████ ] 87%
  1  2  3  4  5  6  7  8  9 10 11 12
- ✓  ✓  ✓  ✓  ✓  ✓  ✓  ▶  .  .  .  .   (▶ = Phase 8 executing: 08-02/03/04/05 done; 08-01 paused)
+ ✓  ✓  ✓  ✓  ✓  ✓  ✓  ▶  ▶  .  .  .   (▶ = Phase 8 operator-pending; Phase 9 Wave 1 done, Waves 2-7 pending)
 ```
 
 **Production state at pause (no live users — safe to remain in this state):**
@@ -163,6 +163,17 @@ These persist in `/gsd-progress` + `/gsd-audit-uat` until resolved. Cleanup ledg
 - **Use `SECURITY_AUDIT.md` as audit framework** — translate Vercel/Supabase sections to Firebase (PROJECT.md, decided 2026-05-03)
 - **12-phase plan, not 5-8** — standard granularity overridden because four load-bearing sequencing constraints cannot be collapsed (ROADMAP.md "Granularity Rationale", validated 2026-05-03)
 
+### Phase 9 Plan 01 Decisions (2026-05-10)
+
+- **Versions strict-pinned (no caret)** — `@sentry/browser@10.52.0` + `@sentry/vite-plugin@5.2.1` follow the project TOOL-01 supply-chain pinning convention; npm install default `^` carets manually stripped
+- **`@ts-nocheck` on test files using vi.mock factory rest-args** — matches existing `tests/main.test.js` convention; production source modules retain `@ts-check` discipline
+- **Redaction contract changed: delete -> `<redacted>` for PII keys (Phase 7 -> Phase 9)** — extras + contexts use the assignment so SRE can see the slot WAS populated without leaking value; headers continue using `delete` per Phase 7's value-must-not-survive contract
+- **PII_KEYS dictionary parity test reads JS source via fs** — the test IS the contract; sorted-equality on extracted regex match vs imported TS const tuple
+- **Phase 4 stub smoke tests removed/replaced rather than retained alongside new behaviour tests** — single-source-of-truth for the module's coverage
+- **Sentry boot site = inside fbOnAuthStateChanged after claims hydration** — Pitfall 3 mitigation; AFTER `claims = tokenResult.claims || {}`; BEFORE `enrolledFactors` block + render
+- **Empty-DSN no-op kill-switch** — mirrors Phase 7 FN-07 reCAPTCHA placeholder pattern; `VITE_SENTRY_DSN ?? ""` coalesces unset env to silent no-op (local dev / unit-test path)
+- **`SLACK_WEBHOOK_URL` is GCP Secret Manager only, NOT GitHub Actions** — runbook Step 5 explicitly documents this; Cloud Function consumes via `defineSecret`; CI/build jobs never need it
+
 ### Phase 8 Plan 06 Decisions (2026-05-10)
 
 - **Tasks 1+2+7 DEFERRED to single operator session** — deploy commands + restore drill procedure + close-gate checklist authored in 08-06-DEFERRED-CHECKPOINT.md; code + docs complete; operator execution batches 08-01 + 08-05 + 08-06 deferred actions into one session
@@ -250,7 +261,9 @@ Additional non-negotiables:
 
 ## Session Continuity
 
-**Last session (2026-05-10):** Phase 8 plan 06 (restore drill + docs + close-gate) — Tasks 3-6 executed and committed; Tasks 1+2+7 (deploy + drill + close-gate) DEFERRED to operator session per 08-06-DEFERRED-CHECKPOINT.md. Task 3: restore-drill-2026-05-13.md template + phase-8-restore-drill-cadence.md (BACKUP-06 + BACKUP-07). Task 4: SECURITY.md +4 sections + 19-row Phase 8 Audit Index (DOC-10). Task 5: 18 LIFE/GDPR/BACKUP rows [x] + DOC-10 updated + 3 traceability rows validated. Task 6: phase-8-cleanup-ledger.md zero-out (phase_8_active_rows: 0). Commits: 88b086d..90c4c4c (5 commits). 08-06-SUMMARY.md created. Phase 8 code+docs complete; operator session required for production deploy + restore drill before Phase 8 is fully closed.
+**Last session (2026-05-10):** Phase 9 plan 01 (Sentry init substrate + shared PII scrubber + audit-events proxy) — all 4 tasks executed and committed. Task 1: install @sentry/browser@10.52.0 (bumped from 10.51.0) + @sentry/vite-plugin@5.2.1 devDep + new src/observability/pii-scrubber.js + functions/src/util/pii-scrubber.ts twin + parity test (drift contract). Task 2: src/observability/sentry.js body filled (initSentryBrowser + setUser + captureError + addBreadcrumb + fingerprint rate-limit; empty-DSN no-op kill-switch); 9 vitest behaviour tests. Task 3: src/observability/audit-events.js body filled (AUDIT_EVENTS frozen 25-entry table + best-effort emitAuditEvent proxy); functions/src/util/sentry.ts beforeSend extended to use shared PII_KEYS + redaction contract changed delete -> "<redacted>"; 6 audit-events tests + 2 new sentry-scrub tests. Task 4: src/main.js Sentry boot wired in fbOnAuthStateChanged after claims hydration (Pitfall 3) + runbooks/phase-9-sentry-bootstrap.md (7-section operator runbook for Sentry org / EU project / DSN / 70 percent quota alert OBS-08). Commits: 4a0aafc..de2a2cc (4 commits). Root observability tests 22/22 green; functions tests 237/237 green. Pre-existing tsc + view-snapshot failures (Phase 8 inheritance) tracked in deferred-items.md. 09-01-SUMMARY.md created. Next plan: 09-02 (@sentry/vite-plugin source-map upload + CI env wiring).
+
+**Previous session (2026-05-10):** Phase 8 plan 06 (restore drill + docs + close-gate) — Tasks 3-6 executed and committed; Tasks 1+2+7 (deploy + drill + close-gate) DEFERRED to operator session per 08-06-DEFERRED-CHECKPOINT.md. Task 3: restore-drill-2026-05-13.md template + phase-8-restore-drill-cadence.md (BACKUP-06 + BACKUP-07). Task 4: SECURITY.md +4 sections + 19-row Phase 8 Audit Index (DOC-10). Task 5: 18 LIFE/GDPR/BACKUP rows [x] + DOC-10 updated + 3 traceability rows validated. Task 6: phase-8-cleanup-ledger.md zero-out (phase_8_active_rows: 0). Commits: 88b086d..90c4c4c (5 commits). 08-06-SUMMARY.md created. Phase 8 code+docs complete; operator session required for production deploy + restore drill before Phase 8 is fully closed.
 
 **Previous session (2026-05-10):** Phase 8 plan 05 (GDPR erasure) — Tasks 1-6 executed and committed; Task 7 (operator provisioning) DEFERRED to Wave 6 batch. Task 1: pseudonymToken.ts pure helper + 12 unit tests. Task 2: eraseCascade.ts pure helper + 7 unit tests (Pitfall 11 auditLog retention, 500-op batch chunking). Task 3: gdprEraseUser.ts callable + 8 unit + 1 integration tests + admin-sdk.ts updateUser tracking. Task 4: firestore.rules redactionList match block + 10 rules tests. Task 5: scripts/post-erasure-audit/run.js (GDPR-03 evidence, ADC, exit 0/1/2) + README. Task 6: index.ts +1 export (→17), src/cloud/gdpr.js eraseUser seam filled (both Phase 4 stubs closed). functions tests: 205 → 233 (+28). Commits: dce9c20..1e881b0 (8 commits). 08-05-SUMMARY.md created. Next plan: 08-06 (restore drill + docs; operator must provision 4 SAs + GDPR_PSEUDONYM_SECRET first).
 
@@ -284,4 +297,4 @@ Additional non-negotiables:
 ---
 
 *State initialized: 2026-05-03 after roadmap creation*
-*Last updated: 2026-05-08 — Phase 6 context gathered (commit e22bef4); ready for /gsd-plan-phase 6*
+*Last updated: 2026-05-10 — Phase 9 plan 01 COMPLETE (commits 4a0aafc..de2a2cc); ready for /gsd-execute-phase 9 (Plan 09-02)*

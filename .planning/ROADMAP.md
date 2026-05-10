@@ -214,7 +214,7 @@ Plans:
   5. Source maps for production releases are uploaded to Sentry via `@sentry/vite-plugin` in CI and stack traces in Sentry resolve to the original source
 **Plans**: 6 plans
 Plans:
-- [ ] 09-01-PLAN.md — Wave 1: Sentry init substrate + shared PII_KEYS dictionary (browser + node parity-tested) + audit-events.js proxy seam + Sentry boot wiring in src/main.js + runbooks/phase-9-sentry-bootstrap.md (OBS-01, OBS-02, OBS-03, OBS-08 substrate, DOC-10)
+- [x] 09-01-PLAN.md — Wave 1: Sentry init substrate + shared PII_KEYS dictionary (browser + node parity-tested) + audit-events.js proxy seam + Sentry boot wiring in src/main.js + runbooks/phase-9-sentry-bootstrap.md (OBS-01, OBS-02, OBS-03, OBS-08 substrate, DOC-10)
 - [ ] 09-02-PLAN.md — Wave 2: @sentry/vite-plugin source-map upload in vite.config.js + CI env wiring (build/deploy/preview) + post-build .map deletion gate (OBS-04)
 - [ ] 09-03-PLAN.md — Wave 3: AUDIT-05 view wiring across 9 sites (src/firebase/auth.js + src/cloud/{claims-admin,gdpr,soft-delete}.js) + auditEventSchema enum +18 .requested literals + parity tests (AUDIT-05, OBS-02 partial)
 - [ ] 09-04-PLAN.md — Wave 4: authAnomalyAlert onDocumentCreated trigger (4 anomaly rules + Slack webhook + audit-alert-sa) + authFailureCounters server-only collection + tests/rules + scripts/test-slack-alert/run.js (OBS-05)

@@ -288,7 +288,7 @@ Plans:
 | 7. Cloud Functions + App Check | 0/0 | Not started | - |
 | 8. Data Lifecycle (Soft-Delete + GDPR + Backups) | 2/6 | In Progress|  |
 | 9. Observability + Audit-Event Wiring | 7/7 | Code-and-docs complete; combined operator session pending per `09-06-DEFERRED-CHECKPOINT.md` (bundles 09-05 Task 3b + 09-06 Task 4) | 2026-05-10 (autonomous portion) |
-| 10. CSP Tightening (Second Sweep) | 3/5 | In Progress (Plans 10-01+10-02 autonomous COMPLETE; 10-03 Task 1 autonomous COMPLETE — Task 2 operator deploy + 7-day soak pending per runbooks/phase-10-csp-soak-bootstrap.md + 10-PREFLIGHT.md Soak Log; 10-04 + 10-05 blocked on 10-03 Day 7 CLEAN signal) | 2026-05-10 (Plans 10-01/10-02 autonomous + 10-03 Task 1) |
+| 10. CSP Tightening (Second Sweep) | 4/5 | In Progress (Plans 10-01+10-02 autonomous COMPLETE; 10-03 Task 1 autonomous COMPLETE — Task 2 operator deploy + 7-day soak pending; 10-04 Task 1 autonomous COMPLETE — runbooks/csp-enforcement-cutover.md + tests/firebase-config.test.js describe.skip pre-staged; 10-04 Task 2 operator enforcement flip + 5-target smoke pending — checkpoint:human-action gate=blocking; 10-05 blocked on 10-04 Task 2 + 10-03 Day 7 CLEAN signal) | 2026-05-10 (Plans 10-01/10-02 autonomous + 10-03 Task 1 + 10-04 Task 1) |
 | 11. Documentation Pack (Evidence Pack) | 0/0 | Not started | - |
 | 12. Audit Walkthrough + Final Report | 0/0 | Not started | - |
 

@@ -237,6 +237,136 @@ Per 08-RESEARCH.md Pattern 3 (Cost Model):
   expected. Set a Firebase budget alert (Phase 9 OBS-07) to catch unexpected
   growth.
 
+---
+
+## 7. GDPR Secrets + Service Account Provisioning (08-05 / Wave 6 batch)
+
+> **Status: DEFERRED — code-complete; operator action batched with Wave 6 (08-06) production deploy.**
+>
+> The `gdprEraseUser` callable is code-complete and tested. Before deploying,
+> the operator MUST complete all steps in this section. Without them, deploy
+> fails with `serviceAccount: <name> not found` and first invocation throws
+> `"secret required (GDPR_PSEUDONYM_SECRET)"`.
+>
+> This section consolidates ALL four Phase 8 service accounts (storage-reader-sa
+> from 08-02, lifecycle-sa from 08-03, gdpr-reader-sa from 08-04, gdpr-writer-sa
+> from 08-05) into a single operator session to minimise context-switching.
+
+### 7.1 Generate + Set GDPR_PSEUDONYM_SECRET
+
+```bash
+# Generate a fresh 32-byte random hex secret
+SECRET_VALUE=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+
+# Set in Firebase Secret Manager
+echo "$SECRET_VALUE" | firebase functions:secrets:set GDPR_PSEUDONYM_SECRET --project=bedeveloped-base-layers
+
+# Confirm (DO NOT print the secret value in PR comments — just confirm existence)
+firebase functions:secrets:get GDPR_PSEUDONYM_SECRET --project=bedeveloped-base-layers
+```
+
+Expected: secret appears with `versions: 1` (or N+1 if previously set).
+
+**SECURITY:** Never echo the secret value to logs, PR comments, or chat.
+Only confirm that the secret exists in Secret Manager.
+
+### 7.2 Provision All 4 Phase 8 Service Accounts
+
+```bash
+PROJECT="bedeveloped-base-layers"
+UPLOADS_BUCKET="gs://bedeveloped-base-layers-uploads"
+BACKUPS_BUCKET="gs://bedeveloped-base-layers-backups"
+
+# ── storage-reader-sa (08-02 / BACKUP-05) ─────────────────────────────────────
+gcloud iam service-accounts create storage-reader-sa \
+  --display-name="Phase 8 Storage signed URL issuer" \
+  --project=$PROJECT
+gcloud storage buckets add-iam-policy-binding $UPLOADS_BUCKET \
+  --member="serviceAccount:storage-reader-sa@$PROJECT.iam.gserviceaccount.com" \
+  --role="roles/storage.objectViewer"
+gcloud iam service-accounts add-iam-policy-binding \
+  storage-reader-sa@$PROJECT.iam.gserviceaccount.com \
+  --member="serviceAccount:storage-reader-sa@$PROJECT.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator"
+
+# ── lifecycle-sa (08-03 / LIFE-01..05) ───────────────────────────────────────
+gcloud iam service-accounts create lifecycle-sa \
+  --display-name="Phase 8 lifecycle (soft-delete + purge)" \
+  --project=$PROJECT
+gcloud projects add-iam-policy-binding $PROJECT \
+  --member="serviceAccount:lifecycle-sa@$PROJECT.iam.gserviceaccount.com" \
+  --role="roles/datastore.user"
+
+# ── gdpr-reader-sa (08-04 / GDPR-01) ─────────────────────────────────────────
+gcloud iam service-accounts create gdpr-reader-sa \
+  --display-name="Phase 8 GDPR export reader" \
+  --project=$PROJECT
+gcloud projects add-iam-policy-binding $PROJECT \
+  --member="serviceAccount:gdpr-reader-sa@$PROJECT.iam.gserviceaccount.com" \
+  --role="roles/datastore.viewer"
+gcloud storage buckets add-iam-policy-binding $BACKUPS_BUCKET \
+  --member="serviceAccount:gdpr-reader-sa@$PROJECT.iam.gserviceaccount.com" \
+  --role="roles/storage.objectAdmin"
+gcloud iam service-accounts add-iam-policy-binding \
+  gdpr-reader-sa@$PROJECT.iam.gserviceaccount.com \
+  --member="serviceAccount:gdpr-reader-sa@$PROJECT.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator"
+
+# ── gdpr-writer-sa (08-05 / GDPR-02..05) ─────────────────────────────────────
+gcloud iam service-accounts create gdpr-writer-sa \
+  --display-name="Phase 8 GDPR erasure writer" \
+  --project=$PROJECT
+gcloud projects add-iam-policy-binding $PROJECT \
+  --member="serviceAccount:gdpr-writer-sa@$PROJECT.iam.gserviceaccount.com" \
+  --role="roles/datastore.user"
+gcloud projects add-iam-policy-binding $PROJECT \
+  --member="serviceAccount:gdpr-writer-sa@$PROJECT.iam.gserviceaccount.com" \
+  --role="roles/firebaseauth.admin"
+gcloud storage buckets add-iam-policy-binding $UPLOADS_BUCKET \
+  --member="serviceAccount:gdpr-writer-sa@$PROJECT.iam.gserviceaccount.com" \
+  --role="roles/storage.objectAdmin"
+```
+
+Expected: each command exits 0 (or prints `already exists` — idempotent).
+
+### 7.3 Verify All 4 SAs Exist
+
+```bash
+gcloud iam service-accounts list \
+  --project=bedeveloped-base-layers \
+  --format="value(email)" \
+  | grep -E "(storage-reader-sa|lifecycle-sa|gdpr-reader-sa|gdpr-writer-sa)"
+```
+
+Expected: 4 lines printed (one per SA).
+
+### 7.4 Confirm Secret Exists in Secret Manager
+
+```bash
+gcloud secrets describe GDPR_PSEUDONYM_SECRET \
+  --project=bedeveloped-base-layers \
+  --format="value(name)"
+```
+
+Expected: `projects/<num>/secrets/GDPR_PSEUDONYM_SECRET`
+
+### 7.5 Evidence Record
+
+```
+gdpr_pseudonym_secret_set_at: <ISO timestamp>
+storage_reader_sa_created_at: <ISO>
+lifecycle_sa_created_at: <ISO>
+gdpr_reader_sa_created_at: <ISO>
+gdpr_writer_sa_created_at: <ISO>
+operator: <email>
+```
+
+### 7.6 Post-Provisioning Deploy
+
+After completing steps 7.1–7.5, proceed with Wave 6 (08-06) which deploys
+all Phase 8 Cloud Functions in a single `firebase deploy --only functions`
+and runs the end-to-end smoke tests including `scripts/post-erasure-audit/run.js`.
+
 - **uploads bucket soft-delete retention:** Soft-deleted objects are charged at
   their storage class rate until the 90-day retention period expires. This is
   expected — the uploads bucket holds client documents, not ephemeral data.

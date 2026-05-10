@@ -17,3 +17,6 @@ export { onOrgDelete } from "./audit/triggers/onOrgDelete.js";
 export { onUserDelete } from "./audit/triggers/onUserDelete.js";
 export { onDocumentDelete } from "./audit/triggers/onDocumentDelete.js";
 export { checkRateLimit } from "./ratelimit/checkRateLimit.js";
+// Phase 8 Wave 1 (08-02): backup substrate Cloud Functions.
+export { scheduledFirestoreExport } from "./backup/scheduledFirestoreExport.js";
+export { getDocumentSignedUrl } from "./backup/getDocumentSignedUrl.js";

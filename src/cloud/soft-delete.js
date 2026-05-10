@@ -10,8 +10,7 @@
 // of the gate (caller catches HttpsError on permission-denied via the
 // Phase 6 D-13 unified-error wrapper surface).
 
-import { httpsCallable } from "firebase/functions";
-import { functions } from "../firebase/functions.js";
+import { functions, httpsCallable } from "../firebase/functions.js";
 
 const softDeleteCallable = httpsCallable(functions, "softDelete");
 const restoreSoftDeletedCallable = httpsCallable(functions, "restoreSoftDeleted");

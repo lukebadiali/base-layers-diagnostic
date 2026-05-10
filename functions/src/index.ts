@@ -25,3 +25,5 @@ export { softDelete } from "./lifecycle/softDelete.js";
 export { restoreSoftDeleted } from "./lifecycle/restoreSoftDeleted.js";
 export { scheduledPurge } from "./lifecycle/scheduledPurge.js";
 export { permanentlyDeleteSoftDeleted } from "./lifecycle/permanentlyDeleteSoftDeleted.js";
+// Phase 8 Wave 3 (08-04): GDPR Art. 15 export (gdprEraseUser lands in 08-05).
+export { gdprExportUser } from "./gdpr/gdprExportUser.js";

@@ -39,6 +39,14 @@ const docStore = new Map<string, Record<string, unknown>>();
 const customClaims = new Map<string, Record<string, unknown>>();
 const SERVER_TIMESTAMP = { __isServerTs: true } as const;
 
+// ─── Phase 8 Wave 4 auth.updateUser tracking (gdprEraseUser) ─────────────────
+
+interface UpdateUserCall {
+  uid: string;
+  properties: Record<string, unknown>;
+}
+const updateUserCalls: UpdateUserCall[] = [];
+
 // ─── Phase 8 Wave 1 state ─────────────────────────────────────────────────────
 
 const storageObjects = new Map<
@@ -65,6 +73,7 @@ export function _reset(): void {
   storageObjects.clear();
   issuedSignedUrls.length = 0;
   exportCalls.length = 0;
+  updateUserCalls.length = 0;
 }
 
 // ─── Phase 7 seed / inspect helpers ──────────────────────────────────────────
@@ -129,11 +138,13 @@ export const adminMockState = {
   _allDocs,
   _allClaims,
   SERVER_TIMESTAMP,
-  // Phase 8 additions
+  // Phase 8 Wave 1 additions
   _seedStorageObject,
   _allStorageObjects,
   _allSignedUrls,
   _allExportCalls,
+  // Phase 8 Wave 4 additions
+  _allUpdateUserCalls,
 };
 
 // ─── Doc reference helpers ────────────────────────────────────────────────────
@@ -495,6 +506,10 @@ export function getFirestoreMock() {
   };
 }
 
+export function _allUpdateUserCalls(): UpdateUserCall[] {
+  return [...updateUserCalls];
+}
+
 export function getAuthMock() {
   return {
     async setCustomUserClaims(
@@ -502,6 +517,13 @@ export function getAuthMock() {
       claims: Record<string, unknown>,
     ): Promise<void> {
       customClaims.set(uid, { ...claims });
+    },
+    // Phase 8 Wave 4: track updateUser({disabled:true}) calls from gdprEraseUser
+    async updateUser(
+      uid: string,
+      properties: Record<string, unknown>,
+    ): Promise<void> {
+      updateUserCalls.push({ uid, properties });
     },
   };
 }

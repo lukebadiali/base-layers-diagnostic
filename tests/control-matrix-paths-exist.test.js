@@ -45,7 +45,24 @@ describe("docs/CONTROL_MATRIX.md — DOC-04 path-existence sweep (Phase 11 Wave 
         .map((p) => p.replace(/\\/g, "/")),
     );
 
-    const cited = [...new Set([...src.matchAll(pathRegex)].map((m) => m[0]))];
+    // Pitfall 19 substrate-honest: paths immediately preceding a
+    // `(PENDING-OPERATOR ...)` annotation are aspirational future captures,
+    // not stale citations. Strip those path-plus-PENDING annotations before
+    // extracting paths so the existence-sweep targets real artefacts only.
+    // Same treatment for `(Phase 12 deliverable)` / `(pending Phase 12)`
+    // placeholder text used by the WALK section.
+    const stripped = src
+      // Strip backtick-quoted paths followed by `(PENDING-OPERATOR ...)`.
+      // Example: `docs/evidence/phase-6-mfa-luke.png` (PENDING-OPERATOR — see ...)
+      .replace(
+        /`[^`]+\.(png|jpg|jpeg|svg|gif|webp|md)`\s*\(PENDING-OPERATOR[^)]*\)/g,
+        "(PENDING-OPERATOR)",
+      )
+      // Also strip standalone PENDING-OPERATOR cell annotations.
+      .replace(/PENDING-OPERATOR[^|`\n]*/g, "PENDING-OPERATOR")
+      .replace(/\(Phase \d+ deliverable\)|\(pending Phase \d+\)/g, "(pending)");
+
+    const cited = [...new Set([...stripped.matchAll(pathRegex)].map((m) => m[0]))];
     expect(cited.length, "expected at least one code-path citation").toBeGreaterThan(0);
 
     const missing = [];

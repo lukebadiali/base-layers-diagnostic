@@ -37,12 +37,10 @@ export async function exportUser(input) {
  * deterministic on (uid, GDPR_PSEUDONYM_SECRET) across runs.
  *
  * @param {{ userId: string }} input
- * @returns {Promise<{ ok: true, tombstoneToken: string, counts: Record<string, number> }>}
+ * @returns {Promise<{ ok: true, counts: Record<string, number> }>}
  */
 export async function eraseUser(input) {
   const clientReqId = crypto.randomUUID();
   const result = await eraseUserCallable({ ...input, clientReqId });
-  return /** @type {{ ok: true, tombstoneToken: string, counts: Record<string, number> }} */ (
-    result.data
-  );
+  return /** @type {{ ok: true, counts: Record<string, number> }} */ (result.data);
 }

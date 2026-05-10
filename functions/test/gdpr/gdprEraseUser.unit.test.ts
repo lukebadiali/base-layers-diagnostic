@@ -160,10 +160,11 @@ describe("gdprEraseUser — unit tests", () => {
     const result = (await wrapped({
       data: { userId: TARGET_UID, clientReqId: VALID_REQ_ID_B },
       auth: adminAuthCtx,
-    } as never)) as { ok: boolean; tombstoneToken: string; counts: Record<string, number> };
+    } as never)) as { ok: boolean; counts: Record<string, number> };
 
     expect(result.ok).toBe(true);
-    expect(result.tombstoneToken).toMatch(/^deleted-user-[0-9a-f]{16}$/);
+    // tombstoneToken must NOT be present in the response (M-01 security fix)
+    expect((result as Record<string, unknown>).tombstoneToken).toBeUndefined();
 
     // users/{uid} PII tombstoned
     const userDoc = adminMockState._readDoc(`users/${TARGET_UID}`);
@@ -171,11 +172,19 @@ describe("gdprEraseUser — unit tests", () => {
     expect(userDoc?.name).toBeNull();
     expect(userDoc?.displayName).toBeNull();
 
+    // Derive the tombstone token from redactionList (no longer in response — M-01 fix)
+    const redactionDoc = adminMockState._readDoc(`redactionList/${TARGET_UID}`);
+    expect(redactionDoc).toBeDefined();
+    expect(redactionDoc?.erasedBy).toBe(ADMIN_UID);
+    expect(redactionDoc?.schemaVersion).toBe(1);
+    const tombstoneToken = redactionDoc?.tombstoneToken as string;
+    expect(tombstoneToken).toMatch(/^deleted-user-[0-9a-f]{16}$/);
+
     // messages tombstoned
     const m1 = adminMockState._readDoc("orgs/o1/messages/m1");
-    expect(m1?.authorId).toBe(result.tombstoneToken);
+    expect(m1?.authorId).toBe(tombstoneToken);
     const m2 = adminMockState._readDoc("orgs/o1/messages/m2");
-    expect(m2?.authorId).toBe(result.tombstoneToken);
+    expect(m2?.authorId).toBe(tombstoneToken);
 
     // audit event tombstoned — the batch.update() with dotted key "actor.uid"
     // is stored as a flat key in the mock store (mock does flat merge, not nested merge).
@@ -185,19 +194,9 @@ describe("gdprEraseUser — unit tests", () => {
     const actorUidValue = ev1AsAny["actor.uid"] !== undefined
       ? ev1AsAny["actor.uid"]
       : (ev1AsAny.actor as Record<string, unknown>)?.uid;
-    expect(actorUidValue).toBe(result.tombstoneToken);
-
-    // redactionList/{uid} written
-    const redactionDoc = adminMockState._readDoc(`redactionList/${TARGET_UID}`);
-    expect(redactionDoc).toBeDefined();
-    expect(redactionDoc?.tombstoneToken).toBe(result.tombstoneToken);
-    expect(redactionDoc?.erasedBy).toBe(ADMIN_UID);
-    expect(redactionDoc?.schemaVersion).toBe(1);
+    expect(actorUidValue).toBe(tombstoneToken);
 
     // audit log event written (compliance.erase.user)
-    const auditRow = adminMockState._readDoc("auditLog/ev1");
-    // The compliance.erase.user audit event is written to a NEW doc with eventId from randomUUID
-    // (not overwriting ev1). Verify it exists by checking docStore for a compliance event.
     const allDocs = adminMockState._allDocs();
     const complianceEvent = [...allDocs.entries()].find(
       ([path, data]) =>
@@ -207,7 +206,7 @@ describe("gdprEraseUser — unit tests", () => {
     );
     expect(complianceEvent).toBeDefined();
     const [, evData] = complianceEvent!;
-    expect((evData.payload as Record<string, unknown>)?.tombstoneToken).toBe(result.tombstoneToken);
+    expect((evData.payload as Record<string, unknown>)?.tombstoneToken).toBe(tombstoneToken);
 
     // counts reflect the seeded data
     expect(result.counts.messages).toBe(2);
@@ -218,11 +217,13 @@ describe("gdprEraseUser — unit tests", () => {
   it("same clientReqId → already-exists; new clientReqId → re-runs with same deterministic token", async () => {
     adminMockState._seedDoc(`users/${TARGET_UID}`, { email: "t@x.com" });
 
-    // First call
-    const r1 = (await wrapped({
+    // First call — derive token from redactionList (not in response — M-01 fix)
+    await wrapped({
       data: { userId: TARGET_UID, clientReqId: VALID_REQ_ID_C },
       auth: adminAuthCtx,
-    } as never)) as { tombstoneToken: string };
+    } as never);
+    const token1 = adminMockState._readDoc(`redactionList/${TARGET_UID}`)?.tombstoneToken as string;
+    expect(token1).toMatch(/^deleted-user-[0-9a-f]{16}$/);
 
     // Second call — same clientReqId → already-exists
     await expect(
@@ -235,12 +236,13 @@ describe("gdprEraseUser — unit tests", () => {
     // Third call — new clientReqId → same token (deterministic)
     adminMockState._reset();
     adminMockState._seedDoc(`users/${TARGET_UID}`, { email: "t@x.com" });
-    const r3 = (await wrapped({
+    await wrapped({
       data: { userId: TARGET_UID, clientReqId: VALID_REQ_ID_D },
       auth: adminAuthCtx,
-    } as never)) as { tombstoneToken: string };
+    } as never);
+    const token3 = adminMockState._readDoc(`redactionList/${TARGET_UID}`)?.tombstoneToken as string;
 
-    expect(r1.tombstoneToken).toBe(r3.tombstoneToken);
+    expect(token1).toBe(token3);
   });
 
   // Test 6: Auth updateUser({disabled: true}) called once for target uid

@@ -295,6 +295,6 @@ export const gdprEraseUser = onCall(
       totalOps: ops.length,
     });
 
-    return { ok: true, tombstoneToken: tombstone, counts };
+    return { ok: true, counts };
   }),
 );

@@ -129,12 +129,12 @@ Each requirement is mapped to: (a) the CONCERNS.md finding it closes (where appl
 
 ### Data Lifecycle — Soft-Delete (LIFE)
 
-- [ ] **LIFE-01**: Soft-delete + 30-day restore window across orgs, users (auth-only delete), comments, documents, messages, funnel comments
-- [ ] **LIFE-02**: Soft-delete writes a `deletedAt` timestamp tombstone on the doc PLUS a snapshot at `softDeleted/{type}/items/{id}` (preserves full state for restore)
-- [ ] **LIFE-03**: Rules hide soft-deleted docs from normal queries (`request.query.where('deletedAt', '==', null)` predicate or equivalent)
-- [ ] **LIFE-04**: `restoreSoftDeleted` callable Cloud Function (admin-only) returns soft-deleted record to live state within the 30-day window
-- [ ] **LIFE-05**: Daily `scheduledPurge` Cloud Function hard-deletes records past the 30-day window
-- [ ] **LIFE-06**: Soft-delete UI in admin panel: "Recently Deleted" view + Restore button + "Permanently delete now" override
+- [x] **LIFE-01**: Soft-delete + 30-day restore window across orgs, users (auth-only delete), comments, documents, messages, funnel comments
+- [x] **LIFE-02**: Soft-delete writes a `deletedAt` timestamp tombstone on the doc PLUS a snapshot at `softDeleted/{type}/items/{id}` (preserves full state for restore)
+- [x] **LIFE-03**: Rules hide soft-deleted docs from normal queries (`request.query.where('deletedAt', '==', null)` predicate or equivalent)
+- [x] **LIFE-04**: `restoreSoftDeleted` callable Cloud Function (admin-only) returns soft-deleted record to live state within the 30-day window
+- [x] **LIFE-05**: Daily `scheduledPurge` Cloud Function hard-deletes records past the 30-day window
+- [x] **LIFE-06**: Soft-delete UI in admin panel: "Recently Deleted" view + Restore button + "Permanently delete now" override
 
 ### GDPR Rights (GDPR)
 
@@ -176,7 +176,7 @@ Each requirement is mapped to: (a) the CONCERNS.md finding it closes (where appl
 - [ ] **DOC-07**: `docs/DATA_FLOW.md` — diagram + prose: Client → Firebase Auth → Firestore → Storage → Cloud Functions → Sentry; data classifications, processing regions
 - [ ] **DOC-08**: `/.well-known/security.txt` (RFC 9116) plus vulnerability disclosure policy paragraph in `SECURITY.md` (acknowledge in 5 business days, no legal action against good-faith researchers)
 - [ ] **DOC-09**: `docs/evidence/` — VSQ-ready evidence pack: screenshots of MFA enrolment for Luke + George; sample audit-log entry (PII redacted); backup-policy console screenshot; Firestore region screenshot; App Check enforcement state per service; rules deployment timestamp; latest CI green run; latest `npm audit` clean output
-- [ ] **DOC-10**: Each phase incrementally appends to `SECURITY.md` as it closes findings — no "Phase 11 cliff" of writing it all at the end (Pitfall 19 — compliance theatre prevention) — **Per-phase increments to date:** Phase 1 (initial scaffolding); Phase 3 (CSP / HSTS / hosting headers + Phase 3 Audit Index); Phase 4 (Code Quality + Module Boundaries); Phase 5 (Data Handling + Rules + Phase 5 Audit Index); Phase 6 (Authentication & Sessions + MFA + Anonymous Auth Disabled + Production Rules Deployment + Phase 6 Audit Index); **Phase 7 Wave 6** (07-06): § Cloud Functions Workspace + § App Check + § Audit Log Infrastructure + § Rate Limiting + § Phase 7 Audit Index (16 data rows — 15 mandatory + 1 D-22 closure status). Phase 11 final pass remains owner of authoritative DOC-10 closure.
+- [x] **DOC-10**: Each phase incrementally appends to `SECURITY.md` as it closes findings — no "Phase 11 cliff" of writing it all at the end (Pitfall 19 — compliance theatre prevention) — **Per-phase increments to date:** Phase 1 (initial scaffolding); Phase 3 (CSP / HSTS / hosting headers + Phase 3 Audit Index); Phase 4 (Code Quality + Module Boundaries); Phase 5 (Data Handling + Rules + Phase 5 Audit Index); Phase 6 (Authentication & Sessions + MFA + Anonymous Auth Disabled + Production Rules Deployment + Phase 6 Audit Index); **Phase 7 Wave 6** (07-06): § Cloud Functions Workspace + § App Check + § Audit Log Infrastructure + § Rate Limiting + § Phase 7 Audit Index (16 data rows — 15 mandatory + 1 D-22 closure status). Phase 11 final pass remains owner of authoritative DOC-10 closure.
 
 ### Audit Walkthrough (WALK)
 
@@ -271,7 +271,7 @@ Acknowledged but deferred — not in this milestone's roadmap.
 | BACKUP-01 to BACKUP-07                   | Phase 8                                | Pending | Daily Firestore export + GCS lifecycle + PITR + Storage versioning + signed-URL TTL + quarterly drill cadence + one drill performed |
 | OBS-01 to OBS-08                         | Phase 9                                | Pending | Sentry browser + node + EU region + scrubber + Slack alerts + uptime + budget alerts                                                |
 | DOC-01 to DOC-09                         | Phase 11                               | Pending | Evidence pack — written against existing controls, not new design                                                                   |
-| DOC-10                                   | All phases (canonical owner: Phase 11) | Pending | Cross-cutting — every phase appends to `SECURITY.md` as it closes findings; Phase 11 does the final pass                            |
+| DOC-10                                   | All phases (canonical owner: Phase 11) | Complete | Cross-cutting — every phase appends to `SECURITY.md` as it closes findings; Phase 11 does the final pass                            |
 | WALK-01 to WALK-04                       | Phase 12                               | Pending | Translation map → end-to-end checklist run → `SECURITY_AUDIT_REPORT.md` + LLM-section N/A rationale                                 |
 
 **Coverage:**

@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-10T11:58:00Z"
+last_updated: "2026-05-10T12:24:56.099Z"
 progress:
   total_phases: 12
   completed_phases: 7
   total_plans: 48
-  completed_plans: 42
-  percent: 88
+  completed_plans: 44
+  percent: 92
 ---
 
 # State: Base Layers Diagnostic — Hardening Pass
 
 **Initialized:** 2026-05-03
-**Last updated:** 2026-05-08 — Phase 5 COMPLETE (6/6 plans + cutover + verifier); Phase 6 unblocked
+**Last updated:** 2026-05-10 — Phase 8 plan 03 COMPLETE (soft-delete lifecycle — 4 CFs + rules + client wrappers + admin UI)
 
 ---
 
@@ -36,15 +36,15 @@ Phase 8 — Data Lifecycle (Soft-Delete + GDPR + Backups)
 ## Current Position
 
 Phase: 8 (Data Lifecycle (Soft-Delete + GDPR + Backups)) — EXECUTING
-Plan: 3 of 6 (08-01 paused at operator checkpoint, 08-02 COMPLETE)
-Plans complete: 1 of 6 (08-02 complete; 08-01 paused awaiting operator)
-**Status:** Executing Phase 8 — 08-02 complete; 08-01 paused at human-verify checkpoint (operator must run setup-backup-bucket script)
-**Progress:** 7/12 phases complete; Phase 8 plan 02 done (5 tasks: 4 code tasks + 1 vitest isolation fix)
+Plan: 4 of 6 (08-01 paused at operator checkpoint, 08-02 + 08-03 COMPLETE)
+Plans complete: 2 of 6 (08-02 + 08-03 complete; 08-01 paused awaiting operator)
+**Status:** Executing Phase 8 — 08-03 soft-delete lifecycle complete; next plan 08-04 (GDPR export)
+**Progress:** [█████████░] 92%
 
 ```
-[########........] 42%
+[█████████░] 92%
  1  2  3  4  5  6  7  8  9 10 11 12
- ✓  ✓  ✓  ✓  ✓  ⏸  .  .  .  .  .  .   (⏸ = Wave 5 paused after Steps 1-4)
+ ✓  ✓  ✓  ✓  ✓  ✓  ✓  ▶  .  .  .  .   (▶ = Phase 8 executing: 08-02 + 08-03 done; 08-01 paused)
 ```
 
 **Production state at pause (no live users — safe to remain in this state):**
@@ -163,6 +163,14 @@ These persist in `/gsd-progress` + `/gsd-audit-uat` until resolved. Cleanup ledg
 - **Use `SECURITY_AUDIT.md` as audit framework** — translate Vercel/Supabase sections to Firebase (PROJECT.md, decided 2026-05-03)
 - **12-phase plan, not 5-8** — standard granularity overridden because four load-bearing sequencing constraints cannot be collapsed (ROADMAP.md "Granularity Rationale", validated 2026-05-03)
 
+### Phase 8 Plan 03 Decisions (2026-05-10)
+
+- **Single-load callable pattern in unit tests** — load callable once at module level; seed AFTER load; no vi.resetModules per test; prevents stale module instance issue where seed data was invisible to callable
+- **permanentlyDeleteSoftDeleted.ts and src/data/soft-deleted.js created early** — both created before their scheduled tasks (Tasks 5+8 respectively) to unblock index.ts compile and admin.js import chain
+- **retryCount:1 flat for scheduledPurge** — firebase-functions 7.2.5 uses top-level `retryCount`, not nested `retryConfig` object
+- **src/cloud/soft-delete.js uses adapter import** — `../firebase/functions.js` not `firebase/functions` direct; ESLint no-restricted-imports D-04
+- **tests/mocks/firebase.js: undefined treated as null for deletedAt==null filter** — Firestore absent-field semantics: docs without deletedAt field must match `where("deletedAt", "==", null)`
+
 ### Phase 8 Plan 02 Decisions (2026-05-10)
 
 - **retryCount:2 flat on ScheduleOptions** — firebase-functions 7.2.5 uses top-level `retryCount`, not `retryConfig: { retryCount }` nested object
@@ -217,7 +225,9 @@ Additional non-negotiables:
 
 ## Session Continuity
 
-**Last session (2026-05-10):** Phase 8 plan 02 (backup Cloud Functions) — all 4 tasks executed and committed. Commits: 9fb299d (feat: scheduledFirestoreExport + 5 unit tests), 43b4b0b (feat: getDocumentSignedUrl + 7 unit tests), 628e0eb (feat: index.ts exports + integration tests), 40d7ebe (feat: src/cloud/signed-url.js seam), eb56590 (fix: vitest pool:forks isolation). 08-02-SUMMARY.md created. 08-01 still paused at operator Task 5. Next plan: 08-03 (soft-delete CFs + Rules + client seam).
+**Last session (2026-05-10):** Phase 8 plan 03 (soft-delete lifecycle) — all 8 tasks executed and committed. 4 new lifecycle CFs (softDelete, restoreSoftDeleted, scheduledPurge, permanentlyDeleteSoftDeleted), 5 data wrapper updates (deletedAt==null filter), firestore.rules +5 notDeleted conjuncts, src/cloud/soft-delete.js filled, LIFE-06 admin UI wired, getDownloadURL sweep complete. functions tests: 151 → 189 (+38); root tests: 440 → 445 (+5). Commits: 2ada963..4d9616e (11 commits). 08-03-SUMMARY.md created. Next plan: 08-04 (GDPR export).
+
+**Previous session (2026-05-10):** Phase 8 plan 02 (backup Cloud Functions) — all 4 tasks executed and committed. Commits: 9fb299d (feat: scheduledFirestoreExport + 5 unit tests), 43b4b0b (feat: getDocumentSignedUrl + 7 unit tests), 628e0eb (feat: index.ts exports + integration tests), 40d7ebe (feat: src/cloud/signed-url.js seam), eb56590 (fix: vitest pool:forks isolation). 08-02-SUMMARY.md created. 08-01 still paused at operator Task 5. Next plan: 08-03 (soft-delete CFs + Rules + client seam).
 
 **Previous session (2026-05-10):** Phase 8 plan 01 (backup substrate) — Tasks 1-4 executed and committed. Paused at Task 5 (operator checkpoint). Commits: 1809c1e (chore: @google-cloud/firestore@8.5.0), f6f3566 (feat: setup-backup-bucket script), 6ca6a9f (docs: phase-8-backup-setup.md runbook), cbff8b6 (feat: admin-sdk.ts Storage + FirestoreAdminClient mocks). Operator must run scripts/setup-backup-bucket/run.js and provision backup-sa before Wave 2 (08-02) can deploy.
 

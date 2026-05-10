@@ -74,4 +74,32 @@ describe("SECURITY_AUDIT_REPORT.md doc shape (WALK-02 + WALK-03 partial — Plan
       ).toBeGreaterThanOrEqual(1);
     }
   });
+
+  it("Test 4: all 10 OWASP LLM Top-10 sections enumerated as explicit rows (WALK-04)", () => {
+    const body = readFileSync(REPORT_PATH, "utf-8");
+    // Match table rows starting with `| §6 LLM<digits>` — captures LLM01..LLM10 verbatim.
+    const llmRows = body.match(/^\|\s*§6\s+LLM\d+\b/gm) || [];
+    expect(
+      llmRows.length,
+      `WALK-04 anchor — expected >= 10 LLM01..LLM10 rows in §6 section, got ${llmRows.length}: ${JSON.stringify(llmRows)}`,
+    ).toBeGreaterThanOrEqual(10);
+  });
+
+  it("Test 8: §13 Sign-off Checklist Universal section has >= 14 verdict rows (matches SECURITY_AUDIT.md §13 Universal)", () => {
+    const body = readFileSync(REPORT_PATH, "utf-8");
+    // Scope to the §13 Universal section to avoid matching §13 Supabase/Vercel/AI rows.
+    const universalSection =
+      body.match(
+        /##\s+§13\s+Sign-off Checklist\s+—\s+Universal[\s\S]*?(?=\n##\s+|$(?![\s\S]))/m,
+      )?.[0] ?? "";
+    expect(
+      universalSection.length,
+      "expected ## §13 Sign-off Checklist — Universal section to be present",
+    ).toBeGreaterThan(0);
+    const universalRows = universalSection.match(/^\|\s*§13\s+U#\d+\b/gm) || [];
+    expect(
+      universalRows.length,
+      `expected >= 14 §13 U# rows in Universal section, got ${universalRows.length}: ${JSON.stringify(universalRows)}`,
+    ).toBeGreaterThanOrEqual(14);
+  });
 });

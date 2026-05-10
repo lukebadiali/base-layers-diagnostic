@@ -6,13 +6,10 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const cfg = JSON.parse(
-  readFileSync(resolve(process.cwd(), "firebase.json"), "utf-8"),
-);
+const cfg = JSON.parse(readFileSync(resolve(process.cwd(), "firebase.json"), "utf-8"));
 const rewrites = cfg.hosting.rewrites;
 const globalHeaders = cfg.hosting.headers.find((h) => h.source === "**")?.headers ?? [];
-const headerByKey = (key) =>
-  globalHeaders.find((h) => h.key.toLowerCase() === key.toLowerCase());
+const headerByKey = (key) => globalHeaders.find((h) => h.key.toLowerCase() === key.toLowerCase());
 
 describe("firebase.json — hosting basics", () => {
   it("public is set to dist", () => {
@@ -89,5 +86,53 @@ describe("firebase.json — header values (HSTS preload + COEP + CSP)", () => {
     expect(csp).not.toMatch(/cdn\.jsdelivr\.net/);
     expect(csp).not.toMatch(/fonts\.googleapis\.com/);
     expect(csp).not.toMatch(/fonts\.gstatic\.com/);
+  });
+});
+
+// Phase 10 Wave 2 (HOST-07): assert the TIGHTENED CSP-RO shape. The header
+// KEY remains `Content-Security-Policy-Report-Only` at Wave 2 — Wave 4
+// (Plan 10-04) flips the key to `Content-Security-Policy` and updates the
+// first assertion below to target the enforced key.
+describe("firebase.json — Phase 10 tightened CSP shape (HOST-07)", () => {
+  const cspKey = "Content-Security-Policy-Report-Only";
+
+  it("style-src is locked to 'self' — no 'unsafe-inline'", () => {
+    const csp = headerByKey(cspKey)?.value ?? "";
+    expect(csp).toMatch(/style-src 'self'(?!\s*'unsafe-inline')/);
+    expect(csp).not.toMatch(/style-src[^;]*'unsafe-inline'/);
+  });
+
+  it("connect-src includes Sentry EU origin (https://de.sentry.io) — Pitfall 10B", () => {
+    const csp = headerByKey(cspKey)?.value ?? "";
+    expect(csp).toContain("https://de.sentry.io");
+  });
+
+  it("frame-src is 'self' (no firebaseapp.com popup origin)", () => {
+    const csp = headerByKey(cspKey)?.value ?? "";
+    expect(csp).toMatch(/frame-src 'self'/);
+    expect(csp).not.toMatch(/firebaseapp\.com/);
+  });
+
+  it("base-uri 'self' and form-action 'self' present (HOST-07 SC#1)", () => {
+    const csp = headerByKey(cspKey)?.value ?? "";
+    expect(csp).toContain("base-uri 'self'");
+    expect(csp).toContain("form-action 'self'");
+  });
+
+  it("default-src + object-src + frame-ancestors retain Phase 3 substrate", () => {
+    const csp = headerByKey(cspKey)?.value ?? "";
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("object-src 'none'");
+    expect(csp).toContain("frame-ancestors 'none'");
+  });
+
+  // HOST-06 substrate test — actual submission verification is Plan 10-05 manual operator runbook
+  it("HSTS preload-eligible: max-age >= 31536000, includeSubDomains, preload", () => {
+    const v = headerByKey("Strict-Transport-Security")?.value ?? "";
+    const m = v.match(/max-age=(\d+)/);
+    expect(m).toBeTruthy();
+    expect(parseInt(m[1], 10)).toBeGreaterThanOrEqual(31536000);
+    expect(v).toContain("includeSubDomains");
+    expect(v).toContain("preload");
   });
 });

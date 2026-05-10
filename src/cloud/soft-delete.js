@@ -18,7 +18,7 @@ const permanentlyDeleteCallable = httpsCallable(functions, "permanentlyDeleteSof
 
 /**
  * Soft-delete a record. Admin only (server-enforced).
- * @param {{ type: "org"|"comment"|"document"|"message"|"funnelComment", orgId: string, id: string }} input
+ * @param {{ type: "action"|"comment"|"document"|"message"|"funnelComment", orgId: string, id: string }} input
  * @returns {Promise<{ ok: true }>}
  */
 export async function softDelete(input) {
@@ -29,7 +29,7 @@ export async function softDelete(input) {
 
 /**
  * Restore a soft-deleted record. Admin only (server-enforced).
- * @param {{ type: "org"|"comment"|"document"|"message"|"funnelComment", orgId: string, id: string }} input
+ * @param {{ type: "action"|"comment"|"document"|"message"|"funnelComment", orgId: string, id: string }} input
  * @returns {Promise<{ ok: true }>}
  */
 export async function restoreSoftDeleted(input) {
@@ -40,7 +40,7 @@ export async function restoreSoftDeleted(input) {
 
 /**
  * Permanently delete (hard-delete) ONE soft-deleted record. Admin only.
- * @param {{ type: "org"|"comment"|"document"|"message"|"funnelComment", id: string }} input
+ * @param {{ type: "action"|"comment"|"document"|"message"|"funnelComment", id: string }} input
  * @returns {Promise<{ ok: true }>}
  */
 export async function permanentlyDeleteSoftDeleted(input) {

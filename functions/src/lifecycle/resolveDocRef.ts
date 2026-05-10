@@ -3,9 +3,9 @@
 // softDelete + restoreSoftDeleted + scheduledPurge + permanentlyDeleteSoftDeleted
 // so the path-map is single-source-of-truth.
 
-export type SoftDeletableType = "org" | "comment" | "document" | "message" | "funnelComment";
+export type SoftDeletableType = "action" | "comment" | "document" | "message" | "funnelComment";
 export const SOFT_DELETABLE_TYPES: readonly SoftDeletableType[] = [
-  "org", "comment", "document", "message", "funnelComment",
+  "action", "comment", "document", "message", "funnelComment",
 ] as const;
 
 /**
@@ -14,10 +14,10 @@ export const SOFT_DELETABLE_TYPES: readonly SoftDeletableType[] = [
  */
 export function resolveDocPath(input: { type: SoftDeletableType; orgId: string; id: string }): string {
   switch (input.type) {
-    case "org": return `orgs/${input.id}`;
-    case "comment": return `orgs/${input.orgId}/comments/${input.id}`;
-    case "document": return `orgs/${input.orgId}/documents/${input.id}`;
-    case "message": return `orgs/${input.orgId}/messages/${input.id}`;
+    case "action":       return `orgs/${input.orgId}/actions/${input.id}`;
+    case "comment":      return `orgs/${input.orgId}/comments/${input.id}`;
+    case "document":     return `orgs/${input.orgId}/documents/${input.id}`;
+    case "message":      return `orgs/${input.orgId}/messages/${input.id}`;
     case "funnelComment": return `funnelComments/${input.id}`;
     default: {
       const _exhaustive: never = input.type;

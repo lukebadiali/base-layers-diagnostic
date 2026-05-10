@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest";
 import { resolveDocPath, resolveSnapshotPath } from "../../src/lifecycle/resolveDocRef.js";
 
 describe("resolveDocPath", () => {
-  it("maps org type to orgs/{id}", () => {
-    expect(resolveDocPath({ type: "org", orgId: "orgA", id: "orgA" })).toBe("orgs/orgA");
+  it("maps action type to orgs/{orgId}/actions/{id}", () => {
+    expect(resolveDocPath({ type: "action", orgId: "orgA", id: "act_xyz" })).toBe("orgs/orgA/actions/act_xyz");
   });
 
   it("maps comment type to orgs/{orgId}/comments/{id}", () => {
@@ -30,12 +30,20 @@ describe("resolveDocPath", () => {
       resolveDocPath({ type: "unknown" as never, orgId: "orgA", id: "x" }),
     ).toThrow(RangeError);
   });
+
+  it("SOFT_DELETABLE_TYPES enum is exactly the 5 expected types (regression pin)", async () => {
+    const { SOFT_DELETABLE_TYPES } = await import("../../src/lifecycle/resolveDocRef.js");
+    expect([...SOFT_DELETABLE_TYPES].sort()).toEqual(
+      ["action", "comment", "document", "funnelComment", "message"].sort(),
+    );
+    expect(SOFT_DELETABLE_TYPES).not.toContain("org");
+  });
 });
 
 describe("resolveSnapshotPath", () => {
   it("maps type + id to softDeleted/{type}/items/{id}", () => {
     expect(resolveSnapshotPath({ type: "comment", id: "c_xyz" })).toBe("softDeleted/comment/items/c_xyz");
     expect(resolveSnapshotPath({ type: "message", id: "m_abc" })).toBe("softDeleted/message/items/m_abc");
-    expect(resolveSnapshotPath({ type: "org", id: "org1" })).toBe("softDeleted/org/items/org1");
+    expect(resolveSnapshotPath({ type: "action", id: "act1" })).toBe("softDeleted/action/items/act1");
   });
 });

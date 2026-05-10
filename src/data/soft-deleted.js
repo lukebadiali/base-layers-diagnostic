@@ -12,7 +12,7 @@
 import { db, collection, getDocs } from "../firebase/db.js";
 
 const SOFT_DELETABLE_TYPES = /** @type {const} */ ([
-  "org",
+  "action",
   "comment",
   "document",
   "message",

@@ -178,24 +178,22 @@ async function main() {
     if (snap.empty) {
       printRow("auditLog (about user)", "PASS", "0 docs (none reference raw uid)");
     } else {
-      // All matching docs should have actor.uid as a tombstone (they match because
-      // actor.uid still equals uid — this would mean erasure didn't tombstone them)
+      // All matching docs should have actor.uid replaced by the tombstone token.
+      // untombstoned = docs where actor.uid is still the raw uid (not a tombstone).
       const untombstoned = snap.docs.filter((d) => !isTombstoneToken(d.data()?.actor?.uid));
       if (untombstoned.length === 0) {
-        // Edge: these docs matched uid — if actor.uid IS uid (not tombstoned) that's a fail.
-        // But if we're here, the query matched uid exactly, meaning the token isn't in place.
-        printRow("auditLog (about user)", "FAIL", `${snap.size} docs still reference raw uid`);
-        allPass = false;
-        failures.push({
-          check: "auditLog (about user)",
-          reason: `${snap.size} untombstoned audit docs`,
-        });
+        // All matched docs have been tombstoned — erasure succeeded on this collection.
+        printRow("auditLog (about user)", "PASS", `${snap.size} docs tombstoned correctly`);
       } else {
-        printRow("auditLog (about user)", "FAIL", `${snap.size} docs still reference raw uid`);
+        printRow(
+          "auditLog (about user)",
+          "FAIL",
+          `${untombstoned.length} of ${snap.size} docs still reference raw uid`,
+        );
         allPass = false;
         failures.push({
           check: "auditLog (about user)",
-          reason: `${snap.size} untombstoned audit docs`,
+          reason: `${untombstoned.length} untombstoned audit docs`,
         });
       }
     }

@@ -10,14 +10,8 @@
 //   - orgs/{orgId}/documents/{docId}
 //   - orgs/{orgId}/messages/{msgId}
 //   - funnelComments/{id}
-import { collection, doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  it,
-} from "vitest";
+import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
+import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
 import { initRulesEnv, asUser, ROLES, assertSucceeds, assertFails } from "./setup.js";
 
 let testEnv;
@@ -49,44 +43,70 @@ beforeEach(async () => {
 
     // ── Phase 8: comments ───────────────────────────────────────────
     await setDoc(doc(db, "orgs/orgA/comments/cLive"), {
-      orgId: "orgA", pillarId: "1", body: "live", authorId: "u1",
+      orgId: "orgA",
+      pillarId: "1",
+      body: "live",
+      authorId: "u1",
       deletedAt: null,
     });
     await setDoc(doc(db, "orgs/orgA/comments/cDeleted"), {
-      orgId: "orgA", pillarId: "1", body: "deleted", authorId: "u1",
+      orgId: "orgA",
+      pillarId: "1",
+      body: "deleted",
+      authorId: "u1",
       deletedAt: now,
     });
 
     // ── Phase 8: actions ────────────────────────────────────────────
     await setDoc(doc(db, "orgs/orgA/actions/aLive"), {
-      orgId: "orgA", title: "live action", deletedAt: null,
+      orgId: "orgA",
+      title: "live action",
+      deletedAt: null,
     });
     await setDoc(doc(db, "orgs/orgA/actions/aDeleted"), {
-      orgId: "orgA", title: "deleted action", deletedAt: now,
+      orgId: "orgA",
+      title: "deleted action",
+      deletedAt: now,
     });
 
     // ── Phase 8: documents ──────────────────────────────────────────
     await setDoc(doc(db, "orgs/orgA/documents/dLive"), {
-      orgId: "orgA", name: "live.pdf", deletedAt: null,
+      orgId: "orgA",
+      name: "live.pdf",
+      deletedAt: null,
     });
     await setDoc(doc(db, "orgs/orgA/documents/dDeleted"), {
-      orgId: "orgA", name: "deleted.pdf", deletedAt: now,
+      orgId: "orgA",
+      name: "deleted.pdf",
+      deletedAt: now,
     });
 
     // ── Phase 8: messages ───────────────────────────────────────────
     await setDoc(doc(db, "orgs/orgA/messages/mLive"), {
-      orgId: "orgA", body: "live msg", authorId: "u1", deletedAt: null,
+      orgId: "orgA",
+      body: "live msg",
+      authorId: "u1",
+      deletedAt: null,
     });
     await setDoc(doc(db, "orgs/orgA/messages/mDeleted"), {
-      orgId: "orgA", body: "deleted msg", authorId: "u1", deletedAt: now,
+      orgId: "orgA",
+      body: "deleted msg",
+      authorId: "u1",
+      deletedAt: now,
     });
 
     // ── Phase 8: funnelComments ─────────────────────────────────────
     await setDoc(doc(db, "funnelComments/fcLive"), {
-      orgId: "orgA", body: "live fc", authorId: "u1", deletedAt: null,
+      orgId: "orgA",
+      body: "live fc",
+      authorId: "u1",
+      deletedAt: null,
     });
     await setDoc(doc(db, "funnelComments/fcDeleted"), {
-      orgId: "orgA", body: "deleted fc", authorId: "u1", deletedAt: now,
+      orgId: "orgA",
+      body: "deleted fc",
+      authorId: "u1",
+      deletedAt: now,
     });
   });
 });

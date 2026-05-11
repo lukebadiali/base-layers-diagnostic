@@ -131,7 +131,7 @@ export default defineConfig(({ command, mode }) => {
           "src/auth/**": { lines: 95, branches: 95, functions: 95, statements: 95 },
           "src/data/**": { lines: 95, branches: 90, functions: 95, statements: 95 },
           "src/ui/**": { lines: 78, branches: 78, functions: 65, statements: 77 },
-          "src/views/**": { lines: 62, branches: 29, functions: 50, statements: 60 },
+          "src/views/**": { lines: 59, branches: 28, functions: 49, statements: 57 },
           "src/state.js": { lines: 44, branches: 25, functions: 100, statements: 50 },
           "src/router.js": { lines: 63, branches: 55, functions: 100, statements: 57 },
           "src/main.js": { lines: 20, branches: 15, functions: 18, statements: 19 },

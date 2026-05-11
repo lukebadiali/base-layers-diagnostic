@@ -885,25 +885,31 @@ Phase 7 established the `functions/test/_mocks/admin-sdk.ts` shared mock and `fi
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All four open questions raised during research have been resolved by the plan set. The resolutions are recorded inline below so the audit trail is explicit.
 
 1. **Does `bedeveloped-base-layers-backups` bucket already exist?**
    - What we know: Phase 5 created `bedeveloped-base-layers-uploads` for documents. No evidence of a backups bucket in runbooks or scripts.
    - What's unclear: Whether any ad-hoc backup bucket was created during Phase 5/6/7 operator work.
    - Recommendation: Wave 1 idempotent bucket-creation script handles this gracefully either way.
+   - **RESOLVED:** 08-01 Task 2 step 2 uses an idempotent `gcloud storage buckets describe ... ; gcloud storage buckets create ... || true` pattern that works whether the bucket exists or not. Operator runbook §4 documents the verification step.
 
 2. **Which service account for `lifecycle-sa` (soft-delete + restore callable)?**
    - What we know: Phase 7 Wave 1 provisioned 6 SAs (`scripts/provision-function-sas/run.js`). None covers lifecycle operations.
    - What's unclear: Whether to add to existing script or create separately.
    - Recommendation: Add `lifecycle-sa` and `gdpr-sa` entries to a new `scripts/provision-phase8-sas/run.js`, mirroring the Phase 7 pattern.
+   - **RESOLVED:** 08-05 Task 7 (operator checkpoint) provisions a new `lifecycle-sa` with `roles/datastore.user`, alongside `storage-reader-sa`, `gdpr-reader-sa`, and `gdpr-writer-sa`. The four SA grants are documented in the operator runbook (`runbooks/phase-8-backup-setup.md` §5 + 08-05 Task 7).
 
 3. **Should `gdprExportUser` and `gdprEraseUser` share a service account or have separate ones?**
    - What we know: Both need Firestore read-all + Storage write access; erasure additionally needs Firestore write-all and Auth access.
    - Recommendation: Separate SAs — `gdpr-reader-sa` (export, read-only IAM) and `gdpr-writer-sa` (erasure, broad write IAM). Least-privilege principle per FN-04 pattern.
+   - **RESOLVED:** Least-privilege won. 08-04 uses `gdpr-reader-sa` (Firestore `roles/datastore.viewer` + scoped Storage object admin on the gdpr-exports prefix); 08-05 uses `gdpr-writer-sa` (`roles/datastore.user` + `roles/firebaseauth.admin` + scoped Storage object admin on uploads bucket). The two SAs are provisioned together in 08-05 Task 7.
 
 4. **Does the Storage emulator support `getSignedUrl` for test coverage of BACKUP-05?**
    - What we know: GitHub issue #3400 (firebase-tools) indicates Storage emulator does NOT support `getSignedUrl`. [CITED: https://github.com/firebase/firebase-tools/issues/3400]
    - Recommendation: Unit test the `getDocumentSignedUrl` callable with a mocked `file.getSignedUrl` method (same `vi.mock` pattern as admin-sdk.ts). Integration test verifies the callable shape; URL validity is a manual verification step.
+   - **RESOLVED:** Cannot be tested against the Storage emulator (firebase-tools issue #3400 — `getSignedUrl` not implemented in the emulator). 08-02 Task 2 mocks `file.getSignedUrl` directly via the `getStorageMock()` factory in `functions/test/_mocks/admin-sdk.ts` per Pattern 11 (offline-mode integration test). URL validity is verified at the operator deploy gate (08-06 Task 1) via a manual smoke test against the deployed callable.
 
 ---
 

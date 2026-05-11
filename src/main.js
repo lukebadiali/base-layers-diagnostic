@@ -67,6 +67,14 @@ import {
 } from "./firebase/auth.js";
 import { createAuthView } from "./views/auth.js";
 
+// Phase 9 Wave 1 (OBS-01 + Pitfall 3): @sentry/browser boot. initSentryBrowser
+// is called inside the fbOnAuthStateChanged callback below — AFTER claims
+// hydration so setUser carries the verified UID + role (never PII like email).
+// Empty VITE_SENTRY_DSN coalesces to "" and the init becomes a silent no-op
+// (kill-switch + local-dev path; mirrors the FN-07 reCAPTCHA placeholder
+// pattern in vite.config.js).
+import { initSentryBrowser, setUser as sentrySetUser } from "./observability/sentry.js";
+
 // Application state singleton — extracted byte-identical to src/state.js
 // (D-02). The IIFE closure references the imported binding directly; no
 // shape change.
@@ -1086,7 +1094,7 @@ import {
 
       const hint = h(
         "div",
-        { class: "auth-help", style: "margin-top:0; padding-top:0; border:0;" },
+        { class: "auth-help u-mt-0 u-pt-0 u-no-border" },
         "First time signing in? Fill in your email + company passphrase, then set a password below. It'll be remembered next time.",
       );
 
@@ -1168,9 +1176,7 @@ import {
       ].forEach(([lbl, input]) => {
         container.appendChild(h("div", { class: "auth-field" }, [h("label", {}, lbl), input]));
       });
-      container.appendChild(
-        h("div", { class: "auth-field", style: "margin-top:-6px;" }, [passConfirm]),
-      );
+      container.appendChild(h("div", { class: "auth-field u-mt-neg-6" }, [passConfirm]));
       container.appendChild(hint);
       container.appendChild(errBox);
       container.appendChild(
@@ -1204,20 +1210,20 @@ import {
   // ================================================================
   function renderNoOrg(user) {
     if (user.role === "client") {
-      return h("div", { class: "card", style: "text-align:center; padding:48px;" }, [
-        h("h2", { style: "margin-top:0;" }, "No organisation assigned"),
+      return h("div", { class: "card u-text-center u-pad-48" }, [
+        h("h2", { class: "u-mt-0" }, "No organisation assigned"),
         h(
           "p",
-          { style: "color: var(--ink-3); max-width:480px; margin: 0 auto;" },
+          { class: "card-empty-text-client" },
           "Your client account isn't linked to an organisation yet. Please contact your BeDeveloped team lead to finish setup.",
         ),
       ]);
     }
-    return h("div", { class: "card", style: "text-align:center; padding:48px;" }, [
-      h("h2", { style: "margin-top:0; font-size: 28px;" }, "Create your first client engagement"),
+    return h("div", { class: "card u-text-center u-pad-48" }, [
+      h("h2", { class: "card-h2-large" }, "Create your first client engagement"),
       h(
         "p",
-        { style: "color: var(--ink-3); max-width: 520px; margin: 0 auto 20px;" },
+        { class: "card-empty-text-internal" },
         "Start by adding an organisation. Then you can invite their team to complete The Base Layers diagnostic.",
       ),
       h(
@@ -1255,43 +1261,29 @@ import {
       const unreadChat = unreadChatTotal(user);
       if (unreadChat > 0) {
         frag.appendChild(
-          h(
-            "div",
-            {
-              style:
-                "display:flex; align-items:center; gap:14px; padding:12px 16px; margin-bottom:16px; background: var(--red-bg); border:1px solid var(--red); border-radius: 10px;",
-            },
-            [
+          h("div", { class: "unread-chat-banner" }, [
+            h("div", { class: "unread-chat-badge" }, String(unreadChat)),
+            h("div", { class: "u-flex1-ink" }, [
               h(
                 "div",
-                {
-                  style:
-                    "min-width:32px; height:32px; border-radius:50%; background: var(--red); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;",
-                },
-                String(unreadChat),
+                { class: "u-fw-600" },
+                `${unreadChat} unread client message${unreadChat === 1 ? "" : "s"}`,
               ),
-              h("div", { style: "flex:1; color: var(--ink);" }, [
-                h(
-                  "div",
-                  { style: "font-weight:600;" },
-                  `${unreadChat} unread client message${unreadChat === 1 ? "" : "s"}`,
-                ),
-                h(
-                  "div",
-                  { style: "font-size:12.5px; color: var(--ink-3);" },
-                  "Across every client channel - click through to respond.",
-                ),
-              ]),
               h(
-                "button",
-                {
-                  class: "btn sm",
-                  onclick: () => setRoute("chat"),
-                },
-                "Open chat",
+                "div",
+                { class: "unread-chat-sub" },
+                "Across every client channel - click through to respond.",
               ),
-            ],
-          ),
+            ]),
+            h(
+              "button",
+              {
+                class: "btn sm",
+                onclick: () => setRoute("chat"),
+              },
+              "Open chat",
+            ),
+          ]),
         );
       }
     }
@@ -1365,29 +1357,21 @@ import {
     frag.appendChild(dashTop);
 
     // Tiles (accordion — click to expand in place)
-    const tilesHeader = h(
-      "div",
-      {
-        style:
-          "display:flex; justify-content:space-between; align-items:baseline; margin-top:28px; margin-bottom:10px;",
-      },
-      [
-        h("h2", { style: "margin:0;" }, "The ten pillars"),
-        h(
-          "button",
-          {
-            class: "btn ghost sm",
-            style: "border-color:var(--line); color:var(--ink-3);",
-            onclick: () => {
-              if (state.expandedPillars.size === DATA.pillars.length) state.expandedPillars.clear();
-              else DATA.pillars.forEach((p) => state.expandedPillars.add(p.id));
-              render();
-            },
+    const tilesHeader = h("div", { class: "tiles-header-bar" }, [
+      h("h2", { class: "u-m-0" }, "The ten pillars"),
+      h(
+        "button",
+        {
+          class: "btn ghost sm u-btn-line-ghost",
+          onclick: () => {
+            if (state.expandedPillars.size === DATA.pillars.length) state.expandedPillars.clear();
+            else DATA.pillars.forEach((p) => state.expandedPillars.add(p.id));
+            render();
           },
-          state.expandedPillars.size === DATA.pillars.length ? "Collapse all" : "Expand all",
-        ),
-      ],
-    );
+        },
+        state.expandedPillars.size === DATA.pillars.length ? "Collapse all" : "Expand all",
+      ),
+    ]);
     frag.appendChild(tilesHeader);
 
     const tiles = h("div", { class: "tiles" });
@@ -1415,19 +1399,19 @@ import {
       }
 
       const foot = h("div", { class: "foot" });
-      const scoreWrap = h("div", { style: "display:flex; align-items:baseline; gap:6px;" });
+      const scoreWrap = h("div", { class: "pillar-score-wrap" });
       scoreWrap.appendChild(h("div", { class: "score" }, s !== null ? `${s}` : "—"));
       if (s !== null && prevS !== null) {
         const d = s - prevS;
         const cls = d > 0 ? "delta-up" : d < 0 ? "delta-down" : "delta-same";
         const arrow = d > 0 ? "▲" : d < 0 ? "▼" : "=";
         scoreWrap.appendChild(
-          h("span", { class: cls, style: "font-size:12px;" }, `${arrow} ${Math.abs(d)}`),
+          h("span", { class: `${cls} pillar-score-arrow` }, `${arrow} ${Math.abs(d)}`),
         );
       }
       foot.appendChild(scoreWrap);
 
-      const rightFoot = h("div", { style: "display:flex; align-items:center; gap:8px;" });
+      const rightFoot = h("div", { class: "pillar-rightfoot" });
       rightFoot.appendChild(
         h("span", { class: `badge ${status}` }, statusLabel(status, done, total)),
       );
@@ -1524,7 +1508,7 @@ import {
       );
     }
 
-    const foot = h("div", { class: "foot", style: "justify-content: flex-end;" });
+    const foot = h("div", { class: "foot pillar-foot-end" });
     foot.appendChild(
       h(
         "button",
@@ -1586,8 +1570,7 @@ import {
 
     if (respUsers.length) {
       const stack = h("span", {
-        class: "respondent-stack",
-        style: "display:inline-flex; margin-left:10px;",
+        class: "respondent-stack round-meta-inline",
       });
       respUsers.slice(0, 5).forEach((u) => {
         stack.appendChild(
@@ -1608,11 +1591,7 @@ import {
 
     if (prevRound) {
       label.appendChild(
-        h(
-          "span",
-          { class: "round-meta", style: "margin-left:10px;" },
-          `· previous: ${prevRound.label}`,
-        ),
+        h("span", { class: "round-meta round-meta-ml" }, `· previous: ${prevRound.label}`),
       );
     }
 
@@ -1744,34 +1723,24 @@ import {
     if (isClientView(user)) {
       const pct = userCompletionPct(org, org.currentRoundId, user.id);
       frag.appendChild(
-        h(
-          "div",
-          {
-            style:
-              "background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px 18px; margin-bottom:16px; display:flex; gap:14px; align-items:center;",
-          },
-          [
-            h("span", { class: "avatar" }, initials(user.name || user.email)),
-            h("div", { style: "flex:1;" }, [
-              h("div", { style: "font-weight:600;" }, "Your progress"),
-              h(
-                "div",
-                { style: "color: var(--ink-3); font-size: 12px;" },
-                `${pct}% of ${DATA.pillars.length * DATA.pillars[0].diagnostics.length} questions answered`,
-              ),
-            ]),
+        h("div", { class: "client-progress-banner" }, [
+          h("span", { class: "avatar" }, initials(user.name || user.email)),
+          h("div", { class: "u-flex-1" }, [
+            h("div", { class: "u-fw-600" }, "Your progress"),
             h(
               "div",
-              {
-                style:
-                  "height:8px; width:180px; background:var(--line); border-radius:999px; overflow:hidden;",
-              },
-              h("span", {
-                style: `display:block; height:100%; width:${pct}%; background:var(--brand);`,
-              }),
+              { class: "client-progress-meta" },
+              `${pct}% of ${DATA.pillars.length * DATA.pillars[0].diagnostics.length} questions answered`,
             ),
-          ],
-        ),
+          ]),
+          h(
+            "div",
+            { class: "client-progress-track" },
+            h("span", {
+              style: `display:block; height:100%; width:${pct}%; background:var(--brand);`,
+            }),
+          ),
+        ]),
       );
     }
 
@@ -1806,7 +1775,7 @@ import {
       );
       const foot = h("div", { class: "foot" });
       foot.appendChild(h("div", { class: "score" }, s !== null ? `${s}` : "—"));
-      const badgeWrap = h("div", { style: "display:flex; gap:6px; align-items:center;" });
+      const badgeWrap = h("div", { class: "badge-wrap" });
       if (unread > 0)
         badgeWrap.appendChild(
           h("span", { class: "count-badge", title: "Unread comments" }, unread),
@@ -1851,17 +1820,15 @@ import {
             "← Back to diagnostic",
           ),
           h("div", { class: "pillar-pill" }, `PILLAR ${p.id}`),
-          h("h1", { class: "view-title", style: "margin-top:2px;" }, p.name),
-          h("p", { class: "view-sub", style: "max-width:720px;" }, p.tagline),
+          h("h1", { class: "view-title pillar-title-h1" }, p.name),
+          h("p", { class: "view-sub pillar-tagline" }, p.tagline),
         ]),
         h("span", { class: `badge ${status}` }, s !== null ? `${s}/100 team` : "Not scored"),
       ]),
     );
 
     // Overview card
-    frag.appendChild(
-      h("div", { class: "card", style: "margin-bottom:20px;" }, [h("p", {}, p.overview)]),
-    );
+    frag.appendChild(h("div", { class: "card pillar-overview-card" }, [h("p", {}, p.overview)]));
 
     const grid = h("div", { class: "pillar-grid" });
 
@@ -1876,7 +1843,7 @@ import {
 
     // Complete button - returns to the diagnostic landing
     left.appendChild(
-      h("div", { style: "margin-top:20px; display:flex; justify-content:flex-end;" }, [
+      h("div", { class: "pillar-actions-foot" }, [
         h(
           "button",
           {
@@ -1913,8 +1880,8 @@ import {
       "div",
       { class: "side-panel" },
       [
-        h("div", { style: "display:flex; justify-content:space-between; align-items:center;" }, [
-          h("h3", { style: "margin:0;" }, "Actions"),
+        h("div", { class: "actions-card-header" }, [
+          h("h3", { class: "u-m-0" }, "Actions"),
           h(
             "button",
             {
@@ -1929,48 +1896,25 @@ import {
           ),
         ]),
         filteredActions.length === 0
-          ? h(
-              "p",
-              { style: "color: var(--ink-3); font-size:13px; margin-top:10px;" },
-              "No actions yet.",
-            )
+          ? h("p", { class: "actions-empty-meta" }, "No actions yet.")
           : openActions.length === 0
-            ? h(
-                "p",
-                { style: "color: var(--ink-3); font-size:13px; margin-top:10px;" },
-                "No open actions.",
-              )
+            ? h("p", { class: "actions-empty-meta" }, "No open actions.")
             : h(
                 "ul",
                 {},
                 openActions.map((a) => h("li", {}, a.title)),
               ),
         completedActions.length
-          ? h(
-              "div",
-              { style: "margin-top:14px; padding-top:10px; border-top: 1px solid var(--line);" },
-              [
-                h(
-                  "div",
-                  {
-                    style:
-                      "font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color: var(--ink-3); margin-bottom:6px;",
-                  },
-                  `Completed (${completedActions.length})`,
+          ? h("div", { class: "actions-divider" }, [
+              h("div", { class: "outcomes-eyebrow" }, `Completed (${completedActions.length})`),
+              h(
+                "ul",
+                { class: "u-m-0" },
+                completedActions.map((a) =>
+                  h("li", { class: "actions-completed-strike" }, a.title),
                 ),
-                h(
-                  "ul",
-                  { style: "margin:0;" },
-                  completedActions.map((a) =>
-                    h(
-                      "li",
-                      { style: "text-decoration:line-through; color: var(--ink-4);" },
-                      a.title,
-                    ),
-                  ),
-                ),
-              ],
-            )
+              ),
+            ])
           : null,
       ].filter(Boolean),
     );
@@ -1990,17 +1934,10 @@ import {
 
     // Anchor row
     card.appendChild(
-      h(
-        "div",
-        {
-          style:
-            "display:flex; justify-content:space-between; font-size:11px; color:var(--ink-3); margin-bottom:6px; letter-spacing:0.04em;",
-        },
-        [
-          h("span", {}, `1 - ${meta.anchors.low}`),
-          h("span", {}, `${meta.scale} - ${meta.anchors.high}`),
-        ],
-      ),
+      h("div", { class: "stage-pct-bar" }, [
+        h("span", {}, `1 - ${meta.anchors.low}`),
+        h("span", {}, `${meta.scale} - ${meta.anchors.high}`),
+      ]),
     );
 
     // Buttons
@@ -2035,22 +1972,16 @@ import {
     const users = Object.keys(byUser);
     if (users.length <= 1) return null;
 
-    const panel = h("div", { class: "card", style: "margin-top:16px;" });
+    const panel = h("div", { class: "card team-responses-card" });
     panel.appendChild(
-      h("h3", { style: "margin-top:0;" }, `Team responses (${users.length} respondents)`),
+      h("h3", { class: "section-h3-tight" }, `Team responses (${users.length} respondents)`),
     );
 
     p.diagnostics.forEach((q, idx) => {
       const meta = questionMeta(q);
-      const row = h("div", { style: "padding: 10px 0; border-top: 1px solid var(--line);" });
-      row.appendChild(
-        h(
-          "div",
-          { style: "font-size:13px; font-weight:500; margin-bottom:6px;" },
-          `Q${idx + 1}. ${meta.text}`,
-        ),
-      );
-      const scores = h("div", { style: "display:flex; flex-wrap:wrap; gap:6px;" });
+      const row = h("div", { class: "team-row" });
+      row.appendChild(h("div", { class: "team-row-name" }, `Q${idx + 1}. ${meta.text}`));
+      const scores = h("div", { class: "team-row-scores" });
       users.forEach((uid) => {
         const u = findUser(uid);
         const r = ((byUser[uid] || {})[p.id] || {})[idx];
@@ -2061,17 +1992,10 @@ import {
             title:
               (u?.name || u?.email || "respondent") +
               (score ? ` - ${score}/${meta.scale}` : " - no answer"),
-            style: `display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px; background:var(--surface-muted); border:1px solid var(--line); font-size:11px; color:var(--ink-2);`,
+            class: "score-pill",
           },
           [
-            h(
-              "span",
-              {
-                class: "avatar",
-                style: "width:16px; height:16px; font-size:8px;",
-              },
-              initials(u?.name || u?.email || ""),
-            ),
+            h("span", { class: "avatar team-tiny-pip" }, initials(u?.name || u?.email || "")),
             score ? `${score}/${meta.scale}` : "—",
           ],
         );
@@ -2097,7 +2021,7 @@ import {
         { class: "bar" },
         h("span", { style: `width:${s ?? 0}%; background:${statusColor(status)};` }),
       ),
-      h("div", { style: "color: var(--ink-3); font-size:12px;" }, `${done}/${total} team answers`),
+      h("div", { class: "team-row-meta" }, `${done}/${total} team answers`),
     ]);
     return block;
   }
@@ -2114,7 +2038,7 @@ import {
   function sidePanel(title, items, internal = false) {
     return h("div", { class: "side-panel" }, [
       internal ? h("span", { class: "internal-badge" }, "Internal only") : null,
-      h("h3", { style: "margin-top:0;" }, title),
+      h("h3", { class: "section-h3-tight" }, title),
       h(
         "ul",
         {},
@@ -2148,13 +2072,7 @@ import {
     wrap.appendChild(
       h("h3", {}, [
         h("span", {}, `Discussion (${list.length})`),
-        list.length
-          ? h(
-              "span",
-              { style: "font-weight:400; font-size:12px; color:var(--ink-3);" },
-              "Most recent first",
-            )
-          : null,
+        list.length ? h("span", { class: "section-meta-faint" }, "Most recent first") : null,
       ]),
     );
 
@@ -2163,7 +2081,7 @@ import {
       listEl.appendChild(
         h(
           "p",
-          { style: "color: var(--ink-3); font-size:13px; margin:0;" },
+          { class: "section-explainer" },
           "No comments yet. Ask a question or leave a note — BeDeveloped and the team will see it here.",
         ),
       );
@@ -2290,17 +2208,10 @@ import {
     );
 
     const all = (org.actions || []).filter((a) => !isClient || !a.internal);
-    const toolbar = h(
-      "div",
-      {
-        style:
-          "display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;",
-      },
-      [
-        h("div", {}, `${all.length} total · ${all.filter((a) => a.done).length} complete`),
-        h("button", { class: "btn", onclick: () => openActionModal(user) }, "+ New action"),
-      ],
-    );
+    const toolbar = h("div", { class: "stage-section-banner" }, [
+      h("div", {}, `${all.length} total · ${all.filter((a) => a.done).length} complete`),
+      h("button", { class: "btn", onclick: () => openActionModal(user) }, "+ New action"),
+    ]);
     frag.appendChild(toolbar);
 
     if (!all.length) {
@@ -2330,15 +2241,7 @@ import {
     const openTable = h("div", { class: "actions-table" });
     openTable.appendChild(headerRow());
     if (openActions.length === 0) {
-      openTable.appendChild(
-        h(
-          "div",
-          {
-            style: "padding:14px 16px; color: var(--ink-3); font-size:13px;",
-          },
-          "No open actions.",
-        ),
-      );
+      openTable.appendChild(h("div", { class: "empty-card" }, "No open actions."));
     } else {
       openActions.forEach((a) => openTable.appendChild(renderActionRow(a)));
     }
@@ -2347,13 +2250,7 @@ import {
     // Completed actions, in their own section
     if (completedActions.length) {
       frag.appendChild(
-        h(
-          "h2",
-          {
-            style: "margin-top:28px; margin-bottom:10px;",
-          },
-          `Completed (${completedActions.length})`,
-        ),
+        h("h2", { class: "section-banner-spread" }, `Completed (${completedActions.length})`),
       );
       const doneTable = h("div", { class: "actions-table" });
       doneTable.appendChild(headerRow());
@@ -2409,7 +2306,7 @@ import {
     owner.addEventListener("blur", () => updateAction(a.id, { owner: owner.value }));
     row.appendChild(owner);
 
-    const dueWrap = h("div", { style: "display:flex; align-items:center; gap:6px;" });
+    const dueWrap = h("div", { class: "due-wrap" });
     const due = h("input", { type: "date", class: "a-due", value: a.due || "" });
     due.addEventListener("change", () => updateAction(a.id, { due: due.value }));
     dueWrap.appendChild(due);
@@ -2422,8 +2319,7 @@ import {
     const del = h(
       "button",
       {
-        class: "btn ghost sm",
-        style: "border-color: var(--line);",
+        class: "btn ghost sm btn-line-soft",
         onclick: () =>
           confirmDialog(
             "Delete action?",
@@ -2443,10 +2339,7 @@ import {
 
   function openActionModal(user) {
     const title = h("input", { type: "text", placeholder: "Action description" });
-    const select = h("select", {
-      style:
-        "width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; font:inherit;",
-    });
+    const select = h("select", { class: "settings-textarea-comment" });
     DATA.pillars.forEach((p) => {
       const o = document.createElement("option");
       o.value = p.id;
@@ -2454,20 +2347,16 @@ import {
       select.appendChild(o);
     });
     const internalWrap = !isClientView(user)
-      ? h(
-          "label",
-          { style: "display:flex; gap:6px; align-items:center; font-size:13px; margin-top:10px;" },
-          [
-            h("input", { type: "checkbox", id: "actInternal" }),
-            "Internal only (hidden from client view)",
-          ],
-        )
+      ? h("label", { class: "field-row" }, [
+          h("input", { type: "checkbox", id: "actInternal" }),
+          "Internal only (hidden from client view)",
+        ])
       : null;
 
     const m = modal([
       h("h3", {}, "New action"),
       title,
-      h("div", { style: "height:10px;" }),
+      h("div", { class: "progress-spacer" }),
       select,
       internalWrap,
       h("div", { class: "row" }, [
@@ -2531,11 +2420,7 @@ import {
         h("div", { class: "name" }, s.name),
         h("div", { class: "sum" }, s.summary),
         h("div", { class: "progress" }, h("span", { style: `width:${pct}%;` })),
-        h(
-          "div",
-          { style: "font-size:11px; color:var(--ink-3); margin-top:4px;" },
-          `${checkedCount}/${s.checklist.length} complete`,
-        ),
+        h("div", { class: "stage-meta-tiny" }, `${checkedCount}/${s.checklist.length} complete`),
       ]);
       stages.appendChild(card);
     });
@@ -2543,7 +2428,7 @@ import {
 
     const stage = DATA.engagementStages.find((s) => s.id === current);
     const checklist = h("div", { class: "checklist" });
-    checklist.appendChild(h("h3", { style: "margin-top:0;" }, `${stage.name} — checklist`));
+    checklist.appendChild(h("h3", { class: "section-h3-tight" }, `${stage.name} — checklist`));
     stage.checklist.forEach((item, idx) => {
       const done = !!((org.engagement?.stageChecks || {})[current] || {})[idx];
       const row = h("div", { class: `check-item ${done ? "done" : ""}` });
@@ -2631,11 +2516,11 @@ import {
     );
 
     // Intro block
-    const intro = h("div", { class: "report-intro card", style: "margin:18px 0 24px;" });
+    const intro = h("div", { class: "report-intro card report-intro-card" });
     intro.appendChild(
       h(
         "h2",
-        { style: "margin-top:0;" },
+        { class: "report-intro-h2" },
         "Thank you for participating in The Base Layers Sales Assessment.",
       ),
     );
@@ -2653,7 +2538,7 @@ import {
         "We have assessed your performance from The Base Layers sales framework that covers 10 core strategic pillars:",
       ),
     );
-    const pillarList = h("ol", { style: "font-size:14px; color:var(--ink-2);" });
+    const pillarList = h("ol", { class: "report-pillar-ol" });
     DATA.pillars.forEach((p) => {
       pillarList.appendChild(h("li", {}, p.name));
     });
@@ -2677,23 +2562,23 @@ import {
     // Snapshot grid: donut + key metrics side-by-side
     const snap = h("div", { class: "report-snapshot" });
 
-    const chartCard = h("div", { class: "card", style: "min-height:320px;" });
-    chartCard.appendChild(h("h3", { style: "margin-top:0;" }, "Results at a glance"));
+    const chartCard = h("div", { class: "card report-chart-card" });
+    chartCard.appendChild(h("h3", { class: "report-chart-h3" }, "Results at a glance"));
     chartCard.appendChild(
       h(
         "p",
-        { style: "color:var(--ink-3); font-size:12.5px; margin:-4px 0 10px;" },
+        { class: "report-chart-sub" },
         "Each slice is one pillar. Colours show where you're strong (green), developing (amber), or need focus (red).",
       ),
     );
-    const canvasWrap = h("div", { style: "position:relative; height:240px;" });
+    const canvasWrap = h("div", { class: "report-canvas-wrap" });
     const canvas = h("canvas", { id: "reportDonut" });
     canvasWrap.appendChild(canvas);
     chartCard.appendChild(canvasWrap);
     snap.appendChild(chartCard);
 
     const metricsCard = h("div", { class: "card" });
-    metricsCard.appendChild(h("h3", { style: "margin-top:0;" }, "Summary"));
+    metricsCard.appendChild(h("h3", { class: "section-h3-tight" }, "Summary"));
     [
       ["Overall health", summary.avg !== null ? `${summary.avg} / 100` : "Not yet scored"],
       ["Pillars scored", `${summary.scoredCount} of ${DATA.pillars.length}`],
@@ -2709,7 +2594,7 @@ import {
           "Top constraints",
           h(
             "div",
-            { style: "display:flex; flex-direction:column; gap:4px;" },
+            { class: "report-summary-cell" },
             constraints.map((p, i) =>
               h("div", {}, `${i + 1}. ${p.name} (${pillarScore(org, p.id)}/100)`),
             ),
@@ -2725,7 +2610,7 @@ import {
 
     // Pillar detail
     const rp = h("div", { class: "r-pillars" });
-    rp.appendChild(h("h2", { style: "margin-top:28px;" }, "Pillar detail"));
+    rp.appendChild(h("h2", { class: "report-section-h2-spaced" }, "Pillar detail"));
     DATA.pillars.forEach((p) => {
       const s = pillarScore(org, p.id);
       const prevS = prevRoundId ? pillarScoreForRound(org, prevRoundId, p.id) : null;
@@ -2779,26 +2664,15 @@ import {
         (a) => a.pillarId === p.id && (!isClient || !a.internal),
       );
       if (actions.length) {
-        block.appendChild(
-          h(
-            "div",
-            {
-              style:
-                "margin-top:10px; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-3);",
-            },
-            "Actions",
-          ),
-        );
-        const ul = h("ul", { style: "margin:4px 0 0; padding-left:18px; font-size:13px;" });
+        block.appendChild(h("div", { class: "outcomes-eyebrow" }, "Actions"));
+        const ul = h("ul", { class: "report-pillar-ul" });
         actions.forEach((a) =>
           ul.appendChild(
-            h(
-              "li",
-              {
-                style: a.done ? "text-decoration:line-through; color:var(--ink-4);" : "",
-              },
-              [a.title, a.owner ? ` · ${a.owner}` : "", a.due ? ` · due ${a.due}` : ""],
-            ),
+            h("li", { class: a.done ? "actions-completed-strike" : "" }, [
+              a.title,
+              a.owner ? ` · ${a.owner}` : "",
+              a.due ? ` · due ${a.due}` : "",
+            ]),
           ),
         );
         block.appendChild(ul);
@@ -2889,43 +2763,36 @@ import {
     const orgs = loadOrgMetas();
     const orgCard = h("div", { class: "card" });
 
-    const orgBar = h(
-      "div",
-      { style: "display:flex; justify-content:flex-end; margin-bottom:12px;" },
-      [
-        h(
-          "button",
-          {
-            class: "btn",
-            onclick: () =>
-              promptText("New organisation", "e.g. Acme Ltd", (name) => {
-                const o = createOrg(name);
-                state.orgId = o.id;
-                render();
-              }),
-          },
-          "+ New organisation",
-        ),
-      ],
-    );
+    const orgBar = h("div", { class: "toolbar-end" }, [
+      h(
+        "button",
+        {
+          class: "btn",
+          onclick: () =>
+            promptText("New organisation", "e.g. Acme Ltd", (name) => {
+              const o = createOrg(name);
+              state.orgId = o.id;
+              render();
+            }),
+        },
+        "+ New organisation",
+      ),
+    ]);
     orgCard.appendChild(orgBar);
 
     if (!orgs.length) {
-      orgCard.appendChild(h("p", { style: "color: var(--ink-3);" }, "None yet."));
+      orgCard.appendChild(h("p", { class: "muted-paragraph" }, "None yet."));
     } else {
       const table = h("div");
       orgs.forEach((m) => {
         const o = loadOrg(m.id);
         const clients = loadUsers().filter((u) => u.role === "client" && u.orgId === m.id);
         const currentTier = orgTier(o);
-        const row = h("div", {
-          style:
-            "display:grid; grid-template-columns: 1.5fr 1fr 1fr auto; gap:12px; align-items:center; padding:12px 0; border-top:1px solid var(--line);",
-        });
+        const row = h("div", { class: "members-row" });
         row.appendChild(
           h("div", {}, [
-            h("div", { style: "display:flex; align-items:center; gap:8px;" }, [
-              h("span", { style: "font-weight:600;" }, m.name),
+            h("div", { class: "member-name-flex" }, [
+              h("span", { class: "member-name-bold" }, m.name),
               h(
                 "span",
                 {
@@ -2936,7 +2803,7 @@ import {
             ]),
             h(
               "div",
-              { style: "color:var(--ink-3); font-size:12px; margin-top:4px;" },
+              { class: "member-meta-tiny" },
               `${o?.rounds?.length || 0} round(s) · ${respondentsForRound(o, o.currentRoundId).length} respondents`,
             ),
           ]),
@@ -2958,8 +2825,7 @@ import {
         const tierSelect = h("select", {
           title:
             "Tier determines roadmap cadence. Performance = 4 quarters. Transformation = 12 months.",
-          style:
-            "padding:5px 8px; border:1px solid var(--line); border-radius:6px; font:inherit; font-size:12px; background:#fff; cursor:pointer;",
+          class: "members-tier-pill",
         });
         ["performance", "transformation"].forEach((v) => {
           const opt = document.createElement("option");
@@ -2976,7 +2842,7 @@ import {
           render();
         });
         row.appendChild(
-          h("div", { style: "display:flex; gap:6px; align-items:center;" }, [
+          h("div", { class: "member-actions-row" }, [
             tierSelect,
             h(
               "button",
@@ -3027,53 +2893,39 @@ import {
     const allClients = loadUsers().filter((u) => u.role === "client");
     const usersCard = h("div", { class: "card" });
 
-    const userBar = h(
-      "div",
-      { style: "display:flex; justify-content:flex-end; margin-bottom:12px;" },
-      [
-        h(
-          "button",
-          {
-            class: "btn",
-            onclick: () => openInviteClientModal(),
-          },
-          "+ Invite client",
-        ),
-      ],
-    );
+    const userBar = h("div", { class: "toolbar-end" }, [
+      h(
+        "button",
+        {
+          class: "btn",
+          onclick: () => openInviteClientModal(),
+        },
+        "+ Invite client",
+      ),
+    ]);
     usersCard.appendChild(userBar);
 
     if (!allClients.length) {
       usersCard.appendChild(
         h(
           "p",
-          { style: "color: var(--ink-3);" },
+          { class: "muted-paragraph" },
           "No client users yet. Invite someone to let them log in.",
         ),
       );
     } else {
       const table = h("div");
       table.appendChild(
-        h(
-          "div",
-          {
-            style:
-              "display:grid; grid-template-columns: 1fr 1.5fr 1fr auto; gap:12px; padding:8px 0; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-3);",
-          },
-          [
-            h("div", {}, "Name"),
-            h("div", {}, "Email"),
-            h("div", {}, "Organisation"),
-            h("div", {}, ""),
-          ],
-        ),
+        h("div", { class: "clients-table-head" }, [
+          h("div", {}, "Name"),
+          h("div", {}, "Email"),
+          h("div", {}, "Organisation"),
+          h("div", {}, ""),
+        ]),
       );
       allClients.forEach((u) => {
         const o = u.orgId ? loadOrgMetas().find((m) => m.id === u.orgId) : null;
-        const row = h("div", {
-          style:
-            "display:grid; grid-template-columns: 1fr 1.5fr 1fr auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); font-size:13.5px;",
-        });
+        const row = h("div", { class: "clients-table-row" });
         row.appendChild(h("div", {}, u.name || "—"));
         row.appendChild(
           h("div", {}, [
@@ -3091,7 +2943,7 @@ import {
         row.appendChild(
           h(
             "div",
-            { style: "display:flex; gap:6px;" },
+            { class: "clients-actions-row" },
             [
               u.passwordHash
                 ? h(
@@ -3147,43 +2999,36 @@ import {
     const internals = loadUsers().filter((u) => u.role === "internal");
     const intCard = h("div", { class: "card" });
     if (!internals.length) {
-      intCard.appendChild(h("p", { style: "color: var(--ink-3);" }, "None."));
+      intCard.appendChild(h("p", { class: "muted-paragraph" }, "None."));
     } else {
       internals.forEach((u) => {
         intCard.appendChild(
-          h(
-            "div",
-            {
-              style:
-                "display:flex; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); font-size:13.5px;",
-            },
-            [
-              h("span", { class: "avatar internal" }, initials(u.name || u.email)),
-              h("div", { style: "flex:1;" }, [
-                h("div", { style: "font-weight:600;" }, u.name || u.email),
-                h("div", { style: "color:var(--ink-3); font-size:12px;" }, u.email),
-              ]),
-              u.id !== user.id
-                ? h(
-                    "button",
-                    {
-                      class: "btn ghost sm danger",
-                      onclick: () =>
-                        confirmDialog(
-                          "Remove team member?",
-                          `${u.email} will no longer be able to sign in with internal access.`,
-                          () => {
-                            deleteUser(u.id);
-                            render();
-                          },
-                          "Remove",
-                        ),
-                    },
-                    "Remove",
-                  )
-                : h("span", { style: "font-size:11px; color:var(--ink-3);" }, "you"),
-            ],
-          ),
+          h("div", { class: "user-row" }, [
+            h("span", { class: "avatar internal" }, initials(u.name || u.email)),
+            h("div", { class: "u-flex-1" }, [
+              h("div", { class: "invite-row-name" }, u.name || u.email),
+              h("div", { class: "invite-row-email" }, u.email),
+            ]),
+            u.id !== user.id
+              ? h(
+                  "button",
+                  {
+                    class: "btn ghost sm danger",
+                    onclick: () =>
+                      confirmDialog(
+                        "Remove team member?",
+                        `${u.email} will no longer be able to sign in with internal access.`,
+                        () => {
+                          deleteUser(u.id);
+                          render();
+                        },
+                        "Remove",
+                      ),
+                  },
+                  "Remove",
+                )
+              : h("span", { class: "invite-row-you" }, "you"),
+          ]),
         );
       });
     }
@@ -3195,7 +3040,7 @@ import {
     settingsCard.appendChild(
       h(
         "p",
-        { style: "color:var(--ink-2); font-size:13px; margin-top:0;" },
+        { class: "invite-explainer" },
         "Internal sign-in uses Firebase Auth + custom-claim role assignment + TOTP MFA. Admin accounts are seeded via internalAllowlist/{email} and bootstrapped through the Firebase Console; see runbooks/phase6-bootstrap.md.",
       ),
     );
@@ -3316,11 +3161,7 @@ import {
 
     if (!fbReady()) {
       frag.appendChild(
-        h(
-          "div",
-          { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" },
-          "Connecting to shared storage…",
-        ),
+        h("div", { class: "card docs-empty-card" }, "Connecting to shared storage…"),
       );
       return frag;
     }
@@ -3329,9 +3170,9 @@ import {
 
     // Upload card
     const uploadCard = h("div", { class: "card" });
-    const fileInput = h("input", { type: "file", style: "display:none;" });
+    const fileInput = h("input", { type: "file", class: "u-display-none" });
     const privateChk = h("input", { type: "checkbox" });
-    const progressBar = h("div", { style: "margin-top:8px; font-size:12px; color:var(--ink-3);" });
+    const progressBar = h("div", { class: "docs-progress-meta" });
 
     const upload = async (file) => {
       // CODE-09 / D-15 / D-20: validateUpload BEFORE saveDocument trust
@@ -3356,7 +3197,8 @@ import {
           progressBar.textContent = `Uploading ${file.name}… ${pct}%`;
         });
         await task;
-        const url = await storageOps.getDownloadURL(r);
+        // Phase 8 Wave 2 (BACKUP-05 sweep): getDownloadURL removed — clients
+        // fetch signed URLs on demand via getDocumentSignedUrl callable.
         await firestore.setDoc(firestore.doc(db, "documents", docId), {
           orgId: org.id,
           uploaderId: user.id,
@@ -3366,7 +3208,6 @@ import {
           size: file.size,
           contentType: file.type,
           storagePath: path,
-          downloadURL: url,
           visibility: privateChk.checked ? "private" : "org",
           allowedUserIds: privateChk.checked ? [user.id] : [],
           createdAt: firestore.serverTimestamp(),
@@ -3385,26 +3226,23 @@ import {
     });
 
     uploadCard.appendChild(
-      h("div", { style: "display:flex; gap:12px; align-items:center; flex-wrap:wrap;" }, [
+      h("div", { class: "docs-toolbar-row" }, [
         h("button", { class: "btn", onclick: () => fileInput.click() }, "+ Upload file"),
         fileInput,
-        h(
-          "label",
-          {
-            style: "display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-2);",
-          },
-          [privateChk, h("span", {}, "Private (only I can see it)")],
-        ),
+        h("label", { class: "docs-toolbar-label" }, [
+          privateChk,
+          h("span", {}, "Private (only I can see it)"),
+        ]),
       ]),
     );
     uploadCard.appendChild(progressBar);
     frag.appendChild(uploadCard);
 
     // List
-    const listCard = h("div", { class: "card", style: "margin-top:16px;" });
-    listCard.appendChild(h("h3", { style: "margin-top:0;" }, "Files"));
+    const listCard = h("div", { class: "card docs-list-card" });
+    listCard.appendChild(h("h3", { class: "docs-list-h3" }, "Files"));
     const listBody = h("div", {});
-    listBody.appendChild(h("p", { style: "color:var(--ink-3);" }, "Loading…"));
+    listBody.appendChild(h("p", { class: "docs-list-loading" }, "Loading…"));
     listCard.appendChild(listBody);
     frag.appendChild(listCard);
 
@@ -3429,20 +3267,17 @@ import {
         // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
         listBody.replaceChildren();
         if (!visible.length) {
-          listBody.appendChild(h("p", { style: "color:var(--ink-3);" }, "No files yet."));
+          listBody.appendChild(h("p", { class: "docs-list-empty" }, "No files yet."));
           return;
         }
         visible.forEach((d) => {
-          const row = h("div", {
-            style:
-              "display:grid; grid-template-columns: 1.5fr 1fr 1fr auto; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); font-size:13.5px;",
-          });
+          const row = h("div", { class: "docs-table-row" });
           row.appendChild(
             h("div", {}, [
-              h("div", { style: "font-weight:600;" }, d.filename),
+              h("div", { class: "docs-row-filename" }, d.filename),
               h(
                 "div",
-                { style: "font-size:11px; color:var(--ink-3);" },
+                { class: "docs-row-meta" },
                 formatBytes(d.size) + (d.visibility === "private" ? " · private" : ""),
               ),
             ]),
@@ -3452,18 +3287,25 @@ import {
           const canDelete = isInternal || d.uploaderId === user.id;
           const actions = h(
             "div",
-            { style: "display:flex; gap:6px;" },
+            { class: "docs-row-actions" },
             [
               h(
-                "a",
+                "button",
                 {
                   class: "btn secondary sm",
-                  href: d.downloadURL,
-                  target: "_blank",
-                  // CODE-12 (D-20): noreferrer added — opener-phishing mitigation
-                  // (CWE-1021). Pairs with target=_blank to prevent the new
-                  // tab from accessing window.opener.
-                  rel: "noopener noreferrer",
+                  // Phase 8 Wave 2 (BACKUP-05 sweep): fetch signed URL on
+                  // demand via getDocumentSignedUrl callable — no cached
+                  // downloadURL in Firestore. URL is valid for 1 hour; caller
+                  // MUST NOT cache it (server enforces TTL).
+                  onclick: async () => {
+                    try {
+                      const { getDocumentSignedUrl } = await import("./cloud/signed-url.js");
+                      const { url } = await getDocumentSignedUrl(org.id, d.id, d.filename);
+                      window.open(url, "_blank", "noopener,noreferrer");
+                    } catch (e) {
+                      notify("error", "Couldn't fetch download link: " + (e.message || e));
+                    }
+                  },
                 },
                 "Download",
               ),
@@ -3501,7 +3343,7 @@ import {
         // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
         listBody.replaceChildren();
         listBody.appendChild(
-          h("p", { style: "color:var(--red);" }, "Couldn't load documents: " + err.message),
+          h("p", { class: "docs-error-paragraph" }, "Couldn't load documents: " + err.message),
         );
       },
     );
@@ -3518,7 +3360,7 @@ import {
     frag.appendChild(
       h(
         "p",
-        { class: "view-sub", style: "margin-bottom:4px;" },
+        { class: "view-sub chat-sub-tight" },
         org
           ? `Team channel for ${org.name}. Everyone in this organisation + BeDeveloped can post and read.`
           : "Select an organisation to open its channel.",
@@ -3528,10 +3370,7 @@ import {
       frag.appendChild(
         h(
           "p",
-          {
-            class: "view-sub",
-            style: "margin-top:0; color: var(--ink-3); font-style: italic; font-size: 13px;",
-          },
+          { class: "view-sub chat-empty-italic" },
           "The team will aim to respond within 24hrs.",
         ),
       );
@@ -3543,58 +3382,36 @@ import {
     markChatReadFor(user.id, org.id);
 
     if (!fbReady()) {
-      frag.appendChild(
-        h(
-          "div",
-          { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" },
-          "Connecting to chat…",
-        ),
-      );
+      frag.appendChild(h("div", { class: "card docs-empty-card" }, "Connecting to chat…"));
       return frag;
     }
 
     const { db, firestore } = window.FB;
 
-    const card = h("div", {
-      class: "card",
-      style:
-        "padding:0; display:flex; flex-direction:column; height: calc(100vh - 260px); min-height:480px;",
-    });
+    const card = h("div", { class: "card chat-roomshell" });
 
     // Search
     const searchInput = h("input", {
       type: "search",
       placeholder: "Search messages…",
-      style:
-        "width:100%; padding:10px 14px; border:0; border-bottom:1px solid var(--line); font:inherit; font-size:14px; background:transparent;",
+      class: "chat-search-input",
     });
     card.appendChild(searchInput);
 
     // Message list
-    const list = h("div", {
-      style:
-        "flex:1; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:10px;",
-    });
-    list.appendChild(h("p", { style: "color:var(--ink-3); text-align:center;" }, "Loading…"));
+    const list = h("div", { class: "chat-list-scroll" });
+    list.appendChild(h("p", { class: "chat-loading-center" }, "Loading…"));
     card.appendChild(list);
 
     // Composer
     const textInput = h("input", {
       type: "text",
       placeholder: "Type a message…",
-      style:
-        "flex:1; padding:10px 14px; border:1px solid var(--line-2); border-radius:8px; font:inherit; font-size:14px;",
+      class: "chat-input",
     });
     const sendBtn = h("button", { class: "btn" }, "Send");
 
-    const composer = h(
-      "div",
-      {
-        style:
-          "display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--line); background:var(--surface-muted);",
-      },
-      [textInput, sendBtn],
-    );
+    const composer = h("div", { class: "chat-composer-bar" }, [textInput, sendBtn]);
     card.appendChild(composer);
     frag.appendChild(card);
 
@@ -3614,7 +3431,7 @@ import {
         list.appendChild(
           h(
             "p",
-            { style: "color:var(--ink-3); text-align:center;" },
+            { class: "chat-empty-center" },
             term ? "No messages match." : "No messages yet — start the conversation.",
           ),
         );
@@ -3703,7 +3520,7 @@ import {
         // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
         list.replaceChildren();
         list.appendChild(
-          h("p", { style: "color:var(--red);" }, "Couldn't load chat: " + err.message),
+          h("p", { class: "chat-error-paragraph" }, "Couldn't load chat: " + err.message),
         );
       },
     );
@@ -3756,11 +3573,7 @@ import {
 
     if (!fbReady()) {
       frag.appendChild(
-        h(
-          "div",
-          { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" },
-          "Connecting to shared storage…",
-        ),
+        h("div", { class: "card docs-empty-card" }, "Connecting to shared storage…"),
       );
       return frag;
     }
@@ -3769,31 +3582,16 @@ import {
     const canEdit = user.role === "internal";
     const docRef = firestore.doc(db, "roadmaps", org.id);
 
-    const layout = h("div", {
-      class: "roadmap-layout",
-      style: "display:grid; grid-template-columns: 1fr 260px; gap:18px; align-items:start;",
-    });
-    const periodsCol = h("div", { style: "display:flex; flex-direction:column; gap:10px;" });
-    const palette = h("div", {
-      class: "card roadmap-palette",
-      style: "position:sticky; top:18px; padding:14px;",
-    });
+    const layout = h("div", { class: "roadmap-layout roadmap-grid" });
+    const periodsCol = h("div", { class: "roadmap-periods-col" });
+    const palette = h("div", { class: "card roadmap-palette roadmap-pool" });
 
     // Pillar palette
-    palette.appendChild(
-      h(
-        "div",
-        {
-          style:
-            "font-family: var(--font-display); letter-spacing:0.08em; color: var(--brand); font-size:12px; margin-bottom:8px;",
-        },
-        "PILLARS",
-      ),
-    );
+    palette.appendChild(h("div", { class: "roadmap-pool-eyebrow" }, "PILLARS"));
     palette.appendChild(
       h(
         "p",
-        { style: "font-size:11.5px; color:var(--ink-3); margin:0 0 10px; line-height:1.4;" },
+        { class: "roadmap-pool-explainer" },
         canEdit
           ? `Drag any pillar into a ${periodLabelLower}. A pillar can appear in more than one ${periodLabelLower}.`
           : `Pillars assigned to each ${periodLabelLower} appear below.`,
@@ -3843,30 +3641,16 @@ import {
       // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
       periodsCol.replaceChildren();
       localData.periods.forEach((m, idx) => {
-        const card = h("div", { class: "card", style: "padding:14px;" });
+        const card = h("div", { class: "card roadmap-card" });
         card.appendChild(
-          h(
-            "div",
-            {
-              style:
-                "display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;",
-            },
-            [
-              h(
-                "div",
-                {
-                  style:
-                    "font-family: var(--font-display); font-size:18px; letter-spacing:0.02em; color: var(--ink);",
-                },
-                `${periodLabel} ${idx + 1}`,
-              ),
-              h(
-                "div",
-                { style: "font-size:11px; color:var(--ink-3);" },
-                `${(m.pillarIds || []).length} pillar${(m.pillarIds || []).length === 1 ? "" : "s"} · ${(m.outcomes || []).length} outcome${(m.outcomes || []).length === 1 ? "" : "s"}`,
-              ),
-            ],
-          ),
+          h("div", { class: "roadmap-card-header" }, [
+            h("div", { class: "roadmap-card-title" }, `${periodLabel} ${idx + 1}`),
+            h(
+              "div",
+              { class: "roadmap-card-meta" },
+              `${(m.pillarIds || []).length} pillar${(m.pillarIds || []).length === 1 ? "" : "s"} · ${(m.outcomes || []).length} outcome${(m.outcomes || []).length === 1 ? "" : "s"}`,
+            ),
+          ]),
         );
 
         // Pillars drop zone — CODE-06 (D-20): class roadmap-drop replaces inline style block (precondition for Phase 10 strict-CSP).
@@ -3875,7 +3659,7 @@ import {
           drop.appendChild(
             h(
               "span",
-              { style: "font-size:12px; color:var(--ink-4);" },
+              { class: "roadmap-card-empty" },
               canEdit ? "Drag pillars here" : "No pillars assigned yet",
             ),
           );
@@ -3885,18 +3669,14 @@ import {
           if (!p) return;
           const chip = h(
             "span",
-            {
-              style:
-                "display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--brand); color:#fff; font-size:12px;",
-            },
+            { class: "roadmap-pillar-pill" },
             [
               h("span", {}, `${p.id}. ${p.shortName || p.name}`),
               canEdit
                 ? h(
                     "button",
                     {
-                      style:
-                        "border:0; background:transparent; color:#fff; cursor:pointer; padding:0 0 0 4px; font-size:13px; line-height:1;",
+                      class: "roadmap-pillar-pill-x",
                       onclick: () => {
                         const next = {
                           ...localData,
@@ -3948,28 +3728,13 @@ import {
         card.appendChild(drop);
 
         // Outcomes
-        card.appendChild(
-          h(
-            "div",
-            {
-              style:
-                "font-size:11px; letter-spacing:0.08em; color:var(--ink-3); text-transform:uppercase; margin-bottom:6px;",
-            },
-            "Outcomes",
-          ),
-        );
-        const outList = h("div", {
-          style: "display:flex; flex-direction:column; gap:4px; margin-bottom:8px;",
-        });
+        card.appendChild(h("div", { class: "outcomes-eyebrow-2" }, "Outcomes"));
+        const outList = h("div", { class: "outcomes-section" });
         if (!(m.outcomes || []).length) {
-          outList.appendChild(
-            h("div", { style: "font-size:12px; color:var(--ink-4);" }, "None yet."),
-          );
+          outList.appendChild(h("div", { class: "outcomes-empty" }, "None yet."));
         }
         (m.outcomes || []).forEach((o) => {
-          const row = h("div", {
-            style: "display:flex; align-items:center; gap:8px; font-size:13px;",
-          });
+          const row = h("div", { class: "outcomes-row" });
           const check = h("input", { type: "checkbox" });
           check.checked = !!o.done;
           if (canEdit) {
@@ -3994,14 +3759,13 @@ import {
             check.disabled = true;
           }
           row.appendChild(check);
-          row.appendChild(h("span", { style: "flex:1;" }, o.text));
+          row.appendChild(h("span", { class: "outcomes-text" }, o.text));
           if (canEdit) {
             row.appendChild(
               h(
                 "button",
                 {
-                  class: "btn ghost sm danger",
-                  style: "padding:2px 8px; font-size:11px;",
+                  class: "btn ghost sm danger outcomes-edit-btn",
                   onclick: () => {
                     const next = {
                       ...localData,
@@ -4027,8 +3791,7 @@ import {
           const input = h("input", {
             type: "text",
             placeholder: "Add outcome (e.g. Pipeline forecasting in place)",
-            style:
-              "flex:1; padding:6px 10px; border:1px solid var(--line-2); border-radius:6px; font:inherit; font-size:13px;",
+            class: "outcomes-input",
           });
           const addBtn = h("button", { class: "btn sm" }, "Add");
           const pasteBtn = h(
@@ -4073,9 +3836,7 @@ import {
           pasteBtn.addEventListener("click", () =>
             openBulkOutcomeModal(`${periodLabel} ${idx + 1}`, addManyOutcomes),
           );
-          card.appendChild(
-            h("div", { style: "display:flex; gap:6px;" }, [input, addBtn, pasteBtn]),
-          );
+          card.appendChild(h("div", { class: "outcomes-add-row" }, [input, addBtn, pasteBtn]));
         }
 
         periodsCol.appendChild(card);
@@ -4114,10 +3875,9 @@ import {
     const ta = h("textarea", {
       placeholder:
         "Paste outcomes, one per line. Lines starting with -, •, *, or a number are cleaned up.\n\nExample:\n- Pipeline forecasting in place\n- Weekly revenue review running\n- Proposal template standardised",
-      style:
-        "width:100%; min-height:220px; padding:12px; border:1px solid var(--line); border-radius:8px; font:13px/1.5 var(--font-sans, inherit); resize:vertical;",
+      class: "outcomes-textarea",
     });
-    const countLbl = h("div", { style: "font-size:12px; color:var(--ink-3);" }, "0 outcomes");
+    const countLbl = h("div", { class: "outcomes-count" }, "0 outcomes");
     ta.addEventListener("input", () => {
       const n = ta.value
         .split(/\r?\n/)
@@ -4129,7 +3889,7 @@ import {
       h("h3", {}, `Paste multiple outcomes - ${periodLabel}`),
       h(
         "p",
-        { style: "color:var(--ink-3); font-size:13px; margin-top:0;" },
+        { class: "section-explainer" },
         "One outcome per line. Bullet markers and numbering are stripped automatically.",
       ),
       ta,
@@ -4183,6 +3943,17 @@ import {
       // will deny access. Phase 9 Sentry will catch the underlying error.
       claims = {};
     }
+
+    // Phase 9 Wave 1 (OBS-01 + Pitfall 3): init Sentry AFTER claims hydration
+    // so setUser carries the verified UID + role (never PII like email).
+    // Empty VITE_SENTRY_DSN -> "" -> initSentryBrowser becomes a silent no-op
+    // (kill-switch + local-dev path; Wave 2 ships the secrets path that puts
+    // the DSN into CI/preview/prod builds).
+    initSentryBrowser(
+      /** @type {string} */ (import.meta.env.VITE_SENTRY_DSN ?? ""),
+      /** @type {string} */ (import.meta.env.VITE_GIT_SHA ?? "local"),
+    );
+    sentrySetUser({ id: fbUser.uid, role: claims.role || "internal" });
 
     // Hydrate enrolled MFA factors (used by router for renderMfaEnrol guard).
     /** @type {Array<*>} */
@@ -4270,8 +4041,7 @@ import {
       h(
         "button",
         {
-          class: "back",
-          style: "margin-bottom: 6px;",
+          class: "back notes-mb-6",
           onclick: () => setRoute("dashboard"),
         },
         "← Back to dashboard",
@@ -4291,11 +4061,7 @@ import {
 
     if (!fbReady()) {
       frag.appendChild(
-        h(
-          "div",
-          { class: "card", style: "padding:32px; text-align:center; color: var(--ink-3);" },
-          "Connecting to shared storage…",
-        ),
+        h("div", { class: "card docs-empty-card" }, "Connecting to shared storage…"),
       );
       return frag;
     }
@@ -4411,8 +4177,7 @@ import {
         const del = h(
           "button",
           {
-            class: "btn ghost sm",
-            style: "border-color: var(--line);",
+            class: "btn ghost sm btn-line-soft",
             onclick: () =>
               confirmDialog(
                 "Delete KPI?",
@@ -4824,7 +4589,7 @@ import {
         // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
         commentsList.replaceChildren();
         commentsList.appendChild(
-          h("p", { style: "color:var(--red);" }, "Couldn't load comments: " + err.message),
+          h("p", { class: "u-color-red" }, "Couldn't load comments: " + err.message),
         );
       },
     );
@@ -4835,10 +4600,7 @@ import {
   function openInviteClientModal() {
     const name = h("input", { type: "text", placeholder: "Client contact name" });
     const email = h("input", { type: "email", placeholder: "client@company.com" });
-    const select = h("select", {
-      style:
-        "width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; font:inherit;",
-    });
+    const select = h("select", { class: "settings-textarea-comment" });
     const orgs = loadOrgMetas();
     orgs.forEach((o) => {
       const opt = document.createElement("option");
@@ -4852,26 +4614,13 @@ import {
       h("h3", {}, "Invite a client"),
       h(
         "p",
-        { style: "color: var(--ink-3); font-size: 13px; margin-top:0;" },
+        { class: "settings-explainer" },
         "They'll sign in with their email + the company passphrase you set, then create their own password on first login.",
       ),
-      h("div", { style: "display:flex; gap:10px; flex-direction:column;" }, [
-        h("div", {}, [
-          h("label", { style: "font-size:12px; color:var(--ink-2); font-weight:600;" }, "Name"),
-          name,
-        ]),
-        h("div", {}, [
-          h("label", { style: "font-size:12px; color:var(--ink-2); font-weight:600;" }, "Email"),
-          email,
-        ]),
-        h("div", {}, [
-          h(
-            "label",
-            { style: "font-size:12px; color:var(--ink-2); font-weight:600;" },
-            "Organisation",
-          ),
-          select,
-        ]),
+      h("div", { class: "settings-form-stack" }, [
+        h("div", {}, [h("label", { class: "settings-form-label" }, "Name"), name]),
+        h("div", {}, [h("label", { class: "settings-form-label" }, "Email"), email]),
+        h("div", {}, [h("label", { class: "settings-form-label" }, "Organisation"), select]),
       ]),
       errBox,
       h("div", { class: "row" }, [
@@ -4947,8 +4696,7 @@ Any questions, just let me know.`;
 
     const textArea = h("textarea", {
       readonly: "",
-      style:
-        "width:100%; min-height:190px; padding:12px; border:1px solid var(--line); border-radius:8px; font:13px/1.5 var(--font-sans, inherit); resize:vertical;",
+      class: "settings-textarea-tall",
     });
     textArea.value = emailBody;
 
@@ -4972,24 +4720,17 @@ Any questions, just let me know.`;
         h("h3", {}, "Client account created"),
         h(
           "p",
-          { style: "color: var(--ink-2); font-size:13.5px; margin-top:0;" },
+          { class: "settings-text-narrow" },
           `${client.email} can now sign in. There's no automatic email - send them the details below. You'll also need to share the company passphrase for ${org?.name || "their organisation"} separately.`,
         ),
         !hasPassphrase
           ? h(
               "div",
-              {
-                style:
-                  "background: var(--amber-bg, #FFF4E0); border:1px solid var(--amber); color: var(--ink-2); padding:10px 12px; border-radius:8px; font-size:12.5px; margin-bottom:10px;",
-              },
+              { class: "settings-amber-banner" },
               `⚠ ${org?.name || "This organisation"} doesn't have a company passphrase set yet. Set one from the Admin page before the client tries to sign in.`,
             )
           : null,
-        h(
-          "label",
-          { style: "font-size:12px; color:var(--ink-3); display:block; margin-bottom:4px;" },
-          "Suggested message",
-        ),
+        h("label", { class: "settings-section-h" }, "Suggested message"),
         textArea,
         h("div", { class: "row" }, [
           h("button", { class: "btn secondary", onclick: () => m.close() }, "Done"),
@@ -4997,9 +4738,8 @@ Any questions, just let me know.`;
           h(
             "a",
             {
-              class: "btn",
+              class: "btn settings-link-row",
               href: mailto,
-              style: "text-decoration:none; display:inline-flex; align-items:center;",
               onclick: () => {
                 setTimeout(() => m.close(), 100);
               },
@@ -5020,10 +4760,10 @@ Any questions, just let me know.`;
       h("h3", {}, "Change password"),
       h(
         "p",
-        { style: "color:var(--ink-3); font-size:13px; margin-top:0;" },
+        { class: "section-explainer" },
         "Enter your current password, then choose a new one. You'll use the new password next time you sign in.",
       ),
-      h("div", { style: "display:flex; flex-direction:column; gap:10px;" }, [cur, nw, confirmPw]),
+      h("div", { class: "settings-form-flex" }, [cur, nw, confirmPw]),
       errBox,
       h("div", { class: "row" }, [
         h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
@@ -5073,12 +4813,12 @@ Any questions, just let me know.`;
       h("h3", {}, (existing ? "Change" : "Set") + " passphrase — " + orgName),
       h(
         "p",
-        { style: "color: var(--ink-3); font-size: 13px; margin-top:0;" },
+        { class: "settings-explainer" },
         "Share this with the client team. They'll type it alongside their email and personal password when they sign in. If you change it, tell everyone at " +
           orgName +
           " the new one.",
       ),
-      h("div", { style: "display:flex; flex-direction:column; gap:10px;" }, [nw, confirm]),
+      h("div", { class: "settings-form-flex" }, [nw, confirm]),
       errBox,
       h("div", { class: "row" }, [
         h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
@@ -5118,7 +4858,7 @@ Any questions, just let me know.`;
     const errBox = h("div");
     const m = modal([
       h("h3", {}, "Change team passphrase"),
-      h("div", { style: "display:flex; flex-direction:column; gap:10px;" }, [cur, nw]),
+      h("div", { class: "settings-form-flex" }, [cur, nw]),
       errBox,
       h("div", { class: "row" }, [
         h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),

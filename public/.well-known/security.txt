@@ -1,0 +1,10 @@
+# /.well-known/security.txt
+# RFC 9116 -- A File Format to Aid in Security Vulnerability Disclosure
+# https://www.rfc-editor.org/rfc/rfc9116.html
+# Source: rfc-editor.org/rfc/rfc9116.html
+
+Contact: mailto:security@bedeveloped.com
+Expires: 2027-05-10T00:00:00Z
+Preferred-Languages: en
+Canonical: https://baselayers.bedeveloped.com/.well-known/security.txt
+Policy: https://baselayers.bedeveloped.com/SECURITY.md

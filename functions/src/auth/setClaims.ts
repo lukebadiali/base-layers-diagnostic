@@ -18,6 +18,11 @@
 // Poke pattern preserved per Pitfall 2 + Phase 6 ARCHITECTURE.md section 7
 // Flow C: writes users/{uid}/_pokes/{Date.now()} so the target session
 // listener forces an ID-token refresh.
+//
+// Phase 9 Wave 3 (BLOCKER 2 fix): server-side `iam.claims.set` audit emission
+// landed AFTER the poke write. Wave 4 Rule 3 (role escalation alert) reads
+// from these rows — the dual-emit pair is satisfied here + at the client
+// wrapper (src/cloud/claims-admin.js — Plan 03 .requested companion).
 
 import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/logger";
@@ -25,10 +30,12 @@ import { defineSecret } from "firebase-functions/params";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { withSentry } from "../util/sentry.js";
 import { validateInput } from "../util/zod-helpers.js";
 import { ensureIdempotent } from "../util/idempotency.js";
+import { writeAuditEvent } from "../audit/auditLogger.js";
 
 if (!getApps().length) initializeApp();
 
@@ -73,6 +80,48 @@ export const setClaims = onCall(
     await getFirestore()
       .doc(`users/${data.uid}/_pokes/${Date.now()}`)
       .set({ type: "claims-changed", at: FieldValue.serverTimestamp() });
+
+    // Phase 9 Wave 3 (BLOCKER 2 / AUDIT-05): server-side bare emission of
+    // iam.claims.set. Client wrapper (src/cloud/claims-admin.js — Plan 03)
+    // emits the .requested companion. Pair makes latency observable.
+    // Best-effort: log + swallow on emit failure — do NOT block the underlying
+    // claim mutation (Pattern 5 #2). Pitfall 17: actor sourced from
+    // request.auth.token, never from payload.
+    try {
+      const token = (request.auth.token ?? {}) as Record<string, unknown>;
+      await writeAuditEvent(
+        {
+          type: "iam.claims.set",
+          target: { type: "user", id: data.uid, orgId },
+          clientReqId: data.clientReqId,
+          payload: { newRole: role, newOrgId: orgId },
+        },
+        {
+          now: Date.now(),
+          eventId: randomUUID(),
+          ip: null,
+          userAgent: null,
+          actor: {
+            uid: request.auth.uid,
+            email: typeof token.email === "string" ? token.email : null,
+            role:
+              token.role === "admin" ||
+              token.role === "internal" ||
+              token.role === "client" ||
+              token.role === "system"
+                ? token.role
+                : null,
+            orgId: typeof token.orgId === "string" ? token.orgId : null,
+          },
+        },
+      );
+    } catch (auditErr) {
+      logger.warn("audit.emit.failed", {
+        type: "iam.claims.set",
+        targetUid: data.uid,
+        error: auditErr instanceof Error ? auditErr.message : String(auditErr),
+      });
+    }
 
     logger.info("auth.claims.set", {
       targetUid: data.uid,

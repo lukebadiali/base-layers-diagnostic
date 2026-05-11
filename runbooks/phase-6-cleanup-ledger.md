@@ -76,7 +76,7 @@ Rows added by Phase 6 Wave 6 per D-17 to track Phase 7's owned work.
 
 | Row | Reason | Phase | Owner |
 |-----|--------|-------|-------|
-| Drop temporary CSP allowlist for Firebase Auth popup origin | Phase 3 added `frame-src https://bedeveloped-base-layers.firebaseapp.com` preemptively to spare Phase 6 a CSP edit; Phase 10 strict-CSP sweep can drop it once popup flow is removed | Phase 10 | HOST-06 |
+| Drop temporary CSP allowlist for Firebase Auth popup origin | **CLOSED 2026-05-10 — Plan 10-02** (commit `523e47e`): firebase.json CSP-RO directive value tightened — `frame-src` changed from `https://bedeveloped-base-layers.firebaseapp.com` to `'self'`. Verified by `tests/firebase-config.test.js` Phase 10 schema assertion `frame-src is 'self' (no firebaseapp.com popup origin)` (Plan 10-02 commit `24f8a7c`) + `grep signInWithPopup src/` returns 0 hits. App uses email-link sign-in (Phase 6 D-09). Future federated OAuth-popup sign-in (AUTH-V2-* v2) would need re-extension — forward-tracked to `runbooks/phase-10-cleanup-ledger.md` F3. | CLOSED (Phase 10 — Plan 10-02 commit `523e47e`) | HOST-07 |
 
 ## Phase 11 — forward-tracking (queued)
 

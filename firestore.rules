@@ -66,6 +66,7 @@ service cloud.firestore {
       // ── comments subcollection (FN-09 rate-limit composed at create) ─
       match /comments/{cmtId} {
         allow read:   if inOrg(orgId)
+                      && notDeleted(resource.data)
                       && (!("internalOnly" in resource.data) || !resource.data.internalOnly || isInternal());
         allow create: if inOrg(orgId)
                       && request.resource.data.authorId == request.auth.uid
@@ -76,7 +77,7 @@ service cloud.firestore {
 
       // ── actions subcollection ───────────────────────────────────────
       match /actions/{actId} {
-        allow read:   if inOrg(orgId);
+        allow read:   if inOrg(orgId) && notDeleted(resource.data);
         allow create: if inOrg(orgId);
         allow update: if inOrg(orgId)
                       && immutable("orgId")
@@ -87,7 +88,7 @@ service cloud.firestore {
 
       // ── documents subcollection ─────────────────────────────────────
       match /documents/{docId} {
-        allow read:   if inOrg(orgId);
+        allow read:   if inOrg(orgId) && notDeleted(resource.data);
         allow create: if inOrg(orgId);
         allow update: if false;
         allow delete: if false;
@@ -95,7 +96,7 @@ service cloud.firestore {
 
       // ── messages subcollection (FN-09 rate-limit composed at create) ─
       match /messages/{msgId} {
-        allow read:   if inOrg(orgId);
+        allow read:   if inOrg(orgId) && notDeleted(resource.data);
         allow create: if inOrg(orgId)
                       && request.resource.data.authorId == request.auth.uid
                       && rateLimitOk(request.auth.uid);
@@ -134,10 +135,31 @@ service cloud.firestore {
       allow write: if false;       // server-only via auditWrite callable (Phase 7)
     }
 
+    // ── authFailureCounters/{ipHash} (Phase 9 Wave 5 / OBS-05 / Pattern 10) ───
+    // Server-only rolling-window counter consumed by the auth-anomaly Slack
+    // alert (functions/src/observability/authAnomalyAlert.ts). Same Pattern as
+    // the auditLog block above (allow read+write: if false; Admin SDK is the
+    // only writer — specifically the audit-alert-sa SA from Wave 6 / Plan
+    // 09-05 SA inventory). Prevents client tampering that would bypass the
+    // EXACTLY-ONCE Slack-fire guarantee (T-9-04-6 mitigation).
+    match /authFailureCounters/{ipHash} {
+      allow read:  if false;
+      allow write: if false;
+    }
+
     // ── softDeleted/{type}/items/{id} ─────────────────────────────────
     match /softDeleted/{type}/items/{id} {
       allow read:  if isAdmin();
       allow write: if false;       // server-only (Phase 8)
+    }
+
+    // ── redactionList/{userId} (GDPR-05 — Phase 8 Wave 4) ────────────────
+    // Server-only writes via gdprEraseUser callable; admin-readable so
+    // backup-rotation scripts (BACKUP-07 restore drill) can re-apply
+    // tombstone tokens after database restore. Pitfall 17 — never client-writable.
+    match /redactionList/{userId} {
+      allow read:  if isAdmin();
+      allow write: if false;
     }
 
     // ── rateLimits (FN-09 — replaces Phase 5 D-17 deny-block; Phase 7 W4) ─
@@ -181,7 +203,7 @@ service cloud.firestore {
 
     // ── funnelComments/{id} (orgId field per ARCHITECTURE.md §4) ─────
     match /funnelComments/{id} {
-      allow read:   if inOrg(resource.data.orgId);
+      allow read:   if inOrg(resource.data.orgId) && notDeleted(resource.data);
       allow create: if inOrg(request.resource.data.orgId)
                     && request.resource.data.authorId == request.auth.uid;
       allow update: if false;

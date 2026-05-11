@@ -76,7 +76,11 @@ describe("withSentry — Sentry init lifecycle", () => {
 });
 
 describe("beforeSend PII scrub (Test 3)", () => {
-  it("strips authorization + cookie headers and email/name/ip extras", () => {
+  it("strips authorization + cookie headers and replaces email/name/ip extras with <redacted>", () => {
+    // Phase 9 (OBS-01) contract update: extras + contexts use the shared
+    // PII_KEYS dictionary and the redaction contract is `"<redacted>"`
+    // assignment (not `delete`) so SRE can still see the slot WAS populated.
+    // Headers continue to be stripped via `delete`.
     const event: Record<string, unknown> = {
       request: {
         headers: {
@@ -105,10 +109,40 @@ describe("beforeSend PII scrub (Test 3)", () => {
     expect(headers["user-agent"]).toBe("test-ua");
 
     const extra = event.extra as Record<string, unknown>;
-    expect(extra.email).toBeUndefined();
-    expect(extra.name).toBeUndefined();
-    expect(extra.ip).toBeUndefined();
+    expect(extra.email).toBe("<redacted>");
+    expect(extra.name).toBe("<redacted>");
+    expect(extra.ip).toBe("<redacted>");
     expect(extra.keepme).toBe("ok");
+  });
+
+  it("Phase 9: scrubs PII keys inside event.contexts.<bag> via shared PII_KEYS dictionary", () => {
+    const event: Record<string, unknown> = {
+      contexts: {
+        user: { name: "Alice", role: "admin" },
+        device: { chatBody: "secret message", model: "test" },
+      },
+    };
+    _scrubEventForTest(event);
+    const ctx = event.contexts as Record<string, Record<string, unknown>>;
+    expect(ctx.user.name).toBe("<redacted>");
+    expect(ctx.user.role).toBe("admin");
+    expect(ctx.device.chatBody).toBe("<redacted>");
+    expect(ctx.device.model).toBe("test");
+  });
+
+  it("Phase 9: clips free-form request.body and request.data strings to <redacted-body>", () => {
+    const event: Record<string, unknown> = {
+      request: {
+        body: "long chat message body",
+        data: "some payload",
+        method: "POST",
+      },
+    };
+    _scrubEventForTest(event);
+    const req = event.request as Record<string, unknown>;
+    expect(req.body).toBe("<redacted-body>");
+    expect(req.data).toBe("<redacted-body>");
+    expect(req.method).toBe("POST");
   });
 
   it("is safe to call with no request.headers and no extra", () => {

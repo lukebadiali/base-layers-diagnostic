@@ -10,7 +10,8 @@
     "strict": true,
     "target": "es2022",
     "esModuleInterop": true,
-    "ignoreDeprecations": "6.0"
+    "ignoreDeprecations": "6.0",
+    "skipLibCheck": true
   },
   "compileOnSave": true,
   "include": ["src/**/*.ts"],

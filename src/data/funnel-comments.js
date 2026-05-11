@@ -24,7 +24,13 @@ import {
 export async function listFunnelComments(orgId) {
   /** @type {Array<any>} */
   const out = [];
-  const snap = await getDocs(query(collection(db, "funnelComments"), where("orgId", "==", orgId)));
+  const snap = await getDocs(
+    query(
+      collection(db, "funnelComments"),
+      where("orgId", "==", orgId),
+      where("deletedAt", "==", null),
+    ),
+  );
   snap.forEach((/** @type {any} */ d) => out.push({ id: d.id, ...d.data() }));
   return out;
 }
@@ -58,7 +64,11 @@ export async function deleteFunnelComment(commentId) {
  */
 export function subscribeFunnelComments(orgId, { onChange, onError }) {
   return onSnapshot(
-    query(collection(db, "funnelComments"), where("orgId", "==", orgId)),
+    query(
+      collection(db, "funnelComments"),
+      where("orgId", "==", orgId),
+      where("deletedAt", "==", null),
+    ),
     (/** @type {any} */ snap) => {
       /** @type {Array<any>} */
       const out = [];

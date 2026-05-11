@@ -12,7 +12,15 @@
 // src/firebase/auth.js#updatePassword) don't need to bring crypto.randomUUID()
 // into their own scope. The 5-min idempotency window (FN-03 ensureIdempotent)
 // keys off this id + the caller uid + the target uid.
+//
+// Phase 9 Wave 4 (AUDIT-05): POST-emit `iam.claims.set.requested` after the
+// server callable resolves. Server-side setClaims (Plan 03a) emits the bare
+// `iam.claims.set` flavour; client `.requested` makes the pair latency-observable
+// (Pattern 5 #4). NO PII in payload — only `newRole` (opaque non-PII string).
+// actor.{uid,email,role,orgId} is server-overlaid from request.auth.token by
+// the auditWrite callable (Pitfall 17).
 import { functions, httpsCallable } from "../firebase/functions.js";
+import { emitAuditEvent } from "../observability/audit-events.js";
 
 const setClaimsCallable = httpsCallable(functions, "setClaims");
 
@@ -23,4 +31,16 @@ const setClaimsCallable = httpsCallable(functions, "setClaims");
 export async function setClaims(input) {
   const clientReqId = crypto.randomUUID();
   await setClaimsCallable({ ...input, clientReqId });
+  // Phase 9 (AUDIT-05) POST-emit. Best-effort — never roll back the
+  // already-resolved server callable on audit failure (emitAuditEvent
+  // swallows internally; double-wrap is defensive).
+  try {
+    emitAuditEvent(
+      "iam.claims.set.requested",
+      { type: "user", id: input.uid, orgId: input.orgId ?? null },
+      { newRole: input.role ?? null },
+    );
+  } catch (_emitErr) {
+    // Pattern 5 #2 — best-effort.
+  }
 }

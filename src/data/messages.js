@@ -30,6 +30,8 @@
 import {
   db,
   collection,
+  query,
+  where,
   getDocs,
   onSnapshot,
   serverTimestamp,
@@ -55,7 +57,12 @@ function byCreatedAt(a, b) {
  * @returns {Promise<Array<any>>}
  */
 export async function listMessages(orgId) {
-  const snap = await getDocs(collection(db, "orgs", orgId, "messages"));
+  const snap = await getDocs(
+    query(
+      collection(db, "orgs", orgId, "messages"),
+      where("deletedAt", "==", null),
+    ),
+  );
   /** @type {Array<any>} */
   const out = [];
   snap.forEach((/** @type {any} */ d) => out.push({ id: d.id, ...d.data() }));
@@ -106,7 +113,10 @@ export async function addMessage(orgId, message) {
  */
 export function subscribeMessages(orgId, { onChange, onError }) {
   return onSnapshot(
-    collection(db, "orgs", orgId, "messages"),
+    query(
+      collection(db, "orgs", orgId, "messages"),
+      where("deletedAt", "==", null),
+    ),
     (/** @type {any} */ snap) => {
       /** @type {Array<any>} */
       const out = [];

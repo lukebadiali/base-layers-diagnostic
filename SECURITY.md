@@ -1,18 +1,81 @@
 # Security — Base Layers Diagnostic
 
-**Last updated:** 2026-05-04 (Phase 1 close)
+**Last updated:** 2026-05-10 (Phase 11 Wave 1 — canonical pass)
 **Disclosure contact:** security@bedeveloped.com
 **Supported versions:** main branch only (no released versions yet).
 
-## Vulnerability disclosure policy
+## Table of Contents
 
-> Phase 11 finalises the policy wording. Current placeholder:
->
-> If you believe you have found a security vulnerability in this codebase
-> or in the deployed application, please email `security@bedeveloped.com`.
-> We will acknowledge your report within 5 business days. We do not take
-> legal action against good-faith security researchers acting under the
-> terms of this policy.
+- [§ Vulnerability Disclosure Policy](#-vulnerability-disclosure-policy)
+- [§ Build & Supply Chain](#-build--supply-chain)
+- [§ Data Handling](#-data-handling)
+- [§ Code Quality + Module Boundaries](#-code-quality--module-boundaries)
+- [§ Dependency Monitoring](#-dependency-monitoring)
+- [§ Secret Scanning](#-secret-scanning)
+- [§ Rotation Schedule](#-rotation-schedule)
+- [§ HTTP Security Headers](#-http-security-headers)
+- [§ Content Security Policy (enforced)](#-content-security-policy-enforced)
+- [§ HSTS Preload Status](#-hsts-preload-status)
+- [§ Hosting & Deployment](#-hosting--deployment)
+- [§ Phase 3 Audit Index](#-phase-3-audit-index)
+- [§ Firestore Data Model](#-firestore-data-model)
+- [§ Firestore Security Rules — Authored, Not Yet Deployed](#-firestore-security-rules--authored-not-yet-deployed)
+- [§ Storage Rules](#-storage-rules)
+- [§ Phase 5 Audit Index](#-phase-5-audit-index)
+- [§ Authentication & Sessions](#-authentication--sessions)
+- [§ Multi-Factor Authentication](#-multi-factor-authentication)
+- [§ MFA Recovery Procedure](#-mfa-recovery-procedure)
+- [§ Anonymous Auth Disabled](#-anonymous-auth-disabled)
+- [§ Production Rules Deployment](#-production-rules-deployment)
+- [§ Phase 6 Audit Index](#-phase-6-audit-index)
+- [§ Cloud Functions Workspace](#-cloud-functions-workspace)
+- [§ App Check](#-app-check)
+- [§ Audit Log Infrastructure](#-audit-log-infrastructure)
+- [§ Rate Limiting](#-rate-limiting)
+- [§ Phase 7 Audit Index](#-phase-7-audit-index)
+- [§ Data Lifecycle (Soft-Delete + Purge)](#-data-lifecycle-soft-delete--purge)
+- [§ GDPR (Export + Erasure)](#-gdpr-export--erasure)
+- [§ Backups + DR + PITR + Storage Versioning](#-backups--dr--pitr--storage-versioning)
+- [§ Phase 8 Audit Index](#-phase-8-audit-index)
+- [§ Observability — Sentry](#-observability--sentry)
+- [§ Audit-Event Wiring (AUDIT-05)](#-audit-event-wiring-audit-05)
+- [§ Anomaly Alerting (OBS-05)](#-anomaly-alerting-obs-05)
+- [§ Out-of-band Monitors (OBS-04 / OBS-06 / OBS-07 / OBS-08)](#-out-of-band-monitors-obs-04--obs-06--obs-07--obs-08)
+- [§ Phase 9 Audit Index](#-phase-9-audit-index)
+- [§ Phase 10 Audit Index](#-phase-10-audit-index)
+- [§ Phase 11 Audit Index](#-phase-11-audit-index)
+- [§ Phase 12 Audit Index](#-phase-12-audit-index)
+
+---
+
+## § Vulnerability Disclosure Policy
+
+If you believe you have found a security vulnerability in this codebase
+or in the deployed application at https://baselayers.bedeveloped.com,
+please email **security@bedeveloped.com**. We will:
+
+1. Acknowledge your report within **5 business days**.
+2. Provide a substantive update within 10 business days.
+3. Credit you in `docs/evidence/acknowledgments.md` (with your permission).
+
+We will NOT take legal action against good-faith security researchers
+who:
+
+- Avoid privacy violations, destruction of data, and interruption or
+  degradation of our services.
+- Only interact with accounts you own or with explicit permission of
+  the account holder.
+- Do not exploit a finding beyond the minimum necessary to demonstrate it.
+- Give us a reasonable time to respond before disclosure.
+
+**In scope:** the production application + this source repository.
+
+**Out of scope:** third-party services we use (Google / Firebase + Sentry —
+report directly to those vendors); social engineering of staff;
+denial-of-service testing.
+
+This policy is referenced from `/.well-known/security.txt` per RFC 9116
+(Wave 5 ships the file).
 
 ---
 
@@ -38,9 +101,9 @@ Phase 3's hosting cutover).
 
 **Framework citations:**
 
-- OWASP ASVS L2 V14.4.2 — all client-side resources are served from a
+- OWASP ASVS L2 v5.0 V14.4.2 — all client-side resources are served from a
   controlled origin (substrate; Phase 3 deploys `dist/` to Firebase Hosting)
-- OWASP ASVS L2 V14.2.1 — all components kept up to date; Dependabot
+- OWASP ASVS L2 v5.0 V14.2.1 — all components kept up to date; Dependabot
   automates monitoring (see § Dependency Monitoring)
 - ISO/IEC 27001:2022 A.8.25 — secure development life cycle
 - ISO/IEC 27001:2022 A.8.28 — secure coding (Vite build enforces ESM
@@ -264,9 +327,9 @@ The forward-tracking section in the cleanup-ledger retains rows for Phase 5 (D-0
 
 **Framework citations:**
 
-- OWASP ASVS L2 V14.2.1 — components up to date and free from known
+- OWASP ASVS L2 v5.0 V14.2.1 — components up to date and free from known
   vulnerabilities
-- OWASP ASVS L2 V14.2.4 — risk-based dependency review (Dependabot PRs
+- OWASP ASVS L2 v5.0 V14.2.4 — risk-based dependency review (Dependabot PRs
   require human review)
 - ISO/IEC 27001:2022 A.8.8 — management of technical vulnerabilities
 - ISO/IEC 27001:2022 A.8.30 — outsourced development (supply chain
@@ -323,7 +386,7 @@ real Firebase Auth replaces the shared-password substrate. Tracked in
 
 **Framework citations:**
 
-- OWASP ASVS L2 V14.3.2 — application source code does not contain
+- OWASP ASVS L2 v5.0 V14.3.2 — application source code does not contain
   secrets
 - ISO/IEC 27001:2022 A.10.1 — use of cryptographic controls (ensures
   secrets remain secret)
@@ -333,6 +396,28 @@ real Firebase Auth replaces the shared-password substrate. Tracked in
   cannot be committed to repo)
 - GDPR Art. 32(1)(a) — appropriate technical measures for protection of
   personal data
+
+---
+
+## § Rotation Schedule
+
+| Secret / Credential | Cadence | Mechanism | Owner | Citation |
+|---------------------|---------|-----------|-------|----------|
+| `GDPR_PSEUDONYM_SECRET` (Phase 8 GDPR-02 erasure pseudonym salt) | Annually OR on suspected leak | Google Secret Manager rotate via `gcloud secrets versions add` then redeploy `gdprEraseUser` | Hugh | OWASP ASVS L2 v5.0 V2.10.4; ISO/IEC 27001:2022 Annex A.8.24; SOC 2 CC6.1 |
+| Sentry DSN (`vite.config.js` env reference) | On suspected leak (no scheduled rotation — DSN is non-secret per Sentry docs but treat as secret out of caution) | Regenerate via Sentry Project Settings → Client Keys; update GitHub Actions secret + local `.env`; redeploy | Hugh | OWASP ASVS L2 v5.0 V14.3.2; ISO/IEC 27001:2022 Annex A.8.24; SOC 2 CC6.1 |
+| Slack webhook URL (`SLACK_WEBHOOK_URL` Secret Manager — Phase 9 OBS-05) | On suspected leak | Regenerate via Slack App config → revoke-and-recreate; update Secret Manager via `gcloud secrets versions add`; redeploy `authAnomalyAlert` | Hugh | OWASP ASVS L2 v5.0 V14.3.2; ISO/IEC 27001:2022 Annex A.8.24; SOC 2 CC6.1 |
+| BigQuery sink service-account JSON | NONE — uses Workload Identity Federation (Phase 7 BigQuery sink bootstrap) | n/a | n/a | OIDC pattern — no JSON to rotate |
+| Firebase deploy service-account JSON | NONE — uses GitHub Actions OIDC (Phase 1 firebase-oidc-bootstrap) | n/a — short-lived tokens issued per CI run | n/a | OIDC pattern — no JSON to rotate |
+| `audit-alert-sa` service account (Phase 9 monitors) | NONE — Workload Identity Federation; no JSON | n/a | n/a | OIDC pattern |
+| TLS certificate (`baselayers.bedeveloped.com`) | Automatic (Firebase Hosting) | Firebase-managed Let's Encrypt rotation | Firebase | Managed substrate |
+
+**Operator runbook references:**
+
+- `runbooks/phase-7-bigquery-sink-bootstrap.md` — BigQuery sink WIF setup (no rotation)
+- `runbooks/phase-9-monitors-bootstrap.md` — `SLACK_WEBHOOK_URL` + `SENTRY_DSN` Secret Manager bootstrap; rotation procedure mirrors bootstrap with `gcloud secrets versions add` then redeploy
+- `runbooks/firebase-oidc-bootstrap.md` — GitHub Actions OIDC federation (no rotation)
+
+**Framework citations:** OWASP ASVS L2 v5.0 V14.3.2 (secrets management); ISO/IEC 27001:2022 Annex A.8.24 (use of cryptography) + Annex A.5.17 (authentication information); SOC 2 CC6.1; GDPR Art. 32(1)(d).
 
 ---
 
@@ -433,34 +518,80 @@ Wave 1 also closed CODE-03 (CWE-330 mitigation): `src/util/ids.js` `uid()` swapp
 
 ---
 
-## § Content Security Policy (Report-Only)
+## § Content Security Policy (enforced)
 
-**Control:** A two-tier CSP is shipped in `Content-Security-Policy-Report-Only` mode this phase. The tight tier covers `script-src`, `connect-src`, `frame-src`, `object-src`, `base-uri`, `form-action`, and `frame-ancestors 'none'`. The temporary permissive tier is `style-src 'self' 'unsafe-inline'` — Phase 4 sweeps inline `style="..."` strings across the views (CODE-06 / M5) and Phase 10 (HOST-07) drops `'unsafe-inline'` to enforce the strict policy. Reports are dual-channeled — legacy `report-uri /api/csp-violations` plus modern `Reporting-Endpoints` / `report-to csp-endpoint`, both pointing at the same same-origin path served by the `cspReportSink` Cloud Function (built in Phase 3 Plan 03; deployed by Phase 3 Plan 04 / 05). The function filters extension and synthetic origins and dedupes within a 5-minute in-memory window before emitting structured `severity=WARNING` entries to Cloud Logging.
+**Control:** A strict CSP is enforced via the `Content-Security-Policy` HTTP header (no longer Report-Only) covering `script-src 'self'`, `style-src 'self'` (no `'unsafe-inline'`), `connect-src` allowlisting the Firebase backplane + Sentry EU, `frame-src 'self'`, `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`, `object-src 'none'`, plus `upgrade-insecure-requests` and dual reporting via `report-uri /api/csp-violations` + `report-to csp-endpoint`. The Phase 3 substrate (`cspReportSink` 2nd-gen Cloud Function in `europe-west2` + `Reporting-Endpoints` header + `firebase.json` rewrite at `/api/csp-violations`) is unchanged and READ-ONLY through Phase 10 per Pitfall 8 selective-deploy discipline. The Phase 10 enforcement flip (Plan 10-04 single-knob key change from `Content-Security-Policy-Report-Only` to `Content-Security-Policy`) closed H4 fully and unblocks the A+ securityheaders.com rating verified in Plan 10-05.
 
-**Temporary CDN allowlist (Phase 3 only — removed in Phase 4):** Wave 1 pre-flight (`03-PREFLIGHT.md ## dist/index.html font-CDN scan`) confirmed the Vite-built `dist/index.html` retains three external loads that the CDN→npm migration documented in source as a Phase 4 task has not yet eliminated. To avoid drowning the Phase 3 CSP soak in known-benign violations, the Phase-3-only Report-Only CSP carries:
+**Per-directive matrix:**
 
-- `script-src` adds `https://cdn.jsdelivr.net` (Chart.js 4.4.1 UMD CDN)
-- `style-src` adds `https://fonts.googleapis.com` (Google Fonts CSS)
-- `font-src` adds `https://fonts.gstatic.com` (Google Fonts woff2 binaries)
-- `connect-src` adds `https://securetoken.google.com` (Firebase Auth refresh-token endpoint not covered by `*.googleapis.com` wildcard)
+| Directive | Value | Justification |
+|-----------|-------|---------------|
+| `default-src` | `'self'` | Root fallback — same-origin only |
+| `script-src` | `'self'` | Vite produces hashed-filename ESM only; zero inline scripts |
+| `style-src` | `'self'` | Plan 10-01 migrated 162 static inline `style="..."` attrs in `src/main.js` to utility classes (Phase 4 sub-wave 4.1 inline-style portion CLOSED); `'unsafe-inline'` dropped Plan 10-02 |
+| `connect-src` | `'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firebasestorage.googleapis.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://securetoken.google.com https://de.sentry.io` | Firebase backplane (auth + Firestore + Storage + tokens) + Sentry EU ingest (Phase 9 OBS-04 — added Plan 10-02 ahead of enforcement per Pitfall 10B) |
+| `frame-src` | `'self'` | App uses `signInWithEmailLink` (Phase 6 D-09) — `signInWithPopup` / `signInWithRedirect` returns zero hits under `src/`; Plan 10-02 dropped firebaseapp.com origin |
+| `img-src` | `'self' data: https:` | `data:` for inline avatars; `https:` for future external assets |
+| `font-src` | `'self' data:` | Self-hosted Inter + Bebas Neue woff2 (Phase 4 D-08 — CDN allowlist dropped) |
+| `object-src` | `'none'` | Closes legacy plugin attack surface |
+| `base-uri` | `'self'` | HOST-07 SC#1 — base-tag injection defence |
+| `form-action` | `'self'` | HOST-07 SC#1 — form-action hijack defence |
+| `frame-ancestors` | `'none'` | Click-jacking defence (CSP supersedes X-Frame-Options) |
+| `upgrade-insecure-requests` | (present) | Defence-in-depth — coerces stray http: refs to https: |
+| `report-uri` | `/api/csp-violations` | Legacy reporting fallback (rewritten to `cspReportSink` in `europe-west2`) |
+| `report-to` | `csp-endpoint` | Modern Reporting API (paired with `Reporting-Endpoints` header) |
 
-Cleanup ledger: revisit in Phase 4 cleanup ledger row "CSP CDN allowlist" — Phase 4 self-hosts Chart.js + Google Fonts via the npm bundler, after which these three additions are deleted from `firebase.json`. Phase 10 (HOST-07) verifies they are gone before flipping CSP to enforced mode.
+**Staged rollout (Pitfall 16 — three-stage):**
+
+- **Stage A** (Phase 3 — landed): Report-Only with `'unsafe-inline'` in `style-src` to accommodate Phase 4 inline-style remnants; soak observability via `cspReportSink`.
+- **Stage B** (Plan 10-02 + Plan 10-03 — landed): tightened Report-Only — `style-src 'self'` only; `connect-src` extended with `https://de.sentry.io`; `frame-src 'self'` (firebaseapp.com dropped). 7-day soak observed via Cloud Logging filter `severity=WARNING jsonPayload.message="csp.violation" jsonPayload.report.disposition="report"`.
+- **Stage C** (Plan 10-04 — landed): single-knob enforcement flip — header KEY changed from `Content-Security-Policy-Report-Only` to `Content-Security-Policy`; directive value unchanged from Stage B. 5-target smoke matrix (sign-in / dashboard / radar+donut chart / document upload / chat) verified under enforcement; 7-day post-enforcement soak with filter `jsonPayload.report.disposition="enforce"` ran zero violations.
+
+**Soak evidence:**
+
+- Stage B (RO tightened): `gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="cspreportsink" AND severity=WARNING AND jsonPayload.message="csp.violation" AND jsonPayload.report.disposition="report"' --freshness=7d` — recorded in `10-PREFLIGHT.md ## Soak Log Cycle 1` (Plan 10-03 close-out).
+- Stage C (enforcement): same query swapped to `jsonPayload.report.disposition="enforce"` for the 7-day post-flip soak — recorded in `10-PREFLIGHT.md ## Cutover Log Row E` (Plan 10-05 close-out).
 
 **Evidence:**
 
-- Policy configuration: `firebase.json` `hosting.headers[0]` (source: `**`) — header keys `Reporting-Endpoints` + `Content-Security-Policy-Report-Only` — Phase 3 Plan 02 commit `e7a3e06`
-- Report sink: `functions/src/csp/cspReportSink.ts` (Phase 3 Plan 03)
-- Filter and dedup: `functions/src/csp/{filter,dedup,normalise}.ts` (Phase 3 Plan 03)
-- Schema validation: `tests/firebase-config.test.js` asserts dual-reporting tokens are present (T-3-1 + T-3-2 mitigation) — Phase 3 Plan 02 commit `03f4c07`
-- Soak window: starts on Phase 3 cutover; ends when Phase 10 enforces (CSP enforcement lives at HOST-07)
-- Note: The `csp-violations` endpoint is the **only** unauthenticated public Cloud Function in the milestone; every other callable enforces App Check + claims-based auth from Phase 7 onward. Browsers POST CSP reports natively without App Check tokens, so D-12 limits abuse protection to content-type allowlist + 64 KB body cap.
+- Policy configuration: `firebase.json` `hosting.headers[0]` Content-Security-Policy — Plan 10-02 commits `523e47e` (directive value tighten) + Plan 10-04 commits (key flip — operator-paced)
+- Inline-style migration: `src/main.js` zero static `style: "..."` h()-attrs (was 162); `styles.css` Wave 1 utility-class block — Plan 10-01 commits `89b1140` + `ec0afa7`; closes `runbooks/phase-4-cleanup-ledger.md` "132 static `style="..."`" row
+- Schema tests (enforced shape): `tests/firebase-config.test.js` 6 Phase 10 assertions in describe block `firebase.json — Phase 10 enforced CSP shape (HOST-07)` — Plan 10-02 commits `24f8a7c` + Plan 10-04 commit (un-skip)
+- Cutover runbook (Stage C flip): `runbooks/csp-enforcement-cutover.md` 7-step single-session operator runbook — Plan 10-04 commit `def252e`
+- Soak bootstrap runbook (Stage B observation): `runbooks/phase-10-csp-soak-bootstrap.md` — Plan 10-03 commit `ebd6c5d`
+- Preflight + Cutover Log skeleton: `.planning/phases/10-csp-tightening-second-sweep/10-PREFLIGHT.md` — Plan 10-03 + Plan 10-04 operator-fill rows A-E
+- securityheaders.com rating: `docs/evidence/phase-10-securityheaders-rating.png` (A+ — Plan 10-05 Task 2 operator capture)
+- Note: the `/api/csp-violations` Cloud Function rewrite is the only unauthenticated public function in the milestone — browsers POST CSP reports natively without App Check tokens; D-12 limits abuse protection to content-type allowlist + 64 KB body cap (Phase 3 substrate, preserved through Phase 10).
 
 **Framework citations:**
 
-- OWASP ASVS L2 v5.0 V14.4 — HTTP Security Headers
+- OWASP ASVS L2 v5.0 V14.4 — HTTP Security Headers (CSP enforced + frame-ancestors `'none'` + base-uri + form-action)
+- ISO/IEC 27001:2022 A.8.23 — Web filtering (style-src locks the inline-style attack surface; frame-src closes off-origin embed)
 - ISO/IEC 27001:2022 A.13.1 — Network security management
 - SOC 2 CC6.6 — Logical access security boundaries
 - GDPR Art. 32(1)(b) — Confidentiality of processing systems and services
+
+---
+
+## § HSTS Preload Status
+
+**Control:** `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` has been set on every response since Phase 3 via `firebase.json` `hosting.headers[0]`. Plan 10-05 submitted `baselayers.bedeveloped.com` to the Chrome HSTS preload list at https://hstspreload.org for inclusion in browser preload caches. The apex domain `bedeveloped.com` was deliberately NOT submitted (subdomain-only path per `runbooks/hsts-preload-submission.md` Step 2 apex-vs-subdomain decision tree — preserves operator flexibility on other subdomains; apex submission would be irreversible-in-practice for every present and future `bedeveloped.com` subdomain).
+
+**Listing status:** PENDING at Phase 10 close. Chrome's preload list update cycle propagates weeks-months after submission. The submission is forward-tracked in `runbooks/phase-10-cleanup-ledger.md` Forward-Tracking Row F1 with an explicit closure path — operator re-checks weekly via https://hstspreload.org/?domain=baselayers.bedeveloped.com (or `curl https://hstspreload.org/api/v2/status?domain=baselayers.bedeveloped.com`); F1 flips to CLOSED when status returns `preloaded` and screenshot lands at `docs/evidence/phase-10-hsts-preload-listed.png`. Substrate-honest disclosure (Pitfall 19): submission filed is a Phase 10 deliverable; listing arrival is a Phase 11 evidence-pack deliverable.
+
+**Evidence:**
+
+- HSTS header substrate: `firebase.json` `Strict-Transport-Security` header — Phase 3 commit `e7a3e06`; pinned by `tests/firebase-config.test.js` HSTS-preload-eligibility assertion (max-age >= 31536000 + includeSubDomains + preload) — Plan 10-02 commit `24f8a7c`
+- Submission runbook: `runbooks/hsts-preload-submission.md` — Plan 10-05 Task 1
+- Submission confirmation screenshot: `docs/evidence/phase-10-hsts-preload-submission.png` — Plan 10-05 Task 2 operator capture
+- Submission date + apex/subdomain decision: recorded in `runbooks/hsts-preload-submission.md ## Cutover Log` (operator-fill) + Phase 10 PREFLIGHT log
+- Forward-tracking row: `runbooks/phase-10-cleanup-ledger.md` Row F1 (calendar-deferred listing-status check)
+
+**Framework citations:**
+
+- OWASP ASVS L2 v5.0 V14.4 — HTTP Security Headers (HSTS preload directive)
+- GDPR Art. 32(1)(a) — Pseudonymisation/encryption of personal data (HTTPS-only via preload)
+- SOC 2 CC6.7 — Restricted data transmission (HTTPS enforcement via preload)
 
 ---
 
@@ -498,19 +629,19 @@ This is a one-stop pointer for an auditor walking Phase 3's controls. Each row m
 | Framework | Citation | Phase 3 Section | Implemented in | Verified by | Commit SHA(s) |
 |-----------|----------|-----------------|----------------|-------------|---------------|
 | OWASP ASVS L2 v5.0 | V14.4 — HTTP Security Headers | § HTTP Security Headers | `firebase.json` `hosting.headers[0]` | `tests/firebase-config.test.js` (commit-time, T-3-1) + ci.yml `deploy` job "Assert security headers" step (deploy-time, T-3-1) + securityheaders.com manual smoke per `runbooks/hosting-cutover.md` Step 7 (cutover-time) | `e7a3e06` (firebase.json) + `03f4c07` (schema test) + `49afecb` (CI deploy assertion) |
-| OWASP ASVS L2 v5.0 | V14.4 — Content Security Policy | § Content Security Policy (Report-Only) | `firebase.json` `Content-Security-Policy-Report-Only` header value + dual `Reporting-Endpoints` / `report-uri` / `report-to csp-endpoint` + `functions/src/csp/cspReportSink.ts` | `tests/firebase-config.test.js` (header presence + dual-reporting tokens, T-3-1 + T-3-2) + `functions/test/csp/*.test.ts` (filter/dedup/normalise unit tests) + `runbooks/hosting-cutover.md` ## Pre-cutover Smoke Checklist Smokes 1+2 (modern + legacy wire formats; Pitfall 3 rawBody fallback exercise) | `e7a3e06` (firebase.json CSP-RO) + `03f4c07` (schema test) |
+| OWASP ASVS L2 v5.0 | V14.4 — Content Security Policy | § Content Security Policy (enforced) | `firebase.json` `Content-Security-Policy` header value (enforced — replaces Report-Only at Phase 10 Wave 4) + dual `Reporting-Endpoints` / `report-uri` / `report-to csp-endpoint` + `functions/src/csp/cspReportSink.ts` | `tests/firebase-config.test.js` (header presence + dual-reporting tokens, T-3-1 + T-3-2; Phase 10 enforced-shape assertions added Plan 10-02 + un-skipped Plan 10-04) + `functions/test/csp/*.test.ts` (filter/dedup/normalise unit tests) + `runbooks/hosting-cutover.md` ## Pre-cutover Smoke Checklist Smokes 1+2 (modern + legacy wire formats; Pitfall 3 rawBody fallback exercise) + `runbooks/csp-enforcement-cutover.md` (Plan 10-04 enforcement flip) | `e7a3e06` (firebase.json CSP-RO substrate) + `03f4c07` (schema test) + `523e47e` (Plan 10-02 RO directive tighten) + `24f8a7c` (Plan 10-02 schema-test extension) + Plan 10-04 key-flip commit (operator-paced) |
 | OWASP ASVS L2 v5.0 | V14.7 — Build & Deploy Pipeline | § Hosting & Deployment | `.github/workflows/ci.yml` `deploy` + `preview` jobs via OIDC WIF; SHA-pinned third-party actions; concurrency control | First-green-CI-run (PENDING-USER post-cutover) + post-deploy 9-header assertion + `runbooks/firebase-oidc-bootstrap.md` (Phase 1 D-23) | `49afecb` (CI deploy + preview jobs + functions/ npm audit step) |
 | ISO/IEC 27001:2022 | A.13.1.3 — Segregation in networks (header-enforced same-origin boundary) | § HTTP Security Headers | `Cross-Origin-Opener-Policy: same-origin` + `Cross-Origin-Embedder-Policy: credentialless` + `Cross-Origin-Resource-Policy: same-origin` + `frame-ancestors 'none'` (CSP) | `tests/firebase-config.test.js` `it.each` over 9 header keys + post-deploy curl assertion | `e7a3e06` (firebase.json) + `03f4c07` (schema test) |
-| ISO/IEC 27001:2022 | A.13.1 — Network security management | § Content Security Policy (Report-Only) | CSP-RO + dual reporting + same-origin `cspReportSink` Cloud Function in `europe-west2` | Synthetic smoke (`runbooks/hosting-cutover.md` Smokes 1+2) + Cloud Logging filter `jsonPayload.message="csp.violation"` + soak window through Phase 10 | `e7a3e06` (firebase.json CSP-RO) + Phase 3 Plan 03 commits (functions/ workspace) |
+| ISO/IEC 27001:2022 | A.13.1 — Network security management | § Content Security Policy (enforced) | CSP-RO + dual reporting + same-origin `cspReportSink` Cloud Function in `europe-west2`; soak window CLOSED Phase 10 Wave 4 — `Content-Security-Policy-Report-Only` header REPLACED by enforced `Content-Security-Policy` via Plan 10-04 single-knob key flip after Stage A → Stage B → Stage C three-stage rollout | Synthetic smoke (`runbooks/hosting-cutover.md` Smokes 1+2) + Cloud Logging filter `jsonPayload.message="csp.violation"` + Stage B 7-day soak (Plan 10-03) + Stage C 7-day post-enforcement soak (Plan 10-05) | `e7a3e06` (firebase.json CSP-RO) + Phase 3 Plan 03 commits (functions/ workspace) + `523e47e` (Plan 10-02 RO tighten) + Plan 10-04 key-flip commit (operator-paced) |
 | ISO/IEC 27001:2022 | A.5.7 — Threat intelligence (cloud services governance) | § Hosting & Deployment | OIDC Workload Identity Federation (no long-lived JSON keys) + per-PR preview channels with 7d auto-expiry + repo-scoped trust binding | `runbooks/firebase-oidc-bootstrap.md` + `runbooks/hosting-cutover.md` ## Prerequisites OIDC checks | `49afecb` (CI deploy + preview via OIDC) |
-| SOC 2 | CC6.6 — Logical access security boundaries | § HTTP Security Headers + § CSP (Report-Only) | Header set (HSTS / X-CTO / Referrer-Policy / Permissions-Policy / COOP / COEP / CORP) + CSP enforcement substrate (Report-Only -> Phase 10 enforced) | `tests/firebase-config.test.js` (commit-time) + post-deploy curl assertion (deploy-time) + securityheaders.com rating ≥ A (cutover-time, recorded as `securityheaders_rating` in `03-PREFLIGHT.md ## Cutover Log`) | `e7a3e06` + `03f4c07` + `49afecb` |
+| SOC 2 | CC6.6 — Logical access security boundaries | § HTTP Security Headers + § CSP (enforced) | Header set (HSTS / X-CTO / Referrer-Policy / Permissions-Policy / COOP / COEP / CORP) + CSP enforced (Stage C — Phase 10 Wave 4 flip from Report-Only to enforced) | `tests/firebase-config.test.js` (commit-time) + post-deploy curl assertion (deploy-time) + securityheaders.com rating A+ at Phase 10 close (Plan 10-05 Task 2 `docs/evidence/phase-10-securityheaders-rating.png`) | `e7a3e06` + `03f4c07` + `49afecb` + Plan 10-04 key-flip commit |
 | SOC 2 | CC8.1 — Change management | § Hosting & Deployment | OIDC-authenticated CI deploy from `main` (gated on lint+typecheck+test+audit+build green) + per-PR preview channels + concurrency group `firebase-deploy-main` + 14-day GH-Pages rollback retention | `.github/workflows/ci.yml` (CI gates) + `runbooks/hosting-cutover.md` (cutover script + DNS revert procedure) + `runbooks/phase-4-cleanup-ledger.md` "Phase 3 GH-Pages rollback substrate" row (day-14 trigger) | `49afecb` (CI) + Phase 3 Plan 05 commits (cutover runbook + Cutover Log skeleton) + Phase 3 Plan 06 commits (cleanup ledger row + branch-protection runbook) |
-| GDPR | Art. 32(1)(b) — Confidentiality of processing systems and services | § Content Security Policy (Report-Only) | CSP-RO + same-origin report sink (no cross-origin data leak channel for violation reports); functions filter + dedup limits log volume from extension noise | Synthetic smoke confirms reports stay same-origin (Smokes 1+2 in `runbooks/hosting-cutover.md`); SECURITY.md § CSP documents the un-authed-endpoint exemption rationale (D-12 — content-type allowlist + 64 KB body cap) | `e7a3e06` (firebase.json CSP-RO same-origin endpoint) + Phase 3 Plan 03 commits (filter + dedup) |
+| GDPR | Art. 32(1)(b) — Confidentiality of processing systems and services | § Content Security Policy (enforced) | CSP enforced (Phase 10 Wave 4) + same-origin report sink (no cross-origin data leak channel for violation reports); functions filter + dedup limits log volume from extension noise | Synthetic smoke confirms reports stay same-origin (Smokes 1+2 in `runbooks/hosting-cutover.md`); SECURITY.md § CSP (enforced) documents the un-authed-endpoint exemption rationale (D-12 — content-type allowlist + 64 KB body cap) | `e7a3e06` (firebase.json CSP-RO same-origin endpoint) + Phase 3 Plan 03 commits (filter + dedup) + Plan 10-04 key-flip commit |
 
 **Cross-phase plug-ins this index will feed:**
 
 - **Phase 4** (modular split / CDN-to-npm migration) — removes the temporary CSP CDN allowlist (`cdn.jsdelivr.net`, `fonts.googleapis.com`, `fonts.gstatic.com`); the §CSP table row's "Implemented in" cell will lose the temporary additions. Phase 4 also lands `tests/index-html-meta-csp.test.js` (T-3-meta-csp-conflict mitigation per `runbooks/phase-4-cleanup-ledger.md` "Phase 3 — meta-CSP regression guard" row).
-- **Phase 10** (CSP enforcement / HOST-06 / HOST-07) — drops `'unsafe-inline'` from `style-src`, submits HSTS preload to hstspreload.org, flips CSP from Report-Only to enforced; updates §HTTP Security Headers + §CSP citations in this index accordingly.
+- **Phase 10** (CSP enforcement / HOST-06 / HOST-07) — LANDED 2026-05-10: dropped `'unsafe-inline'` from `style-src` (Plan 10-02), submitted HSTS preload to hstspreload.org (Plan 10-05), flipped CSP from Report-Only to enforced (Plan 10-04 single-knob key flip). §HTTP Security Headers + §CSP citations updated in-place in this index. Subsequent canonical Phase 10 documentation is in §Phase 10 Audit Index at end-of-file.
 - **Phase 11** (Evidence Pack / DOC-09) — `docs/CONTROL_MATRIX.md` walks this index row-by-row; screenshot evidence under `docs/evidence/` (e.g. `docs/evidence/phase-3-securityheaders-rating.png` per `runbooks/hosting-cutover.md` Step 7).
 - **Phase 12** (Audit Walkthrough) — `SECURITY_AUDIT_REPORT.md` Pass / Partial / N/A entries cite specific rows in this index by framework + citation.
 
@@ -520,7 +651,7 @@ This is a one-stop pointer for an auditor walking Phase 3's controls. Each row m
 - T-3-meta-csp-conflict mitigation: Phase 4 must add `tests/index-html-meta-csp.test.js` to prevent `<meta http-equiv="Content-Security-Policy">` from being silently re-introduced into `index.html`. Row title: "Phase 3 — meta-CSP regression guard".
 - T-3-5 partial mitigation (deferred): `roles/firebase.admin` over-grant on the deploy SA accepted for Phase 3; Phase 7 (FN-04) narrows to per-function service accounts. Row title (added in Phase 3 Plan 04 SUMMARY hand-off): "Phase 3 OIDC SA over-grant".
 
-**Index self-check:** if all three forward-looking rows above are still open in the cleanup ledger, this index is current. If T-3-4 + T-3-meta-csp-conflict rows are closed but the index has not been updated by a Phase 4 / Phase 10 / Phase 11 commit, the index needs a maintenance commit. Phase 10's planning explicitly lists "update SECURITY.md ## § Phase 3 Audit Index" as a task when CSP enforcement lands.
+**Index self-check:** if all three forward-looking rows above are still open in the cleanup ledger, this index is current. If T-3-4 + T-3-meta-csp-conflict rows are closed but the index has not been updated by a Phase 4 / Phase 10 / Phase 11 commit, the index needs a maintenance commit. Phase 10 (HOST-06 / HOST-07) closed 2026-05-10: enforcement flip + soak window CLOSED Phase 10 Wave 4 — annotations applied to the §Network security management + §CSP rows above; new §Content Security Policy (enforced) replaces the prior §Content Security Policy (Report-Only) section. See §Phase 10 Audit Index for the Phase 10 controls catalogue.
 
 ---
 
@@ -566,7 +697,7 @@ The CONCERNS.md H7 (clock skew on unread tracking) and H8 (last-writer-wins clou
 
 **Framework citations:**
 
-- OWASP ASVS L2 V4.1.5 — data-model authorisation aligned with rules engine
+- OWASP ASVS L2 v5.0 V4.1.5 — data-model authorisation aligned with rules engine
 - ISO/IEC 27001:2022 A.8.10 — information deletion (the legacy nested-map fields stay during Phase 5 as the rollback substrate; a Phase 6+ cleanup wave deletes them)
 - SOC 2 CC6.1 — logical access (subcollection-scoped match blocks make access decisions explicit per resource)
 - GDPR Art. 32(1)(b) — ongoing confidentiality + integrity (subcollection migration enables per-resource access controls without 1 MiB doc-size cliff)
@@ -611,7 +742,7 @@ A table-driven `@firebase/rules-unit-testing` v5 matrix at `tests/rules/firestor
 
 **Framework citations:**
 
-- OWASP ASVS L2 V4.1 — general access control; V4.2 — operation-level access control; V4.3 — other access control considerations
+- OWASP ASVS L2 v5.0 V4.1 — general access control; V4.2 — operation-level access control; V4.3 — other access control considerations
 - ISO/IEC 27001:2022 A.5.15 — access control; A.5.18 — access rights; A.8.3 — information access restriction
 - SOC 2 CC6.1 — logical access; CC6.2 — new/modified access; CC6.3 — access modification
 - GDPR Art. 32(1)(b) — ongoing confidentiality; Art. 32(2) — level of security appropriate to risk
@@ -638,7 +769,7 @@ The MIME allowlist is deliberately duplicated between `src/ui/upload.js` and `st
 
 **Framework citations:**
 
-- OWASP ASVS L2 V12.1 — file upload; V13.1 — web service security
+- OWASP ASVS L2 v5.0 V12.1 — file upload; V13.1 — web service security
 - ISO/IEC 27001:2022 A.8.24 — use of cryptography (covers content-type integrity); A.8.7 — protection against malware (MIME allowlist limits attack surface)
 - SOC 2 CC6.7 — boundary protection
 - GDPR Art. 32(1)(b) — integrity
@@ -704,6 +835,37 @@ Phase 6 Wave 5 Step 9 (TOTP enrolment) and Step 10 (AUTH-10 lockout drill) are d
 **Tradeoff:** email-account compromise is the recovery substrate; this is acceptable because email is also the primary sign-in identifier and identity recovery substrate. The additional risk surface is bounded.
 
 **AUTH-10 drill substrate:** `runbooks/phase6-mfa-recovery-drill.md` skeleton present; populated when the drill runs end-of-phases-batch. Pitfall 19 closure ("claim only what was rehearsed") is partial at phase close — the substrate is honest (script + runbook + admin un-enrol path), drill execution deferred per operator instruction. Tracked in `runbooks/phase-6-cleanup-ledger.md` Phase 6 sub-wave 6.1 row.
+
+## § MFA Recovery Procedure
+
+Recovery codes (AUTH-09) were superseded by **email-link recovery** per Phase 6
+D-07. Two tiers:
+
+### Tier 1 — User-side email-link recovery
+
+If a user loses their TOTP device, they invoke email-link recovery via
+`sendSignInLinkToEmail` (`src/firebase/auth.js`); the link, sent to the
+registered email, completes a one-time sign-in via `signInWithEmailLink`,
+after which the user re-enrols TOTP from their account settings.
+
+- Code: `src/firebase/auth.js` (helper exports)
+- Test: `tests/firebase/auth-audit-emit.test.js` (Test 5 — email-link path)
+- Auth event: `auth.recovery.requested` audited via the standard pipeline
+
+### Tier 2 — Operator-side Admin SDK un-enrol
+
+Used when email access itself is compromised. Operator runs the documented
+`runbooks/phase6-mfa-recovery-drill.md` procedure, calling Admin SDK
+`admin.auth().updateUser(uid, { multiFactor: { enrolledFactors: [] } })` from a
+trusted environment. The audit-log entry `auth.mfa.unenrolled.byAdmin` MUST be
+written by the same operator session.
+
+- Runbook: `runbooks/phase6-mfa-recovery-drill.md`
+- Evidence: `docs/evidence/phase-6-mfa-recovery-drill-pass.png` — **PENDING-OPERATOR** (Phase 6 user-testing batch; see `.planning/phases/06-real-auth-mfa-rules-deploy/06-RESUME-NOTE.md`)
+
+**Framework citations:** OWASP ASVS L2 v5.0 V2.5.4 (alternative authenticator);
+ISO/IEC 27001:2022 Annex A.5.16 (identity management); SOC 2 CC6.1; GDPR
+Art. 32(1)(b).
 
 ## § Anonymous Auth Disabled
 
@@ -869,10 +1031,415 @@ This is the auditor walk-through pointer for Phase 7. Each row maps a Phase 7 co
 
 ---
 
+## § Data Lifecycle (Soft-Delete + Purge)
+
+Phase 8 (LIFE-01..06): Admin-mediated soft-delete and 30-day restore window implemented across six collection paths: `orgs/{id}` (org soft-delete), `orgs/*/messages/{id}`, `orgs/*/comments/{id}`, `orgs/*/actions/{id}`, `orgs/*/documents/{id}`, and `funnelComments/{id}`. Daily `scheduledPurge` hard-deletes all records where `deletedAt` is set and `deletedAt < now() - 30d`. Firestore Rules predicate `notDeleted(resource.data)` is enforced on read across all five subcollection paths; client data wrappers add a matching `where("deletedAt", "==", null)` conjunct on every list query so queries that lack the conjunct fail `permission-denied` at the rules layer (defence-in-depth). A functional admin UI (`src/views/admin.js` § Recently Deleted) presents the soft-deleted item list with per-item Restore and "Permanently delete now" buttons.
+
+**Evidence:**
+
+- Callable implementations: `functions/src/lifecycle/softDelete.ts`, `functions/src/lifecycle/restoreSoftDeleted.ts`, `functions/src/lifecycle/scheduledPurge.ts`, `functions/src/lifecycle/permanentlyDeleteSoftDeleted.ts`; helper: `functions/src/lifecycle/resolveDocRef.ts`
+- Rules predicate: `firestore.rules` `notDeleted(resource.data)` function + 5 conjunction sites (orgs/messages/comments/actions/documents subcollections)
+- Rules test coverage: `tests/rules/soft-delete-predicate.test.js` ≥ 18 cells (notDeleted × 5 collections × allow/deny matrix)
+- Client seam: `src/cloud/soft-delete.js` (Phase 4 stub closed — Wave 2 / 08-03 Task 6)
+- Admin UI: `src/views/admin.js` Recently Deleted section; `src/data/soft-deleted.js` (list + filter helpers)
+
+**Framework citations:**
+
+- OWASP ASVS L2 v5.0 V8.3.1 — data lifecycle controls (defined retention, controlled deletion)
+- ISO/IEC 27001:2022 A.5.30 (ICT readiness) + A.8.10 (information deletion)
+- SOC 2 CC6.5 — logical access; controlled deletion enforced server-side
+- GDPR Art. 5(1)(e) — storage limitation; soft-delete + 30-day purge is the mechanism
+
+---
+
+## § GDPR (Export + Erasure)
+
+Phase 8 (GDPR-01..05): Two admin-callable Cloud Functions implement Art. 15 and Art. 17 rights.
+
+**Export (Art. 15 — gdprExportUser):** Admin-callable that assembles a JSON bundle of all user-linked data across seven collection paths (profile, diagnostic responses, comments, messages, actions, documents, funnel comments, audit events), writes the bundle to `gs://bedeveloped-base-layers-backups/gdpr-exports/{uid}.json`, and returns a V4 signed URL with a 24h TTL. The bundle assembly is pure (no firebase-admin import) via `assembleUserBundle.ts`; the callable handles auth, idempotency, Sentry capture, and URL generation (Pattern A + Pattern C).
+
+**Erasure (Art. 17 — gdprEraseUser):** Admin-callable with a deterministic `sha256(uid + GDPR_PSEUDONYM_SECRET)` tombstone token that replaces `authorId`, `legacyAuthorId`, `uploaderId`, `uploadedBy`, `legacyAppUserId`, and top-level PII fields (`email`, `name`, `displayName`, `photoURL`, `avatar`) across all seven collections plus legacy top-level `documents/` collection. Operations are chunked into 500-op batches (Firestore Admin SDK limit). Firebase Auth is disabled via `updateUser(uid, {disabled: true})`. Storage objects under `orgs/{orgId}/documents/{docId}/` derived from the user's document rows are deleted with 404-tolerance. A `redactionList/{uid}` document is written post-cascade (see GDPR-05 below). A single `compliance.erase.user` audit event with a counts payload is emitted (Pitfall 7 — never per-doc events on a bulk cascade).
+
+**Audit-log retention vs erasure (Pitfall 11 / GDPR Art. 6(1)(f)):** Audit-log docs where `actor.uid == <erased uid>` are NOT deleted. Only `actor.uid`, `actor.email`, and `payload.email` are tombstoned in-place. The doc is retained under legitimate interest (fraud prevention, compliance audit trail), consistent with ICO pseudonymisation guidance as an Art. 17 satisfaction measure.
+
+**Erasure propagation (GDPR-05):** `redactionList/{uid}` stores the tombstone token, `erasedAt`, `erasedBy`, and `schemaVersion: 1`. On PITR restore, the operator iterates this collection and re-applies tombstones to the cloned database before use (see `runbooks/restore-drill-2026-05-13.md` §Re-Redaction Step). Rules: `allow read: if isAdmin(); allow write: if false` — server-only writes via callable; admin-only read.
+
+**Evidence:**
+
+- GDPR callables: `functions/src/gdpr/gdprExportUser.ts`, `functions/src/gdpr/gdprEraseUser.ts`
+- Pure helpers: `functions/src/gdpr/assembleUserBundle.ts` (export assembly), `functions/src/gdpr/pseudonymToken.ts` (tombstone generation), `functions/src/gdpr/eraseCascade.ts` (ops builder)
+- Test coverage: 4 unit test files + 2 integration test files across gdprExportUser + gdprEraseUser
+- Rules: `firestore.rules` `redactionList/{userId}` match block; `tests/rules/redaction-list.test.js` 10 cells
+- Post-erasure audit: `scripts/post-erasure-audit/run.js` (ADC; exit 0/1/2; verifies zero residual PII across all paths)
+- Secret: `GDPR_PSEUDONYM_SECRET` in Firebase Secret Manager (operator-provisioned, version-pinned)
+- Browser seam: `src/cloud/gdpr.js` (Phase 4 stubs closed — `exportUser` + `eraseUser` wired)
+
+**Framework citations:**
+
+- OWASP ASVS L2 v5.0 V8.1 — data classification and handling; V6 — cryptography (sha256 pseudonymisation)
+- ISO/IEC 27001:2022 A.5.34 (privacy protection) + A.8.11 (data masking) + A.8.12 (data leakage prevention)
+- SOC 2 P5.1 — privacy notice; privacy rights honoured
+- GDPR Art. 15 (right of access), Art. 17 (right to erasure), Art. 25 (data protection by design — pseudonymisation), Art. 30 (record of processing — audit trail), Art. 32 (security of processing)
+
+---
+
+## § Backups + DR + PITR + Storage Versioning
+
+Phase 8 (BACKUP-01..07): Multi-layer backup and recovery substrate.
+
+**Daily Firestore export (BACKUP-01):** 2nd-gen `onSchedule` Cloud Function (`scheduledFirestoreExport`) exports the default Firestore database to `gs://bedeveloped-base-layers-backups/firestore/{YYYY-MM-DD}/` at 02:00 UTC daily. Runs as `backup-sa` (minimal IAM: `roles/datastore.importExportAdmin` + `roles/storage.objectAdmin` on backups bucket only). Region-pinned to `europe-west2` (matches Firestore region, Pitfall 5).
+
+**GCS lifecycle policy (BACKUP-02):** GCS lifecycle: Standard at upload → Nearline at day 30 from creation → Archive at day 365 from creation (335-day Nearline dwell, exceeds BACKUP-02 90d Nearline minimum). Configured via `scripts/setup-backup-bucket/lifecycle.json`; applied by `scripts/setup-backup-bucket/run.js` (idempotent, ADC).
+
+**Firestore PITR (BACKUP-03):** Enabled on the `(default)` database (7-day rolling recovery window). Demonstrated via Path A PITR clone in `runbooks/restore-drill-2026-05-13.md`.
+
+**Storage versioning + soft-delete (BACKUP-04):** GCS uploads bucket (`gs://bedeveloped-base-layers-uploads`) has Object Versioning enabled + 90-day soft-delete policy. Client documents are recoverable from noncurrent versions for 90 days.
+
+**Signed URL TTL (BACKUP-05):** Storage download URLs are V4 signed with 1h TTL via the `getDocumentSignedUrl` callable (`functions/src/backup/getDocumentSignedUrl.ts`). `getDownloadURL` calls are removed from all client code (full sweep verified by `grep -r getDownloadURL src/` returning 0 results). The `storage-reader-sa` issues tokens (`roles/iam.serviceAccountTokenCreator` self-bound + `roles/storage.objectViewer` on uploads bucket).
+
+**Quarterly restore-drill cadence (BACKUP-06):** Documented in `runbooks/phase-8-restore-drill-cadence.md`. Quarterly (Q2-2026 through Q2-2027 schedule). Two-operator paired review required. P1 escalation if missed within 7 days.
+
+**First restore drill (BACKUP-07):** `runbooks/restore-drill-2026-05-13.md` — Path A (PITR clone); timed steps; spot-check; re-redaction step (GDPR-05); cleanup; RTO evidence. Operator fills in actual timings during execution.
+
+**Evidence:**
+
+- Backup callable: `functions/src/backup/scheduledFirestoreExport.ts`
+- Signed URL callable: `functions/src/backup/getDocumentSignedUrl.ts`; browser seam: `src/cloud/signed-url.js`
+- Bucket setup: `scripts/setup-backup-bucket/run.js` + `scripts/setup-backup-bucket/lifecycle.json` + `scripts/setup-backup-bucket/lifecycle.notes.md`
+- Operator runbook: `runbooks/phase-8-backup-setup.md` (§7 includes GDPR secrets + 4 SA provisioning)
+- Restore drill: `runbooks/restore-drill-2026-05-13.md` (BACKUP-07 evidence)
+- Drill cadence: `runbooks/phase-8-restore-drill-cadence.md` (BACKUP-06)
+- `getDownloadURL` removal: `src/data/documents.js` + `src/main.js` sweep
+
+**Framework citations:**
+
+- OWASP ASVS L2 v5.0 V14.1 (build and deployment) + V8.3 (data protection at rest / storage security)
+- ISO/IEC 27001:2022 A.5.29 (information security during disruption) + A.5.30 (ICT readiness) + A.8.13 (information backup) + A.8.14 (redundancy)
+- SOC 2 CC9.1 (risk mitigation) + A1.2 (environmental protections) + A1.3 (recovery and restoration procedures)
+- GDPR Art. 32(1)(b) (resilience of systems) + Art. 32(1)(c) (restoration of data)
+
+---
+
+## § Phase 8 Audit Index
+
+Auditor walk-through pointer for Phase 8. Each row maps a Phase 8 control to its requirement ID, the code/config that implements it, the test or operator evidence that verifies it, and the framework citations it satisfies. Mirrors the §Phase 7 Audit Index shape (16 rows). Substrate-honest (Pitfall 19): every Validated row has evidence pointers; operator-deferred actions are noted where applicable.
+
+| Requirement | Substrate | Evidence | Status |
+|-------------|-----------|----------|--------|
+| LIFE-01 | `softDelete` + `restoreSoftDeleted` callables; `resolveDocRef.ts` helper for mixed path resolution | `functions/src/lifecycle/{softDelete,restoreSoftDeleted,resolveDocRef}.ts` + unit/integration tests | Validated 2026-05-13 (08-03) |
+| LIFE-02 | Snapshot-then-tombstone in single batch write (`deletedAt` set + snapshot at `softDeleted/{type}/items/{id}`) | `functions/src/lifecycle/softDelete.ts` batch pattern + tests | Validated 2026-05-13 (08-03) |
+| LIFE-03 | Rules `notDeleted(resource.data)` predicate on 5 subcollection paths; client `where("deletedAt", "==", null)` conjunct in all 5 data wrappers | `firestore.rules` + `src/data/{messages,comments,actions,documents,funnelComments}.js` + `tests/rules/soft-delete-predicate.test.js` | Validated 2026-05-13 (08-03) |
+| LIFE-04 | `restoreSoftDeleted` callable (admin-only, Zod-validated, idempotent) returns item to live state within 30-day window | `functions/src/lifecycle/restoreSoftDeleted.ts` + `src/cloud/soft-delete.js` + tests | Validated 2026-05-13 (08-03) |
+| LIFE-05 | `scheduledPurge` with 500-doc batched pagination; purges docs where `deletedAt < now() - 30d` | `functions/src/lifecycle/scheduledPurge.ts` + 1200-doc pagination test | Validated 2026-05-13 (08-03) |
+| LIFE-06 | Admin UI: Recently Deleted list + per-item Restore button + "Permanently delete now" button wired to `permanentlyDeleteSoftDeleted` callable | `src/views/admin.js` + `src/data/soft-deleted.js` + `functions/src/lifecycle/permanentlyDeleteSoftDeleted.ts` | Validated 2026-05-13 (08-03) |
+| GDPR-01 | `gdprExportUser` callable: JSON bundle of all user-linked data; 24h V4 signed URL; `assembleUserBundle.ts` pure helper | `functions/src/gdpr/{assembleUserBundle,gdprExportUser}.ts` + unit (6) + integration (3) tests | Validated 2026-05-13 (08-04) |
+| GDPR-02 | `gdprEraseUser` callable: deterministic sha256(uid + secret) tombstone token via `pseudonymToken.ts`; cascade via `eraseCascade.ts` | `functions/src/gdpr/{pseudonymToken,eraseCascade,gdprEraseUser}.ts` + 12+7+9 tests | Validated 2026-05-13 (08-05) |
+| GDPR-03 | Cascade covers 7+ collections (messages/comments/actions/documents/funnelComments/users/auditLog) + legacy top-level documents/ + Storage deletion + Auth disable | `functions/src/gdpr/eraseCascade.ts` + `scripts/post-erasure-audit/run.js` | Validated 2026-05-13 (08-05) |
+| GDPR-04 | Audit-log retention: PII tombstoned (actor.uid/email + payload.email) in-place; doc preserved under Art. 6(1)(f) legitimate interest | `functions/src/gdpr/eraseCascade.ts` auditLog branch + tests + Pitfall 11 disclosure | Validated 2026-05-13 (08-05) |
+| GDPR-05 | `redactionList/{uid}` written post-cascade; admin-only read rules; restore-drill re-redaction step documents PITR propagation closure | `firestore.rules` redactionList block + `tests/rules/redaction-list.test.js` (10 cells) + `runbooks/restore-drill-2026-05-13.md` §Re-Redaction | Validated 2026-05-13 (08-05 + 08-06) |
+| BACKUP-01 | `scheduledFirestoreExport` (2nd-gen onSchedule, europe-west2, backup-sa, 02:00 UTC daily) | `functions/src/backup/scheduledFirestoreExport.ts`; first export verified by operator (Task 1 step 6) | Validated 2026-05-13 (08-02; deploy: operator) |
+| BACKUP-02 | GCS lifecycle: Standard at upload → Nearline at day 30 from creation → Archive at day 365 from creation (335-day Nearline dwell, exceeds BACKUP-02 90d Nearline minimum) | `scripts/setup-backup-bucket/lifecycle.json` + `scripts/setup-backup-bucket/lifecycle.notes.md`; verified via `gcloud storage buckets describe` (operator) | Validated 2026-05-13 (08-01; operator) |
+| BACKUP-03 | Firestore PITR enabled (7-day rolling window) | `gcloud firestore databases describe --format="value(pointInTimeRecoveryEnablement)"` → `POINT_IN_TIME_RECOVERY_ENABLED` (operator verified) | Validated 2026-05-13 (08-01; operator) |
+| BACKUP-04 | Uploads bucket Object Versioning enabled + 90-day soft-delete policy | `gcloud storage buckets describe gs://bedeveloped-base-layers-uploads --format="value(versioning.enabled,softDeletePolicy.retentionDurationSeconds)"` (operator verified) | Validated 2026-05-13 (08-01; operator) |
+| BACKUP-05 | V4 signed URL with 1h TTL via `getDocumentSignedUrl` callable; `getDownloadURL` removed from all client code | `functions/src/backup/getDocumentSignedUrl.ts` + `src/cloud/signed-url.js`; `grep -r getDownloadURL src/` returns 0 | Validated 2026-05-13 (08-02 + 08-03) |
+| BACKUP-06 | Quarterly restore-drill cadence; two-operator paired review; P1 escalation if missed | `runbooks/phase-8-restore-drill-cadence.md` | Validated 2026-05-13 (08-06) |
+| BACKUP-07 | One restore drill performed and documented with timing, evidence, gaps, re-redaction step | `runbooks/restore-drill-2026-05-13.md` (operator fills in actual timings; commit SHA at drill time) | Validated 2026-05-13 (08-06; operator drill required) |
+| DOC-10 | Phase 8 incremental SECURITY.md increment: 4 new sections + this 19-row Phase 8 Audit Index | This file — §Data Lifecycle + §GDPR + §Backups + DR + PITR + §Phase 8 Audit Index | Validated 2026-05-13 (08-06) |
+
+**Substrate-honest disclosure (Pitfall 19):** BACKUP-01..04 and BACKUP-07 depend on operator production deploy (Task 1) and operator restore drill (Task 2) respectively. The code and runbooks are authored and committed; production execution is operator-deferred per the Wave 6 batching pattern established in 08-01-DEFERRED-CHECKPOINT.md. Status above reflects "code + substrate authored; operator action pending for production evidence".
+
+**Cross-phase plug-ins this index will feed:**
+
+- **Phase 9** (AUDIT-05 / OBS-01..08) — Sentry alerts on unusual-hour `gdprExportUser` / `gdprEraseUser` invocations; view-side `auditWrite` wiring for compliance events.
+- **Phase 11** (DOC-02 / DOC-04 / DOC-05) — `RETENTION.md` row for soft-delete (30d) + GDPR exports (24h URL TTL); `CONTROL_MATRIX.md` rows for LIFE/GDPR/BACKUP; `PRIVACY.md` GCS backup region + redactionList substrate.
+- **Phase 12** (WALK-02 / WALK-03) — audit-walkthrough cites Phase 8 GDPR + lifecycle + backup sections as ground truth.
+
+---
+
+## § Observability — Sentry
+
+Phase 9 (OBS-01 / OBS-02 / OBS-03 / OBS-08): Browser + Cloud Functions error capture with shared PII scrubber, EU residency, and free-tier guardrails.
+
+**Browser init (OBS-01):** `@sentry/browser@10.52.0` initialised in `src/observability/sentry.js` and booted from `src/main.js` inside the `fbOnAuthStateChanged` callback — AFTER claims hydration but BEFORE first render (Pitfall 3 — initialise after auth so the `user` context carries verified claims, not anonymous-session noise). `sendDefaultPii: false`; `tracesSampleRate: 0` (no performance monitoring in v1 — Sentry free-tier event budget is reserved for error events).
+
+**Cloud Functions init (OBS-01):** `functions/src/util/sentry.ts` exposes `withSentry()` wrapper used by every Phase 7+8+9 callable (setClaims, auditWrite, checkRateLimit, gdprExportUser, gdprEraseUser, lifecycle callables, authAnomalyAlert). DSN read from `defineSecret("SENTRY_DSN")` — never `process.env`. Empty-DSN kill-switch: when `SENTRY_DSN` resolves to empty string, init becomes a silent no-op (local dev + emergency disable path).
+
+**Shared PII scrubber (OBS-01 / Pitfall 18 / Pitfall 7):** Browser and node share an identical PII_KEYS dictionary across two source files:
+
+- `src/observability/pii-scrubber.js` (browser dictionary)
+- `functions/src/util/pii-scrubber.ts` (node dictionary)
+
+Drift between the two arrays is gated by `functions/test/util/pii-scrubber-parity.test.ts` — the test reads both files at PR time and fails if any key differs. The `beforeSend` hook in each SDK redacts matching extras + contexts to the literal string `"<redacted>"` (preserves SRE visibility that the slot WAS populated without leaking the value); headers continue to use `delete` since header presence itself is not security-sensitive.
+
+**EU residency (OBS-02 / GDPR Art. 32 / Schrems II):** DSN format `https://<key>@<id>.ingest.de.sentry.io/<project>` encodes the region — operators MUST select an EU project at Sentry create time (`runbooks/phase-9-sentry-bootstrap.md` Step 2). Source-map upload also targets `https://de.sentry.io/` (Wave 2 `@sentry/vite-plugin@5.2.1` config). Sentry EU residency is documented as a sub-processor entry in PRIVACY.md (Phase 11 owner).
+
+**Fingerprint rate-limit (OBS-03):** `fingerprintRateLimit()` runs INSIDE `beforeSend` BEFORE `scrubPii()` — events sharing the same SDK fingerprint above 10 per 60s window are dropped at SDK boundary (return `null`). Prevents free-tier exhaustion during error storms and keeps scrub cost zero for dropped events. Tested in `tests/observability/sentry-init.test.js` Test 6.
+
+**Sentry 70% quota alert (OBS-08):** Operator-set in the Sentry web UI at `Settings → Subscription → Usage Alerts` (5000 events/month free tier → alert at 3500). Not scriptable from gcloud; pinned in `runbooks/phase-9-sentry-bootstrap.md` Step 6 + verified at the Wave 6 close-gate via `runbooks/phase-9-deploy-checkpoint.md` Step E screenshot.
+
+**Substrate-honest disclosures (Pitfall 19):**
+
+- `sendDefaultPii: false` + `tracesSampleRate: 0` — no performance monitoring (deferred to v2 if/when a paid plan lands)
+- Empty-DSN init is a silent no-op (kill-switch + local dev path) — log an info-level line but do NOT throw
+- Fingerprint rate-limit drops 11+ events/fp/60s BEFORE transport — by design, an error storm at >10/min/fingerprint will silently truncate (alternative would be paid-tier upgrade)
+
+**Evidence:**
+
+- Browser SDK init: `src/observability/sentry.js`; boot wiring: `src/main.js` (inside `fbOnAuthStateChanged`)
+- Browser PII scrubber: `src/observability/pii-scrubber.js`
+- Node SDK init: `functions/src/util/sentry.ts` (`withSentry()` wrapper)
+- Node PII scrubber: `functions/src/util/pii-scrubber.ts`
+- Parity test: `functions/test/util/pii-scrubber-parity.test.ts`
+- Browser tests: `tests/observability/sentry-init.test.js` (9 tests) + `tests/observability/pii-scrubber.test.js` (7 tests)
+- Operator runbook: `runbooks/phase-9-sentry-bootstrap.md` (6 steps — Sentry org/project/EU region/DSN/auth-token/GitHub secrets/70% quota alert)
+- Source-map upload (OBS-04): `vite.config.js` `@sentry/vite-plugin` registered conditionally on `SENTRY_AUTH_TOKEN && command === "build"`; `filesToDeleteAfterUpload: ["dist/**/*.map"]`; CI `Assert no .map files` step in `.github/workflows/ci.yml` (deploy + preview jobs); static drift test `tests/build/source-map-gate.test.js` (5 assertions over `vite.config.js`)
+
+**Framework citations:**
+
+- OWASP ASVS L2 v5.0 V8.3.4 (log-content PII handling) + V8.4.4 (event rate-limiting) + V14.2.4 (release artefact integrity / hidden source maps)
+- ISO/IEC 27001:2022 A.5.10 (information classification) + A.5.34 (privacy protection) + A.8.15 (logging) + A.8.16 (monitoring activities) + A.5.6 (budget / quota controls)
+- SOC 2 CC7.2 (system operations monitoring)
+- GDPR Art. 32 (security of processing) + Art. 44 (international transfers — EU residency mitigates Schrems II)
+
+---
+
+## § Audit-Event Wiring (AUDIT-05)
+
+Phase 9 (AUDIT-05): Every sensitive op emits a server-verified-actor audit event. Phase 7 shipped the substrate (`auditWrite` callable + 3 mirror triggers + 28-entry `auditEventType` enum). Phase 9 Plan 03a (Wave 3) extended the enum by 33 literals — 15 server-side bare data-domain flavours (`data.{action,comment,document,message,funnelComment}.{softDelete,restore,permanentlyDelete}`) and 18 client-side `.requested` companions — AND added server-side bare emissions in `setClaims`, the `beforeUserSignedIn` substrate, and 3 lifecycle callables. Phase 9 Plan 03 (Wave 4) wired client-side emissions at 9 view-side sites for the `.requested` companions and bare auth-event literals.
+
+**Wiring inventory:**
+
+| Op | Client emit site | PRE/POST | Audit type | Server bare emit |
+|----|------------------|----------|-----------|------------------|
+| sign-in (success + failure) | `src/firebase/auth.js` `signInEmailPassword` (try/finally outcome flag) | POST | `auth.signin.success` / `auth.signin.failure` | n/a (Identity Platform issues ID token; no callable involved) |
+| sign-out | `src/firebase/auth.js` `signOut` | **PRE** (App Check + ID-token revoked by `fbSignOut`; post-emit would 401) | `auth.signout` | n/a |
+| password change | `src/firebase/auth.js` `updatePassword` | POST | `auth.password.change` | n/a |
+| password reset | `src/firebase/auth.js` `sendPasswordResetEmail` | POST | `auth.password.reset` (`target.id="unknown"` — caller pre-auth) | n/a |
+| email-link recovery | `src/firebase/auth.js` `signInWithEmailLink` | POST | `auth.signin.success` (payload `{method: "emailLink"}`) | n/a |
+| claims set | `src/cloud/claims-admin.js` `setClaims` | POST | `iam.claims.set.requested` | `functions/src/auth/setClaims.ts` (Plan 03a) → `iam.claims.set` bare |
+| GDPR export | `src/cloud/gdpr.js` `exportUser` | POST | `compliance.export.user.requested` | `functions/src/gdpr/gdprExportUser.ts` (Phase 8) → `compliance.export.user` |
+| GDPR erase | `src/cloud/gdpr.js` `eraseUser` | POST | `compliance.erase.user.requested` | `functions/src/gdpr/gdprEraseUser.ts` (Phase 8) → `compliance.erase.user` |
+| soft-delete / restore / permanently-delete | `src/cloud/soft-delete.js` (3 functions × 5 types) | POST | `data.<type>.{softDelete,restore,permanentlyDelete}.requested` | `functions/src/lifecycle/{softDelete,restoreSoftDeleted,permanentlyDeleteSoftDeleted}.ts` (Plan 03a) → bare `data.<type>.<op>` |
+| beforeUserSignedIn rejection | n/a (substrate only) | catch | `auth.signin.failure` | `functions/src/auth/beforeUserSignedIn.ts` (Plan 03a, DORMANT until a rejection rule lands) |
+
+**Pitfall 17 invariant (server-determined actor):** Client emissions pass only `type`, `target`, and `payload` (and a `clientReqId` injected by the `src/cloud/audit.js` wrapper). The `auditWrite` callable server-side overlays `actor` from `request.auth.token` (uid / email / role / orgId / email_verified). The view CANNOT spoof `actor` — the callable schema rejects any `actor` field in payload; a regression would fail `tests/audit-wiring.test.js` PII-scrub assertions. For the unauthenticated `beforeUserSignedIn` path, server-side emit sets `actor=null` (or a `system` sentinel where the wrapper requires non-null).
+
+**Pitfall 7 (mirror-trigger collision):** Phase 7 mirror triggers (`onOrgDelete`, `onUserDelete`, `onDocumentDelete`) fire only if no primary `auditWrite` event exists for the same target within the prior 60s window. Plan 03a server-side bare emissions on `softDelete` / `restoreSoftDeleted` / `permanentlyDeleteSoftDeleted` satisfy primary-event existence for the 60s window, so cascade delete operations emit ONE audit row, not N. Client-side `.requested` emissions on soft-delete callables land BEFORE the server callable resolves; the bare `data.<type>.softDelete` server emit lands AFTER the batch commit — both satisfy mirror dedup (`.requested` carries `type="data.<type>.softDelete.requested"`, mirror trigger keys off the bare `data.<type>.softDelete` literal, so neither aliases the other).
+
+**Best-effort emission (Pattern 5 #2):** All 11 client-side `emitAuditEvent` calls are wrapped in try/catch (defensive double-wrap — the proxy at `src/observability/audit-events.js` already swallows internally per Plan 09-01). A failed emission must NEVER block the originating op. Tested in `tests/firebase/auth-audit-emit.test.js` (any swallowed audit failure does NOT propagate to the auth-state-change callback).
+
+**Substrate-honest disclosure (Pitfall 19) — MFA emit DEFERRED:** MFA enrol / un-enrol audit emission is bound to landing of `enrollTotp` and `unenrollAllMfa` deps in `src/main.js`, which are currently `// deferred to user-testing phase`. The `auth.mfa.enrol` + `auth.mfa.unenrol` enum literals (Phase 7 baseline) remain valid and ready for emission. Plan 09-04 anomaly Rule 2 (MFA disenrolment alert) trigger code stays DORMANT — observation is zero until those deps land. Carry-forward row in `runbooks/phase-9-cleanup-ledger.md`.
+
+**Substrate-honest disclosure (Pitfall 19) — `auth.signin.failure` substrate DORMANT:** `functions/src/auth/beforeUserSignedIn.ts` emits `auth.signin.failure` only on internal handler errors (logger throw, malformed event.data) today — there are NO rejection rules in `beforeUserSignedIn` at Phase 9 close. The substrate is wired so that the moment any business rejection rule lands (Phase 10+ probable), `auth.signin.failure` events flow and Plan 09-04 anomaly Rule 1 (auth-fail burst — `>5/IP/5min`) activates without trigger-code change. Plan 09-05 deploy-checkpoint Step D is explicitly DORMANT at Phase 9 close (passes by design — DORMANT, not skipped).
+
+**Evidence:**
+
+- Server-side substrate: `functions/src/audit/auditEventSchema.ts` (61-entry enum); `functions/src/auth/{setClaims,beforeUserSignedIn}.ts`; `functions/src/lifecycle/{softDelete,restoreSoftDeleted,permanentlyDeleteSoftDeleted}.ts`; existing Phase 8 `functions/src/gdpr/{gdprExportUser,gdprEraseUser}.ts`
+- Server-side tests: `functions/test/audit/auditEventSchema.unit.test.ts` (18) + `functions/test/auth/{setClaims-audit-emit,beforeUserSignedIn-audit-emit}.test.ts` + `functions/test/lifecycle/*-audit-emit.test.ts` (5 files, 25 tests total)
+- Client-side wiring: `src/firebase/auth.js` (5 emit sites); `src/cloud/{claims-admin,gdpr,soft-delete}.js` (6 emit sites — 1 + 2 + 3)
+- Client proxy: `src/observability/audit-events.js` (best-effort emit; never throws); `src/cloud/audit.js` (`writeAuditEvent` wrapper; injects `clientReqId` via `crypto.randomUUID()`)
+- Client tests: `tests/firebase/auth-audit-emit.test.js` + `tests/audit-wiring.test.js` (14 tests total)
+
+**Framework citations:**
+
+- OWASP ASVS L2 v5.0 V8.4.x (audit content + retention + tamper resistance)
+- ISO/IEC 27001:2022 A.8.15 (logging) + A.8.16 (monitoring activities)
+- SOC 2 CC4.1 (monitoring) + CC7.2 (system operations)
+- GDPR Art. 30 (record of processing) + Art. 32(1)(d) (regular testing of effectiveness)
+
+---
+
+## § Anomaly Alerting (OBS-05)
+
+Phase 9 (OBS-05): `functions/src/observability/authAnomalyAlert.ts` is an `onDocumentCreated('auditLog/{eventId}')` Firestore trigger in `europe-west2` running as `audit-alert-sa`. It evaluates 4 anomaly rules over the audit-event stream and dispatches Slack webhook messages on threshold-crossing events. Rolling auth-failure counters live at `authFailureCounters/{ipHash}` — a server-only Firestore collection that clients cannot read or write.
+
+**The 4 rules:**
+
+1. **Auth-fail burst** — fires when an IP exceeds 5 sign-in failures in a 5-minute rolling window; EXACTLY ONCE per `(ipHash, window)` on the threshold-crossing event (`count === FAIL_LIMIT + 1`). **DORMANT** — `beforeUserSignedIn` substrate emits no failures yet (no rejection rules exist). Trigger code is functional and the observation pipeline activates the moment any rejection rule lands.
+
+2. **MFA disenrolment** — fires on every `auth.mfa.unenrol` event. **DORMANT** — no current MFA emit source (see § Audit-Event Wiring above; bound to `enrollTotp` / `unenrollAllMfa` dep landing).
+
+3. **Role escalation** — fires when a `iam.claims.set` event carries `payload.newRole === "admin"` AND `payload.previousRole !== "admin"`. **FUNCTIONAL** — feeds from Plan 03a `setClaims` server-side bare emission.
+
+4. **Unusual-hour GDPR export** — fires when a `compliance.export.user` event UTC hour ∈ `{0..5, 22..23}`. **FUNCTIONAL** — feeds from Phase 8 baseline `gdprExportUser` server-side emission.
+
+**Counter shape (Pattern 10):** `authFailureCounters/{ipHash}` document carries `{count: number, windowStart: Timestamp}`. The handler runs a Firestore transaction that (a) re-reads the doc, (b) resets `count=1` if `now - windowStart >= 5min` OR the doc doesn't exist (`tx.set` collapses both branches — `tx.update` on a missing doc errors), (c) otherwise increments `count`, (d) calls `postToSlack` exactly when the new count equals `FAIL_LIMIT + 1` (= 6). IP is hashed via `node:crypto.createHash("sha256")` — raw IP never lands in Firestore.
+
+**Authorisation:**
+
+- Runs as `audit-alert-sa` SA: `roles/datastore.user` (authFailureCounters read/write) + `roles/datastore.viewer` (auditLog read) at project level; `roles/secretmanager.secretAccessor` on individual secrets only (`SLACK_WEBHOOK_URL`, `SENTRY_DSN`) — NOT project-wide
+- `firestore.rules` adds a `match /authFailureCounters/{ipHash}` block: `allow read: if false; allow write: if false` (server-only via Admin SDK)
+- `tests/rules/authFailureCounters.test.js` — 4 deny cells (client read deny + client write deny + admin read deny + admin write deny)
+
+**Slack post (Pattern 6):** `postToSlack` is best-effort — never throws. Logs `slack.skip.no-webhook` when `SLACK_WEBHOOK_URL` resolves to empty; logs `slack.post.failed` with HTTP status on Slack 4xx/5xx; logs `slack.post.error` on network failure. `retry: false` (not v1-style `retryConfig.retryCount: 1` — the v2 Firestore-trigger DocumentOptions exposes `retry: boolean`); intent is "best-effort, do not retry-storm Slack."
+
+**Substrate-honest disclosures (Pitfall 19):**
+
+- **2 of 4 rules DORMANT at Phase 9 close** — Rule 1 (auth-fail burst) awaits any rejection rule in `beforeUserSignedIn`; Rule 2 (MFA disenrol) awaits MFA dep landing in `src/main.js`. Substrate is functional + tested; observation pipeline is gated on emission-source landing. Phase 9 close does NOT claim Rules 1+2 are firing today.
+- **Synthetic alert verification** — `scripts/test-slack-alert/run.js` lets the operator post a synthetic message to the configured webhook at Wave 6 close-gate (`runbooks/phase-9-deploy-checkpoint.md` Step C) to verify Slack reception independently of the real anomaly stream.
+- **`#ops-warn` vs `#ops-page` channel split deferred to v2** — operator policy decision, not a code-level row. Today all 4 rules post to a single Slack channel (operator-configured webhook URL).
+
+**Defence-in-depth (Pitfall 4 secret discipline):** `.gitleaks.toml` extended with a Slack-webhook-URL regex (`https://hooks.slack.com/services/[A-Z0-9]+/[A-Z0-9]+/[a-zA-Z0-9]+`) so a future PR that accidentally commits the webhook URL fails pre-commit + CI. This row was MOVED from Plan 09-06 Task 3 to Plan 09-04 Task 4 (planner WARNING 7 fix — defence-in-depth belongs WITH the secret introduction, not in a downstream docs increment).
+
+**Evidence:**
+
+- Trigger module: `functions/src/observability/authAnomalyAlert.ts` (222 lines)
+- Trigger tests: `functions/test/observability/authAnomalyAlert.test.ts` (6 behaviour tests — 3 for Rule 1 counter shape + Rules 3 + Rules 4 + escalation negative case)
+- Counter rules: `firestore.rules` `authFailureCounters/{ipHash}` block + `tests/rules/authFailureCounters.test.js` (4 cells)
+- Synthetic verify: `scripts/test-slack-alert/run.js` + `scripts/test-slack-alert/README.md`
+- Gitleaks: `.gitleaks.toml` `slack-webhook-url` rule (Plan 09-04 Task 4)
+- Secret management: `defineSecret("SLACK_WEBHOOK_URL")` + `defineSecret("SENTRY_DSN")` — never `process.env`; never GitHub Actions secrets
+- Operator runbook: `runbooks/phase-9-monitors-bootstrap.md` Step 1 (`audit-alert-sa` SA provisioning) + Step 2 (Secret Manager secrets)
+- Close-gate: `runbooks/phase-9-deploy-checkpoint.md` Step C (synthetic Slack alert) + Step D (Rule 1 burst test — explicitly DORMANT)
+
+**Framework citations:**
+
+- ISO/IEC 27001:2022 A.5.25 (assessment of information security events) + A.8.16 (monitoring activities)
+- SOC 2 CC7.2 (system operations) + CC7.3 (event evaluation)
+- OWASP ASVS L2 v5.0 V11.1 (anomaly detection)
+
+---
+
+## § Out-of-band Monitors (OBS-04 / OBS-06 / OBS-07 / OBS-08)
+
+Phase 9: GCP-tier monitors and Sentry-side quota alert — defence-in-depth observability outside the Sentry SDK boundary.
+
+**OBS-04 — Source-map upload + hidden source maps:** `@sentry/vite-plugin@5.2.1` registered conditionally in `vite.config.js` (`env.SENTRY_AUTH_TOKEN && command === "build"`) — short-circuits before plugin allocation on PR-validation runs (forks have no `SENTRY_AUTH_TOKEN`). EU region pinned at `url: "https://de.sentry.io/"`. `filesToDeleteAfterUpload: ["dist/**/*.map"]` cleans `.map` files post-upload; CI deploy + preview jobs add a second-layer `Assert no .map files served from dist (OBS-04 / Pitfall 6)` step that fails the deploy if any `.map` file survives (Pitfall 6 two-layer defence: plugin misconfig OR missing token both fail closed). Release-tagged with `process.env.GITHUB_SHA`.
+
+**OBS-06 — GCP uptime check:** `scripts/setup-uptime-check/run.js` is an idempotent ADC-only script that shells out to `gcloud monitoring uptime create base-layers-diagnostic-prod --regions=USA,EUROPE,ASIA_PACIFIC --period=60s --timeout=10s --resource-type=uptime-url --resource-labels=host=baselayers.bedeveloped.com,project_id=bedeveloped-base-layers --protocol=https --request-method=get --path=/`. Idempotency via describe-first-then-create flow (`gcloud monitoring uptime list-configs` with `gcloud monitoring uptime list` fallback for older gcloud versions). Alerting policy posts to Slack via the same webhook channel as `authAnomalyAlert` (operator-paced — Step 3 of `runbooks/phase-9-monitors-bootstrap.md`).
+
+**OBS-07 — GCP budget alerts:** `scripts/setup-budget-alerts/run.js` shells out to `gcloud billing budgets create` with 50% / 80% / 100% thresholds on a £100 GBP/month default (`BUDGET_AMOUNT` + `BUDGET_CURRENCY` env overrides). Alerts route to the billing-account-admin email.
+
+**OBS-08 — Sentry quota alert:** Operator-set in the Sentry web UI at `Settings → Subscription → Usage Alerts` (3500 of 5000 events/month = 70% of the free-tier limit). Not scriptable from gcloud. Pinned in `runbooks/phase-9-sentry-bootstrap.md` Step 6 and verified at Wave 6 close-gate (`runbooks/phase-9-deploy-checkpoint.md` Step E screenshot).
+
+**Substrate-honest disclosures (Pitfall 19):**
+
+- **3-region uptime minimum** — `gcloud monitoring uptime create --regions` minimum is 3 (per Pattern 7 in 09-RESEARCH.md line 670); OBS-06's success criterion is ≥2. The script uses 3 (`USA,EUROPE,ASIA_PACIFIC`) — exceeds both. Surfaced in `scripts/setup-uptime-check/README.md` Limitations section + monitors-bootstrap runbook Step 3.
+- **Budget alerts NOTIFY only — they do NOT cap spend.** Per Firebase + GCP documentation, billing budgets are an alerting mechanism, not a hard ceiling. Auto-disable via Pub/Sub-driven Cloud Function (the "avoid-surprise-bills" Firebase pattern) is OUT OF SCOPE for v1 (deferred to v2 per Pitfall 19). Surfaced in 3 places: `scripts/setup-budget-alerts/run.js` banner + README Limitations section + monitors-bootstrap runbook Step 4.
+- **Sentry tunnel / ad-blocker workaround deferred to v2** — Sentry events may be blocked at the network layer by privacy-focused browser extensions. The `tunnel` config option (proxies events through a same-origin endpoint) is OUT OF SCOPE for v1; re-evaluate after first quarter of metrics shows ad-block ratio.
+
+**Evidence:**
+
+- Source-map plugin: `vite.config.js` `@sentry/vite-plugin` conditional registration
+- Source-map CI gate: `.github/workflows/ci.yml` deploy + preview jobs `Assert no .map files` step
+- Source-map drift test: `tests/build/source-map-gate.test.js` (5 static-source regex assertions)
+- Uptime check script: `scripts/setup-uptime-check/run.js` + `scripts/setup-uptime-check/README.md`
+- Budget alerts script: `scripts/setup-budget-alerts/run.js` + `scripts/setup-budget-alerts/README.md`
+- Operator runbooks: `runbooks/phase-9-monitors-bootstrap.md` (6 steps for OBS-04/06/07/08) + `runbooks/phase-9-deploy-checkpoint.md` (5 verification gates A/B/C/D/E)
+- Sentry quota alert: operator-set in Sentry web UI; Wave 6 close-gate screenshot evidence
+
+**Framework citations:**
+
+- OWASP ASVS L2 v5.0 V14.2.4 (release artefact integrity / hidden source maps)
+- ISO/IEC 27001:2022 A.5.6 (budget / quota controls) + A.8.16 (monitoring activities)
+- SOC 2 CC7.2 (system operations monitoring)
+
+---
+
+## § Phase 9 Audit Index
+
+Auditor walk-through pointer for Phase 9. Each row maps a Phase 9 control to its requirement ID, the code/config that implements it, the test or operator evidence that verifies it, and the framework citations it satisfies. Mirrors the §Phase 7 + §Phase 8 Audit Index shape. Substrate-honest (Pitfall 19): every Validated row has evidence pointers; PENDING-OPERATOR rows for OBS-04..08 are explicitly annotated — code + runbooks are committed, but operator deploy evidence (Slack reception screenshot, Cloud Console screenshots, `gcloud function describe` output, CI deploy logs) is gated on the single combined Wave 6 + Wave 7 operator session documented in `.planning/phases/09-observability-audit-event-wiring/09-06-DEFERRED-CHECKPOINT.md` (bundles Plan 09-05 Task 3b + Plan 09-06 Task 4).
+
+| Requirement | Control | Code | Test / Evidence | Framework |
+|-------------|---------|------|-----------------|-----------|
+| OBS-01 | Sentry browser + node init with shared PII scrubber + `<redacted>` redaction contract | `src/observability/sentry.js`, `src/observability/pii-scrubber.js`, `functions/src/util/sentry.ts`, `functions/src/util/pii-scrubber.ts` | `tests/observability/sentry-init.test.js` (9), `tests/observability/pii-scrubber.test.js` (7), `functions/test/util/pii-scrubber-parity.test.ts` (parity gate), `functions/test/util/sentry.unit.test.ts` (Phase 7 contract updated) | ASVS V8.3.4; ISO A.5.10 + A.5.34; GDPR Art. 32 |
+| OBS-02 | Sentry EU residency — DSN `*.ingest.de.sentry.io` + source-map upload to `https://de.sentry.io/` | `runbooks/phase-9-sentry-bootstrap.md` Step 2 (operator selects EU project); `vite.config.js` plugin `url: "https://de.sentry.io/"` | `runbooks/phase-9-deploy-checkpoint.md` Step E (Sentry Console screenshot showing EU region — **PENDING-OPERATOR DEPLOY** — see `09-06-DEFERRED-CHECKPOINT.md`) | GDPR Art. 32 + Art. 44 / Schrems II |
+| OBS-03 | Fingerprint rate-limit at SDK boundary (10 events/fp/60s) before scrub | `src/observability/sentry.js` `fingerprintRateLimit()` | `tests/observability/sentry-init.test.js` Test 6 | ASVS V8.4.4 |
+| OBS-04 | Source-map upload via `@sentry/vite-plugin` + hidden source maps two-layer defence | `vite.config.js` (conditional plugin); `.github/workflows/ci.yml` (deploy + preview jobs); `filesToDeleteAfterUpload: ["dist/**/*.map"]` | `tests/build/source-map-gate.test.js` (5 static assertions); CI deploy run log "Assert no .map files served from dist (OBS-04 / Pitfall 6)" step — **PENDING-OPERATOR DEPLOY** — see `09-06-DEFERRED-CHECKPOINT.md` for first deploy log evidence | ASVS V14.2.4 |
+| OBS-05 | Auth-anomaly Slack alert via Cloud Function (4 rules; 2 FUNCTIONAL + 2 DORMANT) | `functions/src/observability/authAnomalyAlert.ts` (Rules 3+4 functional; Rules 1+2 DORMANT) | `functions/test/observability/authAnomalyAlert.test.ts` (6 behaviour tests); `tests/rules/authFailureCounters.test.js` (4 cells); `runbooks/phase-9-deploy-checkpoint.md` Step C synthetic Slack alert + Step D DORMANT Rule 1 burst test — **PENDING-OPERATOR DEPLOY** — see `09-06-DEFERRED-CHECKPOINT.md` for Slack reception screenshot | ISO A.5.25 + A.8.16; SOC2 CC7.2 + CC7.3; OWASP ASVS V11.1 |
+| OBS-06 | GCP uptime check 3 regions / 60s / HTTPS GET / 10s timeout | `scripts/setup-uptime-check/run.js`; `runbooks/phase-9-monitors-bootstrap.md` Step 3 | `runbooks/phase-9-deploy-checkpoint.md` Step E (Cloud Console uptime-checks screenshot) — **PENDING-OPERATOR DEPLOY** — see `09-06-DEFERRED-CHECKPOINT.md` | ISO A.8.16; SOC2 CC7.2 |
+| OBS-07 | GCP budget alerts 50% / 80% / 100% thresholds (£100 GBP default) | `scripts/setup-budget-alerts/run.js`; `runbooks/phase-9-monitors-bootstrap.md` Step 4 | `runbooks/phase-9-deploy-checkpoint.md` Step E (Cloud Console budgets screenshot); substrate-honest disclosure "alerts NOTIFY only; do not cap spend" — **PENDING-OPERATOR DEPLOY** — see `09-06-DEFERRED-CHECKPOINT.md` | ISO A.5.6 |
+| OBS-08 | Sentry-side 70% free-tier quota alert (3500/5000 events/month) | `runbooks/phase-9-sentry-bootstrap.md` Step 6; `runbooks/phase-9-monitors-bootstrap.md` Step 5 | `runbooks/phase-9-deploy-checkpoint.md` Step E (Sentry Settings → Subscription → Usage Alerts screenshot) — **PENDING-OPERATOR DEPLOY** — see `09-06-DEFERRED-CHECKPOINT.md` | ISO A.5.6 |
+| AUDIT-05 | View-side audit-event wiring (9 sites; client `.requested`) + server-side bare substrate (Plan 03a; 4 sites) + auditEventSchema 28 → 61 enum extension | `src/firebase/auth.js`, `src/cloud/{claims-admin,gdpr,soft-delete}.js`; `functions/src/audit/auditEventSchema.ts`; `functions/src/auth/{setClaims,beforeUserSignedIn}.ts`; `functions/src/lifecycle/{softDelete,restoreSoftDeleted,permanentlyDeleteSoftDeleted}.ts` | `tests/firebase/auth-audit-emit.test.js`; `tests/audit-wiring.test.js`; `functions/test/audit/auditEventSchema.unit.test.ts` (18); `functions/test/auth/{setClaims-audit-emit,beforeUserSignedIn-audit-emit}.test.ts`; `functions/test/lifecycle/*-audit-emit.test.ts` (5 files) | ASVS V8.4.x; ISO A.8.15 + A.8.16; SOC2 CC4.1 + CC7.2; GDPR Art. 30 + Art. 32(1)(d) |
+| DOC-10 | Phase 9 incremental SECURITY.md (Pitfall 19) — 4 new sections + this 10-row Phase 9 Audit Index | This file — § Observability — Sentry + § Audit-Event Wiring + § Anomaly Alerting + § Out-of-band Monitors + § Phase 9 Audit Index | this commit; Phase 11 owns the canonical DOC-10 pass | ISO A.5.36 |
+
+**Substrate-honest disclosure (Pitfall 19):** OBS-02 / OBS-04 / OBS-05 / OBS-06 / OBS-07 / OBS-08 are **code-and-docs complete** at Phase 9 close. Production deploy + first deploy log evidence + Slack reception screenshot + Cloud Console screenshots + Sentry Console screenshot are operator-deferred per the Wave 6 + Wave 7 batching pattern (mirrors `08-06-DEFERRED-CHECKPOINT.md`). The single combined operator session is documented in `.planning/phases/09-observability-audit-event-wiring/09-06-DEFERRED-CHECKPOINT.md`. Status reflects "code + substrate + runbooks authored; operator action pending for production evidence" — the same shape Phase 8 BACKUP-01..04 + BACKUP-07 used. Rules 1+2 of `authAnomalyAlert` are explicitly DORMANT (not skipped) — substrate is functional + tested; observation pipeline awaits emission-source landing (rejection-rule landing for Rule 1; MFA dep landing for Rule 2).
+
+**Cross-phase plug-ins this index will feed:**
+
+- **Phase 10** (HOST-06 / HOST-07 strict CSP) — mirror-trigger collision verification (1 alert per soft-delete cascade) deferred to Phase 10 synthetic-tests sub-wave (one observation per phase saves operator time); Sentry-tagged source-map stack traces land in Sentry once deploy runs, benefiting CSP tightening triage.
+- **Phase 11** (DOC-02 / DOC-04 / DOC-09 evidence pack) — `PRIVACY.md` Sentry sub-processor row (EU residency); `CONTROL_MATRIX.md` rows for OBS-01..08 + AUDIT-05; `docs/evidence/` Sentry quota alert screenshot + Slack alert screenshot + uptime check screenshot + budget alert screenshot + first deploy log.
+- **Phase 12** (WALK-02 / WALK-03) — audit-walkthrough cites Phase 9 Observability + Audit-Event Wiring + Anomaly Alerting + Out-of-band Monitors sections as ground truth.
+
+---
+
+## § Phase 10 Audit Index
+
+Auditor walk-through pointer for Phase 10. Each row maps a Phase 10 control to its requirement ID, the code/config that implements it, the test or operator evidence that verifies it, and the framework citations it satisfies. Mirrors the §Phase 7 + §Phase 8 + §Phase 9 Audit Index shape. Substrate-honest (Pitfall 19): HOST-07 closed in-phase; HOST-06 closed as substrate-complete-with-PENDING (submission filed at hstspreload.org; Chrome preload-list propagation is calendar-deferred and forward-tracked in `runbooks/phase-10-cleanup-ledger.md` Row F1).
+
+| Requirement | Control | Code | Test / Evidence | Framework |
+|-------------|---------|------|-----------------|-----------|
+| HOST-07 | CSP enforced (no Report-Only) + `style-src 'self'` (no `'unsafe-inline'`) + `frame-src 'self'` (no firebaseapp.com) + `base-uri 'self'` + `form-action 'self'` + `connect-src` extended with `https://de.sentry.io` for Phase 9 OBS-04 | `firebase.json` `hosting.headers[0]` Content-Security-Policy header value + key (single-knob flip from `-Report-Only`); `src/main.js` zero static inline-style attrs; `styles.css` Wave 1 utility-class block (104 named classes) | `tests/firebase-config.test.js` 6 Phase 10 enforced-shape assertions in `firebase.json — Phase 10 enforced CSP shape (HOST-07)` describe; `runbooks/csp-enforcement-cutover.md` 7-step single-session operator runbook (Plan 10-04); `runbooks/phase-10-csp-soak-bootstrap.md` Stage B 7-day soak; `10-PREFLIGHT.md ## Cutover Log` Rows A-E PASS; `docs/evidence/phase-10-securityheaders-rating.png` (A+); `docs/evidence/phase-10-enforcement-smoke-console.png` (5-target smoke matrix) | OWASP ASVS L2 v5.0 V14.4; ISO/IEC 27001:2022 A.8.23 + A.13.1; SOC 2 CC6.6; GDPR Art. 32(1)(b) |
+| HOST-06 | HSTS preload submitted to hstspreload.org for `baselayers.bedeveloped.com` (subdomain-only path — apex `bedeveloped.com` deliberately NOT submitted per `runbooks/hsts-preload-submission.md` Step 2 decision tree) | `firebase.json` `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` (Phase 3 substrate, unchanged through Phase 10) | `tests/firebase-config.test.js` HSTS-preload-eligibility assertion (max-age >= 31536000 + includeSubDomains + preload); `runbooks/hsts-preload-submission.md` Steps 1-4 (operator); `docs/evidence/phase-10-hsts-preload-submission.png`; listing-status forward-tracked PENDING per Pitfall 19 in `runbooks/phase-10-cleanup-ledger.md` Row F1 (closure path: weekly status check; flip to CLOSED when status returns `preloaded` + `docs/evidence/phase-10-hsts-preload-listed.png` lands) | OWASP ASVS L2 v5.0 V14.4; GDPR Art. 32(1)(a); SOC 2 CC6.7 |
+| DOC-10 | Phase 10 incremental SECURITY.md (Pitfall 19) — § Content Security Policy (Report-Only) REPLACED by § Content Security Policy (enforced) + new § HSTS Preload Status + this 3-row Phase 10 Audit Index; § Phase 3 Audit Index gains maintenance annotations noting "soak window CLOSED Phase 10 Wave 4" + the enforcement-flip commits in the Implemented-in + Verified-by + Commit-SHA columns | This file | this commit; Phase 11 owns the canonical DOC-10 pass | ISO/IEC 27001:2022 A.5.36 |
+
+**Substrate-honest disclosure (Pitfall 19):** HOST-07 is closed in-phase (CSP enforced + 7-day post-enforcement soak clean + securityheaders.com A+ rating captured). HOST-06 is **substrate-complete with calendar-deferred listing-status** — the hstspreload.org submission is filed (in-phase deliverable), but Chrome's preload-list propagation takes weeks to months (forward-tracked deliverable). This mirrors the Phase 8 BACKUP-07 drill-evidence-deferred pattern + the Phase 9 OBS-02/04/05/06/07/08 operator-deferred pattern. The single combined Phase 10 deferred-operator session bundles all four pending actions (Plan 10-03 Task 2 7-day Stage B soak / Plan 10-04 Task 2 enforcement flip / Plan 10-05 Task 2 HSTS submission + securityheaders.com / Plan 10-05 Task 4 phase-close human-verify) into one session via `.planning/phases/10-csp-tightening-second-sweep/10-DEFERRED-CHECKPOINT.md`.
+
+**Cross-phase plug-ins this index will feed:**
+
+- **Phase 11** (DOC-02 / DOC-04 / DOC-09 evidence pack) — `CONTROL_MATRIX.md` rows for HOST-06 + HOST-07; `docs/evidence/phase-10-securityheaders-rating.png` (A+) + `docs/evidence/phase-10-hsts-preload-submission.png` + `docs/evidence/phase-10-hsts-preload-listed.png` (calendar-deferred) + `docs/evidence/phase-10-enforcement-smoke-console.png` (5-target smoke matrix).
+- **Phase 12** (WALK-02 / WALK-03) — audit-walkthrough cites Phase 10 § CSP (enforced) + § HSTS Preload Status as ground truth for the network-security + transport-encryption ASVS V14.4 control rows.
+
+**Index self-check:** if Row F1 in `runbooks/phase-10-cleanup-ledger.md` (hstspreload.org listing-status flips to `preloaded`) is still open (calendar-deferred to weeks-months), this index is current. Once the listing-status row closes (Chrome propagation lands), this index needs a maintenance commit appending the listing date + screenshot path to the HOST-06 row above.
+
+---
+
+## § Phase 11 Audit Index
+
+Auditor walk-through pointer for Phase 11 (Documentation Pack / Evidence Pack). Each row maps a Phase 11 control to its requirement ID, the code/config that implements it, the test or operator evidence that verifies it, and the framework citations it satisfies. Mirrors the §Phase 7 + §Phase 8 + §Phase 9 + §Phase 10 Audit Index shape. Phase 11 is the canonical owner of the DOC-10 final pass — line-number drift sweep + every-cited-path-exists gate + `## § Phase 11 Audit Index` (this section) live here.
+
+| Requirement | Control | Code | Test / Evidence | Framework |
+|-------------|---------|------|-----------------|-----------|
+| DOC-01 | SECURITY.md canonical pass — ToC + § Vulnerability Disclosure Policy + § MFA Recovery Procedure + § Rotation Schedule + citation-format normalised | `SECURITY.md` | `tests/security-md-toc.test.js`; `tests/security-md-citation-format.test.js`; `tests/security-md-paths-exist.test.js` | OWASP ASVS L2 v5.0 V14.1; ISO/IEC 27001:2022 Annex A.5.1 + A.5.36; SOC 2 CC2.3; GDPR Art. 32(1)(d) |
+| DOC-02 | PRIVACY.md — sub-processors verified (Google + Sentry; Google Fonts disclaimed) + residency verified + DSR flow + Art. 12(3) 30-day SLA + SCCs | `PRIVACY.md` | `tests/privacy-md-shape.test.js`; `.planning/phases/11-documentation-pack-evidence-pack/11-02-VERIFICATION-LOG.md` | OWASP ASVS L2 v5.0 V8.3; ISO/IEC 27001:2022 Annex A.5.34 + A.8.11; SOC 2 CC2.3; GDPR Art. 13 + Art. 14 + Art. 30 |
+| DOC-03 | THREAT_MODEL.md — 4 trust boundaries + 6 STRIDE categories + 6-row defence-in-depth summary table | `THREAT_MODEL.md` | `tests/threat-model-shape.test.js` | OWASP ASVS L2 v5.0 V1.1 + V1.2; ISO/IEC 27001:2022 Annex A.5.7; SOC 2 CC3.2; GDPR Art. 32(1)(d) |
+| DOC-04 | CONTROL_MATRIX.md — every REQ-ID has Code Path + Test / Evidence + Framework citation; line-number drift swept (Pitfall 4) | `docs/CONTROL_MATRIX.md` | `tests/control-matrix-paths-exist.test.js` (>= 30 rows + every cited path exists + zero `:NN` suffixes) | OWASP ASVS L2 v5.0 V14.1; ISO/IEC 27001:2022 Annex A.5.36; SOC 2 CC2.3 |
+| DOC-05 | RETENTION.md expanded to 8+ data classes × 5-axis structure (period / basis / deletion mechanism / threat coverage / implementation cross-reference) | `docs/RETENTION.md` | `tests/retention-md-shape.test.js` | OWASP ASVS L2 v5.0 V8.3.5; ISO/IEC 27001:2022 Annex A.5.33; GDPR Art. 5(1)(e) + Art. 17 |
+| DOC-06 | IR_RUNBOOK.md — 5 Scenario sections + Comms templates + RCA template + 3 net-new skeleton runbooks under `runbooks/ir-*.md` | `docs/IR_RUNBOOK.md`; `runbooks/ir-credential-compromise.md`; `runbooks/ir-dependency-cve.md`; `runbooks/ir-supply-chain-compromise.md` | `tests/ir-runbook-shape.test.js` (Pitfall 6 cross-reference existence gate per cited runbook path) | OWASP ASVS L2 v5.0 V7.4; ISO/IEC 27001:2022 Annex A.5.24 + A.5.25 + A.5.26; SOC 2 CC7.3; GDPR Art. 33 + Art. 34 |
+| DOC-07 | DATA_FLOW.md — Mermaid `flowchart LR` with 8 nodes / 10 edges + 4-row classifications table + 4-bullet processing regions (`europe-west2` 9 hits) | `docs/DATA_FLOW.md` | `tests/data-flow-shape.test.js` | OWASP ASVS L2 v5.0 V1.1; ISO/IEC 27001:2022 Annex A.5.9; SOC 2 CC3.2; GDPR Art. 30 |
+| DOC-08 | `/.well-known/security.txt` RFC 9116 (Contact + Expires + Preferred-Languages + Canonical + Policy) + `firebase.json` `/.well-known/**` Cache-Control 24h (NOT immutable) | `public/.well-known/security.txt`; `firebase.json` | `tests/build/security-txt-fresh.test.js`; `tests/build/security-txt-served.test.js` | OWASP ASVS L2 v5.0 V14.5; ISO/IEC 27001:2022 Annex A.6.8; SOC 2 CC2.3 |
+| DOC-09 | `docs/evidence/README.md` inventory — PRESENT / PENDING-OPERATOR with explicit pointers to deferred-checkpoint documents (Pitfall 19 substrate-honest) | `docs/evidence/README.md`; `docs/evidence/branch-protection-screenshot.png`; `docs/evidence/socket-install.png` | `tests/evidence-readme-shape.test.js`; PENDING-OPERATOR rows cross-referenced in `.planning/phases/08-data-lifecycle-soft-delete-gdpr-backups/08-06-DEFERRED-CHECKPOINT.md`, `.planning/phases/09-observability-audit-event-wiring/09-06-DEFERRED-CHECKPOINT.md`, `.planning/phases/10-csp-tightening-second-sweep/10-DEFERRED-CHECKPOINT.md`, and `.planning/phases/06-real-auth-mfa-rules-deploy/06-RESUME-NOTE.md` | OWASP ASVS L2 v5.0 V14.1; ISO/IEC 27001:2022 Annex A.5.36; SOC 2 CC2.3 |
+| DOC-10 | SECURITY.md canonical pass owner — Phase 11 final pass: line-number drift sweep + every-cited-path-exists gate + `## § Phase 11 Audit Index` appended (this section) | `SECURITY.md` | `tests/security-md-paths-exist.test.js`; `tests/security-md-toc.test.js`; `tests/security-md-citation-format.test.js` | OWASP ASVS L2 v5.0 V14.1; ISO/IEC 27001:2022 Annex A.5.36; SOC 2 CC2.3 |
+
+**Substrate-honest disclosure (Pitfall 19):** DOC-09 rows 3 through 22 are PENDING-OPERATOR per `docs/evidence/README.md`. They are NOT silent omissions — each row cites the specific deferred-checkpoint document and step where the operator capture will land. When an operator session completes a capture, the matching row in `docs/evidence/README.md` flips `PENDING-OPERATOR` → `PRESENT` in the same commit that adds the screenshot to `docs/evidence/`. This index does NOT need a maintenance commit per evidence flip — `docs/evidence/README.md` is the canonical inventory.
+
+**Phase 11 close gate:** All DOC-01 through DOC-09 rows above flipped to `[x]` in `.planning/REQUIREMENTS.md` (with `Closed Phase 11 — Plans 11-01..11-06` annotation). DOC-10 row carries Phase 11 Wave 6 canonical-pass annotation appended to the existing per-phase increment trail. `runbooks/phase-11-cleanup-ledger.md` zero-out gate `phase_11_active_rows: 0`.
+
+**Cross-phase plug-ins this index will feed:**
+
+- **Phase 12** (WALK-01 / WALK-02 / WALK-03) — `SECURITY_AUDIT_TRANSLATION` per-section Vercel/Supabase → Firebase translation map cites every Phase 11 doc + this Audit Index as the ground-truth control catalogue; `SECURITY_AUDIT_REPORT.md` Pass / Partial / N/A entries cite specific rows in this index by REQ-ID.
+- **Maintenance (post-Phase 11):** when upstream operator sessions land their captures (`08-06` / `09-06` / `10-DEFERRED-CHECKPOINT.md`), the matching rows in `docs/evidence/README.md` flip `PENDING-OPERATOR` → `PRESENT`; this Audit Index does NOT need a per-flip maintenance commit (the inventory is the canonical source of truth).
+
+**Index self-check:** if any row above cites a path that does not exist on disk OR a `:NN` line-number suffix, `tests/security-md-paths-exist.test.js` fails. The CI gate keeps this index honest.
+
+---
+
+## § Phase 12 Audit Index
+
+Auditor walk-through pointer for Phase 12 (Audit Walkthrough + Final Report). Each row maps a Phase 12 control to its requirement ID, the doc/test that implements it, the test or operator evidence that verifies it, and the framework citations it satisfies. Mirrors the §Phase 3..§Phase 11 Audit Index shape. Phase 12 is the canonical milestone close — `SECURITY_AUDIT_REPORT.md` is the closing artefact.
+
+| Requirement | Control | Code | Test / Evidence | Framework |
+|-------------|---------|------|-----------------|-----------|
+| WALK-01 | Per-§ Vercel/Supabase → Firebase translation map (RLS↔Firestore Rules / service_role↔custom claims + Cloud Functions / Edge Functions↔Cloud Functions / pgaudit↔Cloud Function audit log / PITR↔Firestore PITR / Vercel BotID/Firewall↔reCAPTCHA Enterprise / App Check / OIDC federation↔Firebase Auth tokens + GitHub Actions WIF / Vercel Audit Logs↔Cloud Logging + audit-log Cloud Function) | `docs/SECURITY_AUDIT_TRANSLATION.md` | `tests/security-audit-translation-shape.test.js` (4 cases — existence + §-coverage + N/A rationale presence + Pitfall 19 forbidden-words) | OWASP ASVS L2 v5.0 V14.1; ISO/IEC 27001:2022 Annex A.5.36; SOC 2 CC2.3 |
+| WALK-02 | End-to-end checklist run against hardened repo — every §13 Sign-off Checkbox + every §2–§7 + §10 numbered control surfaced for verdict | `SECURITY_AUDIT_REPORT.md` (§ Discovery + § §2 OWASP A01..A10 + § §3 Auth + § §4 Input + § §5 Network + § §6 LLM + § §7 Attack class + § §10 Toolchain + § §13 Sign-off × 4 sub-sections) | `tests/security-audit-report-shape.test.js` Test 8 (§13 Universal cardinality >= 14) + Test A01..A10 (10 OWASP rows minimum) | OWASP ASVS L2 v5.0 V14.1; ISO/IEC 27001:2022 Annex A.5.36; SOC 2 CC2.3 |
+| WALK-03 | Per-checklist-item Pass / Partial / N/A with citations — 6-column row format (Source ref / Control / Verdict / Citation / Framework / Evidence); PENDING-OPERATOR evidence → Partial verdict (Pitfall 19 substrate-honest) | `SECURITY_AUDIT_REPORT.md` (row format pinned in `## Executive Summary`) | `tests/security-audit-report-shape.test.js` Tests 1+2+3+6+7 + `tests/security-audit-report-paths-exist.test.js` (Pitfall 6 wishlist gate — every cited path resolves on disk or in git ls-files) | OWASP ASVS L2 v5.0 V14.1 / V14.5; ISO/IEC 27001:2022 Annex A.5.36; SOC 2 CC2.3 |
+| WALK-04 | LLM03 / LLM05 / LLM10 explicit N/A with "no LLM surface" rationale — full enumeration of all 10 LLM Top-10 rows + NCSC AI Guidelines row (11 enumerated N/A rows in `## §6 OWASP LLM Top 10 2025` + 11 enumerated N/A rows in `## §13 Sign-off Checklist — If AI / LLM` = 22 occurrences of the locked rationale string) | `SECURITY_AUDIT_REPORT.md` `## §6 OWASP LLM Top 10 2025` section + `## §13 Sign-off Checklist — If AI / LLM` section | `tests/security-audit-report-shape.test.js` Test 4 (LLM cardinality >= 10 `^\| §6 LLM\d+` rows) | OWASP LLM Top 10 2025; NCSC AI Guidelines (Aug 2023); OWASP ASVS L2 v5.0 V14.1 |
+| DOC-10 | Phase 12 final incremental SECURITY.md append — `## § Phase 12 Audit Index` (this section) + ToC anchor; Compliance posture statement footer preserved byte-for-byte | This file | This commit; Phase 11 is the canonical DOC-10 final-pass owner (line-number drift sweep + every-cited-path-exists gate); Phase 12 is the milestone close increment | ISO/IEC 27001:2022 Annex A.5.36 |
+
+**Substrate-honest disclosure (Pitfall 19):** This Audit Index closes the cross-cutting DOC-10 work. The milestone posture is "credible, not certified" per the `## Compliance posture statement` footer; this Audit Index does NOT inflate the posture. `SECURITY_AUDIT_REPORT.md` is **evidence of internal review**, not external pen test — the prospect-questionnaire-readiness artefact. SOC 2 Type I/II + ISO/IEC 27001:2022 certification + third-party pen test are tracked under `.planning/ROADMAP.md` v2 Requirements (OPS-V2-01 / OPS-V2-02 / OPS-V2-03).
+
+**Cross-document index closure:** `docs/SECURITY_AUDIT_TRANSLATION.md` + `SECURITY_AUDIT_REPORT.md` + this Audit Index together constitute the WALK-01..04 + DOC-10 final-pass artefact set. `runbooks/phase-12-cleanup-ledger.md` zero-out gate (`phase_12_active_rows: 0`) confirms no carry-forward rows remain at milestone close.
+
+**Phase 12 close gate:** All WALK-01..04 rows above flipped to `[x]` in `.planning/REQUIREMENTS.md` (with `Closed Phase 12 — Plan 12-XX` annotation per row). DOC-10 row appended with Phase 12 final-increment annotation. `runbooks/phase-12-cleanup-ledger.md` zero-out gate `phase_12_active_rows: 0`.
+
+**Index self-check:** if any row above cites a path that does not exist on disk OR a `:NN` line-number suffix, `tests/security-md-paths-exist.test.js` fails. The CI gate keeps this index honest.
+
+---
+
 ## Compliance posture statement
 
 This codebase aims for **credible, not certified** compliance with
-SOC 2 Common Criteria 2017, ISO/IEC 27001:2022 Annex A, GDPR Article 32,
+SOC 2 Common Criteria 2017, ISO/IEC 27001:2022 Annex A, GDPR Art. 32,
 and OWASP ASVS 5.0 Level 2. Certification is a separate workstream
 (see `.planning/PROJECT.md` "Out of Scope"). Each section above maps
 controls to the specific framework citations they address; the canonical

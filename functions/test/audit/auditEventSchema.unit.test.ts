@@ -113,3 +113,116 @@ describe("auditEventInput — optional fields (Test 5)", () => {
     expect(out.target.snapshot).toEqual({ name: "Old Name" });
   });
 });
+
+// ─── Phase 9 Wave 3 (AUDIT-05 / OBS-05): enum extension tests ────────────────
+// 33 new literals — 15 server-side bare data-domain flavours + 18 client-side
+// .requested companions. Tests pin the enum is exactly the intended shape:
+// the new bare data-domain literals exist, the .requested companions exist,
+// the existing literals (auth.signin.failure / iam.claims.set) are preserved,
+// over-broad shapes (e.g. data.action.delete bare) are rejected.
+
+describe("auditEventInput — Phase 9 enum extension (Wave 3 substrate)", () => {
+  // Test 1: bare data.action.softDelete (NEW — server-side lifecycle/softDelete emit)
+  it("accepts data.action.softDelete bare flavour (server-side lifecycle emit)", () => {
+    const out = auditEventInput.parse({
+      type: "data.action.softDelete",
+      target: { type: "action", id: "a1", orgId: "o1" },
+      clientReqId: FIXED_UUID,
+    });
+    expect(out.type).toBe("data.action.softDelete");
+  });
+
+  // Test 2: .requested companion (client-side wrapper emit)
+  it("accepts data.action.softDelete.requested .requested companion", () => {
+    const out = auditEventInput.parse({
+      type: "data.action.softDelete.requested",
+      target: { type: "action", id: "a1", orgId: "o1" },
+      clientReqId: FIXED_UUID,
+    });
+    expect(out.type).toBe("data.action.softDelete.requested");
+  });
+
+  // Test 3: bare data.message.permanentlyDelete (NEW)
+  it("accepts data.message.permanentlyDelete bare flavour", () => {
+    const out = auditEventInput.parse({
+      type: "data.message.permanentlyDelete",
+      target: { type: "message", id: "m1", orgId: "o1" },
+      clientReqId: FIXED_UUID,
+    });
+    expect(out.type).toBe("data.message.permanentlyDelete");
+  });
+
+  // Test 4: data.funnelComment.restore.requested .requested (NEW)
+  it("accepts data.funnelComment.restore.requested .requested companion", () => {
+    const out = auditEventInput.parse({
+      type: "data.funnelComment.restore.requested",
+      target: { type: "funnelComment", id: "fc1", orgId: null },
+      clientReqId: FIXED_UUID,
+    });
+    expect(out.type).toBe("data.funnelComment.restore.requested");
+  });
+
+  // Test 5: iam.claims.set.requested (NEW — client-side claims-admin emit)
+  it("accepts iam.claims.set.requested .requested companion", () => {
+    const out = auditEventInput.parse({
+      type: "iam.claims.set.requested",
+      target: { type: "user", id: "u1" },
+      clientReqId: FIXED_UUID,
+    });
+    expect(out.type).toBe("iam.claims.set.requested");
+  });
+
+  // Test 6: compliance.erase.user.requested (NEW)
+  it("accepts compliance.erase.user.requested .requested companion", () => {
+    const out = auditEventInput.parse({
+      type: "compliance.erase.user.requested",
+      target: { type: "user", id: "u1" },
+      clientReqId: FIXED_UUID,
+    });
+    expect(out.type).toBe("compliance.erase.user.requested");
+  });
+
+  // Test 7: existing literal preserved (auth.signin.failure was already in enum)
+  it("STILL accepts auth.signin.failure (existing literal preserved post-extension)", () => {
+    const out = auditEventInput.parse({
+      type: "auth.signin.failure",
+      target: { type: "user", id: "u1" },
+      clientReqId: FIXED_UUID,
+    });
+    expect(out.type).toBe("auth.signin.failure");
+  });
+
+  // Test 8: existing literal preserved (iam.claims.set was already in enum)
+  it("STILL accepts iam.claims.set (existing literal preserved post-extension)", () => {
+    const out = auditEventInput.parse({
+      type: "iam.claims.set",
+      target: { type: "user", id: "u1" },
+      clientReqId: FIXED_UUID,
+    });
+    expect(out.type).toBe("iam.claims.set");
+  });
+
+  // Test 9: data.action.delete bare is NOT in the enum (action only has soft/restore/perm new variants;
+  // the Phase 7 baseline only added bare `delete` for document/message/comment/user/org).
+  // This test pins the enum is exactly the intended shape, not over-broad.
+  it("REJECTS data.action.delete bare (action only has the new soft/restore/permanently variants — no bare delete)", () => {
+    expect(() =>
+      auditEventInput.parse({
+        type: "data.action.delete",
+        target: { type: "action", id: "a1", orgId: "o1" },
+        clientReqId: FIXED_UUID,
+      }),
+    ).toThrow();
+  });
+
+  // Test 10: completely bogus event rejected with ZodError
+  it("rejects totally.bogus.event with ZodError (negative control)", () => {
+    expect(() =>
+      auditEventInput.parse({
+        type: "totally.bogus.event",
+        target: { type: "user", id: "u1" },
+        clientReqId: FIXED_UUID,
+      }),
+    ).toThrow();
+  });
+});

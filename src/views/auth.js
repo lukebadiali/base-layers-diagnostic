@@ -43,30 +43,34 @@ export function createAuthView(deps) {
   const notify = deps.notify || ((/** @type {string} */ _l, /** @type {string} */ _m) => {});
 
   function renderSignIn() {
-    const wrap = h("div", { class: "auth-wrap auth-sign-in" });
-    const form = h("form", { class: "auth-form", method: "post" });
+    const wrap = h("div", { class: "auth-sign-in" });
+    wrap.appendChild(h("h2", { class: "auth-heading" }, "Internal sign-in"));
+    wrap.appendChild(
+      h("p", { class: "auth-sub" }, "Sign in with your BeDeveloped email and password."),
+    );
+
+    const form = h("form", { method: "post" });
     const email = h("input", {
       type: "email",
       name: "email",
       required: "",
       autocomplete: "username",
-      placeholder: "Email",
+      placeholder: "you@bedeveloped.com",
     });
     const password = h("input", {
       type: "password",
       name: "password",
       required: "",
       autocomplete: "current-password",
-      placeholder: "Password",
+      placeholder: "Your password",
     });
-    const submit = h("button", { type: "submit" }, "Sign in");
-    const reset = h("button", { type: "button", class: "auth-reset-link" }, "Forgot password?");
-    const forgotMfa = h("button", { type: "button", class: "auth-forgot-mfa-link" }, "Forgot 2FA?");
-    form.appendChild(email);
-    form.appendChild(password);
+
+    form.appendChild(h("div", { class: "auth-field" }, [h("label", {}, "Email"), email]));
+    form.appendChild(h("div", { class: "auth-field" }, [h("label", {}, "Password"), password]));
+
+    const submit = h("button", { type: "submit", class: "auth-submit" }, "Sign in");
     form.appendChild(submit);
-    form.appendChild(reset);
-    form.appendChild(forgotMfa);
+
     form.addEventListener("submit", async (/** @type {Event} */ e) => {
       e.preventDefault();
       const emailVal = /** @type {HTMLInputElement} */ (email).value;
@@ -77,6 +81,10 @@ export function createAuthView(deps) {
         notify("error", (err && /** @type {*} */ (err).message) || "Sign-in failed");
       }
     });
+    wrap.appendChild(form);
+
+    const reset = h("button", { type: "button", class: "auth-reset-link" }, "Forgot password?");
+    const forgotMfa = h("button", { type: "button", class: "auth-forgot-mfa-link" }, "Forgot 2FA?");
     reset.addEventListener("click", async () => {
       const emailVal = /** @type {HTMLInputElement} */ (email).value;
       try {
@@ -92,7 +100,14 @@ export function createAuthView(deps) {
     forgotMfa.addEventListener("click", () => {
       if (deps.routeToForgotMfa) deps.routeToForgotMfa();
     });
-    wrap.appendChild(form);
+    wrap.appendChild(
+      h("div", { class: "auth-help" }, [
+        reset,
+        h("span", { class: "auth-help-sep" }, " · "),
+        forgotMfa,
+      ]),
+    );
+
     return wrap;
   }
 

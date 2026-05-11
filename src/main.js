@@ -574,9 +574,10 @@ import {
   function signIn(userId) {
     jset(K.session, { userId });
   }
-  function signOut() {
+  async function signOut() {
     stopChatSubscription();
     LS.removeItem(K.session);
+    await fbSignOut();
   }
 
   // ---------- Chat unread tracking ----------

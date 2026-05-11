@@ -31,3 +31,21 @@ regexes = [
   # match tolerant of how the gcp-api-key rule captures the trailing context character.
   '''AIzaSy[A-Za-z0-9_-]{33}["\']?''',
 ]
+
+# Phase 9 Wave 5 (OBS-05 / Pitfall 4 / 09-RESEARCH.md §848-853):
+# Block Slack incoming-webhook URLs from being committed. The trigger
+# (functions/src/observability/authAnomalyAlert.ts) consumes
+# SLACK_WEBHOOK_URL via defineSecret(); the secret lives in GCP Secret
+# Manager only and MUST NOT enter the repo via runbooks, scripts, .env
+# files, or anywhere else. Defence-in-depth alongside the Wave 6
+# operator-runbook discipline.
+#
+# Pattern matches the documented Slack incoming-webhook URL shape:
+# https://hooks.slack.com/services/T<10-26 alphanum>/B<10-26 alphanum>/<24+ alphanum>
+# Markdown placeholders like T.../B.../... (which contain dots/ellipses)
+# do NOT match, so docs that reference the URL format are not false-positive.
+[[rules]]
+id = "slack-webhook-url"
+description = "Phase 9 Pitfall 4 — Slack incoming webhook URL committed"
+regex = '''https://hooks\.slack\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[A-Za-z0-9]+'''
+tags = ["secret", "slack", "phase-9"]

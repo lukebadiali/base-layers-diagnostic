@@ -134,6 +134,70 @@ feature PR is the "weakening to make it pass" anti-pattern that
 `SECURITY_AUDIT.md` §0(4) blocks. The threshold values are committed source
 of truth — any reduction shows up in `git diff vite.config.js`.
 
+## Error Message Discipline (Phase 9 — Pitfall 8 prevention)
+
+Sentry's `beforeSend` PII scrubber strips known PII keys (email, name, ip,
+body, message, etc. — see `src/observability/pii-scrubber.js` and the
+parity-tested `functions/src/util/pii-scrubber.ts`) and clips request
+bodies. It does **NOT** inspect the freeform `exception.values[0].value`
+field — meaning that an error like:
+
+```javascript
+// ANTI-PATTERN — never do this
+throw new Error(`Invalid email: ${email}`);
+```
+
+will leak the email into Sentry's event payload via the exception value.
+The scrubber sees no `email` key — it sees `exception.values[0].value = "Invalid email: alice@example.com"` and lets it through. The AUTH-12
+account-enumeration mitigation (unified sign-in error messages) also
+benefits from this rule: any Firebase error code that leaks via a
+template-literal `Error` message into Sentry undoes the unification.
+
+**Rule:** error messages MUST be static strings. Put dynamic context in
+`error.cause` (passed through structured-clone-safe paths) or in a
+`Sentry.addBreadcrumb({ data: { ... } })` (which IS scrubbed via
+`beforeBreadcrumb`). The chokepoint pattern from the Phase 6 AUTH-12
+unified-error wrapper at `src/firebase/auth.js` is the canonical
+prevention shape: no Firebase error codes leak through the layer
+boundary; sign-in / sign-up / password-change paths surface only the
+unified "Email or password incorrect" generic message.
+
+Compliant pattern:
+
+```javascript
+// GOOD — static message; user input in cause/breadcrumb (both scrubbed)
+Sentry.addBreadcrumb({ category: "auth", message: "invalid email submitted" });
+throw new Error("Invalid email");
+
+// ALSO GOOD — typed error class with constant message
+export class SignInError extends Error {
+  constructor() {
+    super("Email or password incorrect");
+    this.name = "SignInError";
+  }
+}
+```
+
+The Phase 6 `SignInError` class is the canonical exemplar (constant
+message; chokepoint at `src/firebase/auth.js`).
+
+**Code review checklist:** for any new `throw new Error(...)` in
+`src/**` or `functions/src/**`, confirm the message has no
+template-literal interpolation of user input. If interpolation is
+necessary for debugging, route it through breadcrumbs or `error.cause`.
+ESLint rule `no-template-curly-in-string` does NOT catch this — it only
+detects template-literal syntax in single-quoted strings (the opposite
+mistake). A custom rule would help but is not yet implemented; the
+review checklist + quarterly audit are the active defences.
+
+**Quarterly audit (forward-tracking ledger row):** operator manually
+samples 50 random Sentry events from the prior 90 days and confirms
+zero PII in `exception.values[0].value` strings. First run Q3-2026;
+recurring. The audit is tracked as a carry-forward row in
+`runbooks/phase-9-cleanup-ledger.md`.
+
+Citation: 09-RESEARCH.md §Pitfall 8 (line 876+).
+
 ## Test runtime budget
 
 Soft target (no enforcement): `npm test` completes in <30s locally and <90s in

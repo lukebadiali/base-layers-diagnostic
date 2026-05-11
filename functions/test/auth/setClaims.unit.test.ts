@@ -143,11 +143,17 @@ describe("setClaims — poke-pattern preserved (Test 2 / Pitfall 2)", () => {
       orgId: null,
     });
 
-    expect(firestoreDocSpy).toHaveBeenCalledTimes(1);
+    // Phase 9 Wave 3: 2 doc() calls — (1) poke write, (2) writeAuditEvent
+    // (audit emission of iam.claims.set bare flavour). Pin the poke is at
+    // index 0 (preserved ordering: poke BEFORE audit emit per source code).
+    expect(firestoreDocSpy).toHaveBeenCalledTimes(2);
     const pokePath = firestoreDocSpy.mock.calls[0][0] as string;
     expect(pokePath).toMatch(/^users\/target-uid\/_pokes\/\d+$/);
+    const auditPath = firestoreDocSpy.mock.calls[1][0] as string;
+    expect(auditPath).toMatch(/^auditLog\/[0-9a-f-]+$/);
 
-    expect(firestoreSetSpy).toHaveBeenCalledTimes(1);
+    // Poke set is index 0; audit set is index 1. Pin the poke shape.
+    expect(firestoreSetSpy).toHaveBeenCalledTimes(2);
     const pokeDoc = firestoreSetSpy.mock.calls[0][0];
     expect(pokeDoc).toEqual({ type: "claims-changed", at: SERVER_TS });
   });

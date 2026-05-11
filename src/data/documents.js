@@ -21,13 +21,15 @@ import {
   db,
   collection,
   doc,
+  query,
+  where,
   getDoc,
   getDocs,
   setDoc,
   deleteDoc,
   serverTimestamp,
 } from "../firebase/db.js";
-import { storage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "../firebase/storage.js";
+import { storage, ref, uploadBytesResumable, deleteObject } from "../firebase/storage.js";
 import { uid } from "../util/ids.js";
 
 /**
@@ -35,7 +37,12 @@ import { uid } from "../util/ids.js";
  * @returns {Promise<Array<any>>}
  */
 export async function listDocuments(orgId) {
-  const snap = await getDocs(collection(db, "orgs", orgId, "documents"));
+  const snap = await getDocs(
+    query(
+      collection(db, "orgs", orgId, "documents"),
+      where("deletedAt", "==", null),
+    ),
+  );
   /** @type {Array<any>} */
   const out = [];
   snap.forEach((/** @type {any} */ d) => out.push({ id: d.id, ...d.data() }));
@@ -43,18 +50,21 @@ export async function listDocuments(orgId) {
 }
 
 /**
+ * Upload a file and save metadata to Firestore. Returns only the doc id —
+ * callers fetch download URLs on demand via src/cloud/signed-url.js
+ * (BACKUP-05 sweep: getDownloadURL removed in Phase 8 Wave 2 08-03).
+ *
  * @param {string} orgId
  * @param {File} file
  * @param {string} sanitisedName
  * @param {*} [meta]
- * @returns {Promise<{ id: string, downloadURL: string }>}
+ * @returns {Promise<{ id: string }>}
  */
 export async function saveDocument(orgId, file, sanitisedName, meta = {}) {
   const docId = uid("d_");
   const path = `orgs/${orgId}/documents/${docId}/${sanitisedName}`;
   const task = uploadBytesResumable(ref(storage, path), file);
   await task;
-  const downloadURL = await getDownloadURL(/** @type {*} */ (task).snapshot.ref);
   await setDoc(
     doc(db, "orgs", orgId, "documents", docId),
     {
@@ -62,14 +72,13 @@ export async function saveDocument(orgId, file, sanitisedName, meta = {}) {
       orgId,
       name: sanitisedName,
       path,
-      downloadURL,
       ...meta,
       legacyAppUserId: meta?.uploadedBy || null, // D-03 (placed after spread so meta cannot override)
       createdAt: serverTimestamp(),
     },
     { merge: true },
   );
-  return { id: docId, downloadURL };
+  return { id: docId };
 }
 
 /**

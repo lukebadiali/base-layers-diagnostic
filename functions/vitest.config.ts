@@ -14,6 +14,17 @@ export default defineConfig({
     exclude: ["test/_mocks/**", "node_modules/**"],
     environment: "node",
     globals: false,
+    // pool: "forks" gives each test file its own process, preventing vi.mock()
+    // registrations from leaking across files (Phase 8 08-02: backup unit tests
+    // mock @google-cloud/firestore which would otherwise contaminate the shared
+    // module registry in the default thread pool).
+    pool: "forks",
+    // maxForks: cap parallel processes to avoid import-time contention across
+    // 25+ test files that all spin up firebase-functions-test simultaneously.
+    // testTimeout: raised from 5000ms to 15000ms for integration tests that
+    // require multiple async module imports before assertions can run.
+    poolOptions: { forks: { maxForks: 4 } },
+    testTimeout: 15000,
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],

@@ -52,13 +52,13 @@ describe("data/documents.js (Phase 5 subcollection rewrite + Storage)", () => {
     expect(ds).toEqual([]);
   });
 
-  it("saveDocument constructs orgs/{orgId}/documents/{docId}/{sanitisedName} Storage path + writes subcollection metadata + returns downloadURL", async () => {
+  it("saveDocument constructs orgs/{orgId}/documents/{docId}/{sanitisedName} Storage path + writes subcollection metadata + returns { id } (Phase 8: downloadURL dropped — use signed-url callable)", async () => {
     /** @type {*} */
     const fakeFile = { name: "test.pdf", size: 100, type: "application/pdf" };
     const result = await saveDocument("o1", fakeFile, "test.pdf", { uploadedBy: "u_a" });
     expect(result.id).toBeTruthy();
-    expect(result.downloadURL).toMatch(/^https:\/\/download\.example\/orgs\/o1\/documents\//);
-    expect(result.downloadURL).toMatch(/test\.pdf$/);
+    // downloadURL no longer returned — clients fetch via getDocumentSignedUrl (BACKUP-05 sweep)
+    expect(Object.keys(result)).toEqual(["id"]);
     // Confirm the metadata landed in the subcollection (not the parent doc)
     const ds = await listDocuments("o1");
     const meta = ds.find((/** @type {any} */ d) => d.id === result.id);

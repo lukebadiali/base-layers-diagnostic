@@ -17,3 +17,19 @@ export { onOrgDelete } from "./audit/triggers/onOrgDelete.js";
 export { onUserDelete } from "./audit/triggers/onUserDelete.js";
 export { onDocumentDelete } from "./audit/triggers/onDocumentDelete.js";
 export { checkRateLimit } from "./ratelimit/checkRateLimit.js";
+// Phase 8 Wave 1 (08-02): backup substrate Cloud Functions.
+export { scheduledFirestoreExport } from "./backup/scheduledFirestoreExport.js";
+export { getDocumentSignedUrl } from "./backup/getDocumentSignedUrl.js";
+// Phase 8 Wave 2 (08-03): soft-delete lifecycle Cloud Functions.
+export { softDelete } from "./lifecycle/softDelete.js";
+export { restoreSoftDeleted } from "./lifecycle/restoreSoftDeleted.js";
+export { scheduledPurge } from "./lifecycle/scheduledPurge.js";
+export { permanentlyDeleteSoftDeleted } from "./lifecycle/permanentlyDeleteSoftDeleted.js";
+// Phase 8 Wave 3-4 (08-04, 08-05): GDPR Art. 15 export + Art. 17 erasure.
+export { gdprExportUser } from "./gdpr/gdprExportUser.js";
+export { gdprEraseUser } from "./gdpr/gdprEraseUser.js";
+// Phase 9 Wave 5 (OBS-05 / FN-01): authAnomalyAlert Firestore-trigger Slack
+// dispatcher. Reads auditLog/{eventId} creates and applies 4 anomaly rules
+// (auth-fail burst, MFA disenrol [DORMANT], role escalation, unusual-hour
+// GDPR export). Runs as audit-alert-sa in europe-west2.
+export { authAnomalyAlert } from "./observability/authAnomalyAlert.js";

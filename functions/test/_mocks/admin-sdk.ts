@@ -6,16 +6,25 @@
 // "offline mode preferred"). This complements (does not replace) the
 // pure-mocked unit tests under test/{auth,audit,ratelimit}/*.unit.test.ts.
 //
-// Surface modelled (just enough for Phase 7 callables + triggers):
+// Surface modelled (Phase 7 — Firestore + Auth):
 //   - getFirestore().doc(path).get() / set() / update() / delete()
 //   - getFirestore().collection(prefix).where(field, op, value).limit(n).get()
 //   - getFirestore().runTransaction(fn) — single-shot snapshot, last-write-wins
 //   - FieldValue.serverTimestamp() — sentinel marker
 //   - getAuth().setCustomUserClaims(uid, claims) — records into a map
 //
-// State is module-level so the integration tests share one logical Firestore
-// per test run; each `beforeEach` should call `_reset()` to clear it. This
-// mirrors functions/src/util/idempotency.ts's `_resetForTest` seam pattern.
+// Phase 8 Wave 1 additions (getStorageMock + getFirestoreAdminClientMock):
+//   - getStorageMock()              — bucket().file().save() / getSignedUrl() / delete() / exists()
+//                                     + bucket().getFiles()
+//   - getFirestoreAdminClientMock() — databasePath() + exportDocuments()
+//   - _seedStorageObject()          — seed helper (mirrors _seedDoc shape)
+//   - _allStorageObjects()          — inspector for tests
+//   - _allSignedUrls()              — inspector for issued signed URLs
+//   - _allExportCalls()             — inspector for exportDocuments calls
+//
+// State is module-level so the integration tests share one logical store per
+// test run; each `beforeEach` should call `_reset()` to clear it. This mirrors
+// functions/src/util/idempotency.ts's `_resetForTest` seam pattern.
 //
 // ESLint @typescript-eslint/no-explicit-any: this mock is opt-in `any`-heavy
 // at boundaries because it stands in for the broad firebase-admin/firestore
@@ -24,14 +33,50 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+// ─── Phase 7 state ────────────────────────────────────────────────────────────
+
 const docStore = new Map<string, Record<string, unknown>>();
 const customClaims = new Map<string, Record<string, unknown>>();
 const SERVER_TIMESTAMP = { __isServerTs: true } as const;
 
+// ─── Phase 8 Wave 4 auth.updateUser tracking (gdprEraseUser) ─────────────────
+
+interface UpdateUserCall {
+  uid: string;
+  properties: Record<string, unknown>;
+}
+const updateUserCalls: UpdateUserCall[] = [];
+
+// ─── Phase 8 Wave 1 state ─────────────────────────────────────────────────────
+
+const storageObjects = new Map<
+  string,
+  { body: string | Buffer; contentType: string; savedAt: number }
+>();
+const issuedSignedUrls: Array<{
+  bucket: string;
+  path: string;
+  expires: number;
+  action: string;
+}> = [];
+const exportCalls: Array<{
+  name: string;
+  outputUriPrefix: string;
+  collectionIds: string[];
+}> = [];
+
+// ─── Reset (clears all state — Phase 7 + Phase 8) ────────────────────────────
+
 export function _reset(): void {
   docStore.clear();
   customClaims.clear();
+  storageObjects.clear();
+  issuedSignedUrls.length = 0;
+  exportCalls.length = 0;
+  updateUserCalls.length = 0;
 }
+
+// ─── Phase 7 seed / inspect helpers ──────────────────────────────────────────
 
 export function _seedDoc(path: string, data: Record<string, unknown>): void {
   docStore.set(path, data);
@@ -49,6 +94,43 @@ export function _allClaims(): Map<string, Record<string, unknown>> {
   return new Map(customClaims);
 }
 
+// ─── Phase 8 Wave 1 seed / inspect helpers ────────────────────────────────────
+
+export function _seedStorageObject(
+  bucketName: string,
+  path: string,
+  body: string | Buffer,
+  contentType = "application/octet-stream",
+): void {
+  storageObjects.set(`${bucketName}/${path}`, { body, contentType, savedAt: Date.now() });
+}
+
+export function _allStorageObjects(): Map<
+  string,
+  { body: string | Buffer; contentType: string; savedAt: number }
+> {
+  return new Map(storageObjects);
+}
+
+export function _allSignedUrls(): Array<{
+  bucket: string;
+  path: string;
+  expires: number;
+  action: string;
+}> {
+  return [...issuedSignedUrls];
+}
+
+export function _allExportCalls(): Array<{
+  name: string;
+  outputUriPrefix: string;
+  collectionIds: string[];
+}> {
+  return [...exportCalls];
+}
+
+// ─── Shared state object ──────────────────────────────────────────────────────
+
 export const adminMockState = {
   _reset,
   _seedDoc,
@@ -56,6 +138,13 @@ export const adminMockState = {
   _allDocs,
   _allClaims,
   SERVER_TIMESTAMP,
+  // Phase 8 Wave 1 additions
+  _seedStorageObject,
+  _allStorageObjects,
+  _allSignedUrls,
+  _allExportCalls,
+  // Phase 8 Wave 4 additions
+  _allUpdateUserCalls,
 };
 
 // ─── Doc reference helpers ────────────────────────────────────────────────────
@@ -100,19 +189,43 @@ interface WhereClause {
   value: unknown;
 }
 
-function buildQuery(prefix: string, clauses: WhereClause[], limit: number | null): any {
+// Phase 8 Wave 2: extended buildQuery signature with orderByField + startAfterDoc
+// to support scheduledPurge's paginated startAfter loop (Pitfall B).
+function buildQuery(
+  prefix: string,
+  clauses: WhereClause[],
+  limit: number | null,
+  orderByField: string | null = null,
+  startAfterDoc: { id: string; data: () => Record<string, unknown> } | null = null,
+): any {
   return {
     where(field: string, op: string, value: unknown) {
-      return buildQuery(prefix, [...clauses, { field, op, value }], limit);
+      return buildQuery(prefix, [...clauses, { field, op, value }], limit, orderByField, startAfterDoc);
     },
     limit(n: number) {
-      return buildQuery(prefix, clauses, n);
+      return buildQuery(prefix, clauses, n, orderByField, startAfterDoc);
+    },
+    orderBy(field: string) {
+      return buildQuery(prefix, clauses, limit, field, startAfterDoc);
+    },
+    startAfter(doc: { id: string; data: () => Record<string, unknown> }) {
+      return buildQuery(prefix, clauses, limit, orderByField, doc);
     },
     async get() {
       const matches: Array<{
         id: string;
+        ref: { path: string };
         data: () => Record<string, unknown>;
       }> = [];
+
+      // Collect all matching docs first (before limit/startAfter)
+      const allMatches: Array<{
+        id: string;
+        ref: { path: string };
+        data: () => Record<string, unknown>;
+        orderVal: number;
+      }> = [];
+
       for (const [path, data] of docStore.entries()) {
         if (!path.startsWith(prefix + "/")) continue;
         const tail = path.slice(prefix.length + 1);
@@ -127,33 +240,52 @@ function buildQuery(prefix: string, clauses: WhereClause[], limit: number | null
             break;
           }
           if (clause.op === ">") {
-            if (v === undefined || v === null) {
-              ok = false;
-              break;
-            }
+            if (v === undefined || v === null) { ok = false; break; }
             const cur = v instanceof Date ? v.getTime() : Number(v);
-            const cmp =
-              clause.value instanceof Date
-                ? clause.value.getTime()
-                : Number(clause.value);
-            if (!(cur > cmp)) {
-              ok = false;
-              break;
-            }
+            const cmp = clause.value instanceof Date ? clause.value.getTime() : Number(clause.value);
+            if (!(cur > cmp)) { ok = false; break; }
+          }
+          if (clause.op === "<") {
+            if (v === undefined || v === null) { ok = false; break; }
+            const cur = v instanceof Date ? v.getTime() : Number(v);
+            const cmp = clause.value instanceof Date ? clause.value.getTime() : Number(clause.value);
+            if (!(cur < cmp)) { ok = false; break; }
           }
         }
         if (!ok) continue;
-        matches.push({
-          id: tail,
-          data: () => ({ ...data }),
-        });
+        const orderVal = orderByField
+          ? (() => {
+              const ov = readField(data, orderByField);
+              return ov instanceof Date ? ov.getTime() : Number(ov ?? 0);
+            })()
+          : 0;
+        allMatches.push({ id: tail, ref: { path }, data: () => ({ ...data }), orderVal });
+      }
+
+      // Sort by orderBy field if specified
+      if (orderByField) {
+        allMatches.sort((a, b) => a.orderVal - b.orderVal);
+      }
+
+      // Apply startAfter cursor
+      let startIdx = 0;
+      if (startAfterDoc) {
+        const cursorId = startAfterDoc.id;
+        const cursorIdx = allMatches.findIndex((m) => m.id === cursorId);
+        if (cursorIdx !== -1) startIdx = cursorIdx + 1;
+      }
+
+      const sliced = allMatches.slice(startIdx);
+      for (const m of sliced) {
+        matches.push({ id: m.id, ref: m.ref, data: m.data });
         if (limit !== null && matches.length >= limit) break;
       }
+
       return {
         empty: matches.length === 0,
         size: matches.length,
         docs: matches,
-        forEach(fn: (d: { id: string; data: () => Record<string, unknown> }) => void) {
+        forEach(fn: (d: { id: string; ref: { path: string }; data: () => Record<string, unknown> }) => void) {
           matches.forEach(fn);
         },
       };
@@ -212,7 +344,144 @@ function makeTx() {
   };
 }
 
-// ─── Public mock factory ──────────────────────────────────────────────────────
+// ─── Batch write helper (Phase 8 Wave 2 — softDelete / restoreSoftDeleted) ───
+
+function makeBatch() {
+  type Op =
+    | { kind: "set"; path: string; data: Record<string, unknown> }
+    | { kind: "update"; path: string; data: Record<string, unknown> }
+    | { kind: "delete"; path: string };
+  const ops: Op[] = [];
+  return {
+    set(ref: { path: string }, data: Record<string, unknown>) {
+      ops.push({ kind: "set", path: ref.path, data: { ...data } });
+    },
+    update(ref: { path: string }, data: Record<string, unknown>) {
+      ops.push({ kind: "update", path: ref.path, data: { ...data } });
+    },
+    delete(ref: { path: string }) {
+      ops.push({ kind: "delete", path: ref.path });
+    },
+    async commit() {
+      for (const op of ops) {
+        if (op.kind === "set") {
+          docStore.set(op.path, { ...op.data });
+        } else if (op.kind === "update") {
+          const cur = docStore.get(op.path) ?? {};
+          docStore.set(op.path, { ...cur, ...op.data });
+        } else if (op.kind === "delete") {
+          docStore.delete(op.path);
+        }
+      }
+    },
+  };
+}
+
+// ─── collectionGroup helper (Phase 8 Wave 3 / 08-04) ─────────────────────────
+// Mimics Firestore's collectionGroup(name) semantics: matches all docs whose
+// path has a segment matching `name`. For example, collectionGroup("comments")
+// matches orgs/o1/comments/c1, orgs/o2/comments/c2, funnelComments/f1 would
+// NOT match (different collection name). The implementation scans docStore for
+// all paths that contain a /<name>/ segment (or end in /<name>/<docId>).
+//
+// The returned query object supports .where() / .limit() / .orderBy() /
+// .startAfter() chains — it delegates to buildCollectionGroupQuery below.
+
+function buildCollectionGroupQuery(
+  groupName: string,
+  clauses: WhereClause[],
+  limit: number | null,
+  orderByField: string | null = null,
+  startAfterDoc: { id: string; data: () => Record<string, unknown> } | null = null,
+): any {
+  return {
+    where(field: string, op: string, value: unknown) {
+      return buildCollectionGroupQuery(groupName, [...clauses, { field, op, value }], limit, orderByField, startAfterDoc);
+    },
+    limit(n: number) {
+      return buildCollectionGroupQuery(groupName, clauses, n, orderByField, startAfterDoc);
+    },
+    orderBy(field: string) {
+      return buildCollectionGroupQuery(groupName, clauses, limit, field, startAfterDoc);
+    },
+    startAfter(doc: { id: string; data: () => Record<string, unknown> }) {
+      return buildCollectionGroupQuery(groupName, clauses, limit, orderByField, doc);
+    },
+    async get() {
+      const matches: Array<{
+        id: string;
+        ref: { path: string };
+        data: () => Record<string, unknown>;
+        orderVal: number;
+      }> = [];
+
+      for (const [path, data] of docStore.entries()) {
+        // Match: path must have a segment equal to groupName immediately before the doc id.
+        // e.g. for groupName="comments", path="orgs/o1/comments/c1" → segments[-2]==="comments"
+        const segments = path.split("/");
+        if (segments.length < 2) continue;
+        const collectionSegment = segments[segments.length - 2];
+        if (collectionSegment !== groupName) continue;
+
+        const docId = segments[segments.length - 1];
+
+        let ok = true;
+        for (const clause of clauses) {
+          const v = readField(data, clause.field);
+          if (clause.op === "==" && v !== clause.value) {
+            ok = false;
+            break;
+          }
+          if (clause.op === ">") {
+            if (v === undefined || v === null) { ok = false; break; }
+            const cur = v instanceof Date ? v.getTime() : Number(v);
+            const cmp = clause.value instanceof Date ? clause.value.getTime() : Number(clause.value);
+            if (!(cur > cmp)) { ok = false; break; }
+          }
+          if (clause.op === "<") {
+            if (v === undefined || v === null) { ok = false; break; }
+            const cur = v instanceof Date ? v.getTime() : Number(v);
+            const cmp = clause.value instanceof Date ? clause.value.getTime() : Number(clause.value);
+            if (!(cur < cmp)) { ok = false; break; }
+          }
+        }
+        if (!ok) continue;
+
+        const orderVal = orderByField
+          ? (() => {
+              const ov = readField(data, orderByField);
+              return ov instanceof Date ? ov.getTime() : Number(ov ?? 0);
+            })()
+          : 0;
+        matches.push({ id: docId, ref: { path }, data: () => ({ ...data }), orderVal });
+      }
+
+      if (orderByField) {
+        matches.sort((a, b) => a.orderVal - b.orderVal);
+      }
+
+      let startIdx = 0;
+      if (startAfterDoc) {
+        const cursorId = startAfterDoc.id;
+        const cursorIdx = matches.findIndex((m) => m.id === cursorId);
+        if (cursorIdx !== -1) startIdx = cursorIdx + 1;
+      }
+
+      const sliced = limit !== null ? matches.slice(startIdx, startIdx + limit) : matches.slice(startIdx);
+
+      return {
+        empty: sliced.length === 0,
+        size: sliced.length,
+        docs: sliced.map((m) => ({ id: m.id, ref: m.ref, data: m.data })),
+        forEach(fn: (d: { id: string; ref: { path: string }; data: () => Record<string, unknown> }) => void) {
+          sliced.forEach((m) => fn({ id: m.id, ref: m.ref, data: m.data }));
+        },
+      };
+    },
+  };
+}
+
+// ─── Phase 7 public mock factories ───────────────────────────────────────────
 
 export function getFirestoreMock() {
   return {
@@ -221,6 +490,12 @@ export function getFirestoreMock() {
     },
     collection(prefix: string) {
       return buildQuery(prefix, [], null);
+    },
+    collectionGroup(name: string) {
+      return buildCollectionGroupQuery(name, [], null);
+    },
+    batch() {
+      return makeBatch();
     },
     async runTransaction<T>(fn: (tx: ReturnType<typeof makeTx>) => Promise<T>): Promise<T> {
       const tx = makeTx();
@@ -231,6 +506,10 @@ export function getFirestoreMock() {
   };
 }
 
+export function _allUpdateUserCalls(): UpdateUserCall[] {
+  return [...updateUserCalls];
+}
+
 export function getAuthMock() {
   return {
     async setCustomUserClaims(
@@ -239,9 +518,96 @@ export function getAuthMock() {
     ): Promise<void> {
       customClaims.set(uid, { ...claims });
     },
+    // Phase 8 Wave 4: track updateUser({disabled:true}) calls from gdprEraseUser
+    async updateUser(
+      uid: string,
+      properties: Record<string, unknown>,
+    ): Promise<void> {
+      updateUserCalls.push({ uid, properties });
+    },
   };
 }
 
 export const FieldValueMock = {
   serverTimestamp: () => SERVER_TIMESTAMP,
 };
+
+// ─── Phase 8 Wave 1 public mock factories ─────────────────────────────────────
+
+export function getStorageMock() {
+  return {
+    bucket(bucketName: string) {
+      return {
+        file(filePath: string) {
+          const key = `${bucketName}/${filePath}`;
+          return {
+            async save(
+              data: string | Buffer,
+              opts: { contentType?: string } = {},
+            ): Promise<void> {
+              storageObjects.set(key, {
+                body: data,
+                contentType: opts.contentType ?? "application/octet-stream",
+                savedAt: Date.now(),
+              });
+            },
+            async getSignedUrl(opts: {
+              version?: string;
+              action?: string;
+              expires: number;
+            }): Promise<[string]> {
+              issuedSignedUrls.push({
+                bucket: bucketName,
+                path: filePath,
+                expires: opts.expires,
+                action: opts.action ?? "read",
+              });
+              return [
+                `https://signed.example/${bucketName}/${encodeURIComponent(filePath)}?expires=${opts.expires}`,
+              ];
+            },
+            async delete(): Promise<void> {
+              storageObjects.delete(key);
+            },
+            async exists(): Promise<[boolean]> {
+              return [storageObjects.has(key)];
+            },
+          };
+        },
+        async getFiles(
+          opts: { prefix?: string } = {},
+        ): Promise<[Array<{ name: string; delete(): Promise<void> }>]> {
+          const matches = [...storageObjects.entries()]
+            .filter(([k]) => k.startsWith(`${bucketName}/${opts.prefix ?? ""}`))
+            .map(([k]) => ({
+              name: k.slice(bucketName.length + 1),
+              async delete(): Promise<void> {
+                storageObjects.delete(k);
+              },
+            }));
+          return [matches];
+        },
+      };
+    },
+  };
+}
+
+export function getFirestoreAdminClientMock() {
+  return {
+    databasePath(projectId: string, db: string): string {
+      return `projects/${projectId}/databases/${db}`;
+    },
+    async exportDocuments(req: {
+      name: string;
+      outputUriPrefix: string;
+      collectionIds?: string[];
+    }): Promise<[{ name: string }]> {
+      exportCalls.push({
+        name: req.name,
+        outputUriPrefix: req.outputUriPrefix,
+        collectionIds: req.collectionIds ?? [],
+      });
+      return [{ name: `operations/export-${Date.now()}` }];
+    },
+  };
+}

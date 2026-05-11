@@ -38,24 +38,33 @@ export function makeFirestoreMock(opts = {}) {
     const collName = ref.__coll;
     /** @type {Array<any>} */
     const constraints = ref.__constraints || [];
-    return Object.entries(seed)
-      .filter(([k]) => k.startsWith(collName + "/"))
-      // Restrict to direct children of collName: the remainder after the
-      // collection prefix must not contain a '/' (otherwise a 2-segment
-      // collection like 'orgs' would match deeper subcollection seed keys
-      // such as 'orgs/o1/comments/c1' as if c1 were an org).
-      .filter(([k]) => !k.slice(collName.length + 1).includes("/"))
-      .map(([k, data]) => ({ id: k.slice(collName.length + 1), data: () => data }))
-      .filter((d) => constraints.every((c) => {
-        if (c && c.__where) {
-          const [field, op, value] = c.__where;
-          const v = d.data()[field];
-          if (op === "==") return v === value;
-          if (op === "!=") return v !== value;
-          if (op === "in") return Array.isArray(value) && value.includes(v);
-        }
-        return true;
-      }));
+    return (
+      Object.entries(seed)
+        .filter(([k]) => k.startsWith(collName + "/"))
+        // Restrict to direct children of collName: the remainder after the
+        // collection prefix must not contain a '/' (otherwise a 2-segment
+        // collection like 'orgs' would match deeper subcollection seed keys
+        // such as 'orgs/o1/comments/c1' as if c1 were an org).
+        .filter(([k]) => !k.slice(collName.length + 1).includes("/"))
+        .map(([k, data]) => ({ id: k.slice(collName.length + 1), data: () => data }))
+        .filter((d) =>
+          constraints.every((c) => {
+            if (c && c.__where) {
+              const [field, op, value] = c.__where;
+              const v = d.data()[field];
+              if (op === "==") {
+                // Firestore treats missing field and explicit null as equivalent
+                // for == null queries (Phase 8 Wave 2: deletedAt conjunct support).
+                if (value === null) return v === null || v === undefined;
+                return v === value;
+              }
+              if (op === "!=") return v !== value;
+              if (op === "in") return Array.isArray(value) && value.includes(v);
+            }
+            return true;
+          }),
+        )
+    );
   }
 
   return {
@@ -75,76 +84,119 @@ export function makeFirestoreMock(opts = {}) {
     // matching firebase/firestore's overloaded `doc(db, path)` API. The
     // path is split on '/' and must have an even number of segments
     // (alternating collection/id).
-    doc: vi.fn(/** @param {any} _db @param {...string} args */ (_db, ...args) => {
-      // Single-string-path form: split into alternating segments.
-      if (args.length === 1 && typeof args[0] === "string" && args[0].includes("/")) {
-        const segments = args[0].split("/");
-        if (segments.length < 2 || segments.length % 2 !== 0) {
-          throw new Error(`doc(path): path must have even segment count; got "${args[0]}"`);
+    doc: vi.fn(
+      /** @param {any} _db @param {...string} args */ (_db, ...args) => {
+        // Single-string-path form: split into alternating segments.
+        if (args.length === 1 && typeof args[0] === "string" && args[0].includes("/")) {
+          const segments = args[0].split("/");
+          if (segments.length < 2 || segments.length % 2 !== 0) {
+            throw new Error(`doc(path): path must have even segment count; got "${args[0]}"`);
+          }
+          const id = segments[segments.length - 1];
+          const collPath = segments.slice(0, -1).join("/");
+          return { __path: `${collPath}/${id}`, __coll: collPath, __id: id };
         }
-        const id = segments[segments.length - 1];
-        const collPath = segments.slice(0, -1).join("/");
-        return { __path: `${collPath}/${id}`, __coll: collPath, __id: id };
-      }
-      if (args.length < 2 || args.length % 2 !== 0) {
-        throw new Error(`doc() requires alternating collection/id pairs; got ${args.length} args`);
-      }
-      const id = args[args.length - 1];
-      const collPath = args.slice(0, -1).join("/");
-      const path = `${collPath}/${id}`;
-      return { __path: path, __coll: collPath, __id: id };
-    }),
+        if (args.length < 2 || args.length % 2 !== 0) {
+          throw new Error(
+            `doc() requires alternating collection/id pairs; got ${args.length} args`,
+          );
+        }
+        const id = args[args.length - 1];
+        const collPath = args.slice(0, -1).join("/");
+        const path = `${collPath}/${id}`;
+        return { __path: path, __coll: collPath, __id: id };
+      },
+    ),
     // Variadic collection handler (Phase 5 Wave 3 / 05-03): supports both
     //   collection(db, 'orgs')                           -> 1-segment
     //   collection(db, 'orgs', orgId, 'comments')        -> 3-segment (subcollection)
     // Path segments after `db` are joined with '/' to form __coll, which
     // rowsForRef matches against seed keys via startsWith(__coll + '/').
-    collection: vi.fn(/** @param {any} _db @param {...string} args */ (_db, ...args) => {
-      const collPath = args.join("/");
-      return { __coll: collPath };
-    }),
-    addDoc: vi.fn(/** @param {any} ref @param {any} data */ async (ref, data) => {
-      const id = "auto_" + Object.keys(seed).length;
-      seed[ref.__coll + "/" + id] = { ...data, id };
-      return { id, __path: ref.__coll + "/" + id };
-    }),
-    getDoc: vi.fn(/** @param {any} ref */ async (ref) => {
-      if (opts.failGetDoc) throw new Error("mock-getDoc-fail");
-      const data = seed[ref.__path];
-      return { exists: () => data !== undefined, data: () => data, id: ref.__id };
-    }),
-    getDocs: vi.fn(/** @param {any} ref */ async (ref) => {
-      if (opts.failGetDoc) throw new Error("mock-getDoc-fail");
-      const docs = rowsForRef(ref);
-      return { forEach: (/** @type {(d: any) => void} */ fn) => docs.forEach(fn), size: docs.length };
-    }),
-    setDoc: vi.fn(/** @param {any} ref @param {any} data */ async (ref, data) => {
-      if (opts.failSetDoc) throw new Error("mock-setDoc-fail");
-      seed[ref.__path] = data;
-    }),
-    updateDoc: vi.fn(/** @param {any} ref @param {any} patch */ async (ref, patch) => {
-      if (opts.failUpdateDoc) throw new Error("mock-updateDoc-fail");
-      seed[ref.__path] = { ...(seed[ref.__path] || {}), ...patch };
-    }),
-    deleteDoc: vi.fn(/** @param {any} ref */ async (ref) => {
-      delete seed[ref.__path];
-    }),
-    onSnapshot: vi.fn(/** @param {any} ref @param {(snap: any) => void} onChange @param {(err: Error) => void} [_onError] */ (ref, onChange, _onError) => {
-      // Doc ref (ref.__path) → doc snapshot; collection/query ref (ref.__coll
-      // without __path) → collection snapshot.
-      if (ref && ref.__path) {
+    collection: vi.fn(
+      /** @param {any} _db @param {...string} args */ (_db, ...args) => {
+        const collPath = args.join("/");
+        return { __coll: collPath };
+      },
+    ),
+    addDoc: vi.fn(
+      /** @param {any} ref @param {any} data */ async (ref, data) => {
+        const id = "auto_" + Object.keys(seed).length;
+        seed[ref.__coll + "/" + id] = { ...data, id };
+        return { id, __path: ref.__coll + "/" + id };
+      },
+    ),
+    getDoc: vi.fn(
+      /** @param {any} ref */ async (ref) => {
+        if (opts.failGetDoc) throw new Error("mock-getDoc-fail");
         const data = seed[ref.__path];
-        onChange({ exists: () => data !== undefined, data: () => data, id: ref.__id });
-      } else if (ref && ref.__coll) {
+        return { exists: () => data !== undefined, data: () => data, id: ref.__id };
+      },
+    ),
+    getDocs: vi.fn(
+      /** @param {any} ref */ async (ref) => {
+        if (opts.failGetDoc) throw new Error("mock-getDoc-fail");
         const docs = rowsForRef(ref);
-        onChange({ forEach: (/** @type {(d: any) => void} */ fn) => docs.forEach(fn), size: docs.length });
-      }
-      return () => {}; // unsubscribe
-    }),
+        return {
+          forEach: (/** @type {(d: any) => void} */ fn) => docs.forEach(fn),
+          size: docs.length,
+        };
+      },
+    ),
+    setDoc: vi.fn(
+      /** @param {any} ref @param {any} data */ async (ref, data) => {
+        if (opts.failSetDoc) throw new Error("mock-setDoc-fail");
+        seed[ref.__path] = data;
+      },
+    ),
+    updateDoc: vi.fn(
+      /** @param {any} ref @param {any} patch */ async (ref, patch) => {
+        if (opts.failUpdateDoc) throw new Error("mock-updateDoc-fail");
+        seed[ref.__path] = { ...(seed[ref.__path] || {}), ...patch };
+      },
+    ),
+    deleteDoc: vi.fn(
+      /** @param {any} ref */ async (ref) => {
+        delete seed[ref.__path];
+      },
+    ),
+    onSnapshot: vi.fn(
+      /** @param {any} ref @param {(snap: any) => void} onChange @param {(err: Error) => void} [_onError] */ (
+        ref,
+        onChange,
+        _onError,
+      ) => {
+        // Doc ref (ref.__path) → doc snapshot; collection/query ref (ref.__coll
+        // without __path) → collection snapshot.
+        if (ref && ref.__path) {
+          const data = seed[ref.__path];
+          onChange({ exists: () => data !== undefined, data: () => data, id: ref.__id });
+        } else if (ref && ref.__coll) {
+          const docs = rowsForRef(ref);
+          onChange({
+            forEach: (/** @type {(d: any) => void} */ fn) => docs.forEach(fn),
+            size: docs.length,
+          });
+        }
+        return () => {}; // unsubscribe
+      },
+    ),
     serverTimestamp: vi.fn(() => ({ __serverTimestamp: true })),
-    query: vi.fn(/** @param {any} coll @param {...any} constraints */ (coll, ...constraints) => ({ __coll: coll.__coll, __constraints: constraints })),
-    where: vi.fn(/** @param {string} field @param {string} op @param {any} value */ (field, op, value) => ({ __where: [field, op, value] })),
-    orderBy: vi.fn(/** @param {string} field @param {string} dir */ (field, dir) => ({ __orderBy: [field, dir] })),
+    query: vi.fn(
+      /** @param {any} coll @param {...any} constraints */ (coll, ...constraints) => ({
+        __coll: coll.__coll,
+        __constraints: constraints,
+      }),
+    ),
+    where: vi.fn(
+      /** @param {string} field @param {string} op @param {any} value */ (field, op, value) => ({
+        __where: [field, op, value],
+      }),
+    ),
+    orderBy: vi.fn(
+      /** @param {string} field @param {string} dir */ (field, dir) => ({
+        __orderBy: [field, dir],
+      }),
+    ),
     limit: vi.fn(/** @param {number} n */ (n) => ({ __limit: n })),
     // Phase 7 Wave 4 (FN-09 / 07-04): runTransaction shim for src/data/rate-limit.js.
     // Provides a tx with get/set/update/delete that shares the same `seed` map.
@@ -152,34 +204,49 @@ export function makeFirestoreMock(opts = {}) {
     // shim only; tests verify the helper's increment/write composition logic,
     // not contention semantics. Conflict semantics are exercised in
     // tests/rules/rate-limit.test.js against the real emulator.
-    runTransaction: vi.fn(/** @param {any} _db @param {(tx: any) => Promise<any>} updater */ async (_db, updater) => {
-      const tx = {
-        get: vi.fn(/** @param {any} ref */ async (ref) => {
-          if (opts.failGetDoc) throw new Error("mock-getDoc-fail");
-          const data = seed[ref.__path];
-          return {
-            exists: () => data !== undefined,
-            data: () => data,
-            id: ref.__id,
-          };
-        }),
-        set: vi.fn(/** @param {any} ref @param {any} data */ (ref, data) => {
-          seed[ref.__path] = data;
-        }),
-        update: vi.fn(/** @param {any} ref @param {any} patch */ (ref, patch) => {
-          seed[ref.__path] = { ...(seed[ref.__path] || {}), ...patch };
-        }),
-        delete: vi.fn(/** @param {any} ref */ (ref) => {
-          delete seed[ref.__path];
-        }),
-      };
-      return updater(tx);
-    }),
+    runTransaction: vi.fn(
+      /** @param {any} _db @param {(tx: any) => Promise<any>} updater */ async (_db, updater) => {
+        const tx = {
+          get: vi.fn(
+            /** @param {any} ref */ async (ref) => {
+              if (opts.failGetDoc) throw new Error("mock-getDoc-fail");
+              const data = seed[ref.__path];
+              return {
+                exists: () => data !== undefined,
+                data: () => data,
+                id: ref.__id,
+              };
+            },
+          ),
+          set: vi.fn(
+            /** @param {any} ref @param {any} data */ (ref, data) => {
+              seed[ref.__path] = data;
+            },
+          ),
+          update: vi.fn(
+            /** @param {any} ref @param {any} patch */ (ref, patch) => {
+              seed[ref.__path] = { ...(seed[ref.__path] || {}), ...patch };
+            },
+          ),
+          delete: vi.fn(
+            /** @param {any} ref */ (ref) => {
+              delete seed[ref.__path];
+            },
+          ),
+        };
+        return updater(tx);
+      },
+    ),
     // src/firebase/db.js subscribeDoc wrapper (matches the adapter's signature)
-    subscribeDoc: vi.fn(/** @param {any} ref @param {{ onChange: (snap:any) => void, onError: (err:Error) => void }} cb */ (ref, cb) => {
-      const data = seed[ref.__path];
-      cb.onChange({ exists: () => data !== undefined, data: () => data, id: ref.__id });
-      return () => {};
-    }),
+    subscribeDoc: vi.fn(
+      /** @param {any} ref @param {{ onChange: (snap:any) => void, onError: (err:Error) => void }} cb */ (
+        ref,
+        cb,
+      ) => {
+        const data = seed[ref.__path];
+        cb.onChange({ exists: () => data !== undefined, data: () => data, id: ref.__id });
+        return () => {};
+      },
+    ),
   };
 }

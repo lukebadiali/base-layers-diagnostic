@@ -1,30 +1,81 @@
 // tests/observability/audit-events.test.js
-// @ts-check
-// Phase 4 Wave 3 (D-11) smoke test for the AUDIT_EVENTS constants table.
-// Phase 7 (AUDIT-02) populates the table with the canonical event-name set;
-// Phase 9 (AUDIT-05) wires emitAuditEvent calls in views/*.
+// @ts-nocheck
+// Phase 9 Wave 1 (AUDIT-05): tests for the body-filled emitAuditEvent proxy
+// at src/observability/audit-events.js. Mocks ../cloud/audit.js so the proxy
+// behaviour is observable without a Firestore round-trip. Replaces the
+// Phase 4 D-11 stub smoke tests.
 //
-// The table is FROZEN today so any accidental write fails silently in non-
-// strict mode and throws in strict mode (which @ts-check enforces). The
-// freeze test pins the contract.
-import { describe, it, expect } from "vitest";
+// @ts-nocheck applied for vi.mock factory pattern (matches tests/main.test.js).
+
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+const writeAuditEventSpy = vi.fn();
+
+vi.mock("../../src/cloud/audit.js", () => ({
+  writeAuditEvent: (...args) => writeAuditEventSpy(...args),
+}));
+
 import { AUDIT_EVENTS, emitAuditEvent } from "../../src/observability/audit-events.js";
 
-describe("observability/audit-events.js (Phase 4 D-11 stub)", () => {
-  it("AUDIT_EVENTS is exported as an object", () => {
-    expect(typeof AUDIT_EVENTS).toBe("object");
-    expect(AUDIT_EVENTS).not.toBeNull();
+beforeEach(() => {
+  writeAuditEventSpy.mockReset();
+});
+
+describe("AUDIT_EVENTS table — canonical constants", () => {
+  it("Test 3a: AUTH_SIGNIN_SUCCESS maps to 'auth.signin.success'", () => {
+    expect(AUDIT_EVENTS.AUTH_SIGNIN_SUCCESS).toBe("auth.signin.success");
   });
 
-  it("AUDIT_EVENTS is a frozen object", () => {
+  it("Test 3b: AUDIT_EVENTS is frozen (cannot be reassigned)", () => {
     expect(Object.isFrozen(AUDIT_EVENTS)).toBe(true);
   });
 
-  it("emitAuditEvent is a function", () => {
-    expect(typeof emitAuditEvent).toBe("function");
+  it("contains canonical AUTH_* / IAM_* / COMPLIANCE_* / DATA_* constants", () => {
+    expect(AUDIT_EVENTS.AUTH_SIGNIN_FAILURE).toBe("auth.signin.failure");
+    expect(AUDIT_EVENTS.AUTH_SIGNOUT).toBe("auth.signout");
+    expect(AUDIT_EVENTS.AUTH_MFA_ENROL).toBe("auth.mfa.enrol");
+    expect(AUDIT_EVENTS.IAM_CLAIMS_SET_REQUESTED).toBe("iam.claims.set.requested");
+    expect(AUDIT_EVENTS.COMPLIANCE_EXPORT_USER_REQUESTED).toBe("compliance.export.user.requested");
+    expect(AUDIT_EVENTS.COMPLIANCE_ERASE_USER_REQUESTED).toBe("compliance.erase.user.requested");
+    expect(AUDIT_EVENTS.DATA_ACTION_SOFTDELETE_REQUESTED).toBe("data.action.softDelete.requested");
+    expect(AUDIT_EVENTS.DATA_DOCUMENT_PERMANENTLY_DELETE_REQUESTED).toBe(
+      "data.document.permanentlyDelete.requested",
+    );
+  });
+});
+
+describe("emitAuditEvent — proxy to writeAuditEvent", () => {
+  it("Test 1: forwards type/target/payload and returns the result", async () => {
+    writeAuditEventSpy.mockResolvedValueOnce({ ok: true, eventId: "evt-1" });
+    const target = { type: "user", id: "u1", orgId: null };
+    const result = await emitAuditEvent("auth.signin.success", target, {});
+    expect(writeAuditEventSpy).toHaveBeenCalledTimes(1);
+    expect(writeAuditEventSpy).toHaveBeenCalledWith({
+      type: "auth.signin.success",
+      target,
+      payload: {},
+    });
+    expect(result).toEqual({ ok: true, eventId: "evt-1" });
   });
 
-  it("emitAuditEvent does not throw (no-op)", () => {
-    expect(() => emitAuditEvent("test.event", { x: 1 })).not.toThrow();
+  it("Test 2: best-effort — returns null and does not rethrow on failure", async () => {
+    writeAuditEventSpy.mockRejectedValueOnce(new Error("network down"));
+    const target = { type: "user", id: "u2", orgId: null };
+    const result = await emitAuditEvent("auth.signin.failure", target, {});
+    expect(result).toBeNull();
+    expect(writeAuditEventSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("payload is optional — undefined payload still proxies cleanly", async () => {
+    writeAuditEventSpy.mockResolvedValueOnce({ ok: true, eventId: "evt-3" });
+    const target = { type: "user", id: "u3", orgId: null };
+    const result = await emitAuditEvent("auth.signout", target);
+    expect(writeAuditEventSpy).toHaveBeenCalledTimes(1);
+    expect(writeAuditEventSpy).toHaveBeenCalledWith({
+      type: "auth.signout",
+      target,
+      payload: undefined,
+    });
+    expect(result).toEqual({ ok: true, eventId: "evt-3" });
   });
 });

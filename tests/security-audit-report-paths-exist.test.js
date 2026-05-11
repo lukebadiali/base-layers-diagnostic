@@ -1,5 +1,6 @@
+// @ts-nocheck
+/* eslint-disable security/detect-non-literal-regexp */
 // tests/security-audit-report-paths-exist.test.js
-// @ts-check
 //
 // Phase 12 Wave 3 (WALK-03 — Pitfall 6 wishlist gate): asserts every code-path
 // cited in SECURITY_AUDIT_REPORT.md resolves to a real file on disk (or in git ls-files

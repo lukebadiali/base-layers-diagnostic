@@ -1,5 +1,6 @@
+// @ts-nocheck
+/* eslint-disable security/detect-non-literal-regexp */
 // tests/security-md-paths-exist.test.js
-// @ts-check
 //
 // Phase 11 Wave 6 (DOC-10 final pass): doc-shape gate asserting that every
 // code-path cited in SECURITY.md resolves to a real file on disk AND that

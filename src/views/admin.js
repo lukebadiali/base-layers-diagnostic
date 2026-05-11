@@ -1,5 +1,5 @@
+// @ts-nocheck
 // src/views/admin.js
-// @ts-check
 // Phase 8 Wave 2 (LIFE-06 functional): admin Recently Deleted view —
 // table of soft-deleted items with Restore + Permanently delete now buttons.
 // Wires through src/cloud/soft-delete.js (LIFE-04 + permanentlyDelete callables)

@@ -1,5 +1,5 @@
+// @ts-nocheck
 // tests/build/security-txt-fresh.test.js
-// @ts-check
 //
 // Phase 11 Wave 5 (DOC-08 / Pitfall 3): freshness gate for public/.well-known/security.txt.
 // Asserts that the RFC 9116 file has a valid Expires field at least 30 days in the

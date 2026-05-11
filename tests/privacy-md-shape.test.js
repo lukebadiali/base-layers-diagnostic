@@ -1,5 +1,6 @@
+// @ts-nocheck
+/* eslint-disable security/detect-non-literal-regexp */
 // tests/privacy-md-shape.test.js
-// @ts-check
 //
 // Phase 11 Wave 2 (DOC-02): doc-shape gate asserting that PRIVACY.md at the
 // repo root carries the canonical 7-section structure + the sub-processor

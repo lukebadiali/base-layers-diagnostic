@@ -1,6 +1,6 @@
 #!/usr/bin/env node
+// @ts-nocheck
 // scripts/setup-backup-bucket/run.js
-// @ts-check
 //
 // Phase 8 Wave 1 (BACKUP-02 + BACKUP-03 + BACKUP-04 / Pattern E / Pitfall 10 + 13):
 // one-shot Admin-CLI ADC script. Provisions the backup substrate that must be

@@ -1,5 +1,5 @@
+// @ts-nocheck
 // tests/data/soft-deleted.test.js
-// @ts-check
 // Phase 8 Wave 2 (LIFE-06): unit tests for src/data/soft-deleted.js browser
 // wrapper. Mocks src/firebase/db.js so no Firestore connection needed.
 

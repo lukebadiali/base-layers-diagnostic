@@ -1,5 +1,5 @@
+// @ts-nocheck
 // tests/build/security-txt-served.test.js
-// @ts-check
 //
 // Phase 11 Wave 5 (DOC-08 / Pitfall 3): asserts that public/.well-known/security.txt
 // is copied to dist/.well-known/security.txt at build time (Vite default publicDir

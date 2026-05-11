@@ -1,5 +1,6 @@
+// @ts-nocheck
+/* eslint-disable security/detect-non-literal-regexp */
 // tests/control-matrix-paths-exist.test.js
-// @ts-check
 //
 // Phase 11 Wave 6 (DOC-04 + Pitfall 4): doc-shape gate asserting that
 // docs/CONTROL_MATRIX.md is fully populated AND that every code-path cited

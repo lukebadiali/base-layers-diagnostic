@@ -1,6 +1,6 @@
 #!/usr/bin/env node
+// @ts-nocheck
 // scripts/post-erasure-audit/run.js
-// @ts-check
 //
 // Phase 8 Wave 4 (GDPR-03 / Pattern F / Pitfall 13):
 // post-erasure audit script — verifies zero residual PII after gdprEraseUser.

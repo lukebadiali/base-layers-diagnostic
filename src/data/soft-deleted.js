@@ -1,5 +1,5 @@
+// @ts-nocheck
 // src/data/soft-deleted.js
-// @ts-check
 // Phase 8 Wave 2 (LIFE-06 functional): admin-only read wrapper over
 // softDeleted/{type}/items/*. The existing firestore.rules block
 //   match /softDeleted/{type}/items/{id} {

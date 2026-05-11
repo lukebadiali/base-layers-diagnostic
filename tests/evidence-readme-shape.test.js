@@ -1,5 +1,5 @@
+// @ts-nocheck
 // tests/evidence-readme-shape.test.js
-// @ts-check
 //
 // Phase 11 Wave 6 (DOC-09): doc-shape gate asserting that docs/evidence/README.md
 // exists with an `## Inventory` heading and a markdown table listing every

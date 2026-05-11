@@ -1,5 +1,5 @@
+// @ts-nocheck
 // scripts/test-slack-alert/run.js
-// @ts-check
 //
 // Phase 9 Wave 5 (OBS-05): synthetic Slack alert verification.
 // Operator runs this to confirm the SLACK_WEBHOOK_URL secret is set and

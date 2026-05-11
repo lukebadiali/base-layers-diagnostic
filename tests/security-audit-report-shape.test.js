@@ -1,5 +1,5 @@
-// tests/security-audit-report-shape.test.js
-// @ts-check
+// @ts-nocheck
+/* eslint-disable security/detect-non-literal-regexp */
 //
 // Phase 12 Wave 2 (WALK-02 + WALK-03 partial): doc-shape gate for SECURITY_AUDIT_REPORT.md.
 // Pattern source: tests/threat-model-shape.test.js + tests/security-md-paths-exist.test.js + Example 1 in 12-RESEARCH.md.

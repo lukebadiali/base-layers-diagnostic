@@ -3200,7 +3200,7 @@ import {
         await task;
         // Phase 8 Wave 2 (BACKUP-05 sweep): getDownloadURL removed — clients
         // fetch signed URLs on demand via getDocumentSignedUrl callable.
-        await firestore.setDoc(firestore.doc(db, "documents", docId), {
+        await firestore.setDoc(firestore.doc(db, "orgs", org.id, "documents", docId), {
           orgId: org.id,
           uploaderId: user.id,
           uploaderName: user.name || user.email,
@@ -3247,10 +3247,7 @@ import {
     listCard.appendChild(listBody);
     frag.appendChild(listCard);
 
-    const q = firestore.query(
-      firestore.collection(db, "documents"),
-      firestore.where("orgId", "==", org.id),
-    );
+    const q = firestore.collection(db, "orgs", org.id, "documents");
     firestore.onSnapshot(
       q,
       (snap) => {
@@ -3326,7 +3323,9 @@ import {
                             } catch (e) {
                               /* file may already be gone */
                             }
-                            await firestore.deleteDoc(firestore.doc(db, "documents", d.id));
+                            await firestore.deleteDoc(
+                              firestore.doc(db, "orgs", org.id, "documents", d.id),
+                            );
                           },
                           "Delete",
                         ),

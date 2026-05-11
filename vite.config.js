@@ -52,7 +52,11 @@ export default defineConfig(({ command, mode }) => {
     ].filter(Boolean),
     build: {
       target: "es2020",
-      sourcemap: true,
+      // Sourcemap generation is conditional on Sentry upload pipeline (Pitfall 6 + OBS-04):
+      // when SENTRY_AUTH_TOKEN is present at build time the @sentry/vite-plugin uploads
+      // them then deletes via filesToDeleteAfterUpload; when absent (PR previews without
+      // the secret, local dev) skip generation entirely so the CI .map gate never trips.
+      sourcemap: env.SENTRY_AUTH_TOKEN && command === "build" ? true : false,
       rollupOptions: {
         input: { main: "index.html" },
         output: {

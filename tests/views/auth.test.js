@@ -14,6 +14,7 @@ import {
   renderMfaEnrol,
   renderEmailVerificationLanding,
   renderForgotMfa,
+  renderForgotPassword,
 } from "../../src/views/auth.js";
 
 describe("src/views/auth.js — Phase 4 Wave 4 contract (carry-forward)", () => {
@@ -86,6 +87,13 @@ describe("renderMfaEnrol (Phase 6 D-16)", () => {
     const el = view.renderMfaEnrol();
     expect(el.querySelector("button.auth-sign-out-link")).toBeTruthy();
   });
+  it("uses the login-page hero+form layout", () => {
+    const view = createAuthView({});
+    const el = view.renderMfaEnrol();
+    expect(el.classList.contains("auth-wrap")).toBe(true);
+    expect(el.querySelector(".auth-hero")).toBeTruthy();
+    expect(el.querySelector(".auth-form")).toBeTruthy();
+  });
   it("matches the mfa-enrol snapshot", async () => {
     const view = createAuthView({});
     const el = view.renderMfaEnrol();
@@ -147,6 +155,35 @@ describe("renderForgotMfa (Phase 6 BLOCKER-FIX D-07 Tier-1 user-side recovery)",
     document.body.appendChild(el);
     await expect(document.body.innerHTML).toMatchFileSnapshot(
       "../__snapshots__/views/auth-forgot-mfa.html",
+    );
+  });
+});
+
+describe("renderForgotPassword (login-page chrome for password reset)", () => {
+  it("exports renderForgotPassword as a function", () => {
+    expect(typeof renderForgotPassword).toBe("function");
+  });
+  it("uses the login-page hero+form layout", () => {
+    const view = createAuthView({});
+    const el = view.renderForgotPassword();
+    expect(el.classList.contains("auth-wrap")).toBe(true);
+    expect(el.querySelector(".auth-hero")).toBeTruthy();
+    expect(el.querySelector(".auth-form")).toBeTruthy();
+  });
+  it("renders email input + reset-link submit + back-to-sign-in", () => {
+    const view = createAuthView({});
+    const el = view.renderForgotPassword();
+    expect(el.querySelector('input[type="email"][name="email"]')).toBeTruthy();
+    expect(el.querySelector("button.send-password-reset-link")).toBeTruthy();
+    expect(el.querySelector("button.auth-back-to-signin")).toBeTruthy();
+  });
+  it("matches the forgot-password snapshot", async () => {
+    const view = createAuthView({});
+    const el = view.renderForgotPassword();
+    document.body.innerHTML = "";
+    document.body.appendChild(el);
+    await expect(document.body.innerHTML).toMatchFileSnapshot(
+      "../__snapshots__/views/auth-forgot-password.html",
     );
   });
 });

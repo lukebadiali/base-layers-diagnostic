@@ -788,6 +788,17 @@ import {
     ensureChatSubscription(user);
     document.body.classList.toggle("client-view", !!(user && user.role === "client"));
     if (!user) {
+      // Pre-auth routes: forgot-password (and forgot-mfa) need to be reachable
+      // without an active Firebase session, so check them before falling
+      // through to the legacy renderAuth login screen.
+      if (state.route === "forgot-password") {
+        app.appendChild(authView.renderForgotPassword());
+        return;
+      }
+      if (state.route === "forgot-mfa") {
+        app.appendChild(authView.renderForgotMfa());
+        return;
+      }
       app.appendChild(renderAuth());
       return;
     }
@@ -940,6 +951,8 @@ import {
     sendPasswordResetEmail: fbSendPasswordResetEmail,
     routeToForgotMfa: () => setRoute("forgot-mfa"),
     routeToMfaEnrol: () => setRoute("mfa-enrol"),
+    routeToForgotPassword: () => setRoute("forgot-password"),
+    routeToSignIn: () => setRoute("dashboard"),
     // Live getters so the view sees fresh Firebase state on each access.
     get currentUser() {
       return fbAuthInstance.currentUser;

@@ -31,6 +31,8 @@ import { h as defaultH } from "../ui/dom.js";
  *   isMfaRecoveryFlow?: boolean,
  *   routeToForgotMfa?: () => void,
  *   routeToMfaEnrol?: () => void,
+ *   routeToForgotPassword?: () => void,
+ *   routeToSignIn?: () => void,
  * }} AuthDeps
  */
 
@@ -41,6 +43,33 @@ import { h as defaultH } from "../ui/dom.js";
 export function createAuthView(deps) {
   const h = deps.h || defaultH;
   const notify = deps.notify || ((/** @type {string} */ _l, /** @type {string} */ _m) => {});
+
+  // Phase 6 hero side - identical copy to main.js's legacy renderAuth so the
+  // 2FA enrol and password-reset screens share the login layout. Kept private
+  // here rather than exported so views/* still owns its own DOM.
+  function buildHero() {
+    return h("div", { class: "auth-hero" }, [
+      h("img", { class: "hero-logo", src: "assets/logo.png", alt: "BeDeveloped" }),
+      h("div", {}, [
+        h(
+          "h1",
+          {},
+          "Build effective early-stage sales processes that strengthen and improve your business development function.",
+        ),
+        h(
+          "p",
+          { class: "lede" },
+          "The ten-pillar operating model BeDeveloped uses to diagnose, design and develop early-stage sales functions into repeatable revenue engines.",
+        ),
+        h("hr", { class: "hero-accent" }),
+      ]),
+      h(
+        "div",
+        { class: "quote" },
+        '"Early-stage sales is a function, not a personality. Process beats heroics, and repeatability beats charisma."',
+      ),
+    ]);
+  }
 
   function renderSignIn() {
     const wrap = h("div", { class: "auth-sign-in" });
@@ -85,17 +114,8 @@ export function createAuthView(deps) {
 
     const reset = h("button", { type: "button", class: "auth-reset-link" }, "Forgot password?");
     const forgotMfa = h("button", { type: "button", class: "auth-forgot-mfa-link" }, "Forgot 2FA?");
-    reset.addEventListener("click", async () => {
-      const emailVal = /** @type {HTMLInputElement} */ (email).value;
-      try {
-        if (deps.sendPasswordResetEmail && emailVal) await deps.sendPasswordResetEmail(emailVal);
-      } catch (_err) {
-        /* swallow - D-15 generic-success */
-      }
-      notify(
-        "info",
-        "If that account exists, you will receive a reset email shortly. Please check your inbox.",
-      );
+    reset.addEventListener("click", () => {
+      if (deps.routeToForgotPassword) deps.routeToForgotPassword();
     });
     forgotMfa.addEventListener("click", () => {
       if (deps.routeToForgotMfa) deps.routeToForgotMfa();
@@ -172,19 +192,27 @@ export function createAuthView(deps) {
   }
 
   function renderMfaEnrol() {
+    // Login-page chrome: hero on the left, form on the right (same .auth-wrap
+    // 2-column grid as the legacy login). The MFA enrolment ceremony lives in
+    // the form column.
     const wrap = h("div", { class: "auth-wrap auth-mfa-enrol" });
-    wrap.appendChild(h("h2", {}, "Enrol two-factor authentication"));
-    wrap.appendChild(
+    wrap.appendChild(buildHero());
+
+    const formSide = h("div", { class: "auth-form" });
+    formSide.appendChild(h("h2", { class: "auth-heading" }, "Enrol two-factor authentication"));
+    formSide.appendChild(
       h(
         "p",
-        {},
-        "Scan the QR code with your authenticator app (Google Authenticator, 1Password, Authy).",
+        { class: "auth-sub" },
+        "Scan the QR code with your authenticator app (Google Authenticator, 1Password, Authy), then enter the 6-digit code it shows.",
       ),
     );
+
     const qr = h("img", { class: "qr-code", alt: "TOTP enrolment QR code" });
     if (deps.qrcodeDataUrl) /** @type {HTMLImageElement} */ (qr).src = deps.qrcodeDataUrl;
-    wrap.appendChild(qr);
-    const form = h("form", { class: "auth-form", method: "post" });
+    formSide.appendChild(qr);
+
+    const form = h("form", { method: "post" });
     const code = h("input", {
       type: "text",
       name: "verificationCode",
@@ -192,9 +220,12 @@ export function createAuthView(deps) {
       inputmode: "numeric",
       pattern: "[0-9]{6}",
       placeholder: "6-digit code",
+      autocomplete: "one-time-code",
     });
-    const submit = h("button", { type: "submit" }, "Verify");
-    form.appendChild(code);
+    form.appendChild(
+      h("div", { class: "auth-field" }, [h("label", {}, "Verification code"), code]),
+    );
+    const submit = h("button", { type: "submit", class: "auth-submit" }, "Verify");
     form.appendChild(submit);
     form.addEventListener("submit", async (/** @type {Event} */ e) => {
       e.preventDefault();
@@ -205,10 +236,10 @@ export function createAuthView(deps) {
         notify("error", (err && /** @type {*} */ (err).message) || "Verification failed");
       }
     });
-    wrap.appendChild(form);
-    // Escape hatch: mirrors renderFirstRun's auth-sign-out-link pattern. Without
-    // this, an admin forced through the MFA-enrol gate has no way off the screen
-    // if their authenticator is lost or the QR fails to render.
+    formSide.appendChild(form);
+
+    // Escape hatch lives in the form column as a tertiary auth-help link so
+    // the user can bail without losing the chrome.
     const signOutBtn = h("button", { type: "button", class: "auth-sign-out-link" }, "Sign out");
     signOutBtn.addEventListener("click", async () => {
       try {
@@ -217,7 +248,9 @@ export function createAuthView(deps) {
         notify("error", (err && /** @type {*} */ (err).message) || "Sign out failed");
       }
     });
-    wrap.appendChild(signOutBtn);
+    formSide.appendChild(h("div", { class: "auth-help" }, [signOutBtn]));
+
+    wrap.appendChild(formSide);
     return wrap;
   }
 
@@ -341,12 +374,70 @@ export function createAuthView(deps) {
     return wrap;
   }
 
+  function renderForgotPassword() {
+    // Login-page chrome: hero on the left, single-input form on the right.
+    // Replaces the inline "Forgot password?" notify-only flow with a full
+    // page so the user has a clear destination + back-out path.
+    const wrap = h("div", { class: "auth-wrap auth-forgot-password" });
+    wrap.appendChild(buildHero());
+
+    const formSide = h("div", { class: "auth-form" });
+    formSide.appendChild(h("h2", { class: "auth-heading" }, "Reset your password"));
+    formSide.appendChild(
+      h(
+        "p",
+        { class: "auth-sub" },
+        "Enter your BeDeveloped email and we will send you a link to set a new password.",
+      ),
+    );
+
+    const form = h("form", { method: "post" });
+    const email = h("input", {
+      type: "email",
+      name: "email",
+      required: "",
+      autocomplete: "username",
+      placeholder: "you@bedeveloped.com",
+    });
+    form.appendChild(h("div", { class: "auth-field" }, [h("label", {}, "Email"), email]));
+    const submit = h(
+      "button",
+      { type: "submit", class: "auth-submit send-password-reset-link" },
+      "Email me a reset link",
+    );
+    form.appendChild(submit);
+    form.addEventListener("submit", async (/** @type {Event} */ e) => {
+      e.preventDefault();
+      const emailVal = /** @type {HTMLInputElement} */ (email).value;
+      try {
+        if (deps.sendPasswordResetEmail && emailVal) await deps.sendPasswordResetEmail(emailVal);
+      } catch (_err) {
+        /* swallow - generic-success per AUTH-12 (no account-enumeration) */
+      }
+      notify(
+        "info",
+        "If that account exists, you will receive a reset email shortly. Please check your inbox.",
+      );
+    });
+    formSide.appendChild(form);
+
+    const back = h("button", { type: "button", class: "auth-back-to-signin" }, "Back to sign in");
+    back.addEventListener("click", () => {
+      if (deps.routeToSignIn) deps.routeToSignIn();
+    });
+    formSide.appendChild(h("div", { class: "auth-help" }, [back]));
+
+    wrap.appendChild(formSide);
+    return wrap;
+  }
+
   return {
     renderSignIn,
     renderFirstRun,
     renderMfaEnrol,
     renderEmailVerificationLanding,
     renderForgotMfa,
+    renderForgotPassword,
     renderAuth: renderSignIn,
   };
 }
@@ -365,6 +456,9 @@ export function renderEmailVerificationLanding() {
 }
 export function renderForgotMfa() {
   return createAuthView({}).renderForgotMfa();
+}
+export function renderForgotPassword() {
+  return createAuthView({}).renderForgotPassword();
 }
 export function renderAuth() {
   return createAuthView({}).renderSignIn();

@@ -81,6 +81,11 @@ describe("renderMfaEnrol (Phase 6 D-16)", () => {
     expect(el.querySelector('input[name="verificationCode"]')).toBeTruthy();
     expect(el.querySelector('button[type="submit"]')).toBeTruthy();
   });
+  it("renders an escape-hatch sign-out button", () => {
+    const view = createAuthView({});
+    const el = view.renderMfaEnrol();
+    expect(el.querySelector("button.auth-sign-out-link")).toBeTruthy();
+  });
   it("matches the mfa-enrol snapshot", async () => {
     const view = createAuthView({});
     const el = view.renderMfaEnrol();
@@ -124,6 +129,11 @@ describe("renderForgotMfa (Phase 6 BLOCKER-FIX D-07 Tier-1 user-side recovery)",
     expect(el.querySelector("button.send-mfa-recovery-link")).toBeTruthy();
     expect(el.querySelector("button.confirm-unenroll-mfa")).toBeTruthy();
     expect(el.textContent || "").toMatch(/lost.*authenticator|forgot.*2fa|email.*sign.?in.*link/i);
+  });
+  it("renders an escape-hatch back-to-sign-in button", () => {
+    const view = createAuthView({});
+    const el = view.renderForgotMfa();
+    expect(el.querySelector("button.auth-back-to-signin")).toBeTruthy();
   });
   it("matches the forgot-mfa snapshot", async () => {
     const view = createAuthView({});

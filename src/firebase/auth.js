@@ -36,6 +36,7 @@ import {
   signInWithEmailAndPassword,
   signOut as fbSignOut,
   multiFactor as fbMultiFactor,
+  TotpMultiFactorGenerator,
   updatePassword as fbUpdatePassword,
   sendSignInLinkToEmail as fbSendSignInLinkToEmail,
   isSignInWithEmailLink as fbIsSignInWithEmailLink,
@@ -122,6 +123,82 @@ export async function signOut() {
 /** @param {*} user */
 export function multiFactor(user) {
   return fbMultiFactor(user);
+}
+
+// Phase 6 Wave 5 BLOCKER-FIX 1 carry-forward: TOTP enrolment wiring deferred
+// during 2026-05-09 cutover-recovery. Three exports below close the gap so
+// renderMfaEnrol's deps.qrcodeDataUrl + deps.enrollTotp + deps.unenrollAllMfa
+// resolve to working bodies. Audit emit follows the AUDIT-05 best-effort
+// pattern from signInEmailPassword above.
+
+/**
+ * Begin TOTP enrolment by issuing a fresh secret. Returns the secret (handed
+ * to enrollTotp later) and the otpauth:// URI that the caller renders into a
+ * QR code. The MFA session is bound to the secret so verification only works
+ * for the same in-flight enrolment.
+ *
+ * @returns {Promise<{ secret: *, totpUri: string }>}
+ */
+export async function beginTotpEnrollment() {
+  const user = auth.currentUser;
+  if (!user) throw new SignInError();
+  const session = await fbMultiFactor(user).getSession();
+  const secret = await TotpMultiFactorGenerator.generateSecret(session);
+  const accountName = user.email || user.uid;
+  const totpUri = secret.generateQrCodeUrl(accountName, "BeDeveloped Diagnostic");
+  return { secret, totpUri };
+}
+
+/**
+ * Complete TOTP enrolment by verifying the 6-digit code against the secret
+ * issued by beginTotpEnrollment.
+ *
+ * @param {*} secret - the TotpSecret returned from beginTotpEnrollment
+ * @param {string} verificationCode - 6-digit code from the authenticator app
+ * @param {string} [displayName] - friendly factor name shown in the user's MFA list
+ * @returns {Promise<void>}
+ */
+export async function enrollTotp(secret, verificationCode, displayName) {
+  const user = auth.currentUser;
+  if (!user) throw new SignInError();
+  const assertion = TotpMultiFactorGenerator.assertionForEnrollment(secret, verificationCode);
+  try {
+    await fbMultiFactor(user).enroll(assertion, displayName || "Authenticator app");
+  } finally {
+    try {
+      emitAuditEvent("auth.mfa.enrol", { type: "user", id: user.uid, orgId: null }, {});
+    } catch (_emitErr) {
+      // Pattern 5 #2 — best-effort.
+    }
+  }
+}
+
+/**
+ * Un-enrol every TOTP factor on the current user. Used by the Tier-1
+ * forgot-MFA recovery flow after the user re-authenticates via email link.
+ *
+ * @returns {Promise<void>}
+ */
+export async function unenrollAllMfa() {
+  const user = auth.currentUser;
+  if (!user) throw new SignInError();
+  const mf = fbMultiFactor(user);
+  const factors = mf.enrolledFactors || [];
+  try {
+    for (const factor of factors) {
+      await mf.unenroll(factor);
+    }
+  } finally {
+    try {
+      emitAuditEvent(
+        "auth.mfa.unenrol",
+        { type: "user", id: user.uid, orgId: null },
+        { factorCount: factors.length },
+      );
+    } catch (_emitErr) {
+      // Pattern 5 #2 — best-effort.
+    }
+  }
 }
 
 // Phase 6 Wave 3 (BLOCKER-FIX 2): updatePassword export - consumed by views/auth.js

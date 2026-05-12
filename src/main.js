@@ -64,6 +64,9 @@ import {
   // phase when the email-link MFA recovery flow is fully wired (06-WAVE-5-PARTIAL-STATE.md).
   sendEmailVerification as fbSendEmailVerification,
   sendPasswordResetEmail as fbSendPasswordResetEmail,
+  beginTotpEnrollment as fbBeginTotpEnrollment,
+  enrollTotp as fbEnrollTotp,
+  unenrollAllMfa as fbUnenrollAllMfa,
 } from "./firebase/auth.js";
 import { createAuthView } from "./views/auth.js";
 
@@ -810,11 +813,14 @@ import {
       const role = state.fbUser.appClaims && state.fbUser.appClaims.role;
       const enrolled = state.fbUser.appEnrolledFactors;
       const hasMfa = enrolled && enrolled.length > 0;
-      // Phase 6 Wave 5 cutover-recovery (2026-05-09): MFA-enrol gate temporarily
-      // bypassed for Step 11 SC#4. Mirror of the bypass at router.js. Restore
-      // by removing the `false &&` short-circuit below. Tracked in Wave 6 06-06.
-      // eslint-disable-next-line no-constant-condition, no-constant-binary-expression
-      if (false && (role === "admin" || role === "internal") && !hasMfa) {
+      // Explicit-route entry: forgot-MFA flow's "I have signed in - un-enrol"
+      // button calls routeToMfaEnrol after the un-enrol completes; this match
+      // makes the route reachable. Also gives the gate below a non-forced way
+      // in (e.g. operator chooses to re-enrol).
+      const wantsMfaEnrol = state.route === "mfa-enrol";
+      const mustMfaEnrol = (role === "admin" || role === "internal") && !hasMfa;
+      if (wantsMfaEnrol || mustMfaEnrol) {
+        if (!state.qrcodeDataUrl) startMfaEnrolFlow();
         app.appendChild(authView.renderMfaEnrol());
         return;
       }
@@ -896,9 +902,32 @@ import {
   // callbacks. renderAuth (legacy entry) hands off to authView.renderSignIn()
   // for internal admins. The render() top-level dispatcher injects authView's
   // 5 render fns inline as the auth-state ladder per src/router.js D-16.
-  // enrollTotp + unenrollAllMfa + qrcodeDataUrl deps are deferred to the
-  // user-testing phase — left undefined here, the view forms render but
-  // submission is a no-op until those deps are wired.
+
+  // Closure-scoped transient secret for the in-flight TOTP enrolment.
+  // Lives only as long as the enrolment ceremony — cleared on success/abort.
+  // Held outside `state` so it can't accidentally serialize anywhere.
+  /** @type {*} */
+  let inflightTotpSecret = null;
+
+  // Kicks off TOTP enrolment: requests a fresh secret from Firebase, renders
+  // the otpauth:// URI to a QR data URL via the qrcode lib (dynamically
+  // imported to keep ~80KB out of the main bundle), stuffs it into
+  // state.qrcodeDataUrl, and re-renders so renderMfaEnrol picks up the QR.
+  async function startMfaEnrolFlow() {
+    if (inflightTotpSecret) return;
+    try {
+      const { secret, totpUri } = await fbBeginTotpEnrollment();
+      inflightTotpSecret = secret;
+      const qrcodeMod = await import("qrcode");
+      const QRCode = /** @type {*} */ (qrcodeMod).default || qrcodeMod;
+      state.qrcodeDataUrl = await QRCode.toDataURL(totpUri);
+      render();
+    } catch (err) {
+      inflightTotpSecret = null;
+      notify("error", (err && /** @type {*} */ (err).message) || "Could not start MFA enrolment");
+    }
+  }
+
   const authView = createAuthView({
     state,
     h,
@@ -921,9 +950,28 @@ import {
     get isMfaRecoveryFlow() {
       return state.route === "forgot-mfa";
     },
-    // Deferred to user-testing phase (06-WAVE-5-PARTIAL-STATE.md):
-    //   enrollTotp: undefined,
-    //   unenrollAllMfa: undefined,
+    enrollTotp: async (verificationCode) => {
+      if (!inflightTotpSecret) {
+        throw new Error("Enrolment session expired — refresh and try again.");
+      }
+      await fbEnrollTotp(inflightTotpSecret, verificationCode);
+      inflightTotpSecret = null;
+      state.qrcodeDataUrl = null;
+      // Re-hydrate enrolledFactors on the user shim so the auth-ladder gate
+      // sees the new factor immediately and stops re-rendering MFA enrol.
+      if (state.fbUser && fbAuthInstance.currentUser) {
+        try {
+          state.fbUser.appEnrolledFactors =
+            fbMultiFactor(fbAuthInstance.currentUser).enrolledFactors || [];
+        } catch (_e) {
+          state.fbUser.appEnrolledFactors = [];
+        }
+      }
+      if (state.route === "mfa-enrol") state.route = "dashboard";
+      notify("info", "Two-factor authentication enrolled.");
+      render();
+    },
+    unenrollAllMfa: fbUnenrollAllMfa,
   });
 
   // ================================================================

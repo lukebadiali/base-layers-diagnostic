@@ -206,6 +206,18 @@ export function createAuthView(deps) {
       }
     });
     wrap.appendChild(form);
+    // Escape hatch: mirrors renderFirstRun's auth-sign-out-link pattern. Without
+    // this, an admin forced through the MFA-enrol gate has no way off the screen
+    // if their authenticator is lost or the QR fails to render.
+    const signOutBtn = h("button", { type: "button", class: "auth-sign-out-link" }, "Sign out");
+    signOutBtn.addEventListener("click", async () => {
+      try {
+        if (deps.signOut) await deps.signOut();
+      } catch (err) {
+        notify("error", (err && /** @type {*} */ (err).message) || "Sign out failed");
+      }
+    });
+    wrap.appendChild(signOutBtn);
     return wrap;
   }
 
@@ -298,6 +310,22 @@ export function createAuthView(deps) {
       }
     });
     wrap.appendChild(confirm);
+    // Escape hatch: signOut is a no-op when no current user (initial-visit case
+    // before email-link sign-in) and returns the user to the sign-in screen
+    // when invoked post-email-link. Either way, exits the forgot-MFA flow.
+    const backBtn = h(
+      "button",
+      { type: "button", class: "auth-back-to-signin" },
+      "Back to sign in",
+    );
+    backBtn.addEventListener("click", async () => {
+      try {
+        if (deps.signOut) await deps.signOut();
+      } catch (err) {
+        notify("error", (err && /** @type {*} */ (err).message) || "Sign out failed");
+      }
+    });
+    wrap.appendChild(backBtn);
     return wrap;
   }
 

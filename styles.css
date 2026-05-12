@@ -3462,3 +3462,183 @@ a:hover {
 
 /* --- Compound: misc helpers found across views --- */
 .btn-line-soft { border-color: var(--line); }
+
+/* ============================================================
+   PHASE 6 AUTH GATE SCREENS
+   These four post-sign-in gate screens (renderEmailVerificationLanding,
+   renderFirstRun, renderMfaEnrol, renderForgotMfa) reuse the legacy
+   .auth-wrap class but their content isn't a hero+form pair, so the
+   2-column grid leaves the heading floating left and the message
+   floating right. Override to a centered single-column card layout
+   and style the bare inputs/buttons that don't have specific classes.
+   ============================================================ */
+
+/* Centred-card layout for the gate screens that don't use the login chrome
+   (email-verification, first-run, forgot-mfa). The 2FA enrol + password
+   reset screens use the legacy 2-column .auth-wrap grid instead — they get
+   the hero+form layout for parity with the sign-in page. */
+.auth-wrap.auth-email-verification,
+.auth-wrap.auth-forgot-mfa {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  gap: 14px;
+  background: var(--surface);
+}
+
+.auth-wrap.auth-email-verification > h2,
+.auth-wrap.auth-forgot-mfa > h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  color: #474747;
+  margin: 0 0 4px;
+  text-align: center;
+  max-width: 440px;
+  width: 100%;
+}
+
+.auth-wrap.auth-email-verification > p,
+.auth-wrap.auth-forgot-mfa > p {
+  color: var(--ink-3);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+  margin: 0 0 8px;
+  max-width: 440px;
+  width: 100%;
+}
+
+/* Forms inside the centred-card gate screens — override the legacy
+   .auth-form padding (designed for the side-by-side login layout) with a
+   flush card layout. */
+.auth-wrap.auth-forgot-mfa > .auth-form {
+  padding: 0;
+  max-width: 440px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.auth-wrap.auth-forgot-mfa > .auth-form input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  font: inherit;
+  font-size: 14px;
+  background: #fff;
+  transition:
+    border-color 0.12s,
+    box-shadow 0.12s;
+}
+
+.auth-wrap.auth-forgot-mfa > .auth-form input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(87, 158, 192, 0.18);
+}
+
+.auth-wrap.auth-forgot-mfa > .auth-form button[type="submit"] {
+  width: 100%;
+  padding: 12px;
+  background: var(--brand);
+  color: #fff;
+  border: 0;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.12s;
+}
+
+.auth-wrap.auth-forgot-mfa > .auth-form button[type="submit"]:hover {
+  background: var(--brand-2);
+}
+
+/* QR code on MFA enrol — sized to fit comfortably inside the form column
+   of the login-style 2-column layout. */
+.auth-mfa-enrol .qr-code {
+  display: block;
+  width: 200px;
+  height: 200px;
+  margin: 12px 0 16px;
+  background: var(--surface-muted);
+  border-radius: 9px;
+  padding: 8px;
+  box-sizing: content-box;
+}
+
+/* Sign-out escape inside the form column for MFA enrol — sits in .auth-help
+   so it inherits the underlined-link treatment that matches the sign-in
+   screen's "Forgot password?" / "Forgot 2FA?" links. */
+.auth-mfa-enrol .auth-help {
+  margin-top: 18px;
+}
+
+/* Standalone secondary buttons (escape hatches + resend + un-enrol confirm).
+   Without this, bare <button>s render as full-width grey blocks. */
+/* Standalone secondary buttons used by the centred-card gate screens
+   (email-verification, first-run, forgot-mfa). The hero+form gate screens
+   (mfa-enrol, forgot-password) use .auth-help button styling instead. */
+.auth-wrap.auth-email-verification .auth-sign-out-link,
+.auth-wrap.auth-email-verification .resend-verification,
+.auth-wrap.auth-forgot-mfa > .confirm-unenroll-mfa,
+.auth-wrap.auth-forgot-mfa > .auth-back-to-signin {
+  display: block;
+  margin: 8px auto 0;
+  padding: 10px 20px;
+  background: transparent;
+  color: var(--brand);
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+  width: auto;
+  max-width: 100%;
+  text-align: center;
+}
+
+.auth-wrap.auth-email-verification .auth-sign-out-link:hover,
+.auth-wrap.auth-email-verification .resend-verification:hover,
+.auth-wrap.auth-forgot-mfa > .confirm-unenroll-mfa:hover,
+.auth-wrap.auth-forgot-mfa > .auth-back-to-signin:hover {
+  background: var(--surface-muted);
+  border-color: var(--brand);
+  color: var(--brand-2);
+}
+
+/* The "I have signed in - un-enrol my 2FA" button is the primary CTA on the
+   forgot-MFA screen after the user clicks the email link, so it gets a more
+   prominent treatment than the other secondary buttons. */
+.auth-wrap.auth-forgot-mfa .confirm-unenroll-mfa {
+  margin-top: 16px;
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
+  padding: 12px 24px;
+  width: 100%;
+  max-width: 440px;
+}
+
+.auth-wrap.auth-forgot-mfa .confirm-unenroll-mfa:hover {
+  background: var(--brand-2);
+  color: #fff;
+}
+
+@media (max-width: 760px) {
+  .auth-wrap.auth-email-verification,
+  .auth-wrap.auth-forgot-mfa {
+    padding: 32px 20px;
+  }
+}

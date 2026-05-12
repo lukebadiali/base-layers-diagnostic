@@ -132,32 +132,41 @@ export function createAuthView(deps) {
   }
 
   function renderFirstRun() {
+    // Login-page chrome: hero on the left, form on the right. The forced
+    // password-set ceremony for first-run admins lives in the form column.
     const wrap = h("div", { class: "auth-wrap auth-first-run" });
-    wrap.appendChild(
+    wrap.appendChild(buildHero());
+
+    const formSide = h("div", { class: "auth-form" });
+    formSide.appendChild(h("h2", { class: "auth-heading" }, "Set your password"));
+    formSide.appendChild(
       h(
         "p",
-        {},
-        "Set a new password to continue. Minimum 12 characters; passwords reused on other sites are rejected.",
+        { class: "auth-sub" },
+        "Choose a new password to continue. Minimum 12 characters; passwords reused on other sites are rejected.",
       ),
     );
-    const form = h("form", { class: "auth-form", method: "post" });
+
+    const form = h("form", { method: "post" });
     const newPass = h("input", {
       type: "password",
       name: "newPassword",
       required: "",
       autocomplete: "new-password",
-      placeholder: "New password (>= 12 chars)",
+      placeholder: "At least 12 characters",
     });
     const confirm = h("input", {
       type: "password",
       name: "confirmPassword",
       required: "",
       autocomplete: "new-password",
-      placeholder: "Confirm new password",
+      placeholder: "Type it again",
     });
-    const submit = h("button", { type: "submit" }, "Set password");
-    form.appendChild(newPass);
-    form.appendChild(confirm);
+    form.appendChild(h("div", { class: "auth-field" }, [h("label", {}, "New password"), newPass]));
+    form.appendChild(
+      h("div", { class: "auth-field" }, [h("label", {}, "Confirm password"), confirm]),
+    );
+    const submit = h("button", { type: "submit", class: "auth-submit" }, "Set password");
     form.appendChild(submit);
     form.addEventListener("submit", async (/** @type {Event} */ e) => {
       e.preventDefault();
@@ -173,12 +182,11 @@ export function createAuthView(deps) {
         notify("error", (err && /** @type {*} */ (err).message) || "Password update failed");
       }
     });
-    wrap.appendChild(form);
-    // Phase 6 Wave 5 cutover-recovery (2026-05-09): escape hatch on the
-    // firstRun screen for cases where the post-password setClaims wiring
-    // hasn't flipped firstRun:true → false yet (BLOCKER-FIX 1 carry-forward).
-    // Without this, an admin who lands here after a stale session has no UI
-    // path off the screen.
+    formSide.appendChild(form);
+
+    // Escape hatch for stale-session edge case (post-password setClaims hasn't
+    // flipped firstRun:true off yet). Lives inside the form column as a
+    // tertiary auth-help link, mirrors renderMfaEnrol.
     const signOutBtn = h("button", { type: "button", class: "auth-sign-out-link" }, "Sign out");
     signOutBtn.addEventListener("click", async () => {
       try {
@@ -187,7 +195,9 @@ export function createAuthView(deps) {
         notify("error", (err && /** @type {*} */ (err).message) || "Sign out failed");
       }
     });
-    wrap.appendChild(signOutBtn);
+    formSide.appendChild(h("div", { class: "auth-help" }, [signOutBtn]));
+
+    wrap.appendChild(formSide);
     return wrap;
   }
 

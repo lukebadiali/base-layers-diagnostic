@@ -60,6 +60,13 @@ describe("renderFirstRun (Phase 6 D-16)", () => {
     expect(el.querySelector('input[type="password"][name="confirmPassword"]')).toBeTruthy();
     expect(el.querySelector('button[type="submit"]')).toBeTruthy();
   });
+  it("uses the login-page hero+form layout", () => {
+    const view = createAuthView({});
+    const el = view.renderFirstRun();
+    expect(el.classList.contains("auth-wrap")).toBe(true);
+    expect(el.querySelector(".auth-hero")).toBeTruthy();
+    expect(el.querySelector(".auth-form")).toBeTruthy();
+  });
   it("matches the first-run snapshot", async () => {
     const view = createAuthView({});
     const el = view.renderFirstRun();

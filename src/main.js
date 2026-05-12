@@ -996,7 +996,7 @@ import {
     // Hero side
     wrap.appendChild(
       h("div", { class: "auth-hero" }, [
-        h("img", { class: "hero-logo", src: "assets/logo.png", alt: "BeDeveloped" }),
+        h("img", { class: "hero-logo", src: "assets/logo.png?v=54", alt: "BeDeveloped" }),
         h("div", {}, [
           h(
             "h1",

@@ -67,7 +67,7 @@ export function createChrome(deps) {
 
     const logoImg = h("img", {
       class: "brand-logo",
-      src: "assets/logo.png",
+      src: "assets/logo.png?v=54",
       alt: "BeDeveloped",
     });
     const brand = h("div", { class: "brand" }, [

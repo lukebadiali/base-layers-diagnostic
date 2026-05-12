@@ -49,7 +49,7 @@ export function createAuthView(deps) {
   // here rather than exported so views/* still owns its own DOM.
   function buildHero() {
     return h("div", { class: "auth-hero" }, [
-      h("img", { class: "hero-logo", src: "assets/logo.png", alt: "BeDeveloped" }),
+      h("img", { class: "hero-logo", src: "assets/logo.png?v=54", alt: "BeDeveloped" }),
       h("div", {}, [
         h(
           "h1",

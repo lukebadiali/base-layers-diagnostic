@@ -107,6 +107,11 @@ describe("renderEmailVerificationLanding (Phase 6 D-16)", () => {
     expect(el.textContent || "").toMatch(/check your email/i);
     expect(el.querySelector("button.resend-verification")).toBeTruthy();
   });
+  it("renders an escape-hatch sign-out button", () => {
+    const view = createAuthView({});
+    const el = view.renderEmailVerificationLanding();
+    expect(el.querySelector("button.auth-sign-out-link")).toBeTruthy();
+  });
   it("matches the email-verification-landing snapshot", async () => {
     const view = createAuthView({});
     const el = view.renderEmailVerificationLanding();

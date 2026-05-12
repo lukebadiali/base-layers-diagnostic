@@ -242,6 +242,18 @@ export function createAuthView(deps) {
       }
     });
     wrap.appendChild(resend);
+    // Escape hatch: same pattern as renderFirstRun / renderMfaEnrol. Without
+    // this, a user whose email-verification flow stalls (wrong inbox, link
+    // expired, gmail filtering) has no UI path off the screen.
+    const signOutBtn = h("button", { type: "button", class: "auth-sign-out-link" }, "Sign out");
+    signOutBtn.addEventListener("click", async () => {
+      try {
+        if (deps.signOut) await deps.signOut();
+      } catch (err) {
+        notify("error", (err && /** @type {*} */ (err).message) || "Sign out failed");
+      }
+    });
+    wrap.appendChild(signOutBtn);
     return wrap;
   }
 

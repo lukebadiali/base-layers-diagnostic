@@ -51,4 +51,35 @@ describe("src/main.js — boot path shape", () => {
     const src = readFileSync(resolve("src/main.js"), "utf8");
     expect(src).toMatch(/@ts-nocheck/);
   });
+
+  // Phase 4.1 / D-13 follow-up: regression guard for the silent-no-op org/user
+  // hydration bug. The legacy syncFromCloud() one-shot pull had been silently
+  // no-op'd by the H8 dispatcher rewrite, leaving fresh browsers showing only
+  // their locally-cached orgs instead of Firestore's. Live subscription
+  // listeners now drive hydration. If any of these assertions fail, the bug
+  // has regressed.
+  describe("post-auth org/user hydration (Phase 4.1 / D-13)", () => {
+    it("wires _subscribeOrgs + _subscribeUsers as live snapshot listeners", () => {
+      const src = readFileSync(resolve("src/main.js"), "utf8");
+      expect(src).toMatch(/_subscribeOrgs\s*\(/);
+      expect(src).toMatch(/_subscribeUsers\s*\(/);
+    });
+
+    it("does NOT call the legacy syncFromCloud() one-shot pull", () => {
+      const src = readFileSync(resolve("src/main.js"), "utf8");
+      // The wrapper + the call site are both gone. The only matches left in
+      // the file should be documentation comments referencing the historical
+      // bug — strip those and assert no executable call survives.
+      const codeOnly = src.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+      expect(codeOnly).not.toMatch(/\bsyncFromCloud\s*\(/);
+      expect(codeOnly).not.toMatch(/\b_syncFromCloud\b/);
+    });
+
+    it("does NOT carry the cloudFetchAllOrgs / cloudFetchAllUsers one-shot helpers", () => {
+      const src = readFileSync(resolve("src/main.js"), "utf8");
+      const codeOnly = src.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+      expect(codeOnly).not.toMatch(/function\s+cloudFetchAllOrgs\b/);
+      expect(codeOnly).not.toMatch(/function\s+cloudFetchAllUsers\b/);
+    });
+  });
 });

@@ -94,44 +94,16 @@ describe("syncFromCloud (dispatcher contract / H8 fix)", () => {
   });
 });
 
-describe("syncFromCloud (legacy 9-prop deps deprecated shim)", () => {
-  it("returns a no-op unsubscribe + does not throw + warns", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const unsub = syncFromCloud(/** @type {any} */ ({
-      fbReady: () => true,
-      cloudFetchAllOrgs: vi.fn(),
-      cloudFetchAllUsers: vi.fn(),
-      cloudPushOrg: vi.fn(),
-      cloudPushUser: vi.fn(),
-      jget: vi.fn(),
-      jset: vi.fn(),
-      K: { orgs: "k", users: "k", org: () => "k" },
-      render: vi.fn(),
-    }));
-    expect(typeof unsub).toBe("function");
-    expect(warnSpy).toHaveBeenCalled();
-    // No-op unsub must not throw
-    expect(() => unsub()).not.toThrow();
-    warnSpy.mockRestore();
-  });
-
-  it("legacy shim does NOT trigger the parent-doc nested-map syncer (H8 root cause is gone)", () => {
-    // The legacy code path's last-writer-wins overlap merge - that was the H8
-    // root cause - is intentionally NOT executed. The shim only warns + returns.
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const cloudFetchAllOrgs = vi.fn();
-    const cloudPushOrg = vi.fn();
-    const jset = vi.fn();
-    syncFromCloud(/** @type {any} */ ({
-      fbReady: () => true,
-      cloudFetchAllOrgs,
-      cloudPushOrg,
-      jset,
-    }));
-    expect(cloudFetchAllOrgs).not.toHaveBeenCalled();
-    expect(cloudPushOrg).not.toHaveBeenCalled();
-    expect(jset).not.toHaveBeenCalled();
-    warnSpy.mockRestore();
+describe("syncFromCloud (legacy 9-prop shim removed — Phase 4.1 / D-13)", () => {
+  it("throws on the legacy 9-prop deps shape (no silent no-op)", () => {
+    // Regression guard: the old shim silently swallowed an object payload
+    // and returned a no-op unsubscribe, hiding the H8 dispatcher bug. With
+    // the shim deleted, the legacy shape now throws loudly so any
+    // un-migrated callsite is caught at boot.
+    const legacyShape = /** @type {any} */ ({ fbReady: () => true, cloudFetchAllOrgs: vi.fn() });
+    expect(() => syncFromCloud(legacyShape, /** @type {any} */ (undefined))).toThrow(
+      /expected \(orgId, \{ onMetadata, attach, onError \}\)/,
+    );
   });
 });
 

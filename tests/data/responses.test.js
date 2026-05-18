@@ -17,6 +17,15 @@ vi.mock("../../src/firebase/db.js", () => makeFirestoreMock({
       values: [{ score: 7, note: "ok" }],
       legacyAppUserId: "u1",
     },
+    // Defensive shape — doc exists but `values` is missing/not-an-array.
+    // Pins listResponses() falsy-branch return (`: []`) so the silent-corrupt-doc
+    // path can't regress.
+    "orgs/o1/responses/r1__u-malformed__p1": {
+      roundId: "r1",
+      userId: "u-malformed",
+      pillarId: "p1",
+      legacyAppUserId: "u-malformed",
+    },
   },
 }));
 
@@ -30,6 +39,11 @@ describe("data/responses.js (Phase 5 subcollection rewrite)", () => {
 
   it("listResponses returns [] when the (round,user,pillar) tuple has no doc", async () => {
     const rs = await listResponses("o1", "r1", "u-missing", "p1");
+    expect(rs).toEqual([]);
+  });
+
+  it("listResponses returns [] when the doc exists but `values` is missing/not-an-array", async () => {
+    const rs = await listResponses("o1", "r1", "u-malformed", "p1");
     expect(rs).toEqual([]);
   });
 

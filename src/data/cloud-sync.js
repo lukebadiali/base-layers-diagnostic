@@ -32,47 +32,24 @@ export function subscribeOrgMetadata(orgId, { onChange, onError }) {
 /**
  * Coordinate boot-time hydration: parent doc subscription + signal downstream
  * wrappers to attach per-subcollection listeners. The `attach` callback
- * receives the orgId once the parent doc resolves; the caller (likely
- * views/dashboard.js or src/main.js post-4.1) wires subscribeMessages +
- * subscribeReadState etc. inside attach.
+ * receives the orgId once the parent doc resolves; the caller wires
+ * subscribeMessages + subscribeReadState etc. inside attach.
  *
- * Parameter-detector branch: if invoked with the OLD 9-prop deps shape
- * (legacyDeps.fbReady + ...legacy-localStorage helpers...), this is a Phase 4 4.1
- * carryover - logs a deprecation warning + returns a no-op unsubscribe.
- * Removed when src/main.js IIFE migrates to the new shape (D-13 D-18).
+ * Phase 4.1 / D-13 follow-up: the legacy 9-prop deps shape (and its
+ * deprecation shim) is GONE. Top-level orgs + users hydration now lives in
+ * src/main.js as direct subscribeOrgs + subscribeUsers listeners. This
+ * dispatcher is reserved for future per-org-detail wiring.
  *
- * @param {string|object} orgIdOrLegacyDeps
- * @param {{ onMetadata: (meta: any|null) => void, attach: (orgId: string) => void, onError: (err: Error) => void } | undefined} [deps]
+ * @param {string} orgId
+ * @param {{ onMetadata: (meta: any|null) => void, attach: (orgId: string) => void, onError: (err: Error) => void }} deps
  * @returns {() => void}
  */
-export function syncFromCloud(orgIdOrLegacyDeps, deps) {
-  // Parameter-detector branch (legacy 9-prop deps shape from Phase 4 IIFE).
-  // DELETED in Phase 4 4.1 main.js-body-migration sub-wave when consumers
-  // migrate to (orgId, { onMetadata, attach, onError }).
-  if (
-    typeof orgIdOrLegacyDeps === "object" &&
-    orgIdOrLegacyDeps !== null &&
-    "fbReady" in orgIdOrLegacyDeps
-  ) {
-    // DEPRECATED: legacy 9-prop deps shape; treated as no-op to avoid
-    // breaking the IIFE boot path. The parent-doc nested-map syncer that
-    // implemented last-writer-wins overlap merging IS the H8 root cause -
-    // it is intentionally NOT executed here. Per-subcollection listeners
-    // (Wave 3 - subscribeMessages / subscribeReadState / subscribeComments
-    // / subscribeResponses / subscribeActions / subscribeDocuments) own
-    // their data flow now; cloud-sync no longer participates in conflict
-    // resolution.
-    console.warn(
-      "[cloud-sync] DEPRECATED: legacy 9-prop deps shape - rewire to (orgId, { onMetadata, attach, onError }) per Phase 5 Wave 4 D-13. No-op until Phase 4 4.1 main.js-body-migration removes the IIFE callsite.",
-    );
-    return () => {};
-  }
-  if (typeof orgIdOrLegacyDeps !== "string" || !deps) {
+export function syncFromCloud(orgId, deps) {
+  if (typeof orgId !== "string" || !deps) {
     throw new Error(
       "syncFromCloud: expected (orgId, { onMetadata, attach, onError })",
     );
   }
-  const orgId = orgIdOrLegacyDeps;
   const { onMetadata, attach, onError } = deps;
   let attached = false;
   return subscribeOrgMetadata(orgId, {

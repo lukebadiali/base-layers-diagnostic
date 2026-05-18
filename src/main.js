@@ -127,7 +127,12 @@ import {
   migrateV1IfNeeded as _migrateV1IfNeeded,
   clearOldScaleResponsesIfNeeded as _clearOldScaleResponsesIfNeeded,
 } from "./data/migration.js";
-import { syncFromCloud as _syncFromCloud } from "./data/cloud-sync.js";
+// Phase 4.1 / D-13 follow-up: the legacy 9-prop syncFromCloud() one-shot pull
+// is gone. The orgs + users top-level collections are now hydrated via live
+// `_subscribeOrgs` + `_subscribeUsers` snapshot listeners wired post-auth in
+// the IIFE below. The new dispatcher contract (subscribeOrgMetadata + the
+// (orgId, { onMetadata, attach, onError }) shape) in src/data/cloud-sync.js
+// stays available for future per-org-detail hydration but is not used here.
 import * as auth from "./auth/state-machine.js";
 // Phase 4 Wave 2 (D-12): ui/* helpers extracted from app.js IIFE.
 // Closes runbooks/phase-4-cleanup-ledger.md row at app.js:676 (CODE-04 — html:
@@ -501,18 +506,13 @@ import {
       loadOrg,
       saveOrg,
     });
-  const syncFromCloud = () =>
-    _syncFromCloud({
-      fbReady,
-      cloudFetchAllOrgs,
-      cloudFetchAllUsers,
-      cloudPushOrg,
-      cloudPushUser,
-      jget,
-      jset,
-      K,
-      render,
-    });
+  // Phase 4.1 / D-13 follow-up: the legacy one-shot syncFromCloud() pull
+  // (was: `_syncFromCloud({ fbReady, cloudFetchAllOrgs, cloudFetchAllUsers,
+  // cloudPushOrg, cloudPushUser, jget, jset, K, render })`) had been silently
+  // no-op'd by the H8 dispatcher rewrite, leaving the orgs + users top-level
+  // collections un-hydrated on app boot. Replaced post-auth (search:
+  // "_subscribeOrgs(" below) by live `_subscribeOrgs` + `_subscribeUsers`
+  // listeners that hydrate K.orgs / K.org(id) / K.users on every snapshot.
   // Phase 2 Wave 4 (D-05): wrappers for auth state-machine (Pattern E).
   // Bodies extracted to src/auth/state-machine.js. Phase 6 Wave 5 (AUTH-14):
   // verifyInternalPassword wrapper retired alongside src/auth/state-machine.js's
@@ -3167,31 +3167,10 @@ import {
     }
   }
 
-  async function cloudFetchAllOrgs() {
-    if (!fbReady()) return null;
-    try {
-      const { db, firestore } = window.FB;
-      const snap = await firestore.getDocs(firestore.collection(db, "orgs"));
-      return snap.docs.map((d) => d.data());
-    } catch (e) {
-      console.error("Cloud fetch orgs failed:", e);
-      return null;
-    }
-  }
-
-  async function cloudFetchAllUsers() {
-    if (!fbReady()) return null;
-    try {
-      const { db, firestore } = window.FB;
-      const snap = await firestore.getDocs(firestore.collection(db, "users"));
-      return snap.docs.map((d) => d.data());
-    } catch (e) {
-      console.error("Cloud fetch users failed:", e);
-      return null;
-    }
-  }
-
-  // Phase 2 (D-05): syncFromCloud extracted to src/data/cloud-sync.js — wrapper above.
+  // Phase 4.1 / D-13: cloudFetchAllOrgs + cloudFetchAllUsers deleted. They
+  // were the implementation of the silently-no-op'd one-shot pull; live
+  // hydration is now driven by _subscribeOrgs + _subscribeUsers wired
+  // post-auth (search "_subscribeOrgs(" above).
   // Pitfall 20 / H8 entanglement preserved as REGRESSION BASELINE in tests/data/cloud-sync.test.js.
 
   // ================================================================
@@ -4053,14 +4032,39 @@ import {
 
     // Post-auth setup (was previously gated on the firebase-ready event):
     ensureChatSubscription(state.fbUser);
-    try {
-      await syncFromCloud();
-    } catch (_e) {
-      /* sync failures bubble to console; do not block render */
-    }
-    // Cloud data is now mirrored locally; run the framework V2 wipe so
-    // saveOrg pushes the cleared responses back up to Firestore.
-    clearResponsesForFrameworkV2IfNeeded();
+
+    // Phase 4.1 / D-13 follow-up: Firestore is the source of truth for the
+    // orgs + users top-level collections. Live snapshot listeners hydrate
+    // the K.orgs / K.org(id) / K.users localStorage caches that the IIFE's
+    // synchronous helpers (loadOrgMetas / loadOrg / loadUsers) read, then
+    // trigger render(). The first orgs snapshot also drives the one-shot
+    // framework-V2 wipe so saveOrg pushes the cleared responses back up to
+    // Firestore (matches the original intent of "runs after cloud sync
+    // completes" at clearResponsesForFrameworkV2IfNeeded). Replaces the
+    // silently-no-op'd syncFromCloud() one-shot pull.
+    let _orgsHydratedOnce = false;
+    _subscribeOrgs({
+      onChange: (orgs) => {
+        jset(
+          K.orgs,
+          orgs.map((o) => ({ id: o.id, name: o.name })),
+        );
+        for (const org of orgs) jset(K.org(org.id), org);
+        if (!_orgsHydratedOnce) {
+          _orgsHydratedOnce = true;
+          clearResponsesForFrameworkV2IfNeeded();
+        }
+        render();
+      },
+      onError: (err) => console.error("subscribeOrgs failed:", err),
+    });
+    _subscribeUsers({
+      onChange: (users) => {
+        jset(K.users, users);
+        render();
+      },
+      onError: (err) => console.error("subscribeUsers failed:", err),
+    });
 
     render();
   });

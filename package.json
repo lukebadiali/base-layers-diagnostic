@@ -31,7 +31,7 @@
   "dependencies": {
     "@sentry/browser": "10.52.0",
     "chart.js": "4.5.1",
-    "dompurify": "3.4.2",
+    "dompurify": "3.4.5",
     "firebase": "12.12.1",
     "qrcode": "^1.5.4"
   },

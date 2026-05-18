@@ -120,7 +120,9 @@ describe("renderMfaChallenge (Phase 6 follow-up — sign-in 2nd-factor prompt)",
   it("renders a single 6-digit verification code input + submit button", () => {
     const view = createAuthView({});
     const el = view.renderMfaChallenge();
-    const input = el.querySelector('input[name="verificationCode"]');
+    const input = /** @type {HTMLInputElement} */ (
+      el.querySelector('input[name="verificationCode"]')
+    );
     expect(input).toBeTruthy();
     expect(input.getAttribute("inputmode")).toBe("numeric");
     expect(input.getAttribute("pattern")).toBe("[0-9]{6}");
@@ -141,6 +143,7 @@ describe("renderMfaChallenge (Phase 6 follow-up — sign-in 2nd-factor prompt)",
     expect(el.querySelector("button.auth-forgot-mfa-link")).toBeTruthy();
   });
   it("submit calls deps.verifyMfaCode(deps.mfaResolver, code)", async () => {
+    /** @type {Array<{ resolver: *, code: string }>} */
     const calls = [];
     const fakeResolver = { hints: [{ uid: "f1" }] };
     const view = createAuthView({

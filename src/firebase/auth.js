@@ -118,7 +118,7 @@ export async function signInEmailPassword(email, password) {
     const code = (err && /** @type {*} */ (err).code) || "";
     if (code === "auth/multi-factor-auth-required") {
       outcome = "mfa-required";
-      const resolver = fbGetMultiFactorResolver(auth, err);
+      const resolver = fbGetMultiFactorResolver(auth, /** @type {*} */ (err));
       throw new MfaRequiredError(resolver);
     }
     if (AUTH_CRED_ERROR_CODES.has(code)) {

@@ -37,6 +37,7 @@ import {
   signOut as fbSignOut,
   multiFactor as fbMultiFactor,
   TotpMultiFactorGenerator,
+  getMultiFactorResolver as fbGetMultiFactorResolver,
   updatePassword as fbUpdatePassword,
   sendSignInLinkToEmail as fbSendSignInLinkToEmail,
   isSignInWithEmailLink as fbIsSignInWithEmailLink,
@@ -61,6 +62,30 @@ export class SignInError extends Error {
   }
 }
 
+// Phase 6 follow-up (UAT-discovered): signInEmailPassword throws this when the
+// account has MFA enrolled. Carries the live MultiFactorResolver so the view
+// layer can route to renderMfaChallenge + call verifyMfaCode without
+// re-issuing the password sign-in. Resolver is non-serializable; never persist.
+export class MfaRequiredError extends Error {
+  /** @param {*} resolver */
+  constructor(resolver) {
+    super("Multi-factor authentication required");
+    this.name = "MfaRequiredError";
+    /** @type {*} */ this.resolver = resolver;
+  }
+}
+
+// Phase 6 follow-up: verifyMfaCode rethrows as this when the TOTP code is
+// wrong / expired. AUTH-12 chokepoint contract — no firebase/* error codes
+// reach views/*. Generic message is safe (no account-enumeration concern;
+// caller is already partial-authed at the second-factor step).
+export class MfaCodeInvalidError extends Error {
+  constructor() {
+    super("Invalid verification code");
+    this.name = "MfaCodeInvalidError";
+  }
+}
+
 const AUTH_CRED_ERROR_CODES = new Set([
   "auth/user-not-found",
   "auth/wrong-password",
@@ -72,8 +97,18 @@ const AUTH_CRED_ERROR_CODES = new Set([
   "auth/missing-email",
 ]);
 
+const MFA_CODE_INVALID_ERROR_CODES = new Set([
+  "auth/invalid-verification-code",
+  "auth/missing-verification-code",
+  "auth/code-expired",
+]);
+
 /** @param {string} email @param {string} password */
 export async function signInEmailPassword(email, password) {
+  // outcome: "failure" | "success" | "mfa-required". MFA-required is NOT a
+  // sign-in failure — the password was correct, the user is mid-flight to the
+  // second factor. Emitting auth.signin.failure here would poison Phase 9's
+  // OBS-05 anomaly counter. The completion audit fires from verifyMfaCode.
   let outcome = "failure";
   try {
     const result = await signInWithEmailAndPassword(auth, email, password);
@@ -81,6 +116,11 @@ export async function signInEmailPassword(email, password) {
     return result;
   } catch (err) {
     const code = (err && /** @type {*} */ (err).code) || "";
+    if (code === "auth/multi-factor-auth-required") {
+      outcome = "mfa-required";
+      const resolver = fbGetMultiFactorResolver(auth, err);
+      throw new MfaRequiredError(resolver);
+    }
     if (AUTH_CRED_ERROR_CODES.has(code)) {
       throw new SignInError();
     }
@@ -90,15 +130,56 @@ export async function signInEmailPassword(email, password) {
     // Phase 9 (AUDIT-05) best-effort emission — never block the auth flow on
     // audit failure. emitAuditEvent's internal try/catch swallows on failure;
     // we wrap again here so a thrown emit (e.g. throw inside the proxy itself)
-    // also cannot escape the finally block.
+    // also cannot escape the finally block. MFA-required is skipped — see
+    // outcome doc above.
+    if (outcome !== "mfa-required") {
+      try {
+        emitAuditEvent(
+          outcome === "success" ? "auth.signin.success" : "auth.signin.failure",
+          { type: "user", id: auth.currentUser?.uid ?? "unknown", orgId: null },
+          {},
+        );
+      } catch (_emitErr) {
+        // Pattern 5 #2 — best-effort. Never block auth flow on audit failure.
+      }
+    }
+  }
+}
+
+/**
+ * Complete a 2-factor sign-in by verifying the user's TOTP code against the
+ * resolver provided by signInEmailPassword's MfaRequiredError. Assumes a
+ * single enrolled TOTP factor — picks resolver.hints[0]. Emits
+ * auth.signin.success with payload.method:"totp" on resolved success
+ * (mirrors the email-link emission shape in signInWithEmailLink).
+ *
+ * @param {*} resolver - the MultiFactorResolver from the MfaRequiredError
+ * @param {string} verificationCode - 6-digit TOTP code
+ * @returns {Promise<*>} resolved user credential
+ */
+export async function verifyMfaCode(resolver, verificationCode) {
+  let outcome = "failure";
+  try {
+    const hint = resolver.hints[0];
+    const assertion = TotpMultiFactorGenerator.assertionForSignIn(hint.uid, verificationCode);
+    const result = await resolver.resolveSignIn(assertion);
+    outcome = "success";
+    return result;
+  } catch (err) {
+    const code = (err && /** @type {*} */ (err).code) || "";
+    if (MFA_CODE_INVALID_ERROR_CODES.has(code)) {
+      throw new MfaCodeInvalidError();
+    }
+    throw err;
+  } finally {
     try {
       emitAuditEvent(
         outcome === "success" ? "auth.signin.success" : "auth.signin.failure",
         { type: "user", id: auth.currentUser?.uid ?? "unknown", orgId: null },
-        {},
+        outcome === "success" ? { method: "totp" } : {},
       );
     } catch (_emitErr) {
-      // Pattern 5 #2 — best-effort. Never block auth flow on audit failure.
+      // Pattern 5 #2 — best-effort.
     }
   }
 }

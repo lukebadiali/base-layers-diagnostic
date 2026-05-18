@@ -25,6 +25,7 @@
  *   chatSubscribedFor: string|null,
  *   fbUser: *,
  *   qrcodeDataUrl: string|null,
+ *   mfaResolver: *,
  * }} AppState
  */
 
@@ -76,4 +77,8 @@ export const state = {
   // Pre-rendered QR-code data URL for renderMfaEnrol. Populated when MFA
   // enrolment is initiated (deferred to user-testing phase).
   qrcodeDataUrl: null,
+  // Live Firebase MultiFactorResolver for the in-flight MFA challenge (set by
+  // main.js when signInEmailPassword throws MfaRequiredError; cleared on
+  // resolve or cancel). Transient + non-serializable — never persist.
+  mfaResolver: null,
 };

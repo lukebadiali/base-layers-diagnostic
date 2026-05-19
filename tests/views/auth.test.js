@@ -12,6 +12,7 @@ import {
   renderSignIn,
   renderFirstRun,
   renderMfaEnrol,
+  renderMfaChallenge,
   renderEmailVerificationLanding,
   renderForgotMfa,
   renderForgotPassword,
@@ -108,6 +109,75 @@ describe("renderMfaEnrol (Phase 6 D-16)", () => {
     document.body.appendChild(el);
     await expect(document.body.innerHTML).toMatchFileSnapshot(
       "../__snapshots__/views/auth-mfa-enrol.html",
+    );
+  });
+});
+
+describe("renderMfaChallenge (Phase 6 follow-up — sign-in 2nd-factor prompt)", () => {
+  it("exports renderMfaChallenge as a function", () => {
+    expect(typeof renderMfaChallenge).toBe("function");
+  });
+  it("renders a single 6-digit verification code input + submit button", () => {
+    const view = createAuthView({});
+    const el = view.renderMfaChallenge();
+    const input = /** @type {HTMLInputElement} */ (
+      el.querySelector('input[name="verificationCode"]')
+    );
+    expect(input).toBeTruthy();
+    expect(input.getAttribute("inputmode")).toBe("numeric");
+    expect(input.getAttribute("pattern")).toBe("[0-9]{6}");
+    expect(input.getAttribute("autocomplete")).toBe("one-time-code");
+    expect(el.querySelector('button[type="submit"]')).toBeTruthy();
+  });
+  it("uses the login-page hero+form layout", () => {
+    const view = createAuthView({});
+    const el = view.renderMfaChallenge();
+    expect(el.classList.contains("auth-wrap")).toBe(true);
+    expect(el.querySelector(".auth-hero")).toBeTruthy();
+    expect(el.querySelector(".auth-form")).toBeTruthy();
+  });
+  it("offers a cancel button + a forgot-2FA link", () => {
+    const view = createAuthView({});
+    const el = view.renderMfaChallenge();
+    expect(el.querySelector("button.auth-sign-out-link")).toBeTruthy();
+    expect(el.querySelector("button.auth-forgot-mfa-link")).toBeTruthy();
+  });
+  it("submit calls deps.verifyMfaCode(deps.mfaResolver, code)", async () => {
+    /** @type {Array<{ resolver: *, code: string }>} */
+    const calls = [];
+    const fakeResolver = { hints: [{ uid: "f1" }] };
+    const view = createAuthView({
+      mfaResolver: fakeResolver,
+      verifyMfaCode: async (resolver, code) => {
+        calls.push({ resolver, code });
+      },
+    });
+    const el = view.renderMfaChallenge();
+    const input = /** @type {HTMLInputElement} */ (
+      el.querySelector('input[name="verificationCode"]')
+    );
+    input.value = "123456";
+    const form = /** @type {HTMLFormElement} */ (el.querySelector("form"));
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    // Microtask flush so the async submit handler completes.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(calls).toEqual([{ resolver: fakeResolver, code: "123456" }]);
+  });
+  it("cancel button calls deps.cancelMfaChallenge", () => {
+    let called = false;
+    const view = createAuthView({ cancelMfaChallenge: () => (called = true) });
+    const el = view.renderMfaChallenge();
+    /** @type {HTMLButtonElement} */ (el.querySelector("button.auth-sign-out-link")).click();
+    expect(called).toBe(true);
+  });
+  it("matches the mfa-challenge snapshot", async () => {
+    const view = createAuthView({});
+    const el = view.renderMfaChallenge();
+    document.body.innerHTML = "";
+    document.body.appendChild(el);
+    await expect(document.body.innerHTML).toMatchFileSnapshot(
+      "../__snapshots__/views/auth-mfa-challenge.html",
     );
   });
 });

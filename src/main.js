@@ -55,7 +55,7 @@ import "./ui/charts.js";
 import {
   auth as fbAuthInstance,
   onAuthStateChanged as fbOnAuthStateChanged,
-  signInEmailPassword,
+  signInEmailPassword as fbSignInEmailPassword,
   signOut as fbSignOut,
   multiFactor as fbMultiFactor,
   updatePassword as fbUpdatePassword,
@@ -67,6 +67,7 @@ import {
   beginTotpEnrollment as fbBeginTotpEnrollment,
   enrollTotp as fbEnrollTotp,
   unenrollAllMfa as fbUnenrollAllMfa,
+  verifyMfaCode as fbVerifyMfaCode,
 } from "./firebase/auth.js";
 import { createAuthView } from "./views/auth.js";
 
@@ -799,6 +800,15 @@ import {
         app.appendChild(authView.renderForgotMfa());
         return;
       }
+      // MFA challenge: signInEmailPassword threw MfaRequiredError, the
+      // wrapper stashed the resolver + flipped the route. auth.currentUser is
+      // still null at this point — the resolveSignIn call inside verifyMfaCode
+      // is what produces the signed-in user. Gate on state.mfaResolver so a
+      // stale route value can't render an empty challenge form.
+      if (state.route === "mfa-challenge" && state.mfaResolver) {
+        app.appendChild(authView.renderMfaChallenge());
+        return;
+      }
       app.appendChild(renderAuth());
       return;
     }
@@ -943,7 +953,23 @@ import {
     state,
     h,
     notify,
-    signInEmailPassword,
+    // Wrap signInEmailPassword so MfaRequiredError (thrown when the account has
+    // MFA enrolled) is caught here and routed to the challenge view instead of
+    // surfacing as a raw error in the sign-in form. Resolver lives in
+    // state.mfaResolver for the duration of the challenge.
+    signInEmailPassword: async (email, password) => {
+      try {
+        return await fbSignInEmailPassword(email, password);
+      } catch (err) {
+        if (err && /** @type {*} */ (err).name === "MfaRequiredError") {
+          state.mfaResolver = /** @type {*} */ (err).resolver;
+          setRoute("mfa-challenge");
+          render();
+          return undefined;
+        }
+        throw err;
+      }
+    },
     signOut: fbSignOut,
     updatePassword: fbUpdatePassword,
     sendSignInLinkToEmail: fbSendSignInLinkToEmail,
@@ -962,6 +988,23 @@ import {
     },
     get isMfaRecoveryFlow() {
       return state.route === "forgot-mfa";
+    },
+    get mfaResolver() {
+      return state.mfaResolver;
+    },
+    verifyMfaCode: async (resolver, code) => {
+      const result = await fbVerifyMfaCode(resolver, code);
+      // Clear the transient resolver + flip the route so the post-auth render
+      // doesn't briefly mount renderMfaChallenge against a now-stale resolver.
+      // onAuthStateChanged will pick up the new currentUser + drive a render.
+      state.mfaResolver = null;
+      setRoute("dashboard");
+      return result;
+    },
+    cancelMfaChallenge: () => {
+      state.mfaResolver = null;
+      setRoute("dashboard");
+      render();
     },
     enrollTotp: async (verificationCode) => {
       if (!inflightTotpSecret) {

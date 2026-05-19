@@ -33,6 +33,9 @@ import { h as defaultH } from "../ui/dom.js";
  *   routeToMfaEnrol?: () => void,
  *   routeToForgotPassword?: () => void,
  *   routeToSignIn?: () => void,
+ *   verifyMfaCode?: (resolver: *, code: string) => Promise<*>,
+ *   mfaResolver?: *,
+ *   cancelMfaChallenge?: () => void,
  * }} AuthDeps
  */
 
@@ -300,6 +303,82 @@ export function createAuthView(deps) {
     return wrap;
   }
 
+  // Phase 6 follow-up (UAT-discovered): the second factor at sign-in time.
+  // Runs after signInEmailPassword throws MfaRequiredError carrying the
+  // MultiFactorResolver. main.js stashes the resolver in state.mfaResolver and
+  // sets state.route = "mfa-challenge"; this view collects the 6-digit TOTP
+  // code and calls deps.verifyMfaCode(deps.mfaResolver, code) which routes
+  // through src/firebase/auth.js::verifyMfaCode (resolver.resolveSignIn under
+  // the hood).
+  function renderMfaChallenge() {
+    const wrap = h("div", { class: "auth-wrap auth-mfa-challenge" });
+    wrap.appendChild(buildHero());
+
+    const formSide = h("div", { class: "auth-form" });
+    formSide.appendChild(h("h2", { class: "auth-heading" }, "Two-factor authentication"));
+    formSide.appendChild(
+      h(
+        "p",
+        { class: "auth-sub" },
+        "Enter the 6-digit code from your authenticator app to finish signing in.",
+      ),
+    );
+
+    const form = h("form", { method: "post" });
+    const code = h("input", {
+      type: "text",
+      name: "verificationCode",
+      required: "",
+      inputmode: "numeric",
+      pattern: "[0-9]{6}",
+      placeholder: "6-digit code",
+      autocomplete: "one-time-code",
+      autofocus: "",
+    });
+    form.appendChild(
+      h("div", { class: "auth-field" }, [h("label", {}, "Verification code"), code]),
+    );
+    const submit = h("button", { type: "submit", class: "auth-submit" }, "Verify");
+    form.appendChild(submit);
+    form.addEventListener("submit", async (/** @type {Event} */ e) => {
+      e.preventDefault();
+      const codeVal = /** @type {HTMLInputElement} */ (code).value;
+      try {
+        if (deps.verifyMfaCode && deps.mfaResolver) {
+          await deps.verifyMfaCode(deps.mfaResolver, codeVal);
+        }
+      } catch (err) {
+        notify("error", (err && /** @type {*} */ (err).message) || "Verification failed");
+      }
+    });
+    formSide.appendChild(form);
+
+    // Escape hatch: cancel returns to the sign-in screen. main.js clears
+    // state.mfaResolver so renderMfaChallenge's gate fails on the next render.
+    const cancelBtn = h("button", { type: "button", class: "auth-sign-out-link" }, "Cancel");
+    cancelBtn.addEventListener("click", () => {
+      if (deps.cancelMfaChallenge) deps.cancelMfaChallenge();
+    });
+    const forgotMfa = h(
+      "button",
+      { type: "button", class: "auth-forgot-mfa-link" },
+      "Lost access to your authenticator?",
+    );
+    forgotMfa.addEventListener("click", () => {
+      if (deps.routeToForgotMfa) deps.routeToForgotMfa();
+    });
+    formSide.appendChild(
+      h("div", { class: "auth-help" }, [
+        cancelBtn,
+        h("span", { class: "auth-help-sep" }, " · "),
+        forgotMfa,
+      ]),
+    );
+
+    wrap.appendChild(formSide);
+    return wrap;
+  }
+
   function renderForgotMfa() {
     const wrap = h("div", { class: "auth-wrap auth-forgot-mfa" });
     wrap.appendChild(h("h2", {}, "Lost access to your authenticator?"));
@@ -445,6 +524,7 @@ export function createAuthView(deps) {
     renderSignIn,
     renderFirstRun,
     renderMfaEnrol,
+    renderMfaChallenge,
     renderEmailVerificationLanding,
     renderForgotMfa,
     renderForgotPassword,
@@ -460,6 +540,9 @@ export function renderFirstRun() {
 }
 export function renderMfaEnrol() {
   return createAuthView({}).renderMfaEnrol();
+}
+export function renderMfaChallenge() {
+  return createAuthView({}).renderMfaChallenge();
 }
 export function renderEmailVerificationLanding() {
   return createAuthView({}).renderEmailVerificationLanding();

@@ -39,6 +39,8 @@ import {
   TotpMultiFactorGenerator,
   getMultiFactorResolver as fbGetMultiFactorResolver,
   updatePassword as fbUpdatePassword,
+  reauthenticateWithCredential as fbReauthenticateWithCredential,
+  EmailAuthProvider,
   sendSignInLinkToEmail as fbSendSignInLinkToEmail,
   isSignInWithEmailLink as fbIsSignInWithEmailLink,
   signInWithEmailLink as fbSignInWithEmailLink,
@@ -286,16 +288,24 @@ export async function unenrollAllMfa() {
 // renderFirstRun's deps.updatePassword. SignInError reuse is intentional -
 // failure surfaces a generic message at the chokepoint per D-13.
 //
-// Phase 7 Wave 5 (BLOCKER-FIX 1 — sub-wave 6.1 row closes): after the firebase
-// password update resolves, if the current id-token claims include
-// `firstRun: true`, invoke the setClaims callable to flip firstRun off
-// (server-side setCustomUserClaims path drops firstRun because it's not in
-// SetClaimsSchema), then force a getIdToken(true) refresh so the new claim is
-// picked up immediately. The setClaims call is wrapped in try/catch and the
-// error is swallowed (logged) — the password DID update successfully and we
-// don't want to re-throw and confuse the caller. The user will pick up the
-// firstRun flip on next reload via the existing onAuthStateChanged listener
-// path or via the _pokes/{ts} write the server emits per Pitfall 2.
+// Phase 6 follow-up (UAT-discovered firstRun loop): Firebase revokes the user's
+// refresh tokens server-side the moment updatePassword resolves. Any subsequent
+// id-token-requiring call (setClaims callable, audit emit, Firestore listener)
+// fails with auth/user-token-expired and onAuthStateChanged fires with null —
+// bouncing the user to sign-in BEFORE the firstRun:true claim can be flipped.
+// Because the claim is never flipped, the next sign-in re-routes to renderFirstRun
+// and the user re-enters the same screen forever. Fix: reauthenticate with the
+// brand-new credential immediately after fbUpdatePassword so Firebase mints a
+// fresh ID token tied to the new password — then setClaims can run, the claim
+// flips, and render proceeds to the MFA enrol path. Since updatePassword is
+// only called from renderFirstRun (pre-MFA), the reauth does not trigger an
+// MFA challenge.
+//
+// Phase 7 Wave 5 (BLOCKER-FIX 1 — sub-wave 6.1 row closes): if the current
+// id-token claims include `firstRun: true`, invoke the setClaims callable to
+// flip firstRun off (server-side setCustomUserClaims path drops firstRun
+// because it's not in SetClaimsSchema), then force a getIdToken(true) refresh
+// so the new claim is picked up immediately.
 /** @param {string} newPassword */
 export async function updatePassword(newPassword) {
   const user = auth.currentUser;
@@ -318,24 +328,42 @@ export async function updatePassword(newPassword) {
     throw err;
   }
 
-  // BLOCKER-FIX 1: re-flip firstRun:true → absent + force token refresh.
-  // Best-effort; failure here does not roll back the successful password update.
-  try {
-    const idTokenResult = await user.getIdTokenResult();
-    const claims = /** @type {Record<string, unknown>} */ (idTokenResult.claims);
-    if (claims.firstRun === true) {
-      const role = typeof claims.role === "string" ? /** @type {string} */ (claims.role) : null;
-      const orgId = typeof claims.orgId === "string" ? /** @type {string} */ (claims.orgId) : null;
-      await setClaims({ uid: user.uid, role, orgId });
-      // Force ID-token refresh — picks up the server-side setCustomUserClaims
-      // mutation immediately so the next claim read sees firstRun absent.
-      await user.getIdToken(true);
+  // Reauthenticate with the brand-new credential to mint a fresh ID token
+  // (Firebase revoked the previous refresh tokens on the password change).
+  // Best-effort — if reauth fails, the password DID update; the user will be
+  // bounced via onAuthStateChanged and can sign in fresh on the next attempt.
+  let reauthed = false;
+  if (user.email) {
+    try {
+      const credential = EmailAuthProvider.credential(user.email, newPassword);
+      await fbReauthenticateWithCredential(user, credential);
+      reauthed = true;
+    } catch (_reauthErr) {
+      // Phase 9 Sentry will capture if observability is wired by then.
     }
-  } catch (claimsErr) {
-    // Swallow: password DID update; firstRun re-flip will retry on next auth
-    // state change or _pokes listener event (Pitfall 2 mitigation #3).
-    // Phase 9 Sentry will capture if observability is wired by then.
-    /** @type {*} */ (claimsErr);
+  }
+
+  // BLOCKER-FIX 1: re-flip firstRun:true → absent + force token refresh.
+  // Only attempted after reauth succeeds — otherwise setClaims would fail
+  // with auth/user-token-expired (the very failure mode this guard prevents).
+  if (reauthed) {
+    try {
+      const idTokenResult = await user.getIdTokenResult();
+      const claims = /** @type {Record<string, unknown>} */ (idTokenResult.claims);
+      if (claims.firstRun === true) {
+        const role = typeof claims.role === "string" ? /** @type {string} */ (claims.role) : null;
+        const orgId =
+          typeof claims.orgId === "string" ? /** @type {string} */ (claims.orgId) : null;
+        await setClaims({ uid: user.uid, role, orgId });
+        // Force ID-token refresh — picks up the server-side setCustomUserClaims
+        // mutation immediately so the next claim read sees firstRun absent.
+        await user.getIdToken(true);
+      }
+    } catch (claimsErr) {
+      // Swallow: password DID update; firstRun re-flip will retry on next auth
+      // state change or _pokes listener event (Pitfall 2 mitigation #3).
+      /** @type {*} */ (claimsErr);
+    }
   }
 
   // Phase 9 (AUDIT-05) POST-emit — both firebase update + setClaims have

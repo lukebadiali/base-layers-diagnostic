@@ -24,4 +24,7 @@ initAppCheck(app); // Phase 7 (FN-04) replaces the body
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
-export const functions = getFunctions(app);
+// Cloud Functions are deployed to europe-west2 — pin the client SDK to match
+// or callables resolve to the SDK default (us-central1) and CORS-fail. See
+// src/firebase/functions.js header for the full context.
+export const functions = getFunctions(app, "europe-west2");

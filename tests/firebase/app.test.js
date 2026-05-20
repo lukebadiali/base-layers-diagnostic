@@ -62,6 +62,14 @@ describe("src/firebase/app.js — adapter shape (D-05/D-06)", () => {
     expect(m.storage).toBeTruthy();
     expect(m.functions).toBeTruthy();
   });
+
+  it("initialises Functions in europe-west2 (matches deployed Cloud Functions region)", async () => {
+    // Cloud Functions are pinned to europe-west2 in functions/src/**/*.ts.
+    // The default us-central1 region produces CORS failures on every callable.
+    const fnsMod = await import("firebase/functions");
+    await import("../../src/firebase/app.js");
+    expect(fnsMod.getFunctions).toHaveBeenCalledWith(expect.anything(), "europe-west2");
+  });
 });
 
 describe("src/firebase/check.js — initAppCheck body fill (Phase 7 Wave 3, FN-07)", () => {

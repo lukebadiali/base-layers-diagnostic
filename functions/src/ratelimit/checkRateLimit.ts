@@ -42,7 +42,6 @@ export const checkRateLimit = onCall(
   {
     region: "europe-west2",
     enforceAppCheck: true,                  // FN-07
-    serviceAccount: "ratelimit-sa",         // FN-04 (Wave 1 SA inventory)
     secrets: [SENTRY_DSN],                  // FN-05 (defineSecret)
     memory: "256MiB",
     timeoutSeconds: 10,

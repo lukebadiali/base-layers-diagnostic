@@ -25,7 +25,6 @@ export const scheduledPurge = onSchedule(
     timeoutSeconds: 540,
     memory: "512MiB",
     retryCount: 1,
-    serviceAccount: "lifecycle-sa",
   },
   async (_event) => {
     const db = getFirestore();

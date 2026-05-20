@@ -44,7 +44,6 @@ export const softDelete = onCall(
   {
     region: "europe-west2",
     enforceAppCheck: true,
-    serviceAccount: "lifecycle-sa",
     secrets: [SENTRY_DSN],
     memory: "256MiB",
     timeoutSeconds: 30,

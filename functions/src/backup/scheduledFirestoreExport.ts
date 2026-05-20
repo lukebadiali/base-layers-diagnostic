@@ -27,7 +27,6 @@ export const scheduledFirestoreExport = onSchedule(
     timeoutSeconds: 540,
     memory: "256MiB",
     retryCount: 2,
-    serviceAccount: "backup-sa",
   },
   async (_event) => {
     const projectId = process.env.GCLOUD_PROJECT ?? process.env.GCP_PROJECT;

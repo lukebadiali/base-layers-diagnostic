@@ -54,7 +54,6 @@ export const gdprEraseUser = onCall(
   {
     region: "europe-west2",
     enforceAppCheck: true,
-    serviceAccount: "gdpr-writer-sa",
     secrets: [SENTRY_DSN, GDPR_PSEUDONYM_SECRET],
     memory: "1GiB",      // larger than export — cascade may aggregate thousands of ops
     timeoutSeconds: 540,

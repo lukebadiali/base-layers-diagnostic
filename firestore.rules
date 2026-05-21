@@ -182,22 +182,29 @@ service cloud.firestore {
     }
 
     // ── roadmaps/{orgId} (top-level per ARCHITECTURE.md §4) ──────────
+    // `months` and `quarters` are the tier-specific period arrays the renderRoadmap
+    // view writes via setDoc(..., { merge: true }) on each drag-drop / outcome edit
+    // (src/main.js periodsField() returns one of these per orgTier). `pillars` stays
+    // in the whitelist for the documented per-pillar schema in ARCHITECTURE.md §4.
     match /roadmaps/{orgId} {
       allow read:   if inOrg(orgId);
       allow create: if inOrg(orgId);
       allow update: if inOrg(orgId)
                     && immutable("orgId")
-                    && mutableOnly(["pillars", "updatedAt"]);
+                    && mutableOnly(["pillars", "months", "quarters", "updatedAt"]);
       allow delete: if false;
     }
 
     // ── funnels/{orgId} ───────────────────────────────────────────────
+    // `years` (per-quarter numeric inputs) and `kpis` (custom row array) are the
+    // fields renderFunnel writes via setDoc(..., { merge: true }). `stages` stays
+    // in the whitelist for the documented stage schema in ARCHITECTURE.md §4.
     match /funnels/{orgId} {
       allow read:   if inOrg(orgId);
       allow create: if inOrg(orgId);
       allow update: if inOrg(orgId)
                     && immutable("orgId")
-                    && mutableOnly(["stages", "updatedAt"]);
+                    && mutableOnly(["stages", "years", "kpis", "updatedAt"]);
       allow delete: if false;
     }
 

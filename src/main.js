@@ -4086,26 +4086,42 @@ import {
     // Firestore (matches the original intent of "runs after cloud sync
     // completes" at clearResponsesForFrameworkV2IfNeeded). Replaces the
     // silently-no-op'd syncFromCloud() one-shot pull.
+    // Skip render() when the snapshot is identical to what we already cached
+    // locally — typically the echo of this client's own setDoc round-trip.
+    // The user's action handler already called render() inline; redrawing
+    // again would just blow away scroll position and any in-flight drag /
+    // focus / mid-interaction DOM state for no visible benefit. Cross-device
+    // changes (genuinely new data) still trigger a render. The JSON.stringify
+    // compare is O(payload-size) per snapshot — acceptable here because the
+    // orgs collection is small (one doc per engagement).
     let _orgsHydratedOnce = false;
     _subscribeOrgs({
       onChange: (orgs) => {
-        jset(
-          K.orgs,
-          orgs.map((o) => ({ id: o.id, name: o.name })),
-        );
-        for (const org of orgs) jset(K.org(org.id), org);
+        const newMeta = orgs.map((o) => ({ id: o.id, name: o.name }));
+        let changed = JSON.stringify(jget(K.orgs, [])) !== JSON.stringify(newMeta);
+        jset(K.orgs, newMeta);
+        for (const org of orgs) {
+          const prev = jget(K.org(org.id), null);
+          if (!changed && JSON.stringify(prev) !== JSON.stringify(org)) changed = true;
+          jset(K.org(org.id), org);
+        }
         if (!_orgsHydratedOnce) {
           _orgsHydratedOnce = true;
           clearResponsesForFrameworkV2IfNeeded();
+          // First snapshot must always paint — the inline render() below
+          // fires before this listener completes, so the initial render
+          // doesn't have the hydrated orgs yet.
+          changed = true;
         }
-        render();
+        if (changed) render();
       },
       onError: (err) => console.error("subscribeOrgs failed:", err),
     });
     _subscribeUsers({
       onChange: (users) => {
+        const changed = JSON.stringify(jget(K.users, [])) !== JSON.stringify(users);
         jset(K.users, users);
-        render();
+        if (changed) render();
       },
       onError: (err) => console.error("subscribeUsers failed:", err),
     });
@@ -4130,11 +4146,23 @@ import {
     } catch (_e) {
       return;
     }
+    const nextFirstRun = claims.firstRun === true;
+    const nextRole = claims.role || "internal";
+    const nextOrgId = claims.orgId || null;
+    // Only re-render when something the render path actually reads from
+    // claims has changed — typically only on sign-in or when setClaims flips
+    // firstRun. The hourly auto-refresh also fires this listener with the
+    // SAME claims; rendering then would wipe scroll position and abort any
+    // in-flight drag / focus on every token rotation.
+    const changed =
+      state.fbUser.firstRun !== nextFirstRun ||
+      state.fbUser.role !== nextRole ||
+      state.fbUser.orgId !== nextOrgId;
     state.fbUser.appClaims = claims;
-    state.fbUser.firstRun = claims.firstRun === true;
-    state.fbUser.role = claims.role || "internal";
-    state.fbUser.orgId = claims.orgId || null;
-    render();
+    state.fbUser.firstRun = nextFirstRun;
+    state.fbUser.role = nextRole;
+    state.fbUser.orgId = nextOrgId;
+    if (changed) render();
   });
 
   // ================================================================

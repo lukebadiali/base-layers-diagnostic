@@ -18,28 +18,9 @@
 // Pitfall 3 closure: mass-assignment cell asserts client_orgA cannot add a
 // `role: admin` field to an existing actions doc.
 // AUDIT-07 (D-17): internal role CANNOT read auditLog - only admin can.
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  Timestamp,
-} from "firebase/firestore";
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  it,
-} from "vitest";
-import {
-  initRulesEnv,
-  asUser,
-  ROLES,
-  assertSucceeds,
-  assertFails,
-} from "./setup.js";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, Timestamp } from "firebase/firestore";
+import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
+import { initRulesEnv, asUser, ROLES, assertSucceeds, assertFails } from "./setup.js";
 
 let testEnv;
 
@@ -180,8 +161,7 @@ afterAll(async () => {
  */
 function createPayload(role, path) {
   const uid = role === "anonymous" ? null : role;
-  if (path === "orgs/orgA")
-    return { orgId: "orgA", name: "Org A new", createdAt: Timestamp.now() };
+  if (path === "orgs/orgA") return { orgId: "orgA", name: "Org A new", createdAt: Timestamp.now() };
   if (path === "orgs/orgA/responses/r2")
     return {
       orgId: "orgA",
@@ -222,13 +202,10 @@ function createPayload(role, path) {
     };
   if (path === "orgs/orgA/readStates/u_orgA_user")
     return { pillarReads: {}, chatLastRead: Timestamp.now() };
-  if (path.startsWith("users/"))
-    return { role: "client", orgId: "orgA", email: "x@y" };
+  if (path.startsWith("users/")) return { role: "client", orgId: "orgA", email: "x@y" };
   if (path.startsWith("internalAllowlist/")) return { addedAt: Timestamp.now() };
-  if (path.startsWith("auditLog/"))
-    return { type: "x", actorUid: uid, timestamp: Timestamp.now() };
-  if (path.startsWith("softDeleted/"))
-    return { origPath: "x", deletedAt: Timestamp.now() };
+  if (path.startsWith("auditLog/")) return { type: "x", actorUid: uid, timestamp: Timestamp.now() };
+  if (path.startsWith("softDeleted/")) return { origPath: "x", deletedAt: Timestamp.now() };
   if (path.startsWith("rateLimits/")) return { count: 0 };
   if (path.startsWith("roadmaps/"))
     return { orgId: path.split("/")[1], pillars: {}, updatedAt: Timestamp.now() };
@@ -253,18 +230,35 @@ function updatePayload(path, opts = {}) {
     // Mass-assignment cell - try to inject role:admin into an actions doc.
     return { role: "admin" };
   }
-  if (path === "orgs/orgA")
-    return { name: "Org A renamed", updatedAt: Timestamp.now() };
-  if (path === "orgs/orgA/actions/a1")
-    return { status: "done", updatedAt: Timestamp.now() };
-  if (path === "orgs/orgA/responses/r1")
-    return { values: { p1: 5 }, updatedAt: Timestamp.now() };
-  if (path === "orgs/orgA/readStates/u_orgA_user")
-    return { chatLastRead: Timestamp.now() };
-  if (path.startsWith("roadmaps/"))
+  if (path === "orgs/orgA") return { name: "Org A renamed", updatedAt: Timestamp.now() };
+  if (path === "orgs/orgA/actions/a1") return { status: "done", updatedAt: Timestamp.now() };
+  if (path === "orgs/orgA/responses/r1") return { values: { p1: 5 }, updatedAt: Timestamp.now() };
+  if (path === "orgs/orgA/readStates/u_orgA_user") return { chatLastRead: Timestamp.now() };
+  if (path.startsWith("roadmaps/")) {
+    // The renderRoadmap view writes the tier-specific period array
+    // (`months` for transformation tier, `quarters` for performance tier);
+    // older code paths and the docs use `pillars`. All three are mutable.
+    if (opts.shape === "months")
+      return { months: [{ pillarIds: [1], outcomes: [] }], updatedAt: Timestamp.now() };
+    if (opts.shape === "quarters")
+      return { quarters: [{ pillarIds: [2], outcomes: [] }], updatedAt: Timestamp.now() };
+    if (opts.shape === "forbidden") return { adminOnly: "x", updatedAt: Timestamp.now() };
     return { pillars: { p1: 1 }, updatedAt: Timestamp.now() };
-  if (path.startsWith("funnels/"))
+  }
+  if (path.startsWith("funnels/")) {
+    // The renderFunnel view writes `years` (per-quarter numeric grid) and
+    // `kpis` (custom row array). `stages` is the documented shape from
+    // ARCHITECTURE.md §4. All three are mutable.
+    if (opts.shape === "years")
+      return { years: { 2026: { Q1: { lead: 5 } } }, updatedAt: Timestamp.now() };
+    if (opts.shape === "kpis")
+      return {
+        kpis: [{ id: "kpi_1", name: "Leads", target: "10", current: "5", notes: "" }],
+        updatedAt: Timestamp.now(),
+      };
+    if (opts.shape === "forbidden") return { adminOnly: "x", updatedAt: Timestamp.now() };
     return { stages: { s1: 1 }, updatedAt: Timestamp.now() };
+  }
   return { touched: Timestamp.now() };
 }
 
@@ -592,11 +586,67 @@ const CELLS = [
     op: "update",
     expected: "allow",
   },
+  // roadmap mutable-field coverage — locks the rules whitelist to the field
+  // names renderRoadmap actually writes on drag-drop / outcome edits. Probing
+  // with `{pillars:...}` alone hides regressions where the view writes a
+  // tier-specific period array but the rules still only allow `pillars`.
+  {
+    role: "internal",
+    path: "roadmaps/orgA",
+    op: "update",
+    opts: { shape: "months" },
+    expected: "allow",
+    label: "internal can update roadmaps.months (transformation tier)",
+  },
+  {
+    role: "internal",
+    path: "roadmaps/orgA",
+    op: "update",
+    opts: { shape: "quarters" },
+    expected: "allow",
+    label: "internal can update roadmaps.quarters (performance tier)",
+  },
+  {
+    role: "internal",
+    path: "roadmaps/orgA",
+    op: "update",
+    opts: { shape: "forbidden" },
+    expected: "deny",
+    label: "internal cannot add non-whitelisted field to roadmaps",
+  },
 
   // funnels/{orgId}
   { role: "client_orgA", path: "funnels/orgA", op: "read", expected: "allow" },
   { role: "client_orgA", path: "funnels/orgB", op: "create", expected: "deny" },
   { role: "client_orgA", path: "funnels/orgA", op: "update", expected: "allow" },
+  // funnel mutable-field coverage — locks the rules whitelist to the field
+  // names renderFunnel actually writes (quarterly numeric grid + custom KPI
+  // rows). Probing with `{stages:...}` alone hides the same class of bug as
+  // the roadmap cells above.
+  {
+    role: "internal",
+    path: "funnels/orgA",
+    op: "update",
+    opts: { shape: "years" },
+    expected: "allow",
+    label: "internal can update funnels.years (quarterly grid)",
+  },
+  {
+    role: "internal",
+    path: "funnels/orgA",
+    op: "update",
+    opts: { shape: "kpis" },
+    expected: "allow",
+    label: "internal can update funnels.kpis (custom KPI rows)",
+  },
+  {
+    role: "internal",
+    path: "funnels/orgA",
+    op: "update",
+    opts: { shape: "forbidden" },
+    expected: "deny",
+    label: "internal cannot add non-whitelisted field to funnels",
+  },
 
   // funnelComments/{id} - orgId field on doc
   {
@@ -625,11 +675,8 @@ const CELLS = [
   },
 ];
 
-describe.each(CELLS)(
-  "rules matrix: $role $op $path -> $expected",
-  (cell) => {
-    it(cell.label || `${cell.expected}s`, async () => {
-      await runCell(cell);
-    });
-  },
-);
+describe.each(CELLS)("rules matrix: $role $op $path -> $expected", (cell) => {
+  it(cell.label || `${cell.expected}s`, async () => {
+    await runCell(cell);
+  });
+});

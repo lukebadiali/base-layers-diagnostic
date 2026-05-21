@@ -38,6 +38,7 @@ const fbSendPasswordResetEmailSpy = vi.fn(async () => undefined);
 
 vi.mock("firebase/auth", () => ({
   onAuthStateChanged: vi.fn(),
+  onIdTokenChanged: vi.fn(),
   signInWithEmailAndPassword: (...args) => fbSignInWithEmailAndPassword(...args),
   signOut: (...args) => fbSignOutSpy(...args),
   multiFactor: (...args) => fbMultiFactorSpy(...args),

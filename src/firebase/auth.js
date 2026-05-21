@@ -33,6 +33,7 @@
 // `auth.signin.failure` rows from Plan 03a beforeUserSignedIn substrate.
 import {
   onAuthStateChanged,
+  onIdTokenChanged,
   signInWithEmailAndPassword,
   signOut as fbSignOut,
   multiFactor as fbMultiFactor,
@@ -51,7 +52,7 @@ import { auth } from "./app.js";
 import { setClaims } from "../cloud/claims-admin.js";
 import { emitAuditEvent } from "../observability/audit-events.js";
 
-export { auth, onAuthStateChanged };
+export { auth, onAuthStateChanged, onIdTokenChanged };
 
 // Phase 6 (AUTH-12 / D-13): single-chokepoint unified-error wrapper. Catches
 // Firebase auth-credential error codes and re-throws SignInError so callers

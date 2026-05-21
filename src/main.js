@@ -55,6 +55,7 @@ import "./ui/charts.js";
 import {
   auth as fbAuthInstance,
   onAuthStateChanged as fbOnAuthStateChanged,
+  onIdTokenChanged as fbOnIdTokenChanged,
   signInEmailPassword as fbSignInEmailPassword,
   signOut as fbSignOut,
   multiFactor as fbMultiFactor,
@@ -4109,6 +4110,30 @@ import {
       onError: (err) => console.error("subscribeUsers failed:", err),
     });
 
+    render();
+  });
+
+  // Phase 6 follow-up (firstRun loop part 2): onAuthStateChanged does NOT fire
+  // on a forced ID-token refresh — only sign-in / sign-out / user-changed.
+  // updatePassword's final getIdToken(true) after the setClaims callable picks
+  // up the new {role,orgId,firstRun:absent} claims locally, but without this
+  // listener state.fbUser.firstRun stays true and the renderFirstRun screen
+  // re-renders forever. onIdTokenChanged fires on refresh too. Guard on an
+  // already-hydrated state.fbUser so initial sign-in goes through the heavier
+  // onAuthStateChanged path above (which also subscribes to orgs + users).
+  fbOnIdTokenChanged(fbAuthInstance, async (fbUser) => {
+    if (!fbUser || !state.fbUser || fbUser.uid !== state.fbUser.uid) return;
+    let claims;
+    try {
+      const tokenResult = await fbUser.getIdTokenResult();
+      claims = tokenResult.claims || {};
+    } catch (_e) {
+      return;
+    }
+    state.fbUser.appClaims = claims;
+    state.fbUser.firstRun = claims.firstRun === true;
+    state.fbUser.role = claims.role || "internal";
+    state.fbUser.orgId = claims.orgId || null;
     render();
   });
 

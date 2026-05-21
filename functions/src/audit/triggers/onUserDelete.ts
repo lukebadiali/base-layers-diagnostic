@@ -44,7 +44,6 @@ if (!getApps().length) initializeApp();
 // firebase-functions-test wrap(), so Wave 6 hardens to the v1-compliant form.
 export const onUserDelete = functionsV1
   .runWith({
-    serviceAccount: "audit-mirror-sa@",
   })
   .region("europe-west2")
   .auth.user()

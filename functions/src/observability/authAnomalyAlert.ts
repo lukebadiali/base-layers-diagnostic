@@ -201,7 +201,6 @@ export const authAnomalyAlert = onDocumentCreated(
   {
     document: "auditLog/{eventId}",
     region: "europe-west2",
-    serviceAccount: "audit-alert-sa", // Wave 6 SA provisioning — Plan 09-05
     secrets: [SLACK_WEBHOOK_URL, SENTRY_DSN],
     memory: "256MiB",
     timeoutSeconds: 30,

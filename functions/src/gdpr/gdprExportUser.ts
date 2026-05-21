@@ -61,7 +61,6 @@ export const gdprExportUser = onCall(
   {
     region: "europe-west2",
     enforceAppCheck: true,
-    serviceAccount: "gdpr-reader-sa",
     secrets: [SENTRY_DSN],
     memory: "512MiB",
     timeoutSeconds: 540, // bundle assembly + GCS save can be slow for large users (T-08-04-07)

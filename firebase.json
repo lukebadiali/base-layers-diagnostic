@@ -44,6 +44,42 @@
         "source": "/api/csp-violations",
         "function": { "functionId": "cspReportSink", "region": "europe-west2" }
       },
+      {
+        "source": "/setClaims",
+        "function": { "functionId": "setClaims", "region": "europe-west2" }
+      },
+      {
+        "source": "/auditWrite",
+        "function": { "functionId": "auditWrite", "region": "europe-west2" }
+      },
+      {
+        "source": "/getDocumentSignedUrl",
+        "function": { "functionId": "getDocumentSignedUrl", "region": "europe-west2" }
+      },
+      {
+        "source": "/softDelete",
+        "function": { "functionId": "softDelete", "region": "europe-west2" }
+      },
+      {
+        "source": "/restoreSoftDeleted",
+        "function": { "functionId": "restoreSoftDeleted", "region": "europe-west2" }
+      },
+      {
+        "source": "/permanentlyDeleteSoftDeleted",
+        "function": { "functionId": "permanentlyDeleteSoftDeleted", "region": "europe-west2" }
+      },
+      {
+        "source": "/gdprExportUser",
+        "function": { "functionId": "gdprExportUser", "region": "europe-west2" }
+      },
+      {
+        "source": "/gdprEraseUser",
+        "function": { "functionId": "gdprEraseUser", "region": "europe-west2" }
+      },
+      {
+        "source": "/checkRateLimit",
+        "function": { "functionId": "checkRateLimit", "region": "europe-west2" }
+      },
       { "source": "**", "destination": "/index.html" }
     ]
   },

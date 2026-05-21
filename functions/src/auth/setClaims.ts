@@ -52,7 +52,6 @@ export const setClaims = onCall(
   {
     region: "europe-west2",
     enforceAppCheck: true,
-    serviceAccount: "claims-admin-sa",
     secrets: [SENTRY_DSN],
     memory: "256MiB",
     timeoutSeconds: 30,

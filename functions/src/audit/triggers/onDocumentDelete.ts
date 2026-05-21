@@ -23,7 +23,6 @@ export const onDocumentDelete = onDocumentDeleted(
   {
     document: "orgs/{orgId}/documents/{docId}",
     region: "europe-west2",
-    serviceAccount: "audit-mirror-sa",
   },
   async (event) => {
     const orgId = event.params.orgId;

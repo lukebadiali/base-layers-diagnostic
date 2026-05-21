@@ -42,7 +42,6 @@ export const auditWrite = onCall(
   {
     region: "europe-west2",
     enforceAppCheck: true,
-    serviceAccount: "audit-writer-sa",
     secrets: [SENTRY_DSN],
     memory: "256MiB",
     timeoutSeconds: 30,

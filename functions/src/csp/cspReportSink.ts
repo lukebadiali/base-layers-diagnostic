@@ -49,7 +49,6 @@ const MAX_BODY_BYTES = 64 * 1024;
 export const cspReportSink = onRequest(
   {
     region: "europe-west2",
-    serviceAccount: "csp-sink-sa", // FN-04 (Wave 1 SA inventory)
   },
   (req, res) => {
     // Step 1 — content-type gate (D-12 / T-3-3).

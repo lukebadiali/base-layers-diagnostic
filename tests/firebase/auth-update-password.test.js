@@ -46,6 +46,7 @@ const mockUser = {
 
 vi.mock("firebase/auth", () => ({
   onAuthStateChanged: vi.fn(),
+  onIdTokenChanged: vi.fn(),
   signInWithEmailAndPassword: vi.fn(),
   signOut: vi.fn(),
   multiFactor: vi.fn(),

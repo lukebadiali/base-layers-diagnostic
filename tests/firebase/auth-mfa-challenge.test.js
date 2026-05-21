@@ -27,6 +27,7 @@ vi.mock("../../src/cloud/claims-admin.js", () => ({
 
 vi.mock("firebase/auth", () => ({
   onAuthStateChanged: vi.fn(),
+  onIdTokenChanged: vi.fn(),
   signInWithEmailAndPassword: (...args) => fbSignInWithEmailAndPassword(...args),
   signOut: vi.fn(),
   multiFactor: vi.fn(),

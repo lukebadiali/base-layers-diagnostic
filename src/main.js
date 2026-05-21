@@ -854,6 +854,11 @@ import {
     app.appendChild(main);
 
     const org = activeOrgForUser(user);
+    // Subscribe to the /orgs/{orgId}/responses subcollection for the active
+    // org so diagnostic answers sync cross-device (Phase 5 DATA-01 read path).
+    // No-op when fbReady() is false (tests + pre-auth) or when already
+    // subscribed to the same orgId.
+    ensureResponsesSubscription(org ? org.id : null);
 
     if (!org) {
       // Internal with no orgs yet → show setup prompt
@@ -2161,8 +2166,22 @@ import {
     o.responses[o.currentRoundId][user.id][pillarId] =
       o.responses[o.currentRoundId][user.id][pillarId] || {};
     const cur = o.responses[o.currentRoundId][user.id][pillarId][idx] || {};
-    o.responses[o.currentRoundId][user.id][pillarId][idx] = Object.assign({}, cur, patch);
-    saveOrg(o);
+    const merged = Object.assign({}, cur, patch);
+    o.responses[o.currentRoundId][user.id][pillarId][idx] = merged;
+    // Local-only write — the in-memory model needs the new score for the
+    // inline render() that follows this call.
+    //
+    // The Phase 5 (DATA-01) cutover moved responses to the
+    // /orgs/{orgId}/responses/{respId} subcollection. The previous path
+    // (saveOrg → cloudPushOrg → setDoc on /orgs/{orgId}) was rejected by
+    // firestore.rules — clients cannot write the parent doc at all, and
+    // internal users hit `immutable("createdAt")` whenever the local cache's
+    // Timestamp-shape drifted from the server's. The subcollection rules
+    // whitelist the right set of writers (userId == request.auth.uid on
+    // create; mutableOnly values/updatedAt on update) so this path works
+    // for both roles. See PR #37 / #38 trail for the full thread.
+    jset(K.org(o.id), o);
+    cloudPushResponse(o.id, o.currentRoundId, user.id, pillarId, idx, merged);
   }
 
   // ================================================================
@@ -3191,6 +3210,105 @@ import {
     }, 400);
   }
 
+  // Per-response subcollection writer (Phase 5 DATA-01 path). One Firestore
+  // doc per (round, user, pillar) tuple at /orgs/{orgId}/responses/{respId}
+  // where respId = `${roundId}__${userId}__${pillarId}` — matches the shape
+  // the migration script (scripts/migrate-subcollections/builders.js) and
+  // the data/responses.js wrapper produce. Keyed-debounce per cell so rapid
+  // clicks on the same question collapse into a single setDoc.
+  function cloudPushResponse(orgId, roundId, userId, pillarId, idx, value) {
+    if (!fbReady() || !orgId || !roundId || !userId) return;
+    const key = `resp:${orgId}/${roundId}/${userId}/${pillarId}/${idx}`;
+    clearTimeout(cloudSaveTimers[key]);
+    cloudSaveTimers[key] = setTimeout(async () => {
+      try {
+        const { db, firestore } = window.FB;
+        const respId = `${roundId}__${userId}__${pillarId}`;
+        const ref = firestore.doc(db, "orgs", orgId, "responses", respId);
+        const snap = await firestore.getDoc(ref);
+        const existing = snap.exists() ? snap.data() : null;
+        // values is an array indexed by question idx (per the Phase 5 schema).
+        const values = existing && Array.isArray(existing.values) ? existing.values.slice() : [];
+        values[idx] = value;
+        if (snap.exists()) {
+          // Update — rules require mutableOnly(["values", "updatedAt", "legacyAppUserId"]).
+          await firestore.setDoc(
+            ref,
+            { values, updatedAt: firestore.serverTimestamp() },
+            { merge: true },
+          );
+        } else {
+          // Create — rules require userId == request.auth.uid; set all immutable fields.
+          await firestore.setDoc(ref, {
+            orgId,
+            roundId,
+            userId,
+            pillarId: String(pillarId),
+            values,
+            updatedAt: firestore.serverTimestamp(),
+          });
+        }
+      } catch (e) {
+        console.error("Cloud push response failed:", e);
+      }
+    }, 400);
+  }
+
+  // Live subscription to /orgs/{orgId}/responses for the active org. Folds
+  // each subcollection doc back into the in-memory `org.responses` map
+  // (legacy shape: responses[roundId][userId][pillarId][idx]) and renders
+  // when something changed. Track which org we're subscribed to so org
+  // switches (internal user picking a different client) tear the old
+  // listener down before opening the new one.
+  let _responsesUnsubscribe = null;
+  let _responsesSubscribedFor = null;
+  function ensureResponsesSubscription(orgId) {
+    if (_responsesSubscribedFor === orgId) return;
+    if (typeof _responsesUnsubscribe === "function") {
+      try {
+        _responsesUnsubscribe();
+      } catch (_e) {
+        // ignore: unsubscribe never throws in practice but defend anyway
+      }
+    }
+    _responsesUnsubscribe = null;
+    _responsesSubscribedFor = orgId;
+    if (!orgId || !fbReady()) return;
+    const { db, firestore } = window.FB;
+    const respCol = firestore.collection(db, "orgs", orgId, "responses");
+    _responsesUnsubscribe = firestore.onSnapshot(
+      respCol,
+      (snap) => {
+        const cached = loadOrg(orgId);
+        if (!cached) return;
+        const responses = {};
+        snap.forEach((/** @type {*} */ d) => {
+          const data = d.data() || {};
+          // Doc id encodes the tuple — fall back to id parts if the field
+          // copies are missing (defensive against partially-migrated docs).
+          const parts = String(d.id).split("__");
+          const roundId = data.roundId || parts[0];
+          const userId = data.userId || parts[1];
+          const pillarId = data.pillarId != null ? String(data.pillarId) : parts[2];
+          if (!roundId || !userId || !pillarId) return;
+          const values = Array.isArray(data.values) ? data.values : [];
+          responses[roundId] = responses[roundId] || {};
+          responses[roundId][userId] = responses[roundId][userId] || {};
+          const slot = (responses[roundId][userId][pillarId] = {});
+          values.forEach((v, idx) => {
+            if (v !== null && v !== undefined) slot[idx] = v;
+          });
+        });
+        const next = Object.assign({}, cached, { responses });
+        if (JSON.stringify(cached.responses || {}) !== JSON.stringify(responses)) {
+          jset(K.org(orgId), next);
+          render();
+        }
+      },
+      (err) => console.error("subscribeResponses failed:", err),
+    );
+  }
+
   async function cloudDeleteOrg(orgId) {
     if (!fbReady() || !orgId) return;
     try {
@@ -4102,8 +4220,17 @@ import {
         jset(K.orgs, newMeta);
         for (const org of orgs) {
           const prev = jget(K.org(org.id), null);
-          if (!changed && JSON.stringify(prev) !== JSON.stringify(org)) changed = true;
-          jset(K.org(org.id), org);
+          // Phase 5 (DATA-01) moved responses to the
+          // /orgs/{orgId}/responses subcollection; the parent doc's
+          // `responses` field is stale (or absent) and the
+          // ensureResponsesSubscription() listener below owns the truth.
+          // Preserve the locally-cached responses across parent-doc
+          // hydrations so a snapshot doesn't wipe the diagnostic clicks
+          // setResponse() just wrote to the subcollection.
+          const merged =
+            prev && prev.responses ? Object.assign({}, org, { responses: prev.responses }) : org;
+          if (!changed && JSON.stringify(prev) !== JSON.stringify(merged)) changed = true;
+          jset(K.org(org.id), merged);
         }
         if (!_orgsHydratedOnce) {
           _orgsHydratedOnce = true;

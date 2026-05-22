@@ -184,6 +184,10 @@ These persist in `/gsd-progress` + `/gsd-audit-uat` until resolved. Cleanup ledg
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 06.1 inserted after Phase 6 (2026-05-22): Client auth completion — Firebase Auth + inviteClient callable for client users (URGENT — discovered during UAT prep). Phase 6 deployed real Firebase Auth + MFA + custom claims for internal/admin only; client subsystem still uses legacy localStorage-only auth (`passwordHash` field, bypassing Firebase Auth). Phase 6 rules now deny client SDK writes to `/users/{uid}`, so the in-app "+ Invite client" modal silently half-fails (localStorage saves; Firestore write denied with `permission-denied`). `claim-builder.ts:22` admits no orgId-claim path was built for clients (invite-JWT "future flow" never shipped). Phase 6.1 must: (1) ship `inviteClient` server callable (Admin SDK creates Firebase Auth user + setCustomUserClaims({role:client, orgId}) + writes /users/{uid} + audit emit); (2) rewire `src/main.js:1223-1276` client sign-in to use Firebase Auth email/password (mirror Phase 6 internal pattern); (3) resolve org-passphrase semantics (one-time first-sign-in gate vs deprecated); (4) delete `setUserPassword` + `passwordHash` + localStorage-side client auth. Blocks UAT §4 (Client role). See also HANDOFF.md follow-up #1 — vestigial full-org writes on `addComment`/`addAction`/`setEngagementStage` may have related breakage and should be checked as part of this phase.
+
 ### Key Decisions Locked at Initialization
 
 - **Stay on Firebase** — no platform migration to Vercel + Supabase (PROJECT.md, decided 2026-05-03)

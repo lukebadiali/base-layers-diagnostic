@@ -161,6 +161,16 @@ Plans:
 - [ ] 06-06-PLAN.md - Wave 6: cleanup + DOC-10 + RULES-07 verification gate (scripts/strip-legacy-id-fields.js Phase-5-D-21 carry-forward closure substrate + SECURITY.md 5 new sections + Phase 6 Audit Index per D-18 + REQUIREMENTS.md AUTH-09 SUPERSEDED 2026-05-08 by email-link recovery per D-07 + runbooks/phase-6-cleanup-ledger.md zero-out + 4 forward-tracking rows queued for Phase 7/9/10/11) (AUTH-09, AUTH-13, RULES-07, DOC-10)
 **UI hint**: yes
 
+### Phase 06.1: Client auth completion — Firebase Auth + inviteClient callable for client users (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 6
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 06.1 to break down)
+
 ### Phase 7: Cloud Functions + App Check (Trusted-Server Layer)
 **Goal**: A trusted-server boundary exists with audit logging, rate limiting, secret management, and App Check perimeter â€” the substrate every later phase depends on.
 **Depends on**: Phase 6 (custom claims live so Functions can re-verify caller identity from ID token)

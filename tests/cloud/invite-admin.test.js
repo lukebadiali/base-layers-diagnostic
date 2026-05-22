@@ -21,7 +21,11 @@ import {
   PassphraseNotSetError,
 } from "../../src/firebase/auth.js";
 
-const callableSpy = vi.fn();
+// vi.hoisted: vi.mock factories are hoisted ABOVE imports, so any top-level
+// `const spy = vi.fn()` declared after the mock block is uninitialized at
+// factory-call time. Hoisting the spy declaration alongside the mock factory
+// resolves the temporal-dead-zone error.
+const { callableSpy } = vi.hoisted(() => ({ callableSpy: vi.fn() }));
 
 vi.mock("../../src/firebase/functions.js", () => ({
   functions: {},

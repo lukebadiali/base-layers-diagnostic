@@ -47,6 +47,26 @@ interface UpdateUserCall {
 }
 const updateUserCalls: UpdateUserCall[] = [];
 
+// ─── Phase 06.1 Wave 2 (AUTH-16) — Auth user record state ──────────────────
+// Extends the auth mock surface to cover getUserByEmail / createUser /
+// updateUser as a stateful in-memory store. The integration test for
+// inviteClient relies on this: it pre-seeds existing-user cases via
+// _seedUser({uid, email, customClaims}), the inviteClient body calls
+// getUserByEmail / createUser / updateUser, and the test asserts the
+// resulting state via _allClaims() / _readUser().
+
+interface UserRecord {
+  uid: string;
+  email: string;
+  customClaims: Record<string, unknown>;
+  emailVerified: boolean;
+  displayName?: string;
+  password?: string; // only used for assertion in tests; not exposed in real Admin SDK
+}
+const usersByEmail = new Map<string, UserRecord>();
+const usersByUid = new Map<string, UserRecord>();
+let userCounter = 0;
+
 // ─── Phase 8 Wave 1 state ─────────────────────────────────────────────────────
 
 const storageObjects = new Map<
@@ -74,6 +94,47 @@ export function _reset(): void {
   issuedSignedUrls.length = 0;
   exportCalls.length = 0;
   updateUserCalls.length = 0;
+  // Phase 06.1 Wave 2
+  usersByEmail.clear();
+  usersByUid.clear();
+  userCounter = 0;
+}
+
+// ─── Phase 06.1 Wave 2 seed / inspect helpers ────────────────────────────────
+
+export function _seedUser(record: {
+  uid: string;
+  email: string;
+  customClaims?: Record<string, unknown>;
+  emailVerified?: boolean;
+  displayName?: string;
+}): void {
+  const full: UserRecord = {
+    uid: record.uid,
+    email: record.email,
+    customClaims: record.customClaims ?? {},
+    emailVerified: record.emailVerified ?? false,
+    displayName: record.displayName,
+  };
+  usersByEmail.set(record.email, full);
+  usersByUid.set(record.uid, full);
+  // Mirror the customClaims into the customClaims map (so existing
+  // _allClaims() inspector keeps working uniformly for tests).
+  if (record.customClaims) {
+    customClaims.set(record.uid, { ...record.customClaims });
+  }
+}
+
+export function _readUser(email: string): UserRecord | undefined {
+  return usersByEmail.get(email);
+}
+
+export function _readUserByUid(uid: string): UserRecord | undefined {
+  return usersByUid.get(uid);
+}
+
+export function _allUsers(): UserRecord[] {
+  return [...usersByEmail.values()];
 }
 
 // ─── Phase 7 seed / inspect helpers ──────────────────────────────────────────
@@ -145,6 +206,11 @@ export const adminMockState = {
   _allExportCalls,
   // Phase 8 Wave 4 additions
   _allUpdateUserCalls,
+  // Phase 06.1 Wave 2 additions
+  _seedUser,
+  _readUser,
+  _readUserByUid,
+  _allUsers,
 };
 
 // ─── Doc reference helpers ────────────────────────────────────────────────────
@@ -517,13 +583,64 @@ export function getAuthMock() {
       claims: Record<string, unknown>,
     ): Promise<void> {
       customClaims.set(uid, { ...claims });
+      // Phase 06.1 Wave 2: mirror the claims into the user-record store too,
+      // so getUserByEmail (post-setCustomUserClaims) returns updated claims.
+      const u = usersByUid.get(uid);
+      if (u) {
+        u.customClaims = { ...claims };
+      }
     },
     // Phase 8 Wave 4: track updateUser({disabled:true}) calls from gdprEraseUser
+    // Phase 06.1 Wave 2: also handle updateUser({password}) from inviteClient resend
     async updateUser(
       uid: string,
       properties: Record<string, unknown>,
     ): Promise<void> {
       updateUserCalls.push({ uid, properties });
+      const u = usersByUid.get(uid);
+      if (u && typeof properties.password === "string") {
+        u.password = properties.password;
+      }
+    },
+    // Phase 06.1 Wave 2 (AUTH-16): Admin SDK getUserByEmail — throws
+    // {code:"auth/user-not-found"} on miss to mirror the real Admin SDK
+    // contract that inviteClient relies on (RESEARCH § 3 catch-only-user-not-found).
+    async getUserByEmail(email: string): Promise<UserRecord> {
+      const u = usersByEmail.get(email);
+      if (!u) {
+        throw Object.assign(new Error("user not found"), {
+          code: "auth/user-not-found",
+        });
+      }
+      return u;
+    },
+    // Phase 06.1 Wave 2 (AUTH-16): Admin SDK createUser — synthesises a uid
+    // and stores email + emailVerified + displayName. Throws auth/email-already-exists
+    // if the email is already taken (real Admin SDK contract).
+    async createUser(properties: {
+      email: string;
+      password?: string;
+      emailVerified?: boolean;
+      displayName?: string;
+    }): Promise<UserRecord> {
+      if (usersByEmail.has(properties.email)) {
+        throw Object.assign(new Error("email already in use"), {
+          code: "auth/email-already-exists",
+        });
+      }
+      userCounter += 1;
+      const uid = `mock-uid-${userCounter}`;
+      const record: UserRecord = {
+        uid,
+        email: properties.email,
+        emailVerified: properties.emailVerified ?? false,
+        displayName: properties.displayName,
+        password: properties.password,
+        customClaims: {},
+      };
+      usersByEmail.set(properties.email, record);
+      usersByUid.set(uid, record);
+      return record;
     },
   };
 }

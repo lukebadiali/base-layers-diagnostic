@@ -163,13 +163,15 @@ Plans:
 
 ### Phase 06.1: Client auth completion — Firebase Auth + inviteClient callable for client users (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
-**Requirements**: TBD
-**Depends on:** Phase 6
-**Plans:** 0 plans
+**Goal:** [Urgent work - to be planned] — full goal text + success criteria authored by Wave 3 Task 3 (06.1-03-PLAN.md) during execution.
+**Requirements**: AUTH-16, AUTH-17, AUTH-18, DOC-10 (incremental)
+**Depends on:** Phase 6, Phase 7
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 06.1 to break down)
+- [ ] 06.1-01-PLAN.md — Wave 1: pre-flight (App Check status checkpoint) + setOrgClientPassphrase ≥12 length floor + invite-builder.ts pure-logic helpers + inviteClient.ts skeleton + 3 new AUTH-12 error classes + 4 new audit-event enum entries (AUTH-16, AUTH-17)
+- [ ] 06.1-02-PLAN.md — Wave 2: inviteClient body + server-side hashString parity helper + barrel re-export + src/cloud/invite-admin.js wrapper + Invite modal rewire + Instructions modal copy revision + Vitest unit + firebase-functions-test integration tests (AUTH-16, AUTH-17)
+- [ ] 06.1-03-PLAN.md — Wave 3: atomic cutover commit (legacy substrate deletion) + scripts/strip-legacy-user-passwords + DOC-10 SECURITY.md additions + REQUIREMENTS.md AUTH-16/17/18 + ROADMAP.md fill-in + MFA recovery runbook extension + App Check backoff runbook + Phase 06.1 cleanup-ledger zero-out + STATE.md reconciliation + /gsd-verify-work 06.1 checkpoint (AUTH-16, AUTH-17, AUTH-18)
 
 ### Phase 7: Cloud Functions + App Check (Trusted-Server Layer)
 **Goal**: A trusted-server boundary exists with audit logging, rate limiting, secret management, and App Check perimeter â€” the substrate every later phase depends on.

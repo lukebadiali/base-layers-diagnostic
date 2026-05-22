@@ -97,6 +97,14 @@ export const auditEventType = z.enum([
   "data.funnelComment.softDelete.requested",
   "data.funnelComment.restore.requested",
   "data.funnelComment.permanentlyDelete.requested",
+  // Phase 06.1 (D-11 / AUTH-16): client-invite outcomes. Server-only emissions
+  // from inviteClient.ts callable; no client-side .requested companions because
+  // the invite flow's "requesting actor" is the admin, whose admin-side actions
+  // already chain through the existing iam.claims.set.requested emit-site.
+  "auth.client.invite", // existed: false, success
+  "auth.client.invite.resend", // existed: true + confirmReset: true, success
+  "auth.client.invite.rejected.cross-org", // failure: cross-org refusal
+  "auth.client.invite.rejected.passphrase-invalid", // failure: orgPassphrase mismatch
 ]);
 
 export type AuditEventType = z.infer<typeof auditEventType>;

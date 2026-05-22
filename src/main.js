@@ -146,6 +146,18 @@ import {
   ORG_PASSPHRASE_MIN_LENGTH,
   validateOrgPassphrase,
 } from "./auth/passphrase-policy.js";
+// Phase 06.1 Wave 2 (AUTH-16 / D-14): inviteClient callable wrapper + AUTH-12
+// chokepoint error classes. The Invite Client modal (openInviteClientModal,
+// l.~4906) calls inviteClient on submit; PassphraseInvalidError / CrossOrgError /
+// PassphraseNotSetError surface err.message inline so the modal stays open
+// for the admin to correct. Wave 1 added the 3 error classes at src/firebase/
+// auth.js; Wave 2 wires them into the modal here.
+import { inviteClient } from "./cloud/invite-admin.js";
+import {
+  PassphraseInvalidError,
+  CrossOrgError,
+  PassphraseNotSetError,
+} from "./firebase/auth.js";
 // Phase 4 Wave 2 (D-12): ui/* helpers extracted from app.js IIFE.
 // Closes runbooks/phase-4-cleanup-ledger.md row at app.js:676 (CODE-04 — html:
 // branch deleted in src/ui/dom.js) and app.js:527 (the no-unused-vars
@@ -4904,8 +4916,19 @@ import {
   }
 
   function openInviteClientModal() {
+    // Phase 06.1 Wave 2 (AUTH-16 / D-14): rewired to call the inviteClient
+    // callable (via src/cloud/invite-admin.js) instead of writing a local
+    // Firestore user doc. The org passphrase is re-typed here (used both as
+    // the admin's vouch + the new Firebase Auth password the client signs in
+    // with the first time). PassphraseInvalidError / CrossOrgError /
+    // PassphraseNotSetError surface err.message inline; modal stays open so
+    // the admin can correct.
     const name = h("input", { type: "text", placeholder: "Client contact name" });
     const email = h("input", { type: "email", placeholder: "client@company.com" });
+    const orgPassphrase = h("input", {
+      type: "password",
+      placeholder: "Re-enter the company passphrase",
+    });
     const select = h("select", { class: "settings-textarea-comment" });
     const orgs = loadOrgMetas();
     orgs.forEach((o) => {
@@ -4915,6 +4938,135 @@ import {
       select.appendChild(opt);
     });
     const errBox = h("div");
+
+    const createBtn = h(
+      "button",
+      { class: "btn" },
+      "Create account",
+    );
+
+    /**
+     * @param {Error} err
+     */
+    function surfaceError(err) {
+      errBox.replaceChildren();
+      if (
+        err instanceof PassphraseInvalidError ||
+        err instanceof PassphraseNotSetError ||
+        err instanceof CrossOrgError
+      ) {
+        errBox.appendChild(h("div", { class: "auth-error" }, err.message));
+      } else {
+        errBox.appendChild(
+          h(
+            "div",
+            { class: "auth-error" },
+            "Something went wrong — try again.",
+          ),
+        );
+      }
+    }
+
+    async function doInvite(/** @type {boolean} */ confirmReset) {
+      const em = (email.value || "").trim().toLowerCase();
+      const nameVal = (name.value || "").trim();
+      const orgIdVal = select.value;
+      const passVal = orgPassphrase.value || "";
+
+      errBox.replaceChildren();
+      if (!em || !em.includes("@")) {
+        errBox.appendChild(h("div", { class: "auth-error" }, "Enter a valid email."));
+        return;
+      }
+      if (!nameVal) {
+        errBox.appendChild(h("div", { class: "auth-error" }, "Enter the client's name."));
+        return;
+      }
+      if (!orgs.length || !orgIdVal) {
+        errBox.appendChild(
+          h("div", { class: "auth-error" }, "Create an organisation first."),
+        );
+        return;
+      }
+      if (!passVal) {
+        errBox.appendChild(
+          h("div", { class: "auth-error" }, "Re-enter the company passphrase."),
+        );
+        return;
+      }
+
+      createBtn.setAttribute("disabled", "");
+      try {
+        const res = await inviteClient({
+          email: em,
+          name: nameVal,
+          orgId: orgIdVal,
+          orgPassphrase: passVal,
+          ...(confirmReset ? { confirmReset: true } : {}),
+        });
+        if (res && res.existed === true && !confirmReset) {
+          // Existed-user path: prompt admin to confirm reset (re-flips firstRun
+          // and overwrites the existing password back to the org passphrase).
+          createBtn.removeAttribute("disabled");
+          const chosenOrgForCopy = loadOrgMetas().find((o) => o.id === orgIdVal);
+          const orgName = (chosenOrgForCopy && chosenOrgForCopy.name) || "this organisation";
+          const stateDesc = res.hasFirstRun
+            ? "first-run"
+            : "completed";
+          const confirmModal = modal([
+            h("h3", {}, "Email already has an account"),
+            h(
+              "p",
+              { class: "section-explainer" },
+              `That email already has a ${stateDesc} account for ${orgName}. Reset their password back to the current company passphrase and re-flip first-run? Their current sign-in will be invalidated.`,
+            ),
+            h("div", { class: "row" }, [
+              h(
+                "button",
+                {
+                  class: "btn secondary",
+                  onclick: () => confirmModal.close(),
+                },
+                "Cancel",
+              ),
+              h(
+                "button",
+                {
+                  class: "btn",
+                  onclick: async () => {
+                    try {
+                      await doInvite(true);
+                      confirmModal.close();
+                    } catch (_e) {
+                      // doInvite already surfaced; ensure the confirm modal closes
+                      // so the admin can see the underlying modal's error.
+                      confirmModal.close();
+                    }
+                  },
+                },
+                "Yes, reset",
+              ),
+            ]),
+          ]);
+          return;
+        }
+
+        // Success — close + open instructions modal.
+        const chosenOrg = loadOrgMetas().find((o) => o.id === orgIdVal);
+        const client = { email: em, name: nameVal };
+        m.close();
+        render();
+        openInviteInstructionsModal(client, chosenOrg, true);
+      } catch (err) {
+        surfaceError(/** @type {Error} */ (err));
+      } finally {
+        createBtn.removeAttribute("disabled");
+      }
+    }
+
+    createBtn.addEventListener("click", () => {
+      void doInvite(false);
+    });
 
     const m = modal([
       h("h3", {}, "Invite a client"),
@@ -4926,57 +5078,19 @@ import {
       h("div", { class: "settings-form-stack" }, [
         h("div", {}, [h("label", { class: "settings-form-label" }, "Name"), name]),
         h("div", {}, [h("label", { class: "settings-form-label" }, "Email"), email]),
-        h("div", {}, [h("label", { class: "settings-form-label" }, "Organisation"), select]),
+        h("div", {}, [
+          h("label", { class: "settings-form-label" }, "Organisation"),
+          select,
+        ]),
+        h("div", {}, [
+          h("label", { class: "settings-form-label" }, "Company passphrase"),
+          orgPassphrase,
+        ]),
       ]),
       errBox,
       h("div", { class: "row" }, [
         h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-        h(
-          "button",
-          {
-            class: "btn",
-            onclick: () => {
-              // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
-              errBox.replaceChildren();
-              const em = (email.value || "").trim().toLowerCase();
-              if (!em || !em.includes("@")) {
-                errBox.appendChild(h("div", { class: "auth-error" }, "Enter a valid email."));
-                return;
-              }
-              if (findUserByEmail(em)) {
-                errBox.appendChild(
-                  h("div", { class: "auth-error" }, "A user with that email already exists."),
-                );
-                return;
-              }
-              if (!orgs.length) {
-                errBox.appendChild(
-                  h("div", { class: "auth-error" }, "Create an organisation first."),
-                );
-                return;
-              }
-              const user = {
-                id: uid("u_"),
-                email: em,
-                name: (name.value || "").trim(),
-                role: "client",
-                orgId: select.value,
-                createdAt: iso(),
-              };
-              upsertUser(user);
-              const chosenOrg = loadOrgMetas().find((o) => o.id === select.value);
-              const chosenOrgFull = loadOrg(select.value);
-              m.close();
-              render();
-              openInviteInstructionsModal(
-                user,
-                chosenOrg,
-                !!(chosenOrgFull && chosenOrgFull.clientPassphraseHash),
-              );
-            },
-          },
-          "Create account",
-        ),
+        createBtn,
       ]),
     ]);
     setTimeout(() => name.focus(), 10);
@@ -4993,7 +5107,7 @@ You've been set up with access to The Base Layers diagnostic${org?.name ? ` for 
 To sign in:
 1. Go to ${signInUrl}
 2. Enter your email: ${client.email}
-3. Enter the company passphrase (I'll share this with you separately)
+3. Enter the company passphrase your contact has shared with you
 4. Create your own password on first sign-in - you'll use this from then on
 
 Any questions, just let me know.`;
@@ -5027,13 +5141,13 @@ Any questions, just let me know.`;
         h(
           "p",
           { class: "settings-text-narrow" },
-          `${client.email} can now sign in. There's no automatic email - send them the details below. You'll also need to share the company passphrase for ${org?.name || "their organisation"} separately.`,
+          `${client.email} can now sign in. There's no automatic email - send them the details below. Then share the company passphrase with them via your usual secure channel.`,
         ),
         !hasPassphrase
           ? h(
               "div",
               { class: "settings-amber-banner" },
-              `⚠ ${org?.name || "This organisation"} doesn't have a company passphrase set yet. Set one from the Admin page before the client tries to sign in.`,
+              `⚠ ${org?.name || "This organisation"} doesn't have a company passphrase set. Set one (min 12 characters) from Settings → Set passphrase before inviting clients.`,
             )
           : null,
         h("label", { class: "settings-section-h" }, "Suggested message"),

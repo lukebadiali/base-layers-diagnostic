@@ -136,6 +136,16 @@ import {
 // (orgId, { onMetadata, attach, onError }) shape) in src/data/cloud-sync.js
 // stays available for future per-org-detail hydration but is not used here.
 import * as auth from "./auth/state-machine.js";
+// Phase 06.1 Wave 1 Task 1 (AUTH-16 / RESEARCH § Critical Pinned Fact 1.1):
+// length-floor gate for the org client passphrase. Admin SDK
+// auth.createUser({password}) bypasses Identity Platform passwordPolicy, so
+// the modal-submit chokepoint here is the load-bearing gate that keeps
+// invited clients out of the bricked-first-sign-in failure mode. Pure-logic
+// helper — zero firebase/* imports per CLAUDE.md domain/* invariant.
+import {
+  ORG_PASSPHRASE_MIN_LENGTH,
+  validateOrgPassphrase,
+} from "./auth/passphrase-policy.js";
 // Phase 4 Wave 2 (D-12): ui/* helpers extracted from app.js IIFE.
 // Closes runbooks/phase-4-cleanup-ledger.md row at app.js:676 (CODE-04 — html:
 // branch deleted in src/ui/dom.js) and app.js:527 (the no-unused-vars
@@ -694,6 +704,14 @@ import {
 
   // ---------- Client org passphrase (shared by all users of an org) ----------
   async function setOrgClientPassphrase(orgId, pass) {
+    // Phase 06.1 Wave 1 Task 1 (AUTH-16 / RESEARCH § Critical Pinned Fact 1.1):
+    // ≥12-char length floor enforced HERE — the modal-submit chokepoint that
+    // every Set/Change Passphrase route lands at. Admin SDK
+    // auth.createUser({password}) bypasses Identity Platform passwordPolicy,
+    // so without this gate Wave 2's inviteClient.ts would succeed but the
+    // invited client would be bricked at first signInWithEmailAndPassword
+    // (auth/password-does-not-meet-requirements).
+    if (!validateOrgPassphrase(pass)) return false;
     const org = loadOrg(orgId);
     if (!org) return false;
     org.clientPassphraseHash = await hashString(pass);
@@ -5091,9 +5109,12 @@ Any questions, just let me know.`;
   function openSetOrgPassphrase(orgId, orgName) {
     const org = loadOrg(orgId);
     const existing = !!(org && org.clientPassphraseHash);
+    // Phase 06.1 Wave 1 Task 1 (AUTH-16 / RESEARCH § Critical Pinned Fact 1.1):
+    // placeholder raised from "min 4 chars" to "min 12 chars" — matches the
+    // length floor in setOrgClientPassphrase + the gate below.
     const nw = h("input", {
       type: "password",
-      placeholder: "New company passphrase (min 4 chars)",
+      placeholder: "New company passphrase (min 12 chars)",
     });
     const confirm = h("input", { type: "password", placeholder: "Confirm passphrase" });
     const errBox = h("div");
@@ -5117,9 +5138,19 @@ Any questions, just let me know.`;
             onclick: async () => {
               // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
               errBox.replaceChildren();
-              if (nw.value.length < 4) {
+              // Phase 06.1 Wave 1 Task 1 (AUTH-16 / RESEARCH § Critical Pinned
+              // Fact 1.1): modal-side check raised from 4 to
+              // ORG_PASSPHRASE_MIN_LENGTH (12). setOrgClientPassphrase below
+              // re-validates via the same helper as a defence-in-depth gate.
+              if (nw.value.length < ORG_PASSPHRASE_MIN_LENGTH) {
                 errBox.appendChild(
-                  h("div", { class: "auth-error" }, "Passphrase must be at least 4 characters."),
+                  h(
+                    "div",
+                    { class: "auth-error" },
+                    "Passphrase must be at least " +
+                      ORG_PASSPHRASE_MIN_LENGTH +
+                      " characters.",
+                  ),
                 );
                 return;
               }

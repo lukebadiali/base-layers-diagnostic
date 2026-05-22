@@ -346,21 +346,7 @@ import {
       comments: {},
       readStates: {},
     };
-    // Local write — the in-memory model + the rest of saveOrg's bookkeeping.
-    jset(K.org(id), org);
-    // First-write path: cloudPushOrg now uses { merge: true } and strips
-    // immutable fields (createdAt + orgId) to avoid the localStorage-shape
-    // drift hitting the rules' equality check on update. For the doc's very
-    // first write we DO need createdAt + orgId persisted, so do that here
-    // directly. Allowed by `allow create: if isInternal();` on /orgs/{orgId}.
-    if (fbReady()) {
-      const { db, firestore } = window.FB;
-      const { id: _docId, ...payload } = org;
-      void _docId;
-      firestore
-        .setDoc(firestore.doc(db, "orgs", id), Object.assign({ orgId: id }, payload))
-        .catch((e) => console.error("Cloud create org failed:", e));
-    }
+    saveOrg(org);
     const metas = loadOrgMetas();
     metas.push({ id, name });
     saveOrgMetas(metas);
@@ -3204,27 +3190,7 @@ import {
     cloudSaveTimers["org:" + org.id] = setTimeout(async () => {
       try {
         const { db, firestore } = window.FB;
-        // Strip fields the rules treat as immutable on update:
-        //   - `id` is the doc-id, never a stored field anyway.
-        //   - `createdAt` + `orgId` are rule-immutable; sending them as
-        //     localStorage-serialized values (Timestamps become plain
-        //     {seconds,nanoseconds} maps after JSON round-trip) makes
-        //     `request.resource.data.createdAt == resource.data.createdAt`
-        //     false against the server's real Timestamp, and the update
-        //     gets rejected with PERMISSION_DENIED.
-        //
-        // setDoc with `{ merge: true }` preserves the server's existing
-        // values for any field we don't include, so the immutable check
-        // becomes trivially true (both sides hold the server value).
-        //
-        // First-write path: createOrg already does an explicit non-merge
-        // setDoc inline (see createOrg below) so the doc exists with
-        // createdAt + orgId by the time cloudPushOrg is called on it.
-        const { id: _docId, createdAt: _ca, orgId: _oid, ...payload } = org;
-        void _docId;
-        void _ca;
-        void _oid; // eslint: no-unused
-        await firestore.setDoc(firestore.doc(db, "orgs", org.id), payload, { merge: true });
+        await firestore.setDoc(firestore.doc(db, "orgs", org.id), org);
       } catch (e) {
         console.error("Cloud push org failed:", e);
       }

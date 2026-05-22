@@ -96,7 +96,13 @@ import { setRoute as routerSetRoute, renderRoute as routerRenderRoute } from "./
 //   Wave 1 (Plan 02-02): src/util/ids.js, src/util/hash.js  [LANDED]
 //   Wave 2 (Plan 02-03): src/domain/banding.js, src/domain/scoring.js
 //   Wave 3 (Plan 02-04): src/domain/completion.js, src/domain/unread.js
-//   Wave 4 (Plan 02-05): src/data/migration.js, src/data/cloud-sync.js, src/auth/state-machine.js
+//   Wave 4 (Plan 02-05): src/data/migration.js, src/data/cloud-sync.js
+//   Phase 06.1 Wave 3 (AUTH-17 / D-16): legacy auth-helpers module +
+//   legacy client sign-in branch + per-user password mutation + Change-
+//   password modal DELETED atomically. Clients now sign in via Firebase
+//   Auth identical to internal admins; closes HANDOFF.md follow-up #9.
+//   Audit narrative for the deletion lives in SECURITY.md § Client
+//   Authentication + .planning/phases/06.1-*/06.1-03-SUMMARY.md.
 import {
   uid,
   iso,
@@ -135,7 +141,12 @@ import {
 // the IIFE below. The new dispatcher contract (subscribeOrgMetadata + the
 // (orgId, { onMetadata, attach, onError }) shape) in src/data/cloud-sync.js
 // stays available for future per-org-detail hydration but is not used here.
-import * as auth from "./auth/state-machine.js";
+// Phase 06.1 Wave 3 (AUTH-17 / D-16): legacy auth-helpers module import
+// DELETED — module retired alongside the legacy client sign-in branch +
+// per-user password mutation + Change-password modal. The single
+// remaining reader (the legacyCurrentUser wrapper) is inlined below.
+// Audit narrative for the deletion event lives in SECURITY.md § Client
+// Authentication + 06.1-03-SUMMARY.md.
 // Phase 06.1 Wave 1 Task 1 (AUTH-16 / RESEARCH § Critical Pinned Fact 1.1):
 // length-floor gate for the org client passphrase. Admin SDK
 // auth.createUser({password}) bypasses Identity Platform passwordPolicy, so
@@ -310,10 +321,11 @@ import {
   function findUser(id) {
     return loadUsers().find((u) => u.id === id) || null;
   }
-  function findUserByEmail(email) {
-    const e = (email || "").trim().toLowerCase();
-    return loadUsers().find((u) => u.email.toLowerCase() === e) || null;
-  }
+  // Phase 06.1 Wave 3 (AUTH-17 / D-16): `findUserByEmail` helper DELETED.
+  // Its only caller (the legacy client sign-in branch + the legacy Invite
+  // modal short-circuit) is gone — server-side `auth.getUserByEmail` in
+  // the `inviteClient` callable handles email-based user lookup now. Per
+  // RESEARCH § 4 ("If unused, remove the helper") at phase author time.
   function upsertUser(user) {
     const users = loadUsers();
     const i = users.findIndex((u) => u.id === user.id);
@@ -537,17 +549,19 @@ import {
   // collections un-hydrated on app boot. Replaced post-auth (search:
   // "_subscribeOrgs(" below) by live `_subscribeOrgs` + `_subscribeUsers`
   // listeners that hydrate K.orgs / K.org(id) / K.users on every snapshot.
-  // Phase 2 Wave 4 (D-05): wrappers for auth state-machine (Pattern E).
-  // Bodies extracted to src/auth/state-machine.js. Phase 6 Wave 5 (AUTH-14):
-  // verifyInternalPassword wrapper retired alongside src/auth/state-machine.js's
-  // verifyInternalPassword export — replaced by Firebase Auth signInEmailPassword
-  // via src/firebase/auth.js. The other 3 wrappers (verifyOrgClientPassphrase,
-  // verifyUserPassword, currentUser) remain in active use for client/user
-  // passphrase login paths.
-  const verifyOrgClientPassphrase = (orgId, pass) =>
-    auth.verifyOrgClientPassphrase(orgId, pass, { loadOrg });
-  const verifyUserPassword = (userId, pass) => auth.verifyUserPassword(userId, pass, { findUser });
-  const legacyCurrentUser = () => auth.currentUser({ currentSession, findUser });
+  // Phase 06.1 Wave 3 (AUTH-17 / D-16): legacy passphrase + per-user
+  // password verification wrappers DELETED alongside the auth module they
+  // wrapped. Client sign-in now routes through Firebase Auth
+  // signInEmailPassword (src/firebase/auth.js) identically to internal
+  // admins; AUTH-12 chokepoint handles error mapping. The legacyCurrentUser
+  // + currentUser pair below survives — still used by other surfaces
+  // hydrating from localStorage during the IIFE→modular migration window
+  // (Phase 4 sub-wave 4.1 carry-forward). The currentUser body is inlined
+  // here (formerly: `const s = currentSession(); return s ? findUser(s.userId) : null;`).
+  const legacyCurrentUser = () => {
+    const s = currentSession();
+    return s ? findUser(s.userId) : null;
+  };
   // currentUser() now prefers the Phase 6 Firebase-hydrated user (state.fbUser) —
   // legacy localStorage path remains for client/user role flows.
   const currentUser = () => state.fbUser || legacyCurrentUser();
@@ -597,7 +611,9 @@ import {
   function currentSession() {
     return jget(K.session, null);
   }
-  // Phase 2 (D-05): currentUser extracted to src/auth/state-machine.js — wrapper above.
+  // Phase 06.1 Wave 3 (AUTH-17 / D-16): currentUser body inlined into
+  // legacyCurrentUser above. Was extracted to a separate auth-helpers
+  // module in Phase 2 D-05; that module retired this wave.
   function signIn(userId) {
     jset(K.session, { userId });
   }
@@ -730,21 +746,26 @@ import {
     saveOrg(org);
     return true;
   }
-  // Phase 2 (D-05): verifyOrgClientPassphrase extracted to src/auth/state-machine.js — wrapper above.
+  // Phase 06.1 Wave 3 (AUTH-17 / D-16): the legacy reader's sole caller
+  // (inside the deleted client sign-in branch) is gone, but per RESEARCH
+  // § Critical Pinned Fact 1 + CONTEXT D-16 PRESERVE list this predicate
+  // remains as part of the org-passphrase mechanism (the LOAD-BEARING
+  // bootstrap-credential substrate). Future surfaces (e.g. Admin Clients
+  // "needs passphrase setup" badge) may consume it. eslint-disable is
+  // for the temporary no-caller window between Wave 3 cutover and any
+  // future surface that wires it back in.
+  // eslint-disable-next-line no-unused-vars
   function orgHasClientPassphrase(orgId) {
     const org = loadOrg(orgId);
     return !!(org && org.clientPassphraseHash);
   }
 
-  // ---------- Per-user password (client users only) ----------
-  async function setUserPassword(userId, pass) {
-    const u = findUser(userId);
-    if (!u) return false;
-    u.passwordHash = await hashString(pass);
-    upsertUser(u);
-    return true;
-  }
-  // Phase 2 (D-05): verifyUserPassword extracted to src/auth/state-machine.js — wrapper above.
+  // Phase 06.1 Wave 3 (AUTH-17 / D-16): per-user password mutation +
+  // verification helpers DELETED. Per-user password mutation is now
+  // Firebase Auth's responsibility (signInEmailPassword + updatePassword
+  // + sendPasswordResetEmail). The legacy passwordHash field on
+  // users/{uid} is stripped by scripts/strip-legacy-user-passwords/run.js
+  // (expected count 0 per HANDOFF.md).
 
   // Phase 2 (D-05): extracted to src/data/migration.js — wrappers above.
 
@@ -947,7 +968,9 @@ import {
     render,
     isClientView,
     signOut,
-    openChangePasswordModal,
+    // Phase 06.1 Wave 3 (AUTH-17 / D-16): the legacy Change-password modal
+    // dispatch entry DELETED alongside the modal definition + the chrome
+    // user-menu entry that consumed it.
     exportData,
     importData,
   });
@@ -1183,165 +1206,22 @@ import {
   function renderSignInForm() {
     const container = h("div");
 
-    const tabs = h("div", { class: "auth-tabs" }, [
-      h(
-        "button",
-        {
-          class: state.authTab === "client" ? "active" : "",
-          onclick: () => {
-            state.authTab = "client";
-            state.authError = "";
-            render();
-          },
-        },
-        "Client",
-      ),
-      h(
-        "button",
-        {
-          class: state.authTab === "internal" ? "active" : "",
-          onclick: () => {
-            state.authTab = "internal";
-            state.authError = "";
-            render();
-          },
-        },
-        "Internal team",
-      ),
-    ]);
-    container.appendChild(tabs);
-
-    if (state.authTab === "client") {
-      container.appendChild(h("h2", { class: "auth-heading" }, "Client sign-in"));
-      container.appendChild(
-        h(
-          "p",
-          { class: "auth-sub" },
-          "Sign in with the email your BeDeveloped contact used to invite you, your company passphrase, and your personal password.",
-        ),
-      );
-
-      const email = h("input", { type: "email", placeholder: "you@company.com" });
-      const team = h("input", { type: "password", placeholder: "Company passphrase (shared)" });
-      const pass = h("input", { type: "password", placeholder: "Your password" });
-      // CODE-06 (D-20): is-hidden class replaces initial display:none inline style.
-      const passConfirm = h("input", {
-        type: "password",
-        placeholder: "Confirm password (first sign-in only)",
-        class: "is-hidden",
-      });
-      const errBox = h("div");
-      if (state.authError) errBox.appendChild(h("div", { class: "auth-error" }, state.authError));
-
-      const hint = h(
-        "div",
-        { class: "auth-help u-mt-0 u-pt-0 u-no-border" },
-        "First time signing in? Fill in your email + company passphrase, then set a password below. It'll be remembered next time.",
-      );
-
-      // Show/hide the confirm field based on whether the entered email belongs to a fresh user
-      const updateFirstRunUI = () => {
-        const u = findUserByEmail(email.value);
-        const needsPassword = u && u.role === "client" && !u.passwordHash;
-        // CODE-06 (D-20): classList toggle replaces el.style.display mutation.
-        passConfirm.classList.toggle("is-hidden", !needsPassword);
-        pass.placeholder = needsPassword ? "Set your password (min 4 chars)" : "Your password";
-      };
-      email.addEventListener("blur", updateFirstRunUI);
-      email.addEventListener("input", updateFirstRunUI);
-
-      const doClientLogin = async () => {
-        state.authError = "";
-        const u = findUserByEmail(email.value);
-        if (!u || u.role !== "client") {
-          state.authError =
-            "We don't have a client account for that email. Ask your BeDeveloped contact to invite you.";
-          render();
-          return;
-        }
-        if (!u.orgId) {
-          state.authError =
-            "Your client account isn't linked to an organisation yet. Contact BeDeveloped.";
-          render();
-          return;
-        }
-        if (!orgHasClientPassphrase(u.orgId)) {
-          state.authError =
-            "Your organisation hasn't finished sign-in setup yet. Contact your BeDeveloped lead.";
-          render();
-          return;
-        }
-        const okTeam = await verifyOrgClientPassphrase(u.orgId, team.value);
-        if (!okTeam) {
-          state.authError =
-            "Company passphrase didn't match. Ask your BeDeveloped contact for the current one.";
-          render();
-          return;
-        }
-        if (!u.passwordHash) {
-          // First sign-in — password in "pass" field is a new password being set.
-          if (pass.value.length < 4) {
-            state.authError = "Choose a password of at least 4 characters.";
-            render();
-            return;
-          }
-          if (pass.value !== passConfirm.value) {
-            state.authError = "Password and confirmation don't match.";
-            render();
-            return;
-          }
-          await setUserPassword(u.id, pass.value);
-        } else {
-          const okPass = await verifyUserPassword(u.id, pass.value);
-          if (!okPass) {
-            state.authError =
-              "Password didn't match. Contact your BeDeveloped lead if you've forgotten it.";
-            render();
-            return;
-          }
-        }
-        signIn(u.id);
-        state.route = "dashboard";
-        render();
-      };
-      [email, team, pass, passConfirm].forEach((el) =>
-        el.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") doClientLogin();
-        }),
-      );
-
-      [
-        ["Email", email],
-        ["Company passphrase", team],
-        ["Password", pass],
-      ].forEach(([lbl, input]) => {
-        container.appendChild(h("div", { class: "auth-field" }, [h("label", {}, lbl), input]));
-      });
-      container.appendChild(h("div", { class: "auth-field u-mt-neg-6" }, [passConfirm]));
-      container.appendChild(hint);
-      container.appendChild(errBox);
-      container.appendChild(
-        h("button", { class: "auth-submit", onclick: doClientLogin }, "Sign in"),
-      );
-
-      container.appendChild(
-        h(
-          "div",
-          { class: "auth-help" },
-          "Clients only see their own company's data. If your email or passphrase isn't working, ask your BeDeveloped contact.",
-        ),
-      );
-    } else {
-      // Phase 6 Wave 5 (AUTH-14 / D-04 / BLOCKER-FIX 1 wiring): legacy
-      // doInternalLogin form (verifyInternalPassword + isAllowedInternalEmail
-      // + INTERNAL_PASSWORD_HASH) RETIRED. Internal admins now sign in via the
-      // Phase 6 Pattern D auth view's renderSignIn — wraps Firebase Auth
-      // signInWithEmailAndPassword with the AUTH-12 unified-error chokepoint.
-      // On successful sign-in, onAuthStateChanged hydrates state.fbUser and
-      // triggers render(); the auth-state ladder in render() then routes
-      // through firstRun / mfaEnrol / dashboard per claims state.
-      container.appendChild(authView.renderSignIn());
-    }
+    // Phase 06.1 Wave 3 (AUTH-17 / D-16): the auth-tabs container + the
+    // legacy client sign-in branch (legacy client sign-in form against
+    // passphrase + per-user password hash + email-lookup short-circuit)
+    // DELETED. Clients now sign in via Firebase Auth identical to
+    // internal admins — the same Pattern D auth view's renderSignIn
+    // wraps Firebase Auth signInWithEmailAndPassword with the AUTH-12
+    // unified-error chokepoint. On successful sign-in,
+    // onAuthStateChanged hydrates state.fbUser and triggers render();
+    // the auth-state ladder in render() then routes through firstRun /
+    // mfaEnrol / dashboard per claims state. The legacy auth-tab field
+    // in src/state.js is now dead-coded (no readers in src/main.js); the
+    // field is preserved for state-shape compatibility with the wider
+    // IIFE migration but is no longer mutated or branched on. Phase 6
+    // BLOCKER-FIX 1 wiring (the renderSignIn view) is the canonical
+    // entry point.
+    container.appendChild(authView.renderSignIn());
 
     return container;
   }
@@ -3078,51 +2958,23 @@ import {
           h("div", {}, ""),
         ]),
       );
+      // Phase 06.1 Wave 3 (AUTH-17 / D-16): legacy "password set / awaiting
+      // first sign-in" indicator + admin-side "Reset password" button
+      // DELETED. Clients now use Firebase Auth (Phase 6 D-15 +
+      // src/firebase/auth.js sendPasswordResetEmail); the admin-side
+      // reset-via-passwordHash mutation is meaningless once the legacy
+      // hash field is gone. Only the "Remove" affordance survives.
       allClients.forEach((u) => {
         const o = u.orgId ? loadOrgMetas().find((m) => m.id === u.orgId) : null;
         const row = h("div", { class: "clients-table-row" });
         row.appendChild(h("div", {}, u.name || "—"));
-        row.appendChild(
-          h("div", {}, [
-            h("div", {}, u.email),
-            h(
-              "div",
-              {
-                style: `font-size:11px; margin-top:2px; color: ${u.passwordHash ? "var(--green)" : "var(--ink-3)"};`,
-              },
-              u.passwordHash ? "password set" : "awaiting first sign-in",
-            ),
-          ]),
-        );
+        row.appendChild(h("div", {}, u.email));
         row.appendChild(h("div", {}, o ? o.name : "— (unassigned)"));
         row.appendChild(
           h(
             "div",
             { class: "clients-actions-row" },
             [
-              u.passwordHash
-                ? h(
-                    "button",
-                    {
-                      class: "btn ghost sm",
-                      onclick: () =>
-                        confirmDialog(
-                          "Reset password?",
-                          `${u.email} will be asked to set a new password the next time they sign in.`,
-                          () => {
-                            const fresh = findUser(u.id);
-                            if (fresh) {
-                              delete fresh.passwordHash;
-                              upsertUser(fresh);
-                              render();
-                            }
-                          },
-                          "Reset",
-                        ),
-                    },
-                    "Reset password",
-                  )
-                : null,
               h(
                 "button",
                 {
@@ -3140,7 +2992,7 @@ import {
                 },
                 "Remove",
               ),
-            ].filter(Boolean),
+            ],
           ),
         );
         table.appendChild(row);
@@ -5171,54 +5023,14 @@ Any questions, just let me know.`;
     );
   }
 
-  function openChangePasswordModal(user) {
-    const cur = h("input", { type: "password", placeholder: "Current password" });
-    const nw = h("input", { type: "password", placeholder: "New password (min 6 chars)" });
-    const confirmPw = h("input", { type: "password", placeholder: "Confirm new password" });
-    const errBox = h("div");
-    const m = modal([
-      h("h3", {}, "Change password"),
-      h(
-        "p",
-        { class: "section-explainer" },
-        "Enter your current password, then choose a new one. You'll use the new password next time you sign in.",
-      ),
-      h("div", { class: "settings-form-flex" }, [cur, nw, confirmPw]),
-      errBox,
-      h("div", { class: "row" }, [
-        h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-        h(
-          "button",
-          {
-            class: "btn",
-            onclick: async () => {
-              // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
-              errBox.replaceChildren();
-              const ok = await verifyUserPassword(user.id, cur.value);
-              if (!ok) {
-                errBox.appendChild(h("div", { class: "auth-error" }, "Current password is wrong."));
-                return;
-              }
-              if ((nw.value || "").length < 6) {
-                errBox.appendChild(
-                  h("div", { class: "auth-error" }, "New password must be at least 6 characters."),
-                );
-                return;
-              }
-              if (nw.value !== confirmPw.value) {
-                errBox.appendChild(h("div", { class: "auth-error" }, "New passwords don't match."));
-                return;
-              }
-              await setUserPassword(user.id, nw.value);
-              m.close();
-            },
-          },
-          "Update password",
-        ),
-      ]),
-    ]);
-    setTimeout(() => cur.focus(), 10);
-  }
+  // Phase 06.1 Wave 3 (AUTH-17 / D-16): the legacy Change-password modal
+  // (which verified the current password against the per-user
+  // passwordHash and wrote a new hash) DELETED. Client password changes
+  // now flow through Firebase Auth — self-serve resets via
+  // sendPasswordResetEmail (src/firebase/auth.js); future
+  // password-management UI for clients will surface via the Security
+  // panel (CONTEXT D-10). The chrome user-menu entry that opened the
+  // modal was deleted in the same atomic commit.
 
   function openSetOrgPassphrase(orgId, orgName) {
     const org = loadOrg(orgId);

@@ -4,8 +4,11 @@
 // renderFooter from app.js:621-826 + 831-875. Closure references to
 // state / activeOrgForUser / unreadCountTotal / unreadChatTotal / setRoute
 // / loadOrgMetas / jset / K / render / isClientView / signOut /
-// openChangePasswordModal / exportData / importData are replaced with the
+// exportData / importData are replaced with the
 // `deps` parameter passed to createChrome (Pattern D from Phase 2 D-05).
+// Phase 06.1 Wave 3 (AUTH-17 / D-16): the legacy Change-password modal
+// dispatch dep was removed from this list (along with its typedef
+// entry, destructure entry, and the user-menu entry that invoked it).
 // Wave 5 (D-02) moves state into src/state.js — the createChrome adapter
 // shape stays stable across the cutover, so views/* and main.js need no
 // further re-extraction.
@@ -29,7 +32,6 @@ import { initials } from "./format.js";
  *   render: () => void,
  *   isClientView: (user: *) => boolean,
  *   signOut: () => void,
- *   openChangePasswordModal: (user: *) => void,
  *   exportData: () => void,
  *   importData: (file: File) => void,
  * }} ChromeDeps
@@ -55,7 +57,6 @@ export function createChrome(deps) {
     render,
     isClientView,
     signOut,
-    openChangePasswordModal,
     exportData,
     importData,
   } = deps;
@@ -239,21 +240,12 @@ export function createChrome(deps) {
           ),
         );
       }
-      if (isClient && user.passwordHash) {
-        menu.appendChild(
-          h(
-            "button",
-            {
-              onclick: () => {
-                state.userMenuOpen = false;
-                render();
-                openChangePasswordModal(user);
-              },
-            },
-            "Change password",
-          ),
-        );
-      }
+      // Phase 06.1 Wave 3 (AUTH-17 / D-16): "Change password" client menu
+      // entry removed. Clients no longer have a per-user passwordHash;
+      // password changes now go through Firebase Auth
+      // (sendPasswordResetEmail — src/firebase/auth.js). The Security
+      // panel referenced in CONTEXT D-10 (future opt-in MFA surface)
+      // will expose any future password-management UI for clients.
       menu.appendChild(
         h(
           "button",

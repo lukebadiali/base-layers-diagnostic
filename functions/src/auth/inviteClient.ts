@@ -1,25 +1,31 @@
 // Phase 06.1 (AUTH-16 / D-12 / D-15) + Phase 7 substrate (FN-03 / FN-04 /
 // FN-05 / FN-07): admin-only HTTPS callable that invites a client user into
 // an org via Firebase Auth. Server-side authority — re-reads admin role from
-// the verified ID token (Pitfall 17). Wave 1 ships the skeleton (onCall
-// config + role gate + Zod schema + idempotency-marker write); Wave 2 fills
-// the body (Admin SDK auth.getUserByEmail + createUser / updateUser branch +
-// setCustomUserClaims + writeAuditEvent + return shape).
+// the verified ID token (Pitfall 17). Wave 1 shipped the skeleton; Wave 2
+// (this file) replaces the unimplemented throw with the real body:
+//   - read orgs/{orgId} + check clientPassphraseHash
+//   - verify orgPassphrase against stored hash (server-side hashString parity)
+//   - auth.getUserByEmail (catch only auth/user-not-found per RESEARCH § 3)
+//   - decideInviteOutcome → branch (create / resend / cross-org-refuse)
+//   - createUser / updateUser + setCustomUserClaims + writeAuditEvent
+//   - return { uid, existed, hasFirstRun? }
 //
-// Pattern A template inherited verbatim from functions/src/auth/setClaims.ts.
-// Critical delta vs setClaims: this file declares `serviceAccount:
-// "claims-admin-sa"` EXPLICITLY (CONTEXT D-15 + Phase 7 FN-04 — reuse the
-// existing SA, do not provision a new one per RESEARCH § Alternatives
-// Considered). The setClaims callable currently uses the default Functions
-// runtime SA — Phase 06.1 introduces the explicit pin here because the
-// inviteClient body (Wave 2) does broader Auth-Admin work
-// (createUser/updateUser, not just setCustomUserClaims).
+// Pattern A template inherited from functions/src/auth/setClaims.ts. Critical
+// delta: serviceAccount: "claims-admin-sa" EXPLICITLY (CONTEXT D-15 + Phase 7
+// FN-04 — reuse the existing SA, do not provision a new one per RESEARCH §
+// Alternatives Considered). The setClaims callable currently uses the default
+// Functions runtime SA — Phase 06.1 pins the explicit SA here because the
+// inviteClient body does broader Auth-Admin work (createUser / updateUser,
+// not just setCustomUserClaims).
 //
-// Wave 1 SKELETON BEHAVIOUR (this file): the handler runs the role gate +
-// Zod validation + idempotency-marker write, then throws
-// HttpsError("unimplemented", ...). Any accidental client invocation during
-// Wave 1 deployment therefore fails LOUDLY — no silent half-implementation.
-// Wave 2 (06.1-02-PLAN.md Task 1) replaces the throw with the real body.
+// Audit-emit shape: actor sourced from the VERIFIED ID token (Pitfall 17).
+// Each writeAuditEvent wrapped in try/catch + logger.warn so an audit-emit
+// failure NEVER blocks the underlying mutation (Pattern 5 #2 best-effort).
+// All 4 enum entries land here:
+//   - auth.client.invite                         (happy create)
+//   - auth.client.invite.resend                  (happy resend w/ confirmReset)
+//   - auth.client.invite.rejected.cross-org      (failure: cross-org refusal)
+//   - auth.client.invite.rejected.passphrase-invalid (failure: not-set | mismatch)
 
 import {
   onCall,
@@ -29,10 +35,17 @@ import {
 import { logger } from "firebase-functions/logger";
 import { defineSecret } from "firebase-functions/params";
 import { initializeApp, getApps } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { withSentry } from "../util/sentry.js";
 import { validateInput } from "../util/zod-helpers.js";
 import { ensureIdempotent } from "../util/idempotency.js";
+import { writeAuditEvent } from "../audit/auditLogger.js";
+import { hashString } from "../util/hash.js";
+import { decideInviteOutcome, buildInviteClaims } from "./invite-builder.js";
+import type { AuditEventInput } from "../audit/auditEventSchema.js";
 
 if (!getApps().length) initializeApp();
 
@@ -76,30 +89,230 @@ export const inviteClient = onCall(
     // email replay within 5 min from the same admin with the same
     // clientReqId is a no-op; concurrent invites for the same email from
     // different clientReqIds fall through to the auth.getUserByEmail
-    // lookup in Wave 2 (existed-flag branch handles dedup).
+    // lookup (existed-flag branch handles dedup).
     await ensureIdempotent(
       `${request.auth.uid}:inviteClient:${data.email}:${data.clientReqId}`,
       "inviteClient",
       5 * 60,
     );
 
-    // Wave 2 (06.1-02-PLAN.md Task 1) fills the body here:
-    //   - read orgs/{orgId} doc + check clientPassphraseHash (passphrase-not-set branch)
-    //   - verify orgPassphrase hash via server-side hashString parity helper
-    //   - auth.getUserByEmail(email).catch(only auth/user-not-found)
-    //   - call decideInviteOutcome(...) from invite-builder.js
-    //   - branch on outcome (create / resend / cross-org-refuse / passphrase-* errors)
-    //   - writeAuditEvent for the chosen outcome
-    //   - return { uid, existed, hasFirstRun? }
+    // Build the actor overlay once — Pitfall 17: actor sourced from VERIFIED
+    // ID token only. Shape mirrors setClaims.ts:99-114 verbatim (same
+    // role-narrowing ternary + null-coalescing for missing fields).
+    const token = (request.auth.token ?? {}) as Record<string, unknown>;
+    const baseActorOverlay = {
+      ip: null,
+      userAgent: null,
+      actor: {
+        uid: request.auth.uid,
+        email: typeof token.email === "string" ? token.email : null,
+        role:
+          token.role === "admin" ||
+          token.role === "internal" ||
+          token.role === "client" ||
+          token.role === "system"
+            ? (token.role as "admin" | "internal" | "client" | "system")
+            : null,
+        orgId: typeof token.orgId === "string" ? token.orgId : null,
+      },
+    };
 
-    logger.info("inviteClient.skeleton", {
-      email: data.email,
+    // Pattern 5 #2 best-effort wrapper — log + swallow on emit failure so audit
+    // emission NEVER blocks the underlying mutation.
+    async function emitAudit(
+      type: AuditEventInput["type"],
+      payload: Record<string, unknown>,
+      targetType: "user" | "org",
+      targetId: string,
+    ): Promise<void> {
+      try {
+        await writeAuditEvent(
+          {
+            type,
+            target: { type: targetType, id: targetId, orgId: data.orgId },
+            clientReqId: data.clientReqId,
+            payload,
+          },
+          {
+            ...baseActorOverlay,
+            now: Date.now(),
+            eventId: randomUUID(),
+          },
+        );
+      } catch (auditErr) {
+        logger.warn("audit.emit.failed", {
+          type,
+          error:
+            auditErr instanceof Error ? auditErr.message : String(auditErr),
+        });
+      }
+    }
+
+    // ─── Step 1: read orgs/{orgId} + check clientPassphraseHash ──────────────
+    const orgSnap = await getFirestore().doc(`orgs/${data.orgId}`).get();
+    const storedHash: string | null = (orgSnap.exists
+      ? ((orgSnap.data()?.clientPassphraseHash as string | undefined) ?? null)
+      : null) as string | null;
+
+    if (!storedHash) {
+      await emitAudit(
+        "auth.client.invite.rejected.passphrase-invalid",
+        { reason: "passphrase-not-set", email: data.email },
+        "org",
+        data.orgId,
+      );
+      throw new HttpsError(
+        "failed-precondition",
+        "Set the company passphrase first",
+        { code: "auth/passphrase-not-set" },
+      );
+    }
+
+    // ─── Step 2: verify passphrase ────────────────────────────────────────────
+    const candidateHash = await hashString(data.orgPassphrase);
+    if (candidateHash !== storedHash) {
+      await emitAudit(
+        "auth.client.invite.rejected.passphrase-invalid",
+        { reason: "passphrase-mismatch", email: data.email },
+        "org",
+        data.orgId,
+      );
+      throw new HttpsError(
+        "failed-precondition",
+        "Passphrase incorrect",
+        { code: "auth/passphrase-invalid" },
+      );
+    }
+
+    // ─── Step 3: look up existing user (catch only auth/user-not-found) ──────
+    // RESEARCH § 3 critical pin: do NOT catch arbitrary errors — they mask
+    // real network / permission failures and could falsely route to the
+    // create branch.
+    type AdminUserRecord = {
+      uid: string;
+      customClaims?: Record<string, unknown>;
+    };
+    let existingUser: AdminUserRecord | null = null;
+    try {
+      existingUser = (await getAuth().getUserByEmail(
+        data.email,
+      )) as AdminUserRecord;
+    } catch (err) {
+      const code = (err as { code?: string })?.code ?? "";
+      if (code !== "auth/user-not-found") {
+        throw new HttpsError("internal", `Auth lookup failed: ${code}`);
+      }
+    }
+
+    // ─── Step 4: decide outcome via pure-logic helper ─────────────────────────
+    const existingClaims = (existingUser?.customClaims ?? {}) as Record<
+      string,
+      unknown
+    >;
+    const outcome = decideInviteOutcome({
+      passphraseValid: true,
+      passphraseSet: true,
+      existingUser: existingUser
+        ? {
+            uid: existingUser.uid,
+            orgId:
+              typeof existingClaims.orgId === "string"
+                ? (existingClaims.orgId as string)
+                : null,
+            role:
+              typeof existingClaims.role === "string"
+                ? (existingClaims.role as string)
+                : null,
+          }
+        : null,
+      requestedOrgId: data.orgId,
+      confirmReset: data.confirmReset ?? false,
+    });
+
+    // ─── Step 5: branch on outcome ────────────────────────────────────────────
+    if (outcome.kind === "create") {
+      const userRecord = await getAuth().createUser({
+        email: data.email,
+        password: data.orgPassphrase,
+        emailVerified: true,
+        displayName: data.name,
+      });
+      await getAuth().setCustomUserClaims(
+        userRecord.uid,
+        buildInviteClaims(data.orgId),
+      );
+      await emitAudit(
+        "auth.client.invite",
+        { existed: false, newRole: "client", email: data.email },
+        "user",
+        userRecord.uid,
+      );
+      logger.info("inviteClient.success", {
+        orgId: data.orgId,
+        existed: false,
+        byUid: request.auth.uid,
+      });
+      return { uid: userRecord.uid, existed: false };
+    }
+
+    if (outcome.kind === "cross-org-refuse") {
+      await emitAudit(
+        "auth.client.invite.rejected.cross-org",
+        {
+          existingOrgId: outcome.existingOrgId,
+          requestedOrgId: data.orgId,
+          email: data.email,
+        },
+        "user",
+        outcome.existingUid,
+      );
+      throw new HttpsError(
+        "failed-precondition",
+        `User already belongs to a different org (existing orgId=${outcome.existingOrgId}, requested=${data.orgId})`,
+        { code: "auth/cross-org-invite-rejected" },
+      );
+    }
+
+    // outcome.kind === "resend" — narrow explicitly. The passphrase-* outcomes
+    // are statically unreachable here because Steps 1+2 throw before
+    // decideInviteOutcome is called with passphraseSet/Valid:false, but TS
+    // can't prove that without a runtime guard.
+    if (outcome.kind !== "resend") {
+      // Defensive: should never hit (the if/if branches above cover create +
+      // cross-org-refuse; passphrase-* outcomes are pre-empted by Steps 1+2).
+      throw new HttpsError(
+        "internal",
+        `Unexpected outcome kind: ${outcome.kind}`,
+      );
+    }
+
+    if (!data.confirmReset) {
+      const hasFirstRun = existingClaims.firstRun === true;
+      logger.info("inviteClient.existed.noReset", {
+        orgId: data.orgId,
+        byUid: request.auth.uid,
+      });
+      return { uid: outcome.existingUid, existed: true, hasFirstRun };
+    }
+
+    await getAuth().updateUser(outcome.existingUid, {
+      password: data.orgPassphrase,
+    });
+    await getAuth().setCustomUserClaims(
+      outcome.existingUid,
+      buildInviteClaims(data.orgId),
+    );
+    await emitAudit(
+      "auth.client.invite.resend",
+      { existed: true, newRole: "client", email: data.email },
+      "user",
+      outcome.existingUid,
+    );
+    logger.info("inviteClient.success", {
       orgId: data.orgId,
+      existed: true,
       byUid: request.auth.uid,
     });
-    throw new HttpsError(
-      "unimplemented",
-      "inviteClient body lands in 06.1 Wave 2",
-    );
+    return { uid: outcome.existingUid, existed: true };
   }),
 );

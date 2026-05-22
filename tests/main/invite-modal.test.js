@@ -40,6 +40,7 @@ function extractFunctionBlock(/** @type {string} */ src, /** @type {string} */ n
   let started = false;
   for (const line of lines) {
     if (!started) {
+      // eslint-disable-next-line security/detect-non-literal-regexp -- `name` is a hardcoded literal at call sites; this regex is a structural search.
       if (new RegExp(`function\\s+${name}\\s*\\(`).test(line)) {
         started = true;
         // estimate indent: count leading spaces of this line
@@ -50,6 +51,7 @@ function extractFunctionBlock(/** @type {string} */ src, /** @type {string} */ n
       }
     } else {
       // Stop when the next sibling function declaration at the same indent is encountered
+      // eslint-disable-next-line security/detect-non-literal-regexp -- `depth` is a numeric indent derived from already-read source; this regex is a structural search.
       const reEnd = new RegExp(`^\\s{0,${depth}}function\\s+`);
       if (reEnd.test(line) && !line.includes(name)) break;
       out.push(line);

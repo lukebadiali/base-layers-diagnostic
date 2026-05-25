@@ -80,6 +80,10 @@
         "source": "/checkRateLimit",
         "function": { "functionId": "checkRateLimit", "region": "europe-west2" }
       },
+      {
+        "source": "/inviteClient",
+        "function": { "functionId": "inviteClient", "region": "europe-west2" }
+      },
       { "source": "**", "destination": "/index.html" }
     ]
   },

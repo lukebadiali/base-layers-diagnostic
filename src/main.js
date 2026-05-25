@@ -153,22 +153,15 @@ import {
 // the modal-submit chokepoint here is the load-bearing gate that keeps
 // invited clients out of the bricked-first-sign-in failure mode. Pure-logic
 // helper — zero firebase/* imports per CLAUDE.md domain/* invariant.
-import {
-  ORG_PASSPHRASE_MIN_LENGTH,
-  validateOrgPassphrase,
-} from "./auth/passphrase-policy.js";
+import { ORG_PASSPHRASE_MIN_LENGTH, validateOrgPassphrase } from "./auth/passphrase-policy.js";
 // Phase 06.1 Wave 2 (AUTH-16 / D-14): inviteClient callable wrapper + AUTH-12
 // chokepoint error classes. The Invite Client modal (openInviteClientModal,
 // l.~4906) calls inviteClient on submit; PassphraseInvalidError / CrossOrgError /
 // PassphraseNotSetError surface err.message inline so the modal stays open
 // for the admin to correct. Wave 1 added the 3 error classes at src/firebase/
 // auth.js; Wave 2 wires them into the modal here.
-import { inviteClient } from "./cloud/invite-admin.js";
-import {
-  PassphraseInvalidError,
-  CrossOrgError,
-  PassphraseNotSetError,
-} from "./firebase/auth.js";
+import { inviteClient, deleteClient } from "./cloud/invite-admin.js";
+import { PassphraseInvalidError, CrossOrgError, PassphraseNotSetError } from "./firebase/auth.js";
 // Phase 4 Wave 2 (D-12): ui/* helpers extracted from app.js IIFE.
 // Closes runbooks/phase-4-cleanup-ledger.md row at app.js:676 (CODE-04 — html:
 // branch deleted in src/ui/dom.js) and app.js:527 (the no-unused-vars
@@ -2971,29 +2964,40 @@ import {
         row.appendChild(h("div", {}, u.email));
         row.appendChild(h("div", {}, o ? o.name : "— (unassigned)"));
         row.appendChild(
-          h(
-            "div",
-            { class: "clients-actions-row" },
-            [
-              h(
-                "button",
-                {
-                  class: "btn ghost sm danger",
-                  onclick: () =>
-                    confirmDialog(
-                      "Remove client access?",
-                      `${u.email} will no longer be able to sign in. Their responses from past rounds will remain in the data.`,
-                      () => {
-                        deleteUser(u.id);
+          h("div", { class: "clients-actions-row" }, [
+            h(
+              "button",
+              {
+                class: "btn ghost sm danger",
+                onclick: () =>
+                  confirmDialog(
+                    "Remove client access?",
+                    `${u.email} will no longer be able to sign in. Their responses from past rounds will remain in the data.`,
+                    async () => {
+                      // Phase 06.1 post-merge fix: client deletion goes through the
+                      // deleteClient callable (Admin SDK auth.deleteUser + /users
+                      // mirror doc delete in one server-side step). The previous
+                      // local-only deleteUser(u.id) + cloudDeleteUser(u.id) path
+                      // failed silently against firestore.rules:133 (server-only
+                      // mutation invariant) AND left the Firebase Auth user as a
+                      // sign-in-capable orphan.
+                      try {
+                        await deleteClient({ uid: u.id });
+                        deleteUser(u.id); // local cache cleanup; cloud already done
                         render();
-                      },
-                      "Remove",
-                    ),
-                },
-                "Remove",
-              ),
-            ],
-          ),
+                      } catch (err) {
+                        notify(
+                          "error",
+                          "Couldn't remove client: " + /** @type {*} */ ((err).message || err),
+                        );
+                      }
+                    },
+                    "Remove",
+                  ),
+              },
+              "Remove",
+            ),
+          ]),
         );
         table.appendChild(row);
       });
@@ -4791,11 +4795,7 @@ import {
     });
     const errBox = h("div");
 
-    const createBtn = h(
-      "button",
-      { class: "btn" },
-      "Create account",
-    );
+    const createBtn = h("button", { class: "btn" }, "Create account");
 
     /**
      * @param {Error} err
@@ -4809,13 +4809,7 @@ import {
       ) {
         errBox.appendChild(h("div", { class: "auth-error" }, err.message));
       } else {
-        errBox.appendChild(
-          h(
-            "div",
-            { class: "auth-error" },
-            "Something went wrong — try again.",
-          ),
-        );
+        errBox.appendChild(h("div", { class: "auth-error" }, "Something went wrong — try again."));
       }
     }
 
@@ -4835,15 +4829,11 @@ import {
         return;
       }
       if (!orgs.length || !orgIdVal) {
-        errBox.appendChild(
-          h("div", { class: "auth-error" }, "Create an organisation first."),
-        );
+        errBox.appendChild(h("div", { class: "auth-error" }, "Create an organisation first."));
         return;
       }
       if (!passVal) {
-        errBox.appendChild(
-          h("div", { class: "auth-error" }, "Re-enter the company passphrase."),
-        );
+        errBox.appendChild(h("div", { class: "auth-error" }, "Re-enter the company passphrase."));
         return;
       }
 
@@ -4862,9 +4852,7 @@ import {
           createBtn.removeAttribute("disabled");
           const chosenOrgForCopy = loadOrgMetas().find((o) => o.id === orgIdVal);
           const orgName = (chosenOrgForCopy && chosenOrgForCopy.name) || "this organisation";
-          const stateDesc = res.hasFirstRun
-            ? "first-run"
-            : "completed";
+          const stateDesc = res.hasFirstRun ? "first-run" : "completed";
           const confirmModal = modal([
             h("h3", {}, "Email already has an account"),
             h(
@@ -4930,10 +4918,7 @@ import {
       h("div", { class: "settings-form-stack" }, [
         h("div", {}, [h("label", { class: "settings-form-label" }, "Name"), name]),
         h("div", {}, [h("label", { class: "settings-form-label" }, "Email"), email]),
-        h("div", {}, [
-          h("label", { class: "settings-form-label" }, "Organisation"),
-          select,
-        ]),
+        h("div", {}, [h("label", { class: "settings-form-label" }, "Organisation"), select]),
         h("div", {}, [
           h("label", { class: "settings-form-label" }, "Company passphrase"),
           orgPassphrase,
@@ -5073,9 +5058,7 @@ Any questions, just let me know.`;
                   h(
                     "div",
                     { class: "auth-error" },
-                    "Passphrase must be at least " +
-                      ORG_PASSPHRASE_MIN_LENGTH +
-                      " characters.",
+                    "Passphrase must be at least " + ORG_PASSPHRASE_MIN_LENGTH + " characters.",
                   ),
                 );
                 return;

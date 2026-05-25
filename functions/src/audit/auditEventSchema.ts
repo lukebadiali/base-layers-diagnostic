@@ -105,6 +105,13 @@ export const auditEventType = z.enum([
   "auth.client.invite.resend", // existed: true + confirmReset: true, success
   "auth.client.invite.rejected.cross-org", // failure: cross-org refusal
   "auth.client.invite.rejected.passphrase-invalid", // failure: orgPassphrase mismatch
+  // Phase 06.1 post-merge fix: deleteClient outcomes. Mirrors the invite shape:
+  // a success enum + a single failure enum with payload.reason discriminator
+  // ("user-not-found" | "privileged-user") rather than fanning out the enum
+  // (same convention as auth.client.invite.rejected.cross-org's CR-01
+  // privileged-user reuse).
+  "auth.client.delete", // success: client user + /users mirror deleted
+  "auth.client.delete.failed", // failure: payload.reason discriminator
 ]);
 
 export type AuditEventType = z.infer<typeof auditEventType>;

@@ -17,6 +17,12 @@ export { setClaims } from "./auth/setClaims.js";
 // admin invites a client into an org. Wave 1 shipped skeleton; Wave 2 fills
 // body. Re-export lands NOW (Wave 2) per D-13.
 export { inviteClient } from "./auth/inviteClient.js";
+// Phase 06.1 post-merge fix: deleteClient — admin-only callable that removes
+// a client user atomically (Firebase Auth user + /users mirror doc). The
+// Firestore rule on /users/{uid} denies client-side mutations (server-only
+// invariant per D-09), and deleting only the mirror would leave an orphan
+// Auth user that can still sign in.
+export { deleteClient } from "./auth/deleteClient.js";
 export { auditWrite } from "./audit/auditWrite.js";
 export { onOrgDelete } from "./audit/triggers/onOrgDelete.js";
 export { onUserDelete } from "./audit/triggers/onUserDelete.js";

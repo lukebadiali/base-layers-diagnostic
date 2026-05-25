@@ -5,10 +5,31 @@
 // (initAppCheck(app) is called immediately after initializeApp(); see
 // 07-PATTERNS.md Pattern E + Phase 4 D-06).
 //
-// Phase 7 fills the body with the reCAPTCHA Enterprise provider per
-// ARCHITECTURE.md §2 + STACK.md line 48. Per-environment site keys are pulled
-// from import.meta.env at Vite build time. Debug tokens live ONLY in
-// .env.local (gitignored — Pitfall 8 mitigation #3).
+// PLATFORM-UAT post-T19 (2026-05-25): provider switched from
+// ReCaptchaEnterpriseProvider to ReCaptchaV3Provider. Reason — reCAPTCHA
+// Enterprise's score-based risk engine fails to issue App Check tokens in
+// incognito sessions because the third-party cookies + browser
+// fingerprinting it depends on for scoring are blocked by default. This
+// blocks every server call (updatePassword, setClaims callable, auditWrite)
+// for any client opening their invite link in incognito mode — confirmed
+// against a live invitee with `appCheck/recaptcha-error` warnings followed
+// by 401s on every callable and a 400 on identitytoolkit accounts:update.
+// ReCaptchaV3Provider's permissive default score threshold is well-known
+// to work in incognito while still attesting "request came from a real
+// browser running our SPA" (the App Check value prop). Operator follow-up:
+// generate a v3 key at https://www.google.com/recaptcha/admin and register
+// it as the App Check provider in Firebase Console — Enterprise keys
+// (Google Cloud Console) are not interchangeable with v3 keys (legacy
+// reCAPTCHA admin).
+//
+// Env var name VITE_RECAPTCHA_ENTERPRISE_SITE_KEY is deliberately retained
+// to avoid a rename ceremony across GH Actions secrets + .env.local files;
+// it now holds a v3 key, documented in .env.example. Cleanup-rename to
+// VITE_RECAPTCHA_SITE_KEY can ship later as a low-risk refactor.
+//
+// Per-environment site keys are pulled from import.meta.env at Vite build
+// time. Debug tokens live ONLY in .env.local (gitignored — Pitfall 8
+// mitigation #3).
 //
 // Boot order MUST NOT change — src/firebase/app.js calls initAppCheck(app)
 // immediately after initializeApp() (Phase 4 D-06). Only the body changes.
@@ -19,7 +40,7 @@
 // misconfiguration loudly rather than silently bypassing App Check
 // (T-07-03-06 Tampering disposition: mitigate via fail-closed PROD branch).
 
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
+import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 
 const SITE_KEY = import.meta.env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY ?? "";
 
@@ -49,7 +70,7 @@ export function initAppCheck(app) {
   }
 
   return initializeAppCheck(app, {
-    provider: new ReCaptchaEnterpriseProvider(SITE_KEY),
+    provider: new ReCaptchaV3Provider(SITE_KEY),
     isTokenAutoRefreshEnabled: true,
   });
 }

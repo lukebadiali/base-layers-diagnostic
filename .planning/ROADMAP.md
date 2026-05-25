@@ -161,6 +161,30 @@ Plans:
 - [ ] 06-06-PLAN.md - Wave 6: cleanup + DOC-10 + RULES-07 verification gate (scripts/strip-legacy-id-fields.js Phase-5-D-21 carry-forward closure substrate + SECURITY.md 5 new sections + Phase 6 Audit Index per D-18 + REQUIREMENTS.md AUTH-09 SUPERSEDED 2026-05-08 by email-link recovery per D-07 + runbooks/phase-6-cleanup-ledger.md zero-out + 4 forward-tracking rows queued for Phase 7/9/10/11) (AUTH-09, AUTH-13, RULES-07, DOC-10)
 **UI hint**: yes
 
+### Phase 06.1: Client auth completion — Firebase Auth + inviteClient callable for client users (INSERTED)
+
+**Goal**: Migrate client users from the legacy passphrase + per-user `passwordHash` substrate to real Firebase Auth identities; preserve the per-org passphrase as the admin-set bootstrap initial credential; ship an admin-only `inviteClient` Cloud Function that creates Firebase Auth users with `{role: "client", orgId, firstRun: true}` custom claims + `emailVerified: true`; reuse the existing `renderFirstRun` + `updatePassword` + `setClaims`-refresh substrate verbatim (zero new client-side first-run code); delete the legacy substrate atomically with the cutover (8 deletion zones spanning src/main.js + src/ui/chrome.js + 3 standalone files); close Phase 6 HANDOFF.md follow-up #9.
+
+**Depends on**: Phase 6 (Firebase Auth + Identity Platform + custom claims + `signInEmailPassword` chokepoint + `renderFirstRun` view + `sendPasswordResetEmail` substrate), Phase 7 (Cloud Functions Pattern A: App Check + Zod + idempotency + Sentry + minimal-IAM SA + audit-event substrate).
+
+**Requirements**: AUTH-16, AUTH-17, AUTH-18, DOC-10 (incremental).
+
+**Success Criteria** (what must be TRUE):
+  1. Admin can invite a client via the "+ Invite client" modal — providing the client's email, name, org, and the org's current passphrase. The callable creates a Firebase Auth user with `password = orgPassphrase`, `emailVerified: true`, and custom claims `{role: "client", orgId, firstRun: true}`; emits an `auth.client.invite` audit event.
+  2. Re-inviting an existing same-org client without `confirmReset` returns `{existed: true, hasFirstRun}` without mutating; with `confirmReset: true` the callable resets their password + re-flips first-run + emits `auth.client.invite.resend`.
+  3. Inviting an email already bound to a DIFFERENT org claim fails with `auth/cross-org-invite-rejected` + emits `auth.client.invite.rejected.cross-org`. Cross-org client membership is deferred (AUTH-V2-02).
+  4. `setOrgClientPassphrase` enforces ≥12-character length before hashing (research finding A1 — Admin SDK bypasses Identity Platform passwordPolicy); the Set passphrase modal placeholder + error message reflect the 12-char floor.
+  5. The legacy substrate is atomically deleted in a single Phase 06.1 cutover commit across 8 zones: `src/auth/state-machine.js` + `tests/auth/state-machine.test.js` + `tests/fixtures/auth-passwords.js` + `setUserPassword` + the tabs UI + the legacy client sign-in branch in `src/main.js` + `openChangePasswordModal` + 2 wrapper imports + `src/ui/chrome.js` Change-password menu entry + Admin Clients table passwordHash zones.
+  6. `scripts/strip-legacy-user-passwords/run.js` exists + operator-runnable via ADC; expected count 0 per HANDOFF.md (defensive substrate).
+  7. SECURITY.md gains § Client Authentication + § Phase 06.1 Audit Index; REQUIREMENTS.md gains AUTH-16/17/18 + Traceability entries; `runbooks/phase6-mfa-recovery-drill.md` extends Tier-2 to cover client users.
+
+**Plans**: 3 plans
+Plans:
+- [ ] 06.1-01-PLAN.md — Wave 1: pre-flight (App Check status checkpoint + runbook stub) + setOrgClientPassphrase ≥12 length floor + pre-existing-hash review + invite-builder.ts pure-logic helpers + inviteClient.ts skeleton + 3 new AUTH-12 error classes + 4 new audit-event enum entries (AUTH-16, AUTH-17)
+- [ ] 06.1-02-PLAN.md — Wave 2: inviteClient body + server-side hashString parity helper + barrel re-export + src/cloud/invite-admin.js wrapper + Invite modal rewire (no legacy short-circuits) + Instructions modal copy revision + Vitest unit + firebase-functions-test integration tests (AUTH-16, AUTH-17)
+- [ ] 06.1-03-PLAN.md — Wave 3: atomic cutover commit (8 deletion zones including chrome.js + Admin Clients table) + scripts/strip-legacy-user-passwords + DOC-10 SECURITY.md additions + REQUIREMENTS.md AUTH-16/17/18 + ROADMAP.md fill-in + MFA recovery runbook extension + App Check backoff runbook + Phase 06.1 cleanup-ledger zero-out + STATE.md reconciliation + SHA back-fill into SECURITY.md + ledger + /gsd-verify-work 06.1 checkpoint (AUTH-16, AUTH-17, AUTH-18)
+**UI hint**: yes (admin's Invite modal carries a new orgPassphrase input)
+
 ### Phase 7: Cloud Functions + App Check (Trusted-Server Layer)
 **Goal**: A trusted-server boundary exists with audit logging, rate limiting, secret management, and App Check perimeter â€” the substrate every later phase depends on.
 **Depends on**: Phase 6 (custom claims live so Functions can re-verify caller identity from ID token)

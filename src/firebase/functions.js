@@ -17,8 +17,15 @@
 // enforcement + the function-level enforceAppCheck + Zod + idempotency layers
 // providing the real access control (Phase 7 FN-03/FN-07).
 import { app } from "./app.js";
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 
 const HOSTING_DOMAIN = "https://baselayers.bedeveloped.com";
-export const functions = getFunctions(app, HOSTING_DOMAIN);
+// Dev-only emulator gate — same shape as src/firebase/app.js. When emulators
+// are active, the HOSTING_DOMAIN custom-origin choice is overridden by
+// connectFunctionsEmulator below, so callables route to localhost:5001 and
+// bypass the production same-origin invariant. Without this hook, local UAT
+// against inviteClient (and every other callable) preflight-fails on CORS.
+const USE_EMULATORS = import.meta.env.DEV && import.meta.env.VITE_USE_EMULATORS === "1";
+export const functions = getFunctions(app, USE_EMULATORS ? "europe-west2" : HOSTING_DOMAIN);
+if (USE_EMULATORS) connectFunctionsEmulator(functions, "localhost", 5001);
 export { httpsCallable };

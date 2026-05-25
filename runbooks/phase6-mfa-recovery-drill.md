@@ -154,6 +154,56 @@ gaps_observed: <freeform>
 
 ---
 
+## § Client users (Phase 06.1 extension)
+
+### Scope
+
+A client user (`role: "client"`) has MFA enrolled (opt-in per Phase 06.1 CONTEXT D-10) and has lost their TOTP device PLUS their email-link recovery substrate (i.e. the Tier-1 self-serve path is unavailable).
+
+### Tier-1 (user-side, expected path)
+
+Same as internal admins — `sendSignInLinkToEmail` to the verified email → user re-authenticates via the link → user un-enrols TOTP themselves via `multiFactor(currentUser).unenroll(...)` → user re-enrols TOTP from their account settings (Security panel, CONTEXT D-10 surface). The substrate is `src/firebase/auth.js`; the audit event `auth.recovery.requested` is written via the existing pipeline.
+
+### Tier-2 (operator-side, fallback for catastrophic loss)
+
+When email access itself is compromised (Tier-1 unreachable) for a client user:
+
+1. **Out-of-band identity verification.** Operator (the admin who originally invited the client OR a paired second admin) verifies the client user's identity via voice/video call. Confirm name + org context + the invite event (date / org name). Capture: channel + verification timestamp.
+2. **Operator clears all enrolled MFA factors via Admin SDK.** Run:
+
+   ```sh
+   cd functions && node -e '
+   const admin = require("firebase-admin");
+   admin.initializeApp({projectId: "bedeveloped-base-layers"});
+   admin.auth().updateUser("<client uid>", { multiFactor: { enrolledFactors: [] } })
+     .then(() => { console.log("[OK] mfa cleared for <client uid>"); process.exit(0); })
+     .catch(e => { console.error("[FAIL]", e); process.exit(1); });
+   '
+   ```
+
+   (Equivalent to running `scripts/admin-mfa-unenroll/run.js --uid <client uid>` if extended for client uids; the script accepts any uid by design.)
+3. **Operator re-invokes `inviteClient(email, name, orgId, orgPassphrase, confirmReset: true)`** via an in-app admin action — this resets the client's password back to the current org passphrase + re-flips `firstRun: true` + emits `auth.client.invite.resend`. The recovery channel is now identical to first-invite.
+4. **Client signs in** with their email + the current org passphrase. The `firstRun: true` claim routes through `renderFirstRun`; the client sets a new personal password (≥6 chars per the existing Phase 6 substrate); the chained `setClaims` callable drops `firstRun`; the next ID-token refresh routes to dashboard. The client can then opt-in to MFA again via the Security panel.
+
+### Audit trail
+
+4 events captured in `auditLog/` for a complete Tier-2 client MFA recovery:
+
+- `auth.mfa.unenrol` (admin-initiated) — Step 2 above.
+- `auth.client.invite.resend` (admin-initiated) — Step 3 above.
+- `auth.signin.success` (client) — Step 4 sign-in success.
+- `auth.password.change` (client) — Step 4 first-run password set via `updatePassword`.
+
+### Drill cadence
+
+Combined with the internal-admin AUTH-10 drill. The next paired-review session exercises both internal + client recovery paths (each admin takes turns being the locked-out actor on both client and internal sides, per D-08 cadence). Audit-evidence capture follows the existing AUTH-10 drill template (Round 1 / Round 2 evidence blocks above).
+
+### Self-serve password reset (separate from MFA recovery)
+
+Clients who simply forget their password (no MFA loss) use Firebase Auth's built-in flow: `sendPasswordResetEmail` (Phase 6 D-15 + `src/firebase/auth.js`). The legacy admin-side reset-via-passwordHash mutation in the Admin Clients table was DELETED in Phase 06.1 Wave 3 cutover (atomic with the legacy substrate removal); the residual mechanism is the user-side `Forgot password` flow on the sign-in screen.
+
+---
+
 ## AUTH-10 Closure Criteria
 
 AUTH-10 closes when **all** of the following are true:

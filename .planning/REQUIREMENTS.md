@@ -103,6 +103,9 @@ Each requirement is mapped to: (a) the CONCERNS.md finding it closes (where appl
 - [ ] **AUTH-13**: Account lockout / progressive delay verified — Firebase Auth defaults documented in `SECURITY.md`
 - [ ] **AUTH-14**: Hardcoded `INTERNAL_PASSWORD_HASH` and `INTERNAL_ALLOWED_EMAILS` are **deleted** from `app.js` lines 443-444 (closes C2)
 - [ ] **AUTH-15**: Bootstrap migration: Luke + George get real Firebase Auth accounts via Firebase Console; `internalAllowlist/{email}` documents seeded; temp passwords issued via secure channel; first-login flow forces password change + MFA enrolment
+- [ ] **AUTH-16**: `inviteClient` admin-only callable Cloud Function exists; creates Firebase Auth users with `{role: "client", orgId, firstRun: true}` claims + `emailVerified: true`; verifies admin-provided org passphrase against `org.clientPassphraseHash` before creation; refuses cross-org invites with explicit `auth/cross-org-invite-rejected` HttpsError code. Server emits 4 audit-event types (`auth.client.invite`, `auth.client.invite.resend`, `auth.client.invite.rejected.cross-org`, `auth.client.invite.rejected.passphrase-invalid`). Closes via Phase 06.1.
+- [ ] **AUTH-17**: Client users sign in via Firebase Auth Email/Password (`signInEmailPassword` chokepoint at `src/firebase/auth.js`); legacy `src/auth/state-machine.js` + `setUserPassword` + `users/{uid}.passwordHash` field source-writers + client-side sign-in branch + tabs UI + `openChangePasswordModal` + `chrome.js` Change-password user-menu entry + Admin Clients table `passwordHash` zones atomically deleted in a single Phase 06.1 cutover commit. Client password resets now go through `sendPasswordResetEmail` (Phase 6 D-15). Closes Phase 6 HANDOFF.md follow-up #9.
+- [ ] **AUTH-18**: Admin SDK one-shot script (`scripts/strip-legacy-user-passwords/run.js`) strips `passwordHash` from existing user docs in production; documented in `scripts/strip-legacy-user-passwords/README.md`; operator-paced execution per Phase 6 D-20 ADC pattern. Expected count 0 per HANDOFF.md; defensive substrate.
 
 ### Cloud Functions & App Check (FN)
 
@@ -262,6 +265,9 @@ Acknowledged but deferred — not in this milestone's roadmap.
 | RULES-07                                 | Phase 6                                | Pending | Production deploy + rollback plan; the load-bearing cutover step                                                                    |
 | AUTH-01 to AUTH-08, AUTH-10 to AUTH-15   | Phase 6                                | Pending | Anonymous Auth disabled; Email/Password + custom claims + TOTP MFA + bootstrap; password hash deleted                               |
 | AUTH-09                                  | Phase 6                                | Superseded 2026-05-08 | Replaced by email-link recovery per D-07; no recovery codes generated. See AUTH-09 row + SECURITY.md §Multi-Factor Authentication. |
+| AUTH-16                                  | Phase 06.1                             | Validated 2026-05-22 | `inviteClient` admin-only callable; Wave 1 substrate (passphrase-policy ≥12 floor + invite-builder pure helpers + callable skeleton) + Wave 2 functional body (inviteClient body + invite-admin wrapper + Invite modal rewire) + Wave 3 atomic cutover. See `.planning/phases/06.1-client-auth-completion-firebase-auth-inviteclient-callable-f/` + SECURITY.md § Client Authentication + § Phase 06.1 Audit Index. |
+| AUTH-17                                  | Phase 06.1                             | Validated 2026-05-22 | Client Email/Password sign-in via Firebase Auth signInEmailPassword chokepoint; legacy substrate atomically deleted across 8 zones in the Wave 3 cutover commit (state-machine module + 2 test fixtures + setUserPassword + tabs UI + sign-in branch + openChangePasswordModal + chrome.js Change-password menu entry + Admin Clients table passwordHash zones + 2 wrapper imports + module import statement). Closes Phase 6 HANDOFF.md follow-up #9. |
+| AUTH-18                                  | Phase 06.1                             | code+docs complete; operator strip execution deferred | Admin SDK strip script `scripts/strip-legacy-user-passwords/run.js` + README authored Wave 3 Task 2; operator-paced strip-script execution captured in a Phase 06.1 UAT evidence runbook under runbooks/ (PENDING-OPERATOR at the `/gsd-verify-work 06.1` checkpoint). Expected count: 0 per HANDOFF.md. |
 | FN-01 to FN-09                           | Phase 7                                | Validated 2026-05-10 (Phase 7 Wave 6 — PASS-PARTIAL Branch B; FN-06 minInstances:1 carry-forward to sub-wave 7.1 per Pitfall 19) | `functions/` workspace + App Check (Stages A-C shipped; D-F operator-paced in 07-HUMAN-UAT.md) + audit log infrastructure + rate limiting (rules predicate primary; callable fallback Pattern 5b) |
 | FN-10                                    | Phase 3                                | Validated 2026-05-09 (Phase 7 Wave 5 csp-sink-sa rebind; FN-04 selective-deploy guidance) | `csp-violations` endpoint pairs with HOST-05 — ships with the hosting cutover                                                       |
 | AUDIT-01 to AUDIT-04, AUDIT-06, AUDIT-07 | Phase 7                                | Validated 2026-05-10 (Phase 7 Wave 2 application-tier + Wave 5 BigQuery sink substrate; Wave 6 SECURITY.md DOC-10 + Phase 7 Audit Index) | Audit-log infrastructure (collection + Zod schema + 3 mirror triggers + BigQuery 7y sink + retention + audited-user-cannot-read-own — rules-unit-test cell 7) |
@@ -276,8 +282,8 @@ Acknowledged but deferred — not in this milestone's roadmap.
 
 **Coverage:**
 
-- v1 requirements: 120 total (across 15 categories)
-- Mapped to phases: 120 / 120 ✓
+- v1 requirements: 123 total (across 15 categories; +3 AUTH rows added via Phase 06.1 — AUTH-16/17/18)
+- Mapped to phases: 123 / 123 ✓
 - Unmapped: 0 ✓
 - Phases with zero requirements: 0 ✓
 - Sequencing constraints (Pitfalls 1, 9, 14-16) preserved: ✓ (see ROADMAP.md "Sequencing Constraint Validation")

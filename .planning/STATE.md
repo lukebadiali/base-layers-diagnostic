@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-05-11T00:50:00.000Z"
+last_updated: "2026-05-22T14:30:49.147Z"
 progress:
-  total_phases: 12
-  completed_phases: 9
-  total_plans: 66
-  completed_plans: 68
-  percent: 99
+  total_phases: 13
+  completed_phases: 7
+  total_plans: 45
+  completed_plans: 42
+  percent: 93
 ---
 
 # State: Base Layers Diagnostic — Hardening Pass
@@ -183,6 +183,10 @@ These persist in `/gsd-progress` + `/gsd-audit-uat` until resolved. Cleanup ledg
 ---
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 06.1 inserted after Phase 6 (2026-05-22): Client auth completion — Firebase Auth + inviteClient callable for client users (URGENT — discovered during UAT prep). Phase 6 deployed real Firebase Auth + MFA + custom claims for internal/admin only; client subsystem still uses legacy localStorage-only auth (`passwordHash` field, bypassing Firebase Auth). Phase 6 rules now deny client SDK writes to `/users/{uid}`, so the in-app "+ Invite client" modal silently half-fails (localStorage saves; Firestore write denied with `permission-denied`). `claim-builder.ts:22` admits no orgId-claim path was built for clients (invite-JWT "future flow" never shipped). Phase 6.1 must: (1) ship `inviteClient` server callable (Admin SDK creates Firebase Auth user + setCustomUserClaims({role:client, orgId}) + writes /users/{uid} + audit emit); (2) rewire `src/main.js:1223-1276` client sign-in to use Firebase Auth email/password (mirror Phase 6 internal pattern); (3) resolve org-passphrase semantics (one-time first-sign-in gate vs deprecated); (4) delete `setUserPassword` + `passwordHash` + localStorage-side client auth. Blocks UAT §4 (Client role). See also HANDOFF.md follow-up #1 — vestigial full-org writes on `addComment`/`addAction`/`setEngagementStage` may have related breakage and should be checked as part of this phase.
 
 ### Key Decisions Locked at Initialization
 

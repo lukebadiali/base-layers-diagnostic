@@ -12,6 +12,11 @@ export { cspReportSink } from "./csp/cspReportSink.js";
 export { beforeUserCreatedHandler } from "./auth/beforeUserCreated.js";
 export { beforeUserSignedInHandler } from "./auth/beforeUserSignedIn.js";
 export { setClaims } from "./auth/setClaims.js";
+// Phase 06.1 Wave 2 (AUTH-16 / D-13): inviteClient callable creates Firebase
+// Auth users with {role:"client", orgId, firstRun:true} custom claims when
+// admin invites a client into an org. Wave 1 shipped skeleton; Wave 2 fills
+// body. Re-export lands NOW (Wave 2) per D-13.
+export { inviteClient } from "./auth/inviteClient.js";
 export { auditWrite } from "./audit/auditWrite.js";
 export { onOrgDelete } from "./audit/triggers/onOrgDelete.js";
 export { onUserDelete } from "./audit/triggers/onUserDelete.js";

@@ -27,7 +27,9 @@ function makeDeps(overrides = {}) {
     render: () => {},
     isClientView: () => false,
     signOut: () => {},
-    openChangePasswordModal: () => {},
+    // Phase 06.1 Wave 3 (AUTH-17 / D-16): the Change-password modal stub
+    // dep removed from ChromeDeps alongside the modal definition + the
+    // user-menu entry that consumed it.
     exportData: () => {},
     importData: () => {},
     ...overrides,

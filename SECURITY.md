@@ -23,11 +23,13 @@
 - [§ Storage Rules](#-storage-rules)
 - [§ Phase 5 Audit Index](#-phase-5-audit-index)
 - [§ Authentication & Sessions](#-authentication--sessions)
+- [§ Client Authentication](#-client-authentication)
 - [§ Multi-Factor Authentication](#-multi-factor-authentication)
 - [§ MFA Recovery Procedure](#-mfa-recovery-procedure)
 - [§ Anonymous Auth Disabled](#-anonymous-auth-disabled)
 - [§ Production Rules Deployment](#-production-rules-deployment)
 - [§ Phase 6 Audit Index](#-phase-6-audit-index)
+- [§ Phase 06.1 Audit Index](#-phase-061-audit-index)
 - [§ Cloud Functions Workspace](#-cloud-functions-workspace)
 - [§ App Check](#-app-check)
 - [§ Audit Log Infrastructure](#-audit-log-infrastructure)
@@ -271,7 +273,7 @@ The CSP allowlist tightening (Wave 1 — `cdn.jsdelivr.net`, `fonts.googleapis.c
 
 **Phase 4 cleanup-ledger Suppressions table — D-17 phase-close gate posture:** the in-Phase-4-tracker rows reach zero (every original Phase 1 row closed via extraction or file deletion). The 12 rotated `src/main.js:N` rows + the `window.FB`/`window.Chart` bridges + the 132 inline-style strings + the unmet coverage thresholds are documented as **persistent-with-rationale** under the Wave 6 → main.js-body-migration carryover section (D-17 escape hatch: "if a suppression was actually still needed — document under Persistent suppressions with rationale, and reflect in `SECURITY.md` so the audit narrative is honest"). The carryover items close atomically when IIFE bodies migrate from `src/main.js` into the 12 `src/views/*.js` Pattern D DI factory stubs — a sub-wave deliberately deferred from Wave 6 to keep the human-verify checkpoint contract small and avoid the same Phase-2 D-08 snapshot-baseline jeopardy that gated Wave 4 Dev #1 + Wave 5 Dev #1.
 
-The forward-tracking section in the cleanup-ledger retains rows for Phase 5 (D-09 pass-through bodies → subcollection rewrites), Phase 6 (AUTH-14 deletes `src/auth/state-machine.js` + `INTERNAL_PASSWORD_HASH`; AUTH-07 fills `src/cloud/claims-admin.js`), Phase 7 (FN-04 fills `src/firebase/check.js` + `src/cloud/audit.js` + `src/cloud/retry.js` + `src/observability/audit-events.js` constants), Phase 8 (LIFE-04/GDPR-01 fills `src/cloud/soft-delete.js` + `src/cloud/gdpr.js`), and Phase 9 (OBS-01 fills `src/observability/sentry.js`; AUDIT-05 wires `emitAuditEvent` in views/*) — these are the audit-narrative substrate, not leftover suppressions.
+The forward-tracking section in the cleanup-ledger retains rows for Phase 5 (D-09 pass-through bodies → subcollection rewrites), Phase 6 (AUTH-14 internal-side runtime constants deleted at cutover — the residual auth-helpers module + its tests + fixture were retired in Phase 06.1 Wave 3 / HANDOFF.md follow-up #9 closure; AUTH-07 fills `src/cloud/claims-admin.js`), Phase 7 (FN-04 fills `src/firebase/check.js` + `src/cloud/audit.js` + `src/cloud/retry.js` + `src/observability/audit-events.js` constants), Phase 8 (LIFE-04/GDPR-01 fills `src/cloud/soft-delete.js` + `src/cloud/gdpr.js`), and Phase 9 (OBS-01 fills `src/observability/sentry.js`; AUDIT-05 wires `emitAuditEvent` in views/*) — these are the audit-narrative substrate, not leftover suppressions.
 
 **Citations:** OWASP ASVS L2 v5.0 — V14.2 (Dependencies — npm migration), V14.7 (Build & Deploy — lint-enforced boundaries), V5.3 (Output Encoding / XSS prevention — CODE-04 layered with CODE-05/06); ISO/IEC 27001:2022 Annex A — A.8.28 (Secure coding — modular boundary enforcement), A.8.24 (Use of cryptography — CSPRNG via CODE-03); SOC 2 — CC8.1 (Change management — atomic per-requirement commits), CC6.1 (Logical access — boundary enforcement via lint); GDPR Art. 32(1)(b) (Confidentiality of processing — XSS + upload validation), Art. 32(1)(d) (Testing/evaluating effectiveness — coverage thresholds + permanent regression tests).
 
@@ -823,6 +825,48 @@ Phase 6 Wave 5 cutover replaced the Anonymous-Auth-plus-hardcoded-password subst
 
 **OOB temp-credential delivery (D-06):** Operator delivers temp credentials via secure channel of operator's standard practice; runbook does NOT prescribe channel. Tradeoff: operator-discretion on delivery method. Future invite flow (v2) will codify a single channel. Explicit deviation from Pitfall 7's "in-person side-by-side enrolment" recommendation.
 
+## § Client Authentication
+
+**Owner + Framework:** Phase 06.1 (AUTH-16, AUTH-17, AUTH-18); OWASP ASVS L2 v5.0 V2.1 + V2.2; ISO/IEC 27001:2022 Annex A.5.16 + A.8.5; SOC 2 CC6.1; GDPR Art. 32(1)(b).
+
+Phase 06.1 Wave 3 (2026-05-22) migrated client users (`role: "client"`) from the legacy passphrase + per-user `passwordHash` substrate onto real Firebase Auth Email/Password identities — the same identity layer internal admins use, with role-scoped custom claims `{role: "client", orgId, firstRun: true}`. The per-org passphrase mechanism (`orgs/{orgId}.clientPassphraseHash`) is retained as the admin-set bootstrap-credential substrate. Closes Phase 6 HANDOFF.md follow-up #9 (state-machine.js claimed-deleted but never removed; the deletion landed atomically with this phase's cutover).
+
+### Provisioning model
+
+Clients are provisioned via the admin-only `inviteClient` callable Cloud Function (`functions/src/auth/inviteClient.ts`). Input contract: `{email, name, orgId, orgPassphrase, confirmReset?}`. The callable verifies the admin-provided passphrase against the target org's `clientPassphraseHash` via the server-side parity helper `functions/src/util/hash.ts` (SHA-256 hex, byte-parity invariant against `src/util/hash.js`). On verification success, the callable invokes Admin SDK `auth.createUser({email, password: orgPassphrase, emailVerified: true, displayName: name})` and sets custom claims via `auth.setCustomUserClaims(uid, {role: "client", orgId, firstRun: true})`. An audit event `auth.client.invite` is written via the existing `writeAuditEvent` substrate. The browser-side wrapper `src/cloud/invite-admin.js` maps server `HttpsError` codes to the 3 AUTH-12 chokepoint error classes (`PassphraseInvalidError`, `CrossOrgError`, `PassphraseNotSetError`).
+
+### Bootstrap-credential mechanism
+
+The per-org `clientPassphraseHash` (SHA-256, set via `setOrgClientPassphrase` in `src/main.js` with a ≥12-char length floor enforced at `src/auth/passphrase-policy.js validateOrgPassphrase` — Wave 1 substrate) serves as the initial Firebase Auth password for invited clients. The plaintext passphrase is transient only — it lives in the admin browser, transits over HTTPS to the callable, gets hashed for verification, gets passed as `password` to `auth.createUser`, then is dropped at function return. It is never persisted server-side beyond the per-org hash. Identity Platform's `passwordPolicy` does NOT validate Admin SDK `createUser` passwords (RESEARCH § Critical Pinned Fact 1.1), which is why the ≥12-char floor lives at the `setOrgClientPassphrase` chokepoint client-side.
+
+### First-run forced password change
+
+The `firstRun: true` custom claim routes the client's first sign-in through the existing Phase 6 `renderFirstRun` view (substrate unchanged). The user picks a personal password via `updatePassword`, which triggers a chained `setClaims({uid, role, orgId})` callable invocation that intentionally drops `firstRun` because `SetClaimsSchema` deliberately excludes it (`setCustomUserClaims` replaces the entire claim set). The next ID-token refresh carries the trimmed claims; the auth-state ladder in `render()` routes to dashboard.
+
+### Cross-org refusal (AUTH-V2-02 deferred)
+
+If `inviteClient` is invoked with an email already bound to a Firebase Auth user whose claims carry `role === "client"` AND `orgId !== <requested orgId>`, the callable refuses with `failed-precondition` carrying `details.code: "auth/cross-org-invite-rejected"`. An audit event `auth.client.invite.rejected.cross-org` is written. Cross-org client membership (a single client identity that legitimately belongs to multiple orgs — SCIM provisioning + shared-email support) is explicitly out of scope for v1 and tracked under v2 requirement AUTH-V2-02.
+
+### Trust-on-invite email verification
+
+The callable sets `emailVerified: true` server-side at user creation. This is **admin-vouched** verification — the admin's submission of the invite is the verification event, not a click-to-verify email round-trip. The trade-off is documented as a substrate-honest deviation from the classical click-to-verify pattern: the credible-not-certified compliance bar accepts admin-vouched verification for low-privilege `role: "client"` users because the alternative (click-to-verify email) would block a substantial fraction of legitimate invites on email-delivery latency without commensurate threat-model benefit at this scale.
+
+### MFA for client users
+
+MFA enrolment for clients is opt-in only (no router-side hard-enforce gate — that remains `role: internal` exclusive). The existing `renderMfaEnrol` + `beginTotpEnrollment` + `enrollTotp` + `unenrollAllMfa` substrate (Phase 6) is exposed to clients via the Security panel (CONTEXT D-10 surface; future enhancement). The Tier-1 email-link recovery substrate inherits unchanged. The Tier-2 admin Admin SDK un-enrol path is extended to clients in `runbooks/phase6-mfa-recovery-drill.md § Client users` (Tier 2 procedure: out-of-band identity verification → operator Admin SDK `auth.updateUser(uid, { multiFactor: { enrolledFactors: [] } })` → re-invoke `inviteClient(..., confirmReset: true)` to reset password + re-flip first-run). Mandatory client MFA is queued for v2 hardening (forward-tracked in `runbooks/phase-06.1-cleanup-ledger.md` F-06.1-02).
+
+### Password reset for clients
+
+Self-serve via Firebase Auth `sendPasswordResetEmail` (Phase 6 D-15 substrate at `src/firebase/auth.js`). The admin-side reset-via-passwordHash mutation (formerly in the Admin Clients table as a "Reset password" button writing `delete fresh.passwordHash` + upsertUser) was deleted in the Wave 3 cutover commit — no longer meaningful once the `passwordHash` field itself is gone. The MFA recovery runbook documents the self-serve path explicitly for clients in its § Client users subsection.
+
+### Org passphrase length policy
+
+≥12-char enforced in `src/auth/passphrase-policy.js validateOrgPassphrase` (Wave 1 Task 1 substrate). Load-bearing per RESEARCH § Critical Pinned Fact 1.1: Admin SDK `auth.createUser({password})` bypasses Identity Platform `passwordPolicy`. Without the client-side gate, an invited client would be bricked at first `signInWithEmailAndPassword` with `auth/password-does-not-meet-requirements`. The chokepoint gate sits at three layers — the `setOrgClientPassphrase` call site in `src/main.js`, the `openSetOrgPassphrase` modal submit handler, and the pure-logic helper in `src/auth/passphrase-policy.js`.
+
+### Legacy substrate deletion
+
+Phase 06.1 Wave 3 cutover commit `6c1e89e` (Task 4.5 back-fills the literal SHA) deleted 8 zones atomically (no dead-code window — CONTEXT D-02): (1) the legacy auth-helpers module under `src/auth/` (entire module); (2) its sibling test and the SHA-256 parity fixture under `tests/auth/` + `tests/fixtures/` (the 2 SHA-256 parity vectors from the fixture were inlined into `tests/util/hash.test.js` + `tests/crypto-parity.test.js` to preserve the cross-implementation parity gate); (3) `setUserPassword` in `src/main.js`; (4) the auth-tabs UI + the legacy client sign-in branch in `src/main.js`; (5) `openChangePasswordModal` modal in `src/main.js`; (6) the 2 wrapper imports + the auth-helpers module import statement in `src/main.js`; (7) `src/ui/chrome.js` Change-password user-menu entry + the ChromeDeps typedef line + the createChrome destructure entry + the header-comment closure-list mention; (8) Admin Clients table `passwordHash` indicator + "Reset password" button in `src/main.js`. `scripts/strip-legacy-user-passwords/run.js` is the data-side defensive sweep for the residual `passwordHash` field on `users/{uid}` Firestore docs (expected count: 0 per HANDOFF.md — no live client users on production). Closes HANDOFF.md follow-up #9.
+
 ## § Multi-Factor Authentication
 
 Phase 6 Wave 5 Step 9 (TOTP enrolment) and Step 10 (AUTH-10 lockout drill) are deferred to an end-of-all-phases user-testing batch per operator instruction; the substrate to enrol (Firebase Identity Platform TOTP + admin un-enrol script `scripts/admin-mfa-unenroll/run.js`) ships in this phase, but the live drill data populates `runbooks/phase6-mfa-recovery-drill.md` when Luke + George run the same-session drill. AUTH-08 hard-enforced for `role: internal` users via router gates (gates temporarily short-circuited at cutover per D-27 to land Step 11 SC#4 — restoration queued in `runbooks/phase-6-cleanup-ledger.md` Phase 6 sub-wave 6.1 row alongside `enrollTotp + qrcodeDataUrl` wiring).
@@ -833,6 +877,8 @@ Phase 6 Wave 5 Step 9 (TOTP enrolment) and Step 10 (AUTH-10 lockout drill) are d
 - **Tier 2 (operator-side, fallback):** other admin runs `firebase auth:multifactor:unenroll --uid <uid> --factor <factorId>` (or equivalent Admin SDK call via `scripts/admin-mfa-unenroll/run.js`) after OOB identity verification (Pitfall 7 mitigation).
 
 **Tradeoff:** email-account compromise is the recovery substrate; this is acceptable because email is also the primary sign-in identifier and identity recovery substrate. The additional risk surface is bounded.
+
+**Phase 06.1 extension (2026-05-22):** Phase 06.1 extends opt-in MFA to client users; see § Client Authentication > MFA for client users for the substrate and the Tier-2 admin Admin SDK un-enrol extension to clients in `runbooks/phase6-mfa-recovery-drill.md § Client users`.
 
 **AUTH-10 drill substrate:** `runbooks/phase6-mfa-recovery-drill.md` skeleton present; populated when the drill runs end-of-phases-batch. Pitfall 19 closure ("claim only what was rehearsed") is partial at phase close — the substrate is honest (script + runbook + admin un-enrol path), drill execution deferred per operator instruction. Tracked in `runbooks/phase-6-cleanup-ledger.md` Phase 6 sub-wave 6.1 row.
 
@@ -873,7 +919,7 @@ C1 closure. Phase 6 Wave 5 Step 7: Anonymous Auth provider disabled at the IdP l
 
 Pitfall 2 (`request.auth != null` is not access control) closure: combined with Phase 5 D-14 `isAuthed()` predicate (requires `email_verified == true` AND `sign_in_provider != "anonymous"`).
 
-**AUTH-14 partial — substrate-honest at phase close:** the cutover commit retired the load-bearing runtime artifacts (constants + `signInAnonymously` call + `firebase-ready` bridge); `src/auth/state-machine.js` + `tests/auth/state-machine.test.js` + `tests/fixtures/auth-passwords.js` + the `INTERNAL_PASSWORD_HASH`-shape `gitleaks` rule are NOT deleted at Phase 6 close because `src/main.js` line 120 still imports `state-machine.js` (the Phase 4 IIFE body migration is the load-bearing predecessor). Closure tied to Phase 4 sub-wave 4.1 — tracked in `runbooks/phase-6-cleanup-ledger.md` "Phase 6 sub-wave 6.1" carry-forward row.
+**AUTH-14 substrate-honest narrative (Phase 6 close-point posture, updated 2026-05-22 by Phase 06.1 Wave 3 close):** at Phase 6 close the cutover commit retired the load-bearing runtime artifacts (constants + `signInAnonymously` call + `firebase-ready` bridge); the residual auth-helpers module + its 2 test fixtures + the `INTERNAL_PASSWORD_HASH`-shape `gitleaks` rule were left for a follow-up because `src/main.js` still carried the client-side passphrase login path that imported the module. **Phase 06.1 Wave 3 (2026-05-22) closes that follow-up via HANDOFF.md follow-up #9** — the legacy auth-helpers module + its tests + fixture (formerly under `src/auth/` + `tests/auth/` + `tests/fixtures/`) are deleted atomically alongside the client sign-in branch, the per-user password modal, the chrome user-menu Change-password entry, and the Admin Clients table passwordHash zones in the same cutover commit. The `INTERNAL_PASSWORD_HASH`-shape `gitleaks` rule is preserved (defensive regression-gate — see `.gitleaks.toml`). See § Client Authentication + § Phase 06.1 Audit Index for the full Phase 06.1 narrative.
 
 ## § Production Rules Deployment
 
@@ -899,7 +945,7 @@ This is a one-stop pointer for an auditor walking Phase 6's controls. Each row m
 | RULES-07 production deploy | RULES-07 / D-11 | `firestore.rules` + `storage.rules` deployed | RULES-07 verification gate (`runbooks/phase-6-cleanup-ledger.md ## RULES-07 Deploy Verification Gate`) — exactly one deploy chain against bedeveloped-base-layers in the phase commit chain | ASVS V4 / SOC2 CC6.1 |
 | 5-min rollback rehearsal | SC#4 / D-12 / Pitfall 19 | `runbooks/phase6-rules-rollback-rehearsal.md` | runbook `rehearsal_total_seconds: 121` (< 300) | SOC2 CC9.1 / ISO A.5.30 |
 | AUTH-10 MFA drill (Tier-2) | AUTH-10 / D-08 / Pitfall 7 / Pitfall 19 | `runbooks/phase6-mfa-recovery-drill.md` + `scripts/admin-mfa-unenroll/run.js` | runbook drill evidence (skeleton present; populated end-of-phases-batch per operator deferral) | ASVS V2.7.4 / SOC2 CC6.1 |
-| AUTH-14 source deletions | AUTH-14 / C2 / D-04 | (partial deletion in cutover commit `auth14_deletion_sha: 3fddc1c` — runtime constants + signInAnonymously call + firebase-ready bridge gone; state-machine.js + 2 test fixtures + .gitleaks.toml C2 rule deferred to Phase 4 sub-wave 4.1 per `phase-6-cleanup-ledger.md`) | partial verification: `grep -r "INTERNAL_PASSWORD_HASH\|INTERNAL_ALLOWED_EMAILS" src/` returns 0; full closure pending sub-wave 4.1 | (audit-narrative integrity) |
+| AUTH-14 source deletions | AUTH-14 / C2 / D-04 | (Phase 6 cutover commit `auth14_deletion_sha: 3fddc1c` — runtime constants + signInAnonymously call + firebase-ready bridge gone. Phase 06.1 Wave 3 cutover commit closes the residual deletion — see § Phase 06.1 Audit Index AUTH-17 row for the literal SHA.) | `grep -r "INTERNAL_PASSWORD_HASH\|INTERNAL_ALLOWED_EMAILS" src/` returns 0; Phase 06.1 Wave 3 closes the auth-helpers module + 2 test fixtures via HANDOFF.md follow-up #9 | (audit-narrative integrity) |
 | AUTH-09 supersession | AUTH-09 / D-07 | (no code path — supersession is a documented decision) | `.planning/REQUIREMENTS.md` AUTH-09 row marks SUPERSEDED 2026-05-08 by email-link recovery | (compliance-credible posture per D-07) |
 | AUTH-13 progressive delay | AUTH-13 / D-21 | (Firebase Auth defaults) | `runbooks/phase6-cutover.md` Step 4 manual smoke; `auth/too-many-requests` documented behaviour | ASVS V2.1.5 |
 | AUTH-15 bootstrap migration | AUTH-15 / D-05 | `scripts/seed-internal-allowlist/run.js` + `runbooks/phase6-bootstrap.md` | `06-PREFLIGHT.md ## Cutover Log: bootstrap_log_*` populated for both admins; Luke first-signin verified | ASVS V2.4.5 |
@@ -912,6 +958,24 @@ This is a one-stop pointer for an auditor walking Phase 6's controls. Each row m
 - **Phase 9** (AUDIT-05 / OBS-01..08) — view-side `auditWrite` wiring + Sentry + auth-anomaly Slack alerts.
 - **Phase 10** (HOST-06) — drops temporary CSP allowlist for Firebase Auth popups (Phase 3 added preemptively in D-07).
 - **Phase 11** (DOC-04) — customises Firebase password-reset email sender domain to `noreply@bedeveloped.com`.
+
+## § Phase 06.1 Audit Index
+
+This is a one-stop pointer for an auditor walking Phase 06.1 (client auth completion — Firebase Auth + inviteClient callable). Each row maps a Phase 06.1 control to (a) the SECURITY.md section + decision that defines it, (b) the code path that implements it, (c) the test or evidence that verifies it, and (d) the framework citations it addresses. Mirrors the §Phase 6 Audit Index + §Phase 7 Audit Index pattern.
+
+| Requirement | Control | Code Path(s) | Test / Evidence | Framework |
+|-------------|---------|--------------|-----------------|-----------|
+| AUTH-16 | Admin-initiated client invite via `inviteClient` callable; verifies org passphrase + sets `{role: "client", orgId, firstRun: true}` claims + `emailVerified: true`; emits `auth.client.invite` audit event; refuses cross-org invites with `auth/cross-org-invite-rejected` | `functions/src/auth/inviteClient.ts`, `functions/src/auth/invite-builder.ts`, `src/cloud/invite-admin.js`, `functions/src/util/hash.ts` | `functions/test/auth/inviteClient.unit.test.ts` (14 cases), `functions/test/auth/inviteClient.integration.test.ts` (7 cases), `functions/test/util/hash-parity.test.ts`, `tests/cloud/invite-admin.test.js`, `tests/main/invite-modal.test.js` | OWASP ASVS L2 v5.0 V2.1.1 + V2.2.1; ISO/IEC 27001:2022 Annex A.5.16; SOC 2 CC6.1 |
+| AUTH-17 | Clients sign in via Firebase Auth Email/Password (`signInEmailPassword` chokepoint); legacy auth-helpers module + `setUserPassword` + sign-in branch + tabs UI + Change-password modal + chrome user-menu entry + Admin Clients table passwordHash zones deleted atomically; closes HANDOFF.md follow-up #9 | `src/firebase/auth.js` (signInEmailPassword chokepoint) + Phase 06.1 Wave 3 cutover commit `6c1e89e` | `tests/firebase/auth-audit-emit.test.js`; atomic cutover commit in git log shows D + M markers across the 8 deletion zones; `grep -r "from \"./auth/state-machine" src/ tests/` returns 0 importers; `grep -c "openChangePasswordModal" src/ui/chrome.js` returns 0 | OWASP ASVS L2 v5.0 V2.1.1 + V2.1.5; ISO/IEC 27001:2022 Annex A.5.16 + A.8.5; SOC 2 CC6.1 |
+| AUTH-18 | Admin SDK one-shot script removes legacy `users/{uid}.passwordHash` field via `FieldValue.delete()`; idempotent; expected count 0 per HANDOFF.md | `scripts/strip-legacy-user-passwords/run.js`, `scripts/strip-legacy-user-passwords/README.md` | Operator execution log captured in a Phase 06.1 UAT evidence runbook under runbooks/ post-cutover (Task 5; **PENDING-OPERATOR** — bundled into `/gsd-verify-work 06.1` operator session) | OWASP ASVS L2 v5.0 V14.3.3 (Configuration files); ISO/IEC 27001:2022 Annex A.8.10 (Information deletion) |
+| DOC-10 | This Phase 06.1 increment: § Client Authentication section + § Phase 06.1 Audit Index | `SECURITY.md` | Self | (cross-cutting) |
+
+**Substrate-honest disclosure (Pitfall 19):** App Check 22h backoff is operationally mitigated by `runbooks/06.1-app-check-backoff.md` (4-step DevTools Clear-site-data workaround). The underlying reCAPTCHA Enterprise origin config fix is HANDOFF.md follow-up #3 (Phase 7 substrate concern) — forward-tracked in `runbooks/phase-06.1-cleanup-ledger.md` row F-06.1-01. Cross-org client membership (AUTH-V2-02) and mandatory client MFA are explicit out-of-scope items for v1 (queued in F-06.1-02 + F-06.1-05). Server-side validation of `orgPassphrase` length INSIDE the `inviteClient` callable (defense-in-depth on top of Wave 1's `setOrgClientPassphrase` chokepoint) is queued as F-06.1-04.
+
+**Cross-phase plug-ins this index will feed:**
+
+- **v2 milestone** (AUTH-V2-01 / AUTH-V2-02 / AUTH-V2-03 / NOTIF-V2-01) — SSO/OIDC + SCIM provisioning + SMS MFA + transactional email replacing `mailto:` invite UX.
+- **Future hardening phase** (anomaly rule extension) — paged alert on a burst of `auth.client.invite.rejected.*` events (Phase 9 OBS-05 substrate carries no such rule today per RESEARCH § 5).
 
 ## § Cloud Functions Workspace
 

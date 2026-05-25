@@ -96,7 +96,13 @@ import { setRoute as routerSetRoute, renderRoute as routerRenderRoute } from "./
 //   Wave 1 (Plan 02-02): src/util/ids.js, src/util/hash.js  [LANDED]
 //   Wave 2 (Plan 02-03): src/domain/banding.js, src/domain/scoring.js
 //   Wave 3 (Plan 02-04): src/domain/completion.js, src/domain/unread.js
-//   Wave 4 (Plan 02-05): src/data/migration.js, src/data/cloud-sync.js, src/auth/state-machine.js
+//   Wave 4 (Plan 02-05): src/data/migration.js, src/data/cloud-sync.js
+//   Phase 06.1 Wave 3 (AUTH-17 / D-16): legacy auth-helpers module +
+//   legacy client sign-in branch + per-user password mutation + Change-
+//   password modal DELETED atomically. Clients now sign in via Firebase
+//   Auth identical to internal admins; closes HANDOFF.md follow-up #9.
+//   Audit narrative for the deletion lives in SECURITY.md § Client
+//   Authentication + .planning/phases/06.1-*/06.1-03-SUMMARY.md.
 import {
   uid,
   iso,
@@ -135,7 +141,34 @@ import {
 // the IIFE below. The new dispatcher contract (subscribeOrgMetadata + the
 // (orgId, { onMetadata, attach, onError }) shape) in src/data/cloud-sync.js
 // stays available for future per-org-detail hydration but is not used here.
-import * as auth from "./auth/state-machine.js";
+// Phase 06.1 Wave 3 (AUTH-17 / D-16): legacy auth-helpers module import
+// DELETED — module retired alongside the legacy client sign-in branch +
+// per-user password mutation + Change-password modal. The single
+// remaining reader (the legacyCurrentUser wrapper) is inlined below.
+// Audit narrative for the deletion event lives in SECURITY.md § Client
+// Authentication + 06.1-03-SUMMARY.md.
+// Phase 06.1 Wave 1 Task 1 (AUTH-16 / RESEARCH § Critical Pinned Fact 1.1):
+// length-floor gate for the org client passphrase. Admin SDK
+// auth.createUser({password}) bypasses Identity Platform passwordPolicy, so
+// the modal-submit chokepoint here is the load-bearing gate that keeps
+// invited clients out of the bricked-first-sign-in failure mode. Pure-logic
+// helper — zero firebase/* imports per CLAUDE.md domain/* invariant.
+import {
+  ORG_PASSPHRASE_MIN_LENGTH,
+  validateOrgPassphrase,
+} from "./auth/passphrase-policy.js";
+// Phase 06.1 Wave 2 (AUTH-16 / D-14): inviteClient callable wrapper + AUTH-12
+// chokepoint error classes. The Invite Client modal (openInviteClientModal,
+// l.~4906) calls inviteClient on submit; PassphraseInvalidError / CrossOrgError /
+// PassphraseNotSetError surface err.message inline so the modal stays open
+// for the admin to correct. Wave 1 added the 3 error classes at src/firebase/
+// auth.js; Wave 2 wires them into the modal here.
+import { inviteClient } from "./cloud/invite-admin.js";
+import {
+  PassphraseInvalidError,
+  CrossOrgError,
+  PassphraseNotSetError,
+} from "./firebase/auth.js";
 // Phase 4 Wave 2 (D-12): ui/* helpers extracted from app.js IIFE.
 // Closes runbooks/phase-4-cleanup-ledger.md row at app.js:676 (CODE-04 — html:
 // branch deleted in src/ui/dom.js) and app.js:527 (the no-unused-vars
@@ -288,10 +321,11 @@ import {
   function findUser(id) {
     return loadUsers().find((u) => u.id === id) || null;
   }
-  function findUserByEmail(email) {
-    const e = (email || "").trim().toLowerCase();
-    return loadUsers().find((u) => u.email.toLowerCase() === e) || null;
-  }
+  // Phase 06.1 Wave 3 (AUTH-17 / D-16): `findUserByEmail` helper DELETED.
+  // Its only caller (the legacy client sign-in branch + the legacy Invite
+  // modal short-circuit) is gone — server-side `auth.getUserByEmail` in
+  // the `inviteClient` callable handles email-based user lookup now. Per
+  // RESEARCH § 4 ("If unused, remove the helper") at phase author time.
   function upsertUser(user) {
     const users = loadUsers();
     const i = users.findIndex((u) => u.id === user.id);
@@ -346,21 +380,7 @@ import {
       comments: {},
       readStates: {},
     };
-    // Local write — the in-memory model + the rest of saveOrg's bookkeeping.
-    jset(K.org(id), org);
-    // First-write path: cloudPushOrg now uses { merge: true } and strips
-    // immutable fields (createdAt + orgId) to avoid the localStorage-shape
-    // drift hitting the rules' equality check on update. For the doc's very
-    // first write we DO need createdAt + orgId persisted, so do that here
-    // directly. Allowed by `allow create: if isInternal();` on /orgs/{orgId}.
-    if (fbReady()) {
-      const { db, firestore } = window.FB;
-      const { id: _docId, ...payload } = org;
-      void _docId;
-      firestore
-        .setDoc(firestore.doc(db, "orgs", id), Object.assign({ orgId: id }, payload))
-        .catch((e) => console.error("Cloud create org failed:", e));
-    }
+    saveOrg(org);
     const metas = loadOrgMetas();
     metas.push({ id, name });
     saveOrgMetas(metas);
@@ -529,17 +549,19 @@ import {
   // collections un-hydrated on app boot. Replaced post-auth (search:
   // "_subscribeOrgs(" below) by live `_subscribeOrgs` + `_subscribeUsers`
   // listeners that hydrate K.orgs / K.org(id) / K.users on every snapshot.
-  // Phase 2 Wave 4 (D-05): wrappers for auth state-machine (Pattern E).
-  // Bodies extracted to src/auth/state-machine.js. Phase 6 Wave 5 (AUTH-14):
-  // verifyInternalPassword wrapper retired alongside src/auth/state-machine.js's
-  // verifyInternalPassword export — replaced by Firebase Auth signInEmailPassword
-  // via src/firebase/auth.js. The other 3 wrappers (verifyOrgClientPassphrase,
-  // verifyUserPassword, currentUser) remain in active use for client/user
-  // passphrase login paths.
-  const verifyOrgClientPassphrase = (orgId, pass) =>
-    auth.verifyOrgClientPassphrase(orgId, pass, { loadOrg });
-  const verifyUserPassword = (userId, pass) => auth.verifyUserPassword(userId, pass, { findUser });
-  const legacyCurrentUser = () => auth.currentUser({ currentSession, findUser });
+  // Phase 06.1 Wave 3 (AUTH-17 / D-16): legacy passphrase + per-user
+  // password verification wrappers DELETED alongside the auth module they
+  // wrapped. Client sign-in now routes through Firebase Auth
+  // signInEmailPassword (src/firebase/auth.js) identically to internal
+  // admins; AUTH-12 chokepoint handles error mapping. The legacyCurrentUser
+  // + currentUser pair below survives — still used by other surfaces
+  // hydrating from localStorage during the IIFE→modular migration window
+  // (Phase 4 sub-wave 4.1 carry-forward). The currentUser body is inlined
+  // here (formerly: `const s = currentSession(); return s ? findUser(s.userId) : null;`).
+  const legacyCurrentUser = () => {
+    const s = currentSession();
+    return s ? findUser(s.userId) : null;
+  };
   // currentUser() now prefers the Phase 6 Firebase-hydrated user (state.fbUser) —
   // legacy localStorage path remains for client/user role flows.
   const currentUser = () => state.fbUser || legacyCurrentUser();
@@ -589,7 +611,9 @@ import {
   function currentSession() {
     return jget(K.session, null);
   }
-  // Phase 2 (D-05): currentUser extracted to src/auth/state-machine.js — wrapper above.
+  // Phase 06.1 Wave 3 (AUTH-17 / D-16): currentUser body inlined into
+  // legacyCurrentUser above. Was extracted to a separate auth-helpers
+  // module in Phase 2 D-05; that module retired this wave.
   function signIn(userId) {
     jset(K.session, { userId });
   }
@@ -708,27 +732,40 @@ import {
 
   // ---------- Client org passphrase (shared by all users of an org) ----------
   async function setOrgClientPassphrase(orgId, pass) {
+    // Phase 06.1 Wave 1 Task 1 (AUTH-16 / RESEARCH § Critical Pinned Fact 1.1):
+    // ≥12-char length floor enforced HERE — the modal-submit chokepoint that
+    // every Set/Change Passphrase route lands at. Admin SDK
+    // auth.createUser({password}) bypasses Identity Platform passwordPolicy,
+    // so without this gate Wave 2's inviteClient.ts would succeed but the
+    // invited client would be bricked at first signInWithEmailAndPassword
+    // (auth/password-does-not-meet-requirements).
+    if (!validateOrgPassphrase(pass)) return false;
     const org = loadOrg(orgId);
     if (!org) return false;
     org.clientPassphraseHash = await hashString(pass);
     saveOrg(org);
     return true;
   }
-  // Phase 2 (D-05): verifyOrgClientPassphrase extracted to src/auth/state-machine.js — wrapper above.
+  // Phase 06.1 Wave 3 (AUTH-17 / D-16): the legacy reader's sole caller
+  // (inside the deleted client sign-in branch) is gone, but per RESEARCH
+  // § Critical Pinned Fact 1 + CONTEXT D-16 PRESERVE list this predicate
+  // remains as part of the org-passphrase mechanism (the LOAD-BEARING
+  // bootstrap-credential substrate). Future surfaces (e.g. Admin Clients
+  // "needs passphrase setup" badge) may consume it. eslint-disable is
+  // for the temporary no-caller window between Wave 3 cutover and any
+  // future surface that wires it back in.
+  // eslint-disable-next-line no-unused-vars
   function orgHasClientPassphrase(orgId) {
     const org = loadOrg(orgId);
     return !!(org && org.clientPassphraseHash);
   }
 
-  // ---------- Per-user password (client users only) ----------
-  async function setUserPassword(userId, pass) {
-    const u = findUser(userId);
-    if (!u) return false;
-    u.passwordHash = await hashString(pass);
-    upsertUser(u);
-    return true;
-  }
-  // Phase 2 (D-05): verifyUserPassword extracted to src/auth/state-machine.js — wrapper above.
+  // Phase 06.1 Wave 3 (AUTH-17 / D-16): per-user password mutation +
+  // verification helpers DELETED. Per-user password mutation is now
+  // Firebase Auth's responsibility (signInEmailPassword + updatePassword
+  // + sendPasswordResetEmail). The legacy passwordHash field on
+  // users/{uid} is stripped by scripts/strip-legacy-user-passwords/run.js
+  // (expected count 0 per HANDOFF.md).
 
   // Phase 2 (D-05): extracted to src/data/migration.js — wrappers above.
 
@@ -931,7 +968,9 @@ import {
     render,
     isClientView,
     signOut,
-    openChangePasswordModal,
+    // Phase 06.1 Wave 3 (AUTH-17 / D-16): the legacy Change-password modal
+    // dispatch entry DELETED alongside the modal definition + the chrome
+    // user-menu entry that consumed it.
     exportData,
     importData,
   });
@@ -1167,165 +1206,22 @@ import {
   function renderSignInForm() {
     const container = h("div");
 
-    const tabs = h("div", { class: "auth-tabs" }, [
-      h(
-        "button",
-        {
-          class: state.authTab === "client" ? "active" : "",
-          onclick: () => {
-            state.authTab = "client";
-            state.authError = "";
-            render();
-          },
-        },
-        "Client",
-      ),
-      h(
-        "button",
-        {
-          class: state.authTab === "internal" ? "active" : "",
-          onclick: () => {
-            state.authTab = "internal";
-            state.authError = "";
-            render();
-          },
-        },
-        "Internal team",
-      ),
-    ]);
-    container.appendChild(tabs);
-
-    if (state.authTab === "client") {
-      container.appendChild(h("h2", { class: "auth-heading" }, "Client sign-in"));
-      container.appendChild(
-        h(
-          "p",
-          { class: "auth-sub" },
-          "Sign in with the email your BeDeveloped contact used to invite you, your company passphrase, and your personal password.",
-        ),
-      );
-
-      const email = h("input", { type: "email", placeholder: "you@company.com" });
-      const team = h("input", { type: "password", placeholder: "Company passphrase (shared)" });
-      const pass = h("input", { type: "password", placeholder: "Your password" });
-      // CODE-06 (D-20): is-hidden class replaces initial display:none inline style.
-      const passConfirm = h("input", {
-        type: "password",
-        placeholder: "Confirm password (first sign-in only)",
-        class: "is-hidden",
-      });
-      const errBox = h("div");
-      if (state.authError) errBox.appendChild(h("div", { class: "auth-error" }, state.authError));
-
-      const hint = h(
-        "div",
-        { class: "auth-help u-mt-0 u-pt-0 u-no-border" },
-        "First time signing in? Fill in your email + company passphrase, then set a password below. It'll be remembered next time.",
-      );
-
-      // Show/hide the confirm field based on whether the entered email belongs to a fresh user
-      const updateFirstRunUI = () => {
-        const u = findUserByEmail(email.value);
-        const needsPassword = u && u.role === "client" && !u.passwordHash;
-        // CODE-06 (D-20): classList toggle replaces el.style.display mutation.
-        passConfirm.classList.toggle("is-hidden", !needsPassword);
-        pass.placeholder = needsPassword ? "Set your password (min 4 chars)" : "Your password";
-      };
-      email.addEventListener("blur", updateFirstRunUI);
-      email.addEventListener("input", updateFirstRunUI);
-
-      const doClientLogin = async () => {
-        state.authError = "";
-        const u = findUserByEmail(email.value);
-        if (!u || u.role !== "client") {
-          state.authError =
-            "We don't have a client account for that email. Ask your BeDeveloped contact to invite you.";
-          render();
-          return;
-        }
-        if (!u.orgId) {
-          state.authError =
-            "Your client account isn't linked to an organisation yet. Contact BeDeveloped.";
-          render();
-          return;
-        }
-        if (!orgHasClientPassphrase(u.orgId)) {
-          state.authError =
-            "Your organisation hasn't finished sign-in setup yet. Contact your BeDeveloped lead.";
-          render();
-          return;
-        }
-        const okTeam = await verifyOrgClientPassphrase(u.orgId, team.value);
-        if (!okTeam) {
-          state.authError =
-            "Company passphrase didn't match. Ask your BeDeveloped contact for the current one.";
-          render();
-          return;
-        }
-        if (!u.passwordHash) {
-          // First sign-in — password in "pass" field is a new password being set.
-          if (pass.value.length < 4) {
-            state.authError = "Choose a password of at least 4 characters.";
-            render();
-            return;
-          }
-          if (pass.value !== passConfirm.value) {
-            state.authError = "Password and confirmation don't match.";
-            render();
-            return;
-          }
-          await setUserPassword(u.id, pass.value);
-        } else {
-          const okPass = await verifyUserPassword(u.id, pass.value);
-          if (!okPass) {
-            state.authError =
-              "Password didn't match. Contact your BeDeveloped lead if you've forgotten it.";
-            render();
-            return;
-          }
-        }
-        signIn(u.id);
-        state.route = "dashboard";
-        render();
-      };
-      [email, team, pass, passConfirm].forEach((el) =>
-        el.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") doClientLogin();
-        }),
-      );
-
-      [
-        ["Email", email],
-        ["Company passphrase", team],
-        ["Password", pass],
-      ].forEach(([lbl, input]) => {
-        container.appendChild(h("div", { class: "auth-field" }, [h("label", {}, lbl), input]));
-      });
-      container.appendChild(h("div", { class: "auth-field u-mt-neg-6" }, [passConfirm]));
-      container.appendChild(hint);
-      container.appendChild(errBox);
-      container.appendChild(
-        h("button", { class: "auth-submit", onclick: doClientLogin }, "Sign in"),
-      );
-
-      container.appendChild(
-        h(
-          "div",
-          { class: "auth-help" },
-          "Clients only see their own company's data. If your email or passphrase isn't working, ask your BeDeveloped contact.",
-        ),
-      );
-    } else {
-      // Phase 6 Wave 5 (AUTH-14 / D-04 / BLOCKER-FIX 1 wiring): legacy
-      // doInternalLogin form (verifyInternalPassword + isAllowedInternalEmail
-      // + INTERNAL_PASSWORD_HASH) RETIRED. Internal admins now sign in via the
-      // Phase 6 Pattern D auth view's renderSignIn — wraps Firebase Auth
-      // signInWithEmailAndPassword with the AUTH-12 unified-error chokepoint.
-      // On successful sign-in, onAuthStateChanged hydrates state.fbUser and
-      // triggers render(); the auth-state ladder in render() then routes
-      // through firstRun / mfaEnrol / dashboard per claims state.
-      container.appendChild(authView.renderSignIn());
-    }
+    // Phase 06.1 Wave 3 (AUTH-17 / D-16): the auth-tabs container + the
+    // legacy client sign-in branch (legacy client sign-in form against
+    // passphrase + per-user password hash + email-lookup short-circuit)
+    // DELETED. Clients now sign in via Firebase Auth identical to
+    // internal admins — the same Pattern D auth view's renderSignIn
+    // wraps Firebase Auth signInWithEmailAndPassword with the AUTH-12
+    // unified-error chokepoint. On successful sign-in,
+    // onAuthStateChanged hydrates state.fbUser and triggers render();
+    // the auth-state ladder in render() then routes through firstRun /
+    // mfaEnrol / dashboard per claims state. The legacy auth-tab field
+    // in src/state.js is now dead-coded (no readers in src/main.js); the
+    // field is preserved for state-shape compatibility with the wider
+    // IIFE migration but is no longer mutated or branched on. Phase 6
+    // BLOCKER-FIX 1 wiring (the renderSignIn view) is the canonical
+    // entry point.
+    container.appendChild(authView.renderSignIn());
 
     return container;
   }
@@ -3062,51 +2958,23 @@ import {
           h("div", {}, ""),
         ]),
       );
+      // Phase 06.1 Wave 3 (AUTH-17 / D-16): legacy "password set / awaiting
+      // first sign-in" indicator + admin-side "Reset password" button
+      // DELETED. Clients now use Firebase Auth (Phase 6 D-15 +
+      // src/firebase/auth.js sendPasswordResetEmail); the admin-side
+      // reset-via-passwordHash mutation is meaningless once the legacy
+      // hash field is gone. Only the "Remove" affordance survives.
       allClients.forEach((u) => {
         const o = u.orgId ? loadOrgMetas().find((m) => m.id === u.orgId) : null;
         const row = h("div", { class: "clients-table-row" });
         row.appendChild(h("div", {}, u.name || "—"));
-        row.appendChild(
-          h("div", {}, [
-            h("div", {}, u.email),
-            h(
-              "div",
-              {
-                style: `font-size:11px; margin-top:2px; color: ${u.passwordHash ? "var(--green)" : "var(--ink-3)"};`,
-              },
-              u.passwordHash ? "password set" : "awaiting first sign-in",
-            ),
-          ]),
-        );
+        row.appendChild(h("div", {}, u.email));
         row.appendChild(h("div", {}, o ? o.name : "— (unassigned)"));
         row.appendChild(
           h(
             "div",
             { class: "clients-actions-row" },
             [
-              u.passwordHash
-                ? h(
-                    "button",
-                    {
-                      class: "btn ghost sm",
-                      onclick: () =>
-                        confirmDialog(
-                          "Reset password?",
-                          `${u.email} will be asked to set a new password the next time they sign in.`,
-                          () => {
-                            const fresh = findUser(u.id);
-                            if (fresh) {
-                              delete fresh.passwordHash;
-                              upsertUser(fresh);
-                              render();
-                            }
-                          },
-                          "Reset",
-                        ),
-                    },
-                    "Reset password",
-                  )
-                : null,
               h(
                 "button",
                 {
@@ -3124,7 +2992,7 @@ import {
                 },
                 "Remove",
               ),
-            ].filter(Boolean),
+            ],
           ),
         );
         table.appendChild(row);
@@ -3204,27 +3072,7 @@ import {
     cloudSaveTimers["org:" + org.id] = setTimeout(async () => {
       try {
         const { db, firestore } = window.FB;
-        // Strip fields the rules treat as immutable on update:
-        //   - `id` is the doc-id, never a stored field anyway.
-        //   - `createdAt` + `orgId` are rule-immutable; sending them as
-        //     localStorage-serialized values (Timestamps become plain
-        //     {seconds,nanoseconds} maps after JSON round-trip) makes
-        //     `request.resource.data.createdAt == resource.data.createdAt`
-        //     false against the server's real Timestamp, and the update
-        //     gets rejected with PERMISSION_DENIED.
-        //
-        // setDoc with `{ merge: true }` preserves the server's existing
-        // values for any field we don't include, so the immutable check
-        // becomes trivially true (both sides hold the server value).
-        //
-        // First-write path: createOrg already does an explicit non-merge
-        // setDoc inline (see createOrg below) so the doc exists with
-        // createdAt + orgId by the time cloudPushOrg is called on it.
-        const { id: _docId, createdAt: _ca, orgId: _oid, ...payload } = org;
-        void _docId;
-        void _ca;
-        void _oid; // eslint: no-unused
-        await firestore.setDoc(firestore.doc(db, "orgs", org.id), payload, { merge: true });
+        await firestore.setDoc(firestore.doc(db, "orgs", org.id), org);
       } catch (e) {
         console.error("Cloud push org failed:", e);
       }
@@ -4920,8 +4768,19 @@ import {
   }
 
   function openInviteClientModal() {
+    // Phase 06.1 Wave 2 (AUTH-16 / D-14): rewired to call the inviteClient
+    // callable (via src/cloud/invite-admin.js) instead of writing a local
+    // Firestore user doc. The org passphrase is re-typed here (used both as
+    // the admin's vouch + the new Firebase Auth password the client signs in
+    // with the first time). PassphraseInvalidError / CrossOrgError /
+    // PassphraseNotSetError surface err.message inline; modal stays open so
+    // the admin can correct.
     const name = h("input", { type: "text", placeholder: "Client contact name" });
     const email = h("input", { type: "email", placeholder: "client@company.com" });
+    const orgPassphrase = h("input", {
+      type: "password",
+      placeholder: "Re-enter the company passphrase",
+    });
     const select = h("select", { class: "settings-textarea-comment" });
     const orgs = loadOrgMetas();
     orgs.forEach((o) => {
@@ -4931,6 +4790,135 @@ import {
       select.appendChild(opt);
     });
     const errBox = h("div");
+
+    const createBtn = h(
+      "button",
+      { class: "btn" },
+      "Create account",
+    );
+
+    /**
+     * @param {Error} err
+     */
+    function surfaceError(err) {
+      errBox.replaceChildren();
+      if (
+        err instanceof PassphraseInvalidError ||
+        err instanceof PassphraseNotSetError ||
+        err instanceof CrossOrgError
+      ) {
+        errBox.appendChild(h("div", { class: "auth-error" }, err.message));
+      } else {
+        errBox.appendChild(
+          h(
+            "div",
+            { class: "auth-error" },
+            "Something went wrong — try again.",
+          ),
+        );
+      }
+    }
+
+    async function doInvite(/** @type {boolean} */ confirmReset) {
+      const em = (email.value || "").trim().toLowerCase();
+      const nameVal = (name.value || "").trim();
+      const orgIdVal = select.value;
+      const passVal = orgPassphrase.value || "";
+
+      errBox.replaceChildren();
+      if (!em || !em.includes("@")) {
+        errBox.appendChild(h("div", { class: "auth-error" }, "Enter a valid email."));
+        return;
+      }
+      if (!nameVal) {
+        errBox.appendChild(h("div", { class: "auth-error" }, "Enter the client's name."));
+        return;
+      }
+      if (!orgs.length || !orgIdVal) {
+        errBox.appendChild(
+          h("div", { class: "auth-error" }, "Create an organisation first."),
+        );
+        return;
+      }
+      if (!passVal) {
+        errBox.appendChild(
+          h("div", { class: "auth-error" }, "Re-enter the company passphrase."),
+        );
+        return;
+      }
+
+      createBtn.setAttribute("disabled", "");
+      try {
+        const res = await inviteClient({
+          email: em,
+          name: nameVal,
+          orgId: orgIdVal,
+          orgPassphrase: passVal,
+          ...(confirmReset ? { confirmReset: true } : {}),
+        });
+        if (res && res.existed === true && !confirmReset) {
+          // Existed-user path: prompt admin to confirm reset (re-flips firstRun
+          // and overwrites the existing password back to the org passphrase).
+          createBtn.removeAttribute("disabled");
+          const chosenOrgForCopy = loadOrgMetas().find((o) => o.id === orgIdVal);
+          const orgName = (chosenOrgForCopy && chosenOrgForCopy.name) || "this organisation";
+          const stateDesc = res.hasFirstRun
+            ? "first-run"
+            : "completed";
+          const confirmModal = modal([
+            h("h3", {}, "Email already has an account"),
+            h(
+              "p",
+              { class: "section-explainer" },
+              `That email already has a ${stateDesc} account for ${orgName}. Reset their password back to the current company passphrase and re-flip first-run? Their current sign-in will be invalidated.`,
+            ),
+            h("div", { class: "row" }, [
+              h(
+                "button",
+                {
+                  class: "btn secondary",
+                  onclick: () => confirmModal.close(),
+                },
+                "Cancel",
+              ),
+              h(
+                "button",
+                {
+                  class: "btn",
+                  onclick: async () => {
+                    try {
+                      await doInvite(true);
+                      confirmModal.close();
+                    } catch (_e) {
+                      // doInvite already surfaced; ensure the confirm modal closes
+                      // so the admin can see the underlying modal's error.
+                      confirmModal.close();
+                    }
+                  },
+                },
+                "Yes, reset",
+              ),
+            ]),
+          ]);
+          return;
+        }
+
+        // Success — close + open instructions modal.
+        const chosenOrg = loadOrgMetas().find((o) => o.id === orgIdVal);
+        const client = { email: em, name: nameVal };
+        m.close();
+        render();
+        openInviteInstructionsModal(client, chosenOrg, true);
+      } catch (err) {
+        surfaceError(/** @type {Error} */ (err));
+      } finally {
+        createBtn.removeAttribute("disabled");
+      }
+    }
+
+    createBtn.addEventListener("click", () => {
+      void doInvite(false);
+    });
 
     const m = modal([
       h("h3", {}, "Invite a client"),
@@ -4942,57 +4930,19 @@ import {
       h("div", { class: "settings-form-stack" }, [
         h("div", {}, [h("label", { class: "settings-form-label" }, "Name"), name]),
         h("div", {}, [h("label", { class: "settings-form-label" }, "Email"), email]),
-        h("div", {}, [h("label", { class: "settings-form-label" }, "Organisation"), select]),
+        h("div", {}, [
+          h("label", { class: "settings-form-label" }, "Organisation"),
+          select,
+        ]),
+        h("div", {}, [
+          h("label", { class: "settings-form-label" }, "Company passphrase"),
+          orgPassphrase,
+        ]),
       ]),
       errBox,
       h("div", { class: "row" }, [
         h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-        h(
-          "button",
-          {
-            class: "btn",
-            onclick: () => {
-              // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
-              errBox.replaceChildren();
-              const em = (email.value || "").trim().toLowerCase();
-              if (!em || !em.includes("@")) {
-                errBox.appendChild(h("div", { class: "auth-error" }, "Enter a valid email."));
-                return;
-              }
-              if (findUserByEmail(em)) {
-                errBox.appendChild(
-                  h("div", { class: "auth-error" }, "A user with that email already exists."),
-                );
-                return;
-              }
-              if (!orgs.length) {
-                errBox.appendChild(
-                  h("div", { class: "auth-error" }, "Create an organisation first."),
-                );
-                return;
-              }
-              const user = {
-                id: uid("u_"),
-                email: em,
-                name: (name.value || "").trim(),
-                role: "client",
-                orgId: select.value,
-                createdAt: iso(),
-              };
-              upsertUser(user);
-              const chosenOrg = loadOrgMetas().find((o) => o.id === select.value);
-              const chosenOrgFull = loadOrg(select.value);
-              m.close();
-              render();
-              openInviteInstructionsModal(
-                user,
-                chosenOrg,
-                !!(chosenOrgFull && chosenOrgFull.clientPassphraseHash),
-              );
-            },
-          },
-          "Create account",
-        ),
+        createBtn,
       ]),
     ]);
     setTimeout(() => name.focus(), 10);
@@ -5009,7 +4959,7 @@ You've been set up with access to The Base Layers diagnostic${org?.name ? ` for 
 To sign in:
 1. Go to ${signInUrl}
 2. Enter your email: ${client.email}
-3. Enter the company passphrase (I'll share this with you separately)
+3. Enter the company passphrase your contact has shared with you
 4. Create your own password on first sign-in - you'll use this from then on
 
 Any questions, just let me know.`;
@@ -5043,13 +4993,13 @@ Any questions, just let me know.`;
         h(
           "p",
           { class: "settings-text-narrow" },
-          `${client.email} can now sign in. There's no automatic email - send them the details below. You'll also need to share the company passphrase for ${org?.name || "their organisation"} separately.`,
+          `${client.email} can now sign in. There's no automatic email - send them the details below. Then share the company passphrase with them via your usual secure channel.`,
         ),
         !hasPassphrase
           ? h(
               "div",
               { class: "settings-amber-banner" },
-              `⚠ ${org?.name || "This organisation"} doesn't have a company passphrase set yet. Set one from the Admin page before the client tries to sign in.`,
+              `⚠ ${org?.name || "This organisation"} doesn't have a company passphrase set. Set one (min 12 characters) from Settings → Set passphrase before inviting clients.`,
             )
           : null,
         h("label", { class: "settings-section-h" }, "Suggested message"),
@@ -5073,61 +5023,24 @@ Any questions, just let me know.`;
     );
   }
 
-  function openChangePasswordModal(user) {
-    const cur = h("input", { type: "password", placeholder: "Current password" });
-    const nw = h("input", { type: "password", placeholder: "New password (min 6 chars)" });
-    const confirmPw = h("input", { type: "password", placeholder: "Confirm new password" });
-    const errBox = h("div");
-    const m = modal([
-      h("h3", {}, "Change password"),
-      h(
-        "p",
-        { class: "section-explainer" },
-        "Enter your current password, then choose a new one. You'll use the new password next time you sign in.",
-      ),
-      h("div", { class: "settings-form-flex" }, [cur, nw, confirmPw]),
-      errBox,
-      h("div", { class: "row" }, [
-        h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-        h(
-          "button",
-          {
-            class: "btn",
-            onclick: async () => {
-              // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
-              errBox.replaceChildren();
-              const ok = await verifyUserPassword(user.id, cur.value);
-              if (!ok) {
-                errBox.appendChild(h("div", { class: "auth-error" }, "Current password is wrong."));
-                return;
-              }
-              if ((nw.value || "").length < 6) {
-                errBox.appendChild(
-                  h("div", { class: "auth-error" }, "New password must be at least 6 characters."),
-                );
-                return;
-              }
-              if (nw.value !== confirmPw.value) {
-                errBox.appendChild(h("div", { class: "auth-error" }, "New passwords don't match."));
-                return;
-              }
-              await setUserPassword(user.id, nw.value);
-              m.close();
-            },
-          },
-          "Update password",
-        ),
-      ]),
-    ]);
-    setTimeout(() => cur.focus(), 10);
-  }
+  // Phase 06.1 Wave 3 (AUTH-17 / D-16): the legacy Change-password modal
+  // (which verified the current password against the per-user
+  // passwordHash and wrote a new hash) DELETED. Client password changes
+  // now flow through Firebase Auth — self-serve resets via
+  // sendPasswordResetEmail (src/firebase/auth.js); future
+  // password-management UI for clients will surface via the Security
+  // panel (CONTEXT D-10). The chrome user-menu entry that opened the
+  // modal was deleted in the same atomic commit.
 
   function openSetOrgPassphrase(orgId, orgName) {
     const org = loadOrg(orgId);
     const existing = !!(org && org.clientPassphraseHash);
+    // Phase 06.1 Wave 1 Task 1 (AUTH-16 / RESEARCH § Critical Pinned Fact 1.1):
+    // placeholder raised from "min 4 chars" to "min 12 chars" — matches the
+    // length floor in setOrgClientPassphrase + the gate below.
     const nw = h("input", {
       type: "password",
-      placeholder: "New company passphrase (min 4 chars)",
+      placeholder: "New company passphrase (min 12 chars)",
     });
     const confirm = h("input", { type: "password", placeholder: "Confirm passphrase" });
     const errBox = h("div");
@@ -5151,9 +5064,19 @@ Any questions, just let me know.`;
             onclick: async () => {
               // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
               errBox.replaceChildren();
-              if (nw.value.length < 4) {
+              // Phase 06.1 Wave 1 Task 1 (AUTH-16 / RESEARCH § Critical Pinned
+              // Fact 1.1): modal-side check raised from 4 to
+              // ORG_PASSPHRASE_MIN_LENGTH (12). setOrgClientPassphrase below
+              // re-validates via the same helper as a defence-in-depth gate.
+              if (nw.value.length < ORG_PASSPHRASE_MIN_LENGTH) {
                 errBox.appendChild(
-                  h("div", { class: "auth-error" }, "Passphrase must be at least 4 characters."),
+                  h(
+                    "div",
+                    { class: "auth-error" },
+                    "Passphrase must be at least " +
+                      ORG_PASSPHRASE_MIN_LENGTH +
+                      " characters.",
+                  ),
                 );
                 return;
               }

@@ -89,6 +89,33 @@ export class MfaCodeInvalidError extends Error {
   }
 }
 
+// Phase 06.1 (AUTH-16 / D-14): AUTH-12 chokepoint extensions for the
+// inviteClient callable error surface. `src/cloud/invite-admin.js` (Wave 2)
+// switches on the server's HttpsError codes and rethrows these typed errors
+// so the Invite Client modal in src/main.js never sees raw Firebase codes —
+// the modal surfaces err.message verbatim, so the strings below are the
+// user-facing copy contract.
+export class PassphraseInvalidError extends Error {
+  constructor() {
+    super("Company passphrase incorrect — check it or update via Set Passphrase");
+    this.name = "PassphraseInvalidError";
+  }
+}
+
+export class CrossOrgError extends Error {
+  constructor() {
+    super("That email already belongs to a different organisation");
+    this.name = "CrossOrgError";
+  }
+}
+
+export class PassphraseNotSetError extends Error {
+  constructor() {
+    super("Set the company passphrase first via Settings");
+    this.name = "PassphraseNotSetError";
+  }
+}
+
 const AUTH_CRED_ERROR_CODES = new Set([
   "auth/user-not-found",
   "auth/wrong-password",

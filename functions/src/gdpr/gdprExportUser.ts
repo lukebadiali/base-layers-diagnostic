@@ -60,7 +60,11 @@ const GdprExportInput = z.object({
 export const gdprExportUser = onCall(
   {
     region: "europe-west2",
-    enforceAppCheck: true,
+    // PLATFORM-UAT post-T19 F1-B (2026-05-25): enforceAppCheck dropped.
+    // GDPR Art. 12(3) right-of-access — clients self-service their own
+    // data export. A client locked out of an export request because
+    // they used an incognito browser is a regulatory + UX failure.
+    // Primary auth gate (self-uid check + 30-day cooldown) preserved.
     secrets: [SENTRY_DSN],
     memory: "512MiB",
     timeoutSeconds: 540, // bundle assembly + GCS save can be slow for large users (T-08-04-07)

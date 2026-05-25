@@ -43,7 +43,13 @@ const SoftDeleteInput = z.object({
 export const softDelete = onCall(
   {
     region: "europe-west2",
-    enforceAppCheck: true,
+    // PLATFORM-UAT post-T19 F1-B (2026-05-25): enforceAppCheck dropped.
+    // softDelete is the intended path for client document delete (was
+    // surfaced as T15 in PLATFORM-UAT — frontend currently calls
+    // firestore.deleteDoc() directly). Once the T15 frontend fix lands,
+    // clients in incognito need this callable working — App Check
+    // enforcement would block them. Authorisation gate (caller role +
+    // org membership) preserved in handler.
     secrets: [SENTRY_DSN],
     memory: "256MiB",
     timeoutSeconds: 30,

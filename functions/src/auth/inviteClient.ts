@@ -327,6 +327,18 @@ export const inviteClient = onCall(
     await getAuth().updateUser(outcome.existingUid, {
       password: data.orgPassphrase,
     });
+    // Phase 06.1 WR-02 contract: setCustomUserClaims OVERWRITES the entire
+    // claim set (Admin SDK semantics — there is no merge mode). The resend
+    // branch deliberately reverts the user to the canonical client claim
+    // shape `{role:"client", orgId, firstRun:true}` returned by
+    // buildInviteClaims. Any per-user claims added in future phases (e.g.
+    // mfaEnrolled flags, feature-flag claims, email_verified-derived
+    // sub-claims) MUST be re-applied AFTER the resend completes, OR this
+    // call MUST be changed to read-merge-write against existingClaims —
+    // see invite-builder.ts `existingClaims` shape pinned at the
+    // decideInviteOutcome call site above. CR-01's privileged-user gate
+    // already rules out admin/internal claim wipes; the regression hazard
+    // here is forward-only (Phase 9+ claim additions).
     await getAuth().setCustomUserClaims(
       outcome.existingUid,
       buildInviteClaims(data.orgId),

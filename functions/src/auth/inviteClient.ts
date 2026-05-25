@@ -65,7 +65,7 @@ export const inviteClient = onCall(
     region: "europe-west2",
     enforceAppCheck: true,
     secrets: [SENTRY_DSN],
-    serviceAccount: "claims-admin-sa", // FN-04 — reuse per CONTEXT D-15 + RESEARCH Alternatives Considered
+    serviceAccount: "claims-admin-sa@bedeveloped-base-layers.iam.gserviceaccount.com", // FN-04 — reuse per CONTEXT D-15. Full email form required: firebase-tools short-name "claims-admin-sa" gets passed through to Secret Manager setIamPolicy which rejects non-email SA refs with 400 Invalid service account.
     memory: "256MiB",
     timeoutSeconds: 30,
   },

@@ -106,7 +106,6 @@ import { setRoute as routerSetRoute, renderRoute as routerRenderRoute } from "./
 import {
   uid,
   iso,
-  formatWhen,
   initials,
   // CODE-08 (Wave 4): firstNameFromAuthor moved to renderConversationBubble
   // helper in src/views/_shared/render-conversation.js. Aliased _* per
@@ -571,21 +570,14 @@ import {
   }
 
   // ---------- Comments ----------
-  function addComment(org, pillarId, authorId, text, internal = false) {
-    org.comments = org.comments || {};
-    org.comments[pillarId] = org.comments[pillarId] || [];
-    const c = {
-      id: uid("c_"),
-      authorId,
-      text,
-      internal: !!internal,
-      createdAt: iso(),
-    };
-    org.comments[pillarId].push(c);
-    saveOrg(org);
-    return c;
-  }
-
+  // PLATFORM-UAT T13 (2026-05-25): per-pillar comments down-scoped — the
+  // composer + thread UI (renderComments at L2094) was orphaned during the
+  // Phase 4 modular split and never rewired. Local addComment() that backed
+  // it has been removed. Per-pillar discussion now happens via the per-org
+  // Chat tab. commentsFor() below is retained for backwards compatibility
+  // with the unread-count machinery (chrome.js diagnostic-nav dot) so any
+  // legacy comments in Firestore from prior engagements still register —
+  // but no new comments can be created from the UI.
   function commentsFor(org, pillarId, user) {
     const list = (org.comments || {})[pillarId] || [];
     if (user && user.role === "client") return list.filter((c) => !c.internal);
@@ -2085,105 +2077,6 @@ import {
     // for both roles. See PR #37 / #38 trail for the full thread.
     jset(K.org(o.id), o);
     cloudPushResponse(o.id, o.currentRoundId, user.id, pillarId, idx, merged);
-  }
-
-  // ================================================================
-  // COMMENTS (Slack-style)
-  // ================================================================
-  // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead code or wire up call site. See runbooks/phase-4-cleanup-ledger.md
-  function renderComments(user, org, p) {
-    const wrap = h("div", { class: "comments" });
-    const list = commentsFor(org, p.id, user);
-    const lastRead = ((org.readStates || {})[user.id] || {})[p.id];
-    const lastReadT = lastRead ? new Date(lastRead).getTime() : 0;
-
-    wrap.appendChild(
-      h("h3", {}, [
-        h("span", {}, `Discussion (${list.length})`),
-        list.length ? h("span", { class: "section-meta-faint" }, "Most recent first") : null,
-      ]),
-    );
-
-    const listEl = h("div", { class: "comment-list" });
-    if (list.length === 0) {
-      listEl.appendChild(
-        h(
-          "p",
-          { class: "section-explainer" },
-          "No comments yet. Ask a question or leave a note — BeDeveloped and the team will see it here.",
-        ),
-      );
-    } else {
-      list
-        .slice()
-        .reverse()
-        .forEach((c) => {
-          const author = findUser(c.authorId);
-          const isSelf = c.authorId === user.id;
-          const isNew = !isSelf && new Date(c.createdAt).getTime() > lastReadT;
-          const row = h("div", { class: "comment" + (isNew ? " unread" : "") });
-          row.appendChild(
-            h(
-              "span",
-              { class: "avatar" + (author?.role === "internal" ? " internal" : "") },
-              initials(author?.name || author?.email || "?"),
-            ),
-          );
-          const body = h("div");
-          body.appendChild(
-            h("div", { class: "head" }, [
-              h("span", { class: "name" }, author?.name || author?.email || "Unknown"),
-              h("span", { class: "when" }, formatWhen(c.createdAt)),
-              c.internal ? h("span", { class: "tag-internal" }, "Internal") : null,
-            ]),
-          );
-          body.appendChild(h("div", { class: "body" }, c.text));
-          row.appendChild(body);
-          listEl.appendChild(row);
-        });
-    }
-    wrap.appendChild(listEl);
-
-    // Composer
-    const composer = h("div", { class: "comment-composer" });
-    const ta = h("textarea", {
-      placeholder: isClientView(user)
-        ? "Ask a question or leave a comment for the BeDeveloped team…"
-        : "Reply to the client, or leave a note for your team…",
-    });
-    const optsCol = h("div", { class: "opts" });
-    let internalOnly = false;
-    if (!isClientView(user)) {
-      const lbl = h("label", {}, [
-        h("input", {
-          type: "checkbox",
-          onchange: (e) => (internalOnly = e.target.checked),
-        }),
-        h("span", {}, "Internal only"),
-      ]);
-      optsCol.appendChild(lbl);
-    }
-    const post = h(
-      "button",
-      {
-        class: "btn",
-        onclick: () => {
-          const text = ta.value.trim();
-          if (!text) return;
-          const o = loadOrg(org.id);
-          addComment(o, p.id, user.id, text, internalOnly);
-          ta.value = "";
-          render();
-        },
-      },
-      "Post",
-    );
-    optsCol.appendChild(post);
-
-    composer.appendChild(ta);
-    composer.appendChild(optsCol);
-    wrap.appendChild(composer);
-    return wrap;
   }
 
   // ================================================================

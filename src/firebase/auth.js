@@ -376,12 +376,29 @@ export async function updatePassword(newPassword) {
   // with auth/user-token-expired (the very failure mode this guard prevents).
   if (reauthed) {
     try {
-      const idTokenResult = await user.getIdTokenResult();
+      // PLATFORM-UAT T19 fix: force-refresh the token from the server so
+      // inviteClient's server-side claim write (role + orgId, written before
+      // the email link was generated) has actually propagated into the
+      // cached token. Without `true`, getIdTokenResult returns the cached
+      // token from the email-link sign-in — which may pre-date the claim
+      // write — and we read orgId as null even when the server has it set.
+      const idTokenResult = await user.getIdTokenResult(true);
       const claims = /** @type {Record<string, unknown>} */ (idTokenResult.claims);
       if (claims.firstRun === true) {
         const role = typeof claims.role === "string" ? /** @type {string} */ (claims.role) : null;
         const orgId =
           typeof claims.orgId === "string" ? /** @type {string} */ (claims.orgId) : null;
+        // PLATFORM-UAT T19 fix: never call setClaims with orgId:null for a
+        // client. A client without an org is non-sensical and the only path
+        // to that state is a race where the invite-set orgId hasn't reached
+        // this token cache yet. Writing null here would permanently overwrite
+        // the server-side claim that inviteClient already set correctly.
+        // Skip the setClaims call instead; firstRun:true will retry on the
+        // next auth state change or token refresh (onIdTokenChanged listener
+        // in main.js at L4153+), by which time the claim will have propagated.
+        if (role === "client" && !orgId) {
+          throw new Error("firstRun-retry-deferred: orgId not yet propagated");
+        }
         await setClaims({ uid: user.uid, role, orgId });
         // Force ID-token refresh — picks up the server-side setCustomUserClaims
         // mutation immediately so the next claim read sees firstRun absent.

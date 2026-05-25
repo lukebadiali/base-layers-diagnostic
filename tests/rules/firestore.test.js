@@ -46,6 +46,15 @@ async function seedFixtures() {
       name: "Org B",
       createdAt: now,
     });
+    // Legacy-shape org doc: NO `orgId` field, mimics what's actually in
+    // prod for engagements created before the Phase 6 schema conventions
+    // settled. The matrix below exercises updates against this doc so the
+    // `immutable()` helper's missing-field handling is covered.
+    await setDoc(doc(db, "orgs/orgLegacy"), {
+      name: "Legacy Org",
+      createdAt: now,
+      currentRoundId: "r1",
+    });
 
     // Subcollection fixtures under orgs/orgA
     await setDoc(doc(db, "orgs/orgA/responses/r1"), {
@@ -320,6 +329,26 @@ const CELLS = [
   { role: "admin", path: "orgs/orgA-new2", op: "create", expected: "allow" },
   { role: "client_orgA", path: "orgs/orgA", op: "delete", expected: "deny" }, // soft-delete via Cloud Function only
   { role: "internal", path: "orgs/orgA", op: "delete", expected: "deny" }, // delete: false for everyone
+
+  // orgs/orgLegacy — doc missing the optional `orgId` field. Exercises
+  // immutable() against absent-on-both-sides, the regression that hit
+  // prod 2026-05-22 when admin tier-dropdown writes started failing with
+  // permission-denied. The original bracket-access form threw on missing
+  // keys; Map.get(field, null) returns null safely.
+  {
+    role: "internal",
+    path: "orgs/orgLegacy",
+    op: "update",
+    expected: "allow",
+    label: "internal can update org doc that lacks orgId field",
+  },
+  {
+    role: "admin",
+    path: "orgs/orgLegacy",
+    op: "update",
+    expected: "allow",
+    label: "admin can update org doc that lacks orgId field",
+  },
 
   // orgs/orgA/responses/{respId}
   {

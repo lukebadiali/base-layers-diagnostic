@@ -19,8 +19,18 @@ service cloud.firestore {
     function isOwnAuthor(r){ return r.authorId == request.auth.uid; }
 
     // ── Mutation whitelist (D-15 / Pitfall 3 / RULES-02) ──────────────
+    // Use Map.get(field, null) instead of bracket access so the comparison
+    // doesn't throw on docs that lack the field on either side. The prior
+    // bracket-access form errored when either request.resource.data or
+    // resource.data was missing the field — CEL surfaces "no such key" as
+    // an error that short-circuits the whole `allow update` clause to false,
+    // even when both sides were missing the field (which logically should
+    // be "equal — no change"). Hit in prod when admin tried to update an
+    // org doc that lacked an explicit `orgId` field (we found this in prod
+    // diagnostic 2026-05-22). Rules-tests never caught it because the seed
+    // always populated `orgId` + `createdAt` on every fixture doc.
     function immutable(field) {
-      return request.resource.data[field] == resource.data[field];
+      return request.resource.data.get(field, null) == resource.data.get(field, null);
     }
     function mutableOnly(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);

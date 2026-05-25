@@ -65,8 +65,14 @@ const instructionsModalBlock = extractFunctionBlock(SRC, "openInviteInstructions
 
 describe("src/main.js — module imports (Phase 06.1 Wave 2)", () => {
   it("imports { inviteClient } from ./cloud/invite-admin.js", () => {
+    // Post-Phase-06.1: the import named-list may include additional siblings
+    // (e.g. deleteClient — added when the admin Remove button was rewired to
+    // the server-side deleteClient callable). The contract this test pins is
+    // that inviteClient is imported FROM invite-admin.js as a named member,
+    // not that it's the only member.
+
     expect(SRC).toMatch(
-      /import\s+\{\s*inviteClient\s*\}\s+from\s+["']\.\/cloud\/invite-admin\.js["']/,
+      /import\s+\{[^}]*\binviteClient\b[^}]*\}\s+from\s+["']\.\/cloud\/invite-admin\.js["']/,
     );
   });
 

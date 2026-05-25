@@ -49,7 +49,12 @@ const SignedUrlInput = z.object({
 export const getDocumentSignedUrl = onCall(
   {
     region: "europe-west2",
-    enforceAppCheck: true,
+    // PLATFORM-UAT post-T19 F1-B (2026-05-25): enforceAppCheck dropped.
+    // Client document downloads (Documents tab) call this callable to
+    // get a 1h-TTL signed URL. App Check enforcement blocks incognito
+    // clients from downloading their own org's documents. Primary auth
+    // gate (unauthenticated check at L58, org-scope check downstream)
+    // preserved. URL TTL <= 1h limits blast radius (BACKUP-05).
     secrets: [SENTRY_DSN],
     memory: "256MiB",
     timeoutSeconds: 30,

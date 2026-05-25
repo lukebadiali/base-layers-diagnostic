@@ -41,7 +41,11 @@ const CheckRateLimitInput = z.object({
 export const checkRateLimit = onCall(
   {
     region: "europe-west2",
-    enforceAppCheck: true,                  // FN-07
+    // PLATFORM-UAT post-T19 F1-B (2026-05-25): enforceAppCheck dropped
+    // (was FN-07). checkRateLimit gates client message/comment posts —
+    // App Check enforcement here blocks chat + per-pillar comments
+    // from incognito sessions. Primary defence (the 30-msg/60s rule at
+    // firestore.rules:175-192 keyed on request.auth.uid) is preserved.
     secrets: [SENTRY_DSN],                  // FN-05 (defineSecret)
     memory: "256MiB",
     timeoutSeconds: 10,

@@ -53,7 +53,11 @@ const GdprEraseInput = z.object({
 export const gdprEraseUser = onCall(
   {
     region: "europe-west2",
-    enforceAppCheck: true,
+    // PLATFORM-UAT post-T19 F1-B (2026-05-25): enforceAppCheck dropped.
+    // GDPR Art. 17 right-to-be-forgotten — clients self-service erasure
+    // (subject to the cooldown + audit-log carve-out per Pitfall 11).
+    // Same regulatory rationale as gdprExportUser. Primary auth gate
+    // (self-uid check + admin override path) preserved.
     secrets: [SENTRY_DSN, GDPR_PSEUDONYM_SECRET],
     memory: "1GiB",      // larger than export — cascade may aggregate thousands of ops
     timeoutSeconds: 540,

@@ -41,7 +41,13 @@ const SENTRY_DSN = defineSecret("SENTRY_DSN");
 export const auditWrite = onCall(
   {
     region: "europe-west2",
-    enforceAppCheck: true,
+    // PLATFORM-UAT post-T19 F1-B (2026-05-25): enforceAppCheck dropped.
+    // auditWrite fires on most actions (sign-in, write, delete, role
+    // change). App Check enforcement here blocks every audit emission
+    // from incognito sessions — including the first-run flow's audit
+    // trail. Primary auth gate (unauthenticated check at L50) preserved.
+    // Server-side actor.{uid,email,role,orgId} overlay from
+    // request.auth.token still authoritative (Pitfall 17).
     secrets: [SENTRY_DSN],
     memory: "256MiB",
     timeoutSeconds: 30,

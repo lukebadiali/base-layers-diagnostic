@@ -51,7 +51,17 @@ const SetClaimsSchema = z.object({
 export const setClaims = onCall(
   {
     region: "europe-west2",
-    enforceAppCheck: true,
+    // PLATFORM-UAT post-T19 F1-B (2026-05-25): enforceAppCheck dropped.
+    // reCAPTCHA Enterprise can't issue App Check tokens in incognito
+    // sessions (score-based engine needs cookies + fingerprinting that
+    // incognito blocks) and Firebase Console has removed v3 from new
+    // Web App Check provider registrations. setClaims is called from
+    // src/firebase/auth.js#updatePassword on every client first-run —
+    // App Check enforcement here means every incognito invitee gets
+    // permission-denied + the user is bricked. Primary auth gate
+    // (Firebase Auth ID token + admin/self-update role check at L82)
+    // is preserved. See PLATFORM-UAT Gaps section for full rationale
+    // and F2/F3 alternatives evaluated.
     secrets: [SENTRY_DSN],
     memory: "256MiB",
     timeoutSeconds: 30,

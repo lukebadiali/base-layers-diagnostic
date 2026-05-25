@@ -76,10 +76,8 @@ export function createAuthView(deps) {
 
   function renderSignIn() {
     const wrap = h("div", { class: "auth-sign-in" });
-    wrap.appendChild(h("h2", { class: "auth-heading" }, "Internal sign-in"));
-    wrap.appendChild(
-      h("p", { class: "auth-sub" }, "Sign in with your BeDeveloped email and password."),
-    );
+    wrap.appendChild(h("h2", { class: "auth-heading" }, "Sign in"));
+    wrap.appendChild(h("p", { class: "auth-sub" }, "Sign in with your email and password."));
 
     const form = h("form", { method: "post" });
     const email = h("input", {
@@ -87,7 +85,7 @@ export function createAuthView(deps) {
       name: "email",
       required: "",
       autocomplete: "username",
-      placeholder: "you@bedeveloped.com",
+      placeholder: "you@example.com",
     });
     const password = h("input", {
       type: "password",
@@ -476,7 +474,7 @@ export function createAuthView(deps) {
       h(
         "p",
         { class: "auth-sub" },
-        "Enter your BeDeveloped email and we will send you a link to set a new password.",
+        "Enter your email and we will send you a link to set a new password.",
       ),
     );
 
@@ -486,7 +484,7 @@ export function createAuthView(deps) {
       name: "email",
       required: "",
       autocomplete: "username",
-      placeholder: "you@bedeveloped.com",
+      placeholder: "you@example.com",
     });
     form.appendChild(h("div", { class: "auth-field" }, [h("label", {}, "Email"), email]));
     const submit = h(

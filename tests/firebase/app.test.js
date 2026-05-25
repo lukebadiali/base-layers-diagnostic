@@ -44,12 +44,15 @@ vi.mock("firebase/functions", () => ({
   httpsCallable: vi.fn(),
 }));
 // Phase 7 Wave 3 (FN-07): initAppCheck now imports firebase/app-check.
-// Mock the Enterprise provider + initializer so the adapter shape test can
-// exercise the body-filled stub without spinning up real reCAPTCHA Enterprise.
+// PLATFORM-UAT post-T19: provider switched Enterprise → V3 for incognito
+// compatibility (Enterprise score-based engine fails to issue tokens
+// when third-party cookies + fingerprinting are blocked).
+// Mock the V3 provider + initializer so the adapter shape test can exercise
+// the body-filled stub without spinning up a real reCAPTCHA challenge.
 vi.mock("firebase/app-check", () => ({
   initializeAppCheck: vi.fn(() => ({ name: "[mock-app-check]" })),
-  ReCaptchaEnterpriseProvider: vi.fn().mockImplementation((siteKey) => ({
-    name: "[mock-recaptcha-enterprise-provider]",
+  ReCaptchaV3Provider: vi.fn().mockImplementation((siteKey) => ({
+    name: "[mock-recaptcha-v3-provider]",
     siteKey,
   })),
 }));

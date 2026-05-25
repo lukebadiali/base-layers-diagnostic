@@ -6,6 +6,13 @@
 // that consumed it; the 2 canonical SHA-256 parity vectors below were
 // inlined here (generated originally by Node createHash —
 // tests/fixtures/_generators/hash-passwords.js retained as the generator).
+//
+// Phase 06.1 WR-01 fix: the prior "falls back to a 32-bit hash string" test
+// case was replaced with a "throws when crypto.subtle.digest fails" case.
+// The fallback was removed because it silently drifted client-side
+// orgs/{orgId}.clientPassphraseHash away from the server-side SHA-256 hex,
+// bricking every subsequent inviteClient call. Callers must now surface
+// the error loudly rather than write a divergent hash.
 import { describe, it, expect, vi } from "vitest";
 import { hashString } from "../../src/util/hash.js";
 
@@ -50,19 +57,31 @@ describe("hashString", () => {
     await expect(hashString(42)).resolves.toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it("falls back to a 32-bit hash string when crypto.subtle.digest throws (defensive path)", async () => {
-    // Plan 02-06 (Wave 5) coverage back-fill: drive the catch{} branch in
-    // src/util/hash.js so the 100% src/util/** threshold (D-15) holds.
+  it("throws (propagates) when crypto.subtle.digest fails — no silent fallback (WR-01)", async () => {
+    // Phase 06.1 WR-01 fix: the prior FNV fallback returned a base-10 string
+    // when crypto.subtle.digest threw, silently breaking SHA-256 parity with
+    // the server. The fallback was removed; the error must now propagate so
+    // setOrgClientPassphrase surfaces "browser does not support secure
+    // hashing" instead of writing a divergent hash to
+    // orgs/{orgId}.clientPassphraseHash.
     const spy = vi.spyOn(crypto.subtle, "digest").mockImplementation(() => {
       throw new Error("simulated crypto failure");
     });
     try {
-      const out = await hashString("hello");
-      // Fallback is a base-10 integer string from the (h<<5)-h+ch loop.
-      expect(out).toMatch(/^-?\d+$/);
-      // Different inputs produce different fallback hashes.
-      const out2 = await hashString("world");
-      expect(out2).not.toBe(out);
+      await expect(hashString("hello")).rejects.toThrow("simulated crypto failure");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("propagates async rejection from crypto.subtle.digest (WR-01)", async () => {
+    // Cover the async-rejection variant — crypto.subtle.digest returns a
+    // Promise; rejections must surface to the caller, not be swallowed.
+    const spy = vi
+      .spyOn(crypto.subtle, "digest")
+      .mockRejectedValue(new Error("simulated async crypto failure"));
+    try {
+      await expect(hashString("hello")).rejects.toThrow("simulated async crypto failure");
     } finally {
       spy.mockRestore();
     }

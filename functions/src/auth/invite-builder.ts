@@ -60,12 +60,40 @@ export async function verifyOrgPassphrase(
  * Builds the custom-claims shape attached to an invited client user.
  *
  * RESEARCH § 6.2 regression-gate: `firstRun: true` MUST be the literal
- * boolean true. SetClaimsSchema deliberately omits `firstRun`, so when
- * src/firebase/auth.js#updatePassword calls setClaims post-password-change,
- * `setCustomUserClaims` overwrites the entire claim set and drops firstRun.
- * That gate is what flips a first-run user OUT of renderFirstRun on next
- * getIdToken(true) refresh. If firstRun is anything other than the literal
- * true here, the first-run loop never starts.
+ * boolean true. The closing point lives in another file —
+ * `functions/src/auth/setClaims.ts` defines `SetClaimsSchema` (line ~44)
+ * which deliberately omits `firstRun`, so when `src/firebase/auth.js`
+ * `updatePassword()` calls the `setClaims` callable post-password-change,
+ * the chained `setCustomUserClaims` overwrites the entire claim set and
+ * drops `firstRun`. That overwrite is what flips a first-run user OUT of
+ * `renderFirstRun` on next `getIdToken(true)` refresh.
+ *
+ * If `firstRun` is anything other than the literal boolean `true` here,
+ * the first-run loop never starts in the first place — invited users get
+ * dropped straight into the regular client view.
+ *
+ * Dependency chain (Phase 06.1 WR-03 trace):
+ *   1. THIS function emits `{role, orgId, firstRun:true}` on invite.
+ *   2. `functions/src/auth/inviteClient.ts` resend / create branches pass
+ *      that shape to `getAuth().setCustomUserClaims()`.
+ *   3. `src/views/first-run.js` (and callers) check `firstRun === true`
+ *      on the verified ID token to mount `renderFirstRun`.
+ *   4. After the client sets their own password, `src/firebase/auth.js`
+ *      `updatePassword()` calls the `setClaims` callable.
+ *   5. `functions/src/auth/setClaims.ts` validates input against its
+ *      own `SetClaimsSchema` (defined in-file at ~line 44) — which has
+ *      NO `firstRun` field. `setCustomUserClaims` then writes the
+ *      validated shape, overwriting `firstRun:true` with `undefined`.
+ *      (Note: a separate `functions/src/auth/claim-builder.ts` exists
+ *      for the `beforeUserCreated` trigger's `buildClaims` transform —
+ *      it does NOT contain the schema. `setClaims.ts` is the relevant
+ *      file for the firstRun-overwrite gate.)
+ *   6. Next `getIdToken(true)` refresh sees `firstRun !== true` and
+ *      routes OUT of `renderFirstRun` into the steady-state client view.
+ *
+ * Step 5 IS the gate. If `firstRun` is added to `SetClaimsSchema`, the
+ * first-run loop never exits. Both invariants — literal `true` here AND
+ * absence-from-schema there — are load-bearing.
  */
 export function buildInviteClaims(orgId: string): {
   role: "client";

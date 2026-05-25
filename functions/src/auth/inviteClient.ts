@@ -241,6 +241,21 @@ export const inviteClient = onCall(
         userRecord.uid,
         buildInviteClaims(data.orgId),
       );
+      // Phase 06.1 post-merge fix: write the /users/{uid} mirror doc so the
+      // admin-side Clients table (src/main.js:2928 loadUsers().filter(role==="client")
+      // hydrated by subscribeUsers over /users) shows the newly invited client.
+      // Without this, Firebase Auth has the user but the admin UI doesn't.
+      // Shape matches cloudPushUser at src/main.js:3082 — {id, email, name,
+      // role, orgId, createdAt}. id === Firebase Auth UID for consistency
+      // with the existing local-Firestore convention pre-cutover.
+      await getFirestore().doc(`users/${userRecord.uid}`).set({
+        id: userRecord.uid,
+        email: data.email,
+        name: data.name,
+        role: "client",
+        orgId: data.orgId,
+        createdAt: new Date().toISOString(),
+      });
       await emitAudit(
         "auth.client.invite",
         { existed: false, newRole: "client", email: data.email },
@@ -342,6 +357,23 @@ export const inviteClient = onCall(
     await getAuth().setCustomUserClaims(
       outcome.existingUid,
       buildInviteClaims(data.orgId),
+    );
+    // Phase 06.1 post-merge fix: mirror to /users/{uid} like the create branch.
+    // Resend may target a doc that doesn't exist yet (Firebase Auth user created
+    // outside this callable) OR a legacy doc that pre-dates Wave 3's cutover.
+    // merge:true means: write the mutable fields (id/email/name/role/orgId)
+    // but preserve any existing fields including createdAt (set only in the
+    // create branch — see comment above). This avoids resetting createdAt on
+    // every resend round-trip.
+    await getFirestore().doc(`users/${outcome.existingUid}`).set(
+      {
+        id: outcome.existingUid,
+        email: data.email,
+        name: data.name,
+        role: "client",
+        orgId: data.orgId,
+      },
+      { merge: true },
     );
     await emitAudit(
       "auth.client.invite.resend",

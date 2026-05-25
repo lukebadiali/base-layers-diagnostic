@@ -57,11 +57,35 @@ export const setClaims = onCall(
     timeoutSeconds: 30,
   },
   withSentry(async (request: CallableRequest<unknown>) => {
-    // Pitfall 17: re-read role from the verified ID token, NEVER from payload.
-    if (request.auth?.token?.role !== "admin") {
-      throw new HttpsError("permission-denied", "admin role required");
-    }
     const data = validateInput(SetClaimsSchema, request.data ?? {});
+
+    // Pitfall 17: re-read role from the verified ID token, NEVER from payload.
+    // Phase 06.1 (post-merge fix): allow a constrained self-update branch so
+    // first-run CLIENT users can clear their own `firstRun: true` claim after
+    // changing their password. src/firebase/auth.js#updatePassword calls
+    // setClaims({uid: self.uid, role: self.role, orgId: self.orgId}) — because
+    // SetClaimsSchema deliberately omits firstRun, setCustomUserClaims overwrites
+    // the entire claim set and firstRun drops off. Prior to this branch, the
+    // admin-only gate rejected the call → client stuck on firstRun forever.
+    // Self-update is constrained: same uid AND identical role + orgId to the
+    // caller's verified token claims — no role/orgId escalation possible.
+    const callerUid = request.auth?.uid;
+    const callerRole = request.auth?.token?.role;
+    const callerOrgId =
+      typeof request.auth?.token?.orgId === "string" ? request.auth.token.orgId : null;
+    const isAdmin = callerRole === "admin";
+    const isSelfUpdate =
+      !!callerUid &&
+      callerUid === data.uid &&
+      (data.role ?? null) === (callerRole ?? null) &&
+      (data.orgId ?? null) === callerOrgId;
+    if (!isAdmin && !isSelfUpdate) {
+      throw new HttpsError("permission-denied", "admin role required, or self-update with unchanged role+orgId");
+    }
+    // Narrow request.auth for downstream uses (the gate above guarantees it's defined:
+    // isAdmin requires request.auth.token.role === "admin"; isSelfUpdate requires
+    // !!callerUid which derives from request.auth.uid).
+    if (!request.auth) throw new HttpsError("unauthenticated", "auth required");
 
     // Idempotency-marker write BEFORE the side effect (FN-03; 5-min window).
     await ensureIdempotent(

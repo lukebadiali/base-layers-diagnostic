@@ -28,7 +28,11 @@ const updateUserSpy = vi.fn();
 const setCustomUserClaimsSpy = vi.fn();
 
 const firestoreGetSpy = vi.fn();
-const firestoreDocSpy = vi.fn(() => ({ get: firestoreGetSpy }));
+const firestoreSetSpy = vi.fn();
+const firestoreDocSpy = vi.fn(() => ({
+  get: firestoreGetSpy,
+  set: firestoreSetSpy,
+}));
 
 const ensureIdempotentSpy = vi.fn();
 const writeAuditEventSpy = vi.fn();
@@ -108,6 +112,7 @@ beforeEach(() => {
   updateUserSpy.mockReset().mockResolvedValue(undefined);
   setCustomUserClaimsSpy.mockReset().mockResolvedValue(undefined);
   firestoreGetSpy.mockReset();
+  firestoreSetSpy.mockReset().mockResolvedValue(undefined);
   firestoreDocSpy.mockClear();
   ensureIdempotentSpy.mockReset().mockResolvedValue(undefined);
   writeAuditEventSpy.mockReset().mockResolvedValue(undefined);

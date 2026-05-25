@@ -18,13 +18,13 @@
 // already carry iam.claims.set.requested where audit is needed).
 
 import { functions, httpsCallable } from "../firebase/functions.js";
-import {
-  PassphraseInvalidError,
-  CrossOrgError,
-  PassphraseNotSetError,
-} from "../firebase/auth.js";
+import { PassphraseInvalidError, CrossOrgError, PassphraseNotSetError } from "../firebase/auth.js";
 
 const inviteClientCallable = httpsCallable(functions, "inviteClient");
+// Phase 06.1 post-merge fix: deleteClient wrapper. Same Pattern D shape as
+// inviteClient — clientReqId generated per call, error codes mapped to typed
+// errors where the modal cares about the distinction.
+const deleteClientCallable = httpsCallable(functions, "deleteClient");
 
 /**
  * @param {{ email: string, name: string, orgId: string, orgPassphrase: string, confirmReset?: boolean }} input
@@ -34,17 +34,27 @@ export async function inviteClient(input) {
   const clientReqId = crypto.randomUUID();
   try {
     const res = await inviteClientCallable({ ...input, clientReqId });
-    return /** @type {{ uid: string, existed: boolean, hasFirstRun?: boolean }} */ (
-      res.data
-    );
+    return /** @type {{ uid: string, existed: boolean, hasFirstRun?: boolean }} */ (res.data);
   } catch (err) {
-    const code =
-      /** @type {any} */ (err)?.details?.code ??
-      /** @type {any} */ (err)?.code ??
-      "";
+    const code = /** @type {any} */ (err)?.details?.code ?? /** @type {any} */ (err)?.code ?? "";
     if (code === "auth/passphrase-invalid") throw new PassphraseInvalidError();
     if (code === "auth/cross-org-invite-rejected") throw new CrossOrgError();
     if (code === "auth/passphrase-not-set") throw new PassphraseNotSetError();
     throw err;
   }
+}
+
+/**
+ * Atomic client deletion: removes the Firebase Auth user AND the /users/{uid}
+ * mirror doc via the server-side deleteClient callable. The Firestore rule on
+ * /users/{uid} denies client-side deletes; this wrapper is the only path
+ * available to admin/internal callers in the UI.
+ *
+ * @param {{ uid: string }} input
+ * @returns {Promise<{ uid: string, deleted: true }>}
+ */
+export async function deleteClient(input) {
+  const clientReqId = crypto.randomUUID();
+  const res = await deleteClientCallable({ ...input, clientReqId });
+  return /** @type {{ uid: string, deleted: true }} */ (res.data);
 }

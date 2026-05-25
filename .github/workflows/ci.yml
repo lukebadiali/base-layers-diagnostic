@@ -232,9 +232,15 @@ jobs:
           fi
           echo "OK: no .map files in dist (hidden source-map invariant satisfied)"
       - name: Install + build functions/ workspace
+        # Phase 06.1 deploy substrate fix: functions/package-lock.json omits the @emnapi/* deps of Vitest 4's
+        # rolldown WASI bindings on Windows-generated lockfiles (native Win bindings make npm@11 skip the WASM
+        # fallback). Linux `npm ci` then fails on the missing transitive entries. Mirrors the firebase.json
+        # ignore for the deploy upload and the audit job's fresh-install pattern. Includes devDeps because
+        # `npm run build` (tsc) lives in devDependencies. Follow-up: regenerate lockfile in WSL/Linux.
         run: |
           cd functions
-          npm ci
+          rm -f package-lock.json
+          npm install
           npm run build
       - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
@@ -339,9 +345,15 @@ jobs:
           fi
           echo "OK: no .map files in dist (hidden source-map invariant satisfied)"
       - name: Install + build functions/ workspace
+        # Phase 06.1 deploy substrate fix: functions/package-lock.json omits the @emnapi/* deps of Vitest 4's
+        # rolldown WASI bindings on Windows-generated lockfiles (native Win bindings make npm@11 skip the WASM
+        # fallback). Linux `npm ci` then fails on the missing transitive entries. Mirrors the firebase.json
+        # ignore for the deploy upload and the audit job's fresh-install pattern. Includes devDeps because
+        # `npm run build` (tsc) lives in devDependencies. Follow-up: regenerate lockfile in WSL/Linux.
         run: |
           cd functions
-          npm ci
+          rm -f package-lock.json
+          npm install
           npm run build
       - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:

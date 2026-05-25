@@ -2981,14 +2981,22 @@ import {
                       // failed silently against firestore.rules:133 (server-only
                       // mutation invariant) AND left the Firebase Auth user as a
                       // sign-in-capable orphan.
+                      // After deleteClient succeeds, update the LOCAL cache inline.
+                      // Do NOT call deleteUser() — it chains through cloudDeleteUser
+                      // which re-attempts the client-side Firestore delete and fails
+                      // with the same rules-permission error (Firestore delete is
+                      // idempotent but rules still gate it). The subscribeUsers
+                      // snapshot listener will also pick up the server-side
+                      // deletion; the inline saveUsers gives instant UI update
+                      // without waiting on snapshot latency.
                       try {
                         await deleteClient({ uid: u.id });
-                        deleteUser(u.id); // local cache cleanup; cloud already done
+                        saveUsers(loadUsers().filter((x) => x.id !== u.id));
                         render();
                       } catch (err) {
                         notify(
                           "error",
-                          "Couldn't remove client: " + /** @type {*} */ ((err).message || err),
+                          "Couldn't remove client: " + /** @type {*} */ (err.message || err),
                         );
                       }
                     },

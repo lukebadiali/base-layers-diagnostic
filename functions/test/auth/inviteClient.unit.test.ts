@@ -435,12 +435,87 @@ describe("inviteClient — cross-org refusal (Test 9)", () => {
     expect(emittedInput).toMatchObject({
       type: "auth.client.invite.rejected.cross-org",
       target: { type: "user", id: "existing-uid-4", orgId: "org-alpha" },
-      payload: { existingOrgId: "org-bravo", requestedOrgId: "org-alpha" },
+      // Phase 06.1 CR-01 fix added a reason discriminator so the cross-org
+      // and privileged-user refusal paths are distinguishable in queries
+      // (both reuse the same auditEventType — no enum churn).
+      payload: {
+        reason: "cross-org",
+        existingOrgId: "org-bravo",
+        requestedOrgId: "org-alpha",
+      },
     });
 
     expect(createUserSpy).not.toHaveBeenCalled();
     expect(updateUserSpy).not.toHaveBeenCalled();
     expect(setCustomUserClaimsSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("inviteClient — CR-01 privileged-user refusal", () => {
+  it("refuses an existing admin-role user even with confirmReset:true; no Auth mutation, audit emits with reason:'privileged-user'", async () => {
+    const realHash = await computeRealHash(TEST_PASSPHRASE);
+    await seedOrgWithHash(realHash);
+    getUserByEmailSpy.mockResolvedValueOnce({
+      uid: "admin-victim-uid",
+      customClaims: { role: "admin", orgId: "orgZ" },
+    });
+
+    const handler = await loadHandler();
+    await expect(
+      handler({
+        auth: adminAuthCtx,
+        data: { ...baseValidData, confirmReset: true },
+      }),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      details: { code: "auth/email-belongs-to-privileged-user" },
+    });
+
+    // Critical: NO password reset / claims overwrite on the privileged user.
+    expect(updateUserSpy).not.toHaveBeenCalled();
+    expect(setCustomUserClaimsSpy).not.toHaveBeenCalled();
+    expect(createUserSpy).not.toHaveBeenCalled();
+
+    expect(writeAuditEventSpy).toHaveBeenCalledTimes(1);
+    const [emittedInput] = writeAuditEventSpy.mock.calls[0];
+    expect(emittedInput).toMatchObject({
+      type: "auth.client.invite.rejected.cross-org",
+      target: { type: "user", id: "admin-victim-uid", orgId: "org-alpha" },
+      payload: {
+        reason: "privileged-user",
+        existingRole: "admin",
+        requestedOrgId: "org-alpha",
+      },
+    });
+  });
+
+  it("refuses an existing internal-role user (same-org) with no Auth mutation; audit emits 'privileged-user' discriminator", async () => {
+    const realHash = await computeRealHash(TEST_PASSPHRASE);
+    await seedOrgWithHash(realHash);
+    getUserByEmailSpy.mockResolvedValueOnce({
+      uid: "internal-victim-uid",
+      customClaims: { role: "internal", orgId: "org-alpha" },
+    });
+
+    const handler = await loadHandler();
+    await expect(
+      handler({
+        auth: { uid: "internal-uid", token: { role: "internal" } },
+        data: { ...baseValidData, confirmReset: true },
+      }),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      details: { code: "auth/email-belongs-to-privileged-user" },
+    });
+
+    expect(updateUserSpy).not.toHaveBeenCalled();
+    expect(setCustomUserClaimsSpy).not.toHaveBeenCalled();
+
+    const [emittedInput] = writeAuditEventSpy.mock.calls[0];
+    expect(emittedInput).toMatchObject({
+      type: "auth.client.invite.rejected.cross-org",
+      payload: { reason: "privileged-user", existingRole: "internal" },
+    });
   });
 });
 

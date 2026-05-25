@@ -259,6 +259,7 @@ export const inviteClient = onCall(
       await emitAudit(
         "auth.client.invite.rejected.cross-org",
         {
+          reason: "cross-org",
           existingOrgId: outcome.existingOrgId,
           requestedOrgId: data.orgId,
           email: data.email,
@@ -270,6 +271,34 @@ export const inviteClient = onCall(
         "failed-precondition",
         `User already belongs to a different org (existing orgId=${outcome.existingOrgId}, requested=${data.orgId})`,
         { code: "auth/cross-org-invite-rejected" },
+      );
+    }
+
+    // Phase 06.1 CR-01 fix: refuse role-takeover. An existing admin/internal
+    // user MUST NOT be adopted into a client invite — the resend branch would
+    // otherwise password-reset and demote them to role:"client". We reuse the
+    // existing "auth.client.invite.rejected.cross-org" audit type with a
+    // payload discriminator (reason: "privileged-user") rather than widening
+    // the auditEventSchema enum, because the schema is constrained and a new
+    // enum entry would churn payload validators in audit-log readers. The
+    // reason discriminator makes the two refusal paths distinguishable in
+    // queries while keeping the schema stable.
+    if (outcome.kind === "existing-privileged-user") {
+      await emitAudit(
+        "auth.client.invite.rejected.cross-org",
+        {
+          reason: "privileged-user",
+          existingRole: outcome.existingRole,
+          requestedOrgId: data.orgId,
+          email: data.email,
+        },
+        "user",
+        outcome.existingUid,
+      );
+      throw new HttpsError(
+        "failed-precondition",
+        "Email belongs to an existing privileged user",
+        { code: "auth/email-belongs-to-privileged-user" },
       );
     }
 

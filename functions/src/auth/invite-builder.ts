@@ -19,6 +19,18 @@ export type InviteOutcome =
       existingUid: string;
       existingOrgId: string;
     }
+  | {
+      // Phase 06.1 CR-01 fix: refuse when the existing user holds a
+      // privileged role ("admin" or "internal"). The pre-fix resend branch
+      // would (with confirmReset:true) call setCustomUserClaims(uid,
+      // buildInviteClaims(orgId)) — silently demoting an admin/internal user
+      // to role:"client" AND overwriting their Firebase Auth password to the
+      // shared org passphrase. Only role: null | "client" is eligible for
+      // adoption via the resend branch.
+      kind: "existing-privileged-user";
+      existingUid: string;
+      existingRole: "admin" | "internal";
+    }
   | { kind: "passphrase-invalid" }
   | { kind: "passphrase-not-set" };
 
@@ -73,12 +85,17 @@ export function buildInviteClaims(orgId: string): {
  *   1. passphraseSet === false           → passphrase-not-set
  *   2. passphraseValid === false         → passphrase-invalid
  *   3. existingUser === null             → create
- *   4. existing client w/ different orgId → cross-org-refuse
+ *   4. existing user role in {admin, internal} → existing-privileged-user
+ *      (Phase 06.1 CR-01 fix: privileged users are NEVER adoptable — the
+ *       resend branch would demote them to role:"client" and password-reset
+ *       their Firebase Auth account to the shared org passphrase. Only
+ *       role: null | "client" is eligible for adoption.)
+ *   5. existing client w/ different orgId → cross-org-refuse
  *      (RESEARCH § 8: cross-org refusal is based on the existing user's
  *       claims.orgId, NOT the inviting admin's orgId. An existing user with
  *       role !== "client" or orgId === null is "claimable" — adopt into
  *       the requested org via the resend branch.)
- *   5. otherwise                         → resend
+ *   6. otherwise                         → resend
  *
  * NOTE: `confirmReset` is accepted in the args but not branched on here —
  * the resend branch is unconditional in the pure switch; the callable body
@@ -99,6 +116,20 @@ export function decideInviteOutcome(args: {
   if (!args.passphraseSet) return { kind: "passphrase-not-set" };
   if (!args.passphraseValid) return { kind: "passphrase-invalid" };
   if (args.existingUser === null) return { kind: "create" };
+  // Phase 06.1 CR-01 fix: refuse privileged-user takeover BEFORE the cross-
+  // org branch. An internal-role caller targeting an admin colleague's email
+  // (any orgId) would otherwise fall through to the resend branch and, with
+  // confirmReset:true, both password-reset and demote them.
+  if (
+    args.existingUser.role === "admin" ||
+    args.existingUser.role === "internal"
+  ) {
+    return {
+      kind: "existing-privileged-user",
+      existingUid: args.existingUser.uid,
+      existingRole: args.existingUser.role,
+    };
+  }
   if (
     args.existingUser.role === "client" &&
     args.existingUser.orgId !== null &&

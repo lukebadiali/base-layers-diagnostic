@@ -134,6 +134,55 @@ describe("decideInviteOutcome — 6-case boundary table", () => {
       },
       { kind: "resend", existingUid: "u1" },
     ],
+    [
+      // Phase 06.1 CR-01 fix: privileged-user role takeover refused.
+      "CR-01 — existing admin (any orgId) → existing-privileged-user",
+      {
+        passphraseSet: true,
+        passphraseValid: true,
+        existingUser: { uid: "admin-uid", orgId: "orgZ", role: "admin" },
+        requestedOrgId: "orgA",
+        confirmReset: true,
+      },
+      {
+        kind: "existing-privileged-user",
+        existingUid: "admin-uid",
+        existingRole: "admin",
+      },
+    ],
+    [
+      // Phase 06.1 CR-01 fix: even a same-org existing admin is refused —
+      // the privileged-user gate fires BEFORE the cross-org gate.
+      "CR-01 — existing admin (same orgId) → existing-privileged-user (NOT resend)",
+      {
+        passphraseSet: true,
+        passphraseValid: true,
+        existingUser: { uid: "admin-uid", orgId: "orgA", role: "admin" },
+        requestedOrgId: "orgA",
+        confirmReset: true,
+      },
+      {
+        kind: "existing-privileged-user",
+        existingUid: "admin-uid",
+        existingRole: "admin",
+      },
+    ],
+    [
+      // Phase 06.1 CR-01 fix: internal-role users are also refused.
+      "CR-01 — existing internal user → existing-privileged-user",
+      {
+        passphraseSet: true,
+        passphraseValid: true,
+        existingUser: { uid: "internal-uid", orgId: null, role: "internal" },
+        requestedOrgId: "orgA",
+        confirmReset: false,
+      },
+      {
+        kind: "existing-privileged-user",
+        existingUid: "internal-uid",
+        existingRole: "internal",
+      },
+    ],
   ])("%s", (_label, args, expected) => {
     expect(decideInviteOutcome(args)).toEqual(expected);
   });

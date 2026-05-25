@@ -60,6 +60,8 @@ const VALID_REQ_ID_C = "770e8400-e29b-41d4-a716-446655440000";
 const VALID_REQ_ID_D = "880e8400-e29b-41d4-a716-446655440000";
 const VALID_REQ_ID_E = "990e8400-e29b-41d4-a716-446655440000";
 const VALID_REQ_ID_F = "aa0e8400-e29b-41d4-a716-446655440000";
+// Phase 06.1 CR-01 test: privileged-user refusal integration cell.
+const VALID_REQ_ID_G = "bb0e8400-e29b-41d4-a716-446655440000";
 
 const TEST_PASSPHRASE = "test-passphrase-12c";
 // Precomputed SHA-256 of TEST_PASSPHRASE (UTF-8 + lowercase hex). Verified
@@ -216,9 +218,63 @@ describe("inviteClient — integration (firebase-functions-test v3)", () => {
     expect(auditRows.length).toBe(1);
     const auditDoc = auditRows[0]![1] as Record<string, unknown>;
     expect(auditDoc.type).toBe("auth.client.invite.rejected.cross-org");
-    expect((auditDoc.payload as Record<string, unknown>).existingOrgId).toBe(
-      "org-bravo",
+    const auditPayload = auditDoc.payload as Record<string, unknown>;
+    expect(auditPayload.existingOrgId).toBe("org-bravo");
+    // Phase 06.1 CR-01 fix: payload now carries a reason discriminator so
+    // cross-org and privileged-user refusals (which share the same audit
+    // type) are queryable separately.
+    expect(auditPayload.reason).toBe("cross-org");
+  });
+
+  it("Test 3b (CR-01): existing admin-role user + confirmReset → failed-precondition + audit reason:privileged-user; NO password / claims mutation", async () => {
+    const m = await import("../_mocks/admin-sdk.js");
+    m.adminMockState._seedUser({
+      uid: "admin-victim-uid",
+      email: "admin-victim@example.com",
+      customClaims: { role: "admin", orgId: "org-bravo", firstRun: false },
+      // Track existing password so we can assert it wasn't overwritten.
+      // (The mock createUser+seed flow stores password; we seed directly so
+      //  no password is set, mirroring an already-provisioned admin user.)
+    });
+
+    const wrapped = await loadWrapped();
+    await expect(
+      wrapped({
+        data: {
+          email: "admin-victim@example.com",
+          name: "Admin Victim",
+          orgId: "org-alpha",
+          orgPassphrase: TEST_PASSPHRASE,
+          confirmReset: true, // CRITICAL: even with confirmReset, must refuse
+          clientReqId: VALID_REQ_ID_G,
+        },
+        auth: adminCtx,
+      } as never),
+    ).rejects.toMatchObject({
+      code: "failed-precondition",
+      details: { code: "auth/email-belongs-to-privileged-user" },
+    });
+
+    // Critical: the admin user's password / claims MUST NOT be touched.
+    const updates = m.adminMockState._allUpdateUserCalls();
+    expect(updates.length).toBe(0);
+    const claims = m.adminMockState._allClaims().get("admin-victim-uid");
+    // Claims map mirrors only what was seeded; role MUST still be admin.
+    expect(claims).toEqual({
+      role: "admin",
+      orgId: "org-bravo",
+      firstRun: false,
+    });
+
+    const auditRows = Array.from(m.adminMockState._allDocs().entries()).filter(
+      ([path]) => path.startsWith("auditLog/"),
     );
+    expect(auditRows.length).toBe(1);
+    const auditDoc = auditRows[0]![1] as Record<string, unknown>;
+    expect(auditDoc.type).toBe("auth.client.invite.rejected.cross-org");
+    const auditPayload = auditDoc.payload as Record<string, unknown>;
+    expect(auditPayload.reason).toBe("privileged-user");
+    expect(auditPayload.existingRole).toBe("admin");
   });
 
   it("Test 4: passphrase mismatch — org hash A, caller supplies B → failed-precondition + audit", async () => {

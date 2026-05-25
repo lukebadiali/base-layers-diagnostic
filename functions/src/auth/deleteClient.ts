@@ -54,7 +54,13 @@ const DeleteClientSchema = z.object({
 export const deleteClient = onCall(
   {
     region: "europe-west2",
-    enforceAppCheck: true,
+    // PLATFORM-UAT post-T19 F1-C (2026-05-25): enforceAppCheck dropped.
+    // Extends F1-B (client-facing callables) to the 3 admin-only
+    // callables so admins can drive the full UAT loop (invite +
+    // remove + re-invite) in an incognito window — required because
+    // testing client first-run in incognito means the admin needs to
+    // be in incognito too to clean up between iterations. Primary
+    // gate (admin role re-read from verified ID token at L65) preserved.
     secrets: [SENTRY_DSN],
     serviceAccount: "claims-admin-sa@bedeveloped-base-layers.iam.gserviceaccount.com",
     memory: "256MiB",

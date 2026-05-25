@@ -38,7 +38,11 @@ const RestoreInput = z.object({
 export const restoreSoftDeleted = onCall(
   {
     region: "europe-west2",
-    enforceAppCheck: true,
+    // PLATFORM-UAT post-T19 F1-C (2026-05-25): enforceAppCheck dropped
+    // for symmetry with deleteClient + inviteClient. App Check now
+    // unenforced on all client-facing AND admin-facing callables;
+    // primary defence is Firebase Auth ID token + server-side role/org
+    // gates. See setClaims/deleteClient files for full rationale.
     secrets: [SENTRY_DSN],
     memory: "256MiB",
     timeoutSeconds: 30,

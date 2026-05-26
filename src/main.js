@@ -88,6 +88,11 @@ import { state } from "./state.js";
 // (D-02 / Pattern D DI per Phase 2 D-05). The IIFE closure provides the
 // renderX functions via a deps object at the dispatcher call site.
 import { setRoute as routerSetRoute, renderRoute as routerRenderRoute } from "./router.js";
+// PLATFORM-UAT T17: role-predicate helpers. Most legacy
+// `user.role === "internal"` checks across this file actually meant "is
+// BeDeveloped staff" (admin OR internal). isStaff is the right predicate
+// at almost every site; see src/auth/role-predicates.js for the contract.
+import { isStaff } from "./auth/role-predicates.js";
 
 // Phase 2 (D-04 supersedes Phase 1 D-14): index.html now loads this file as
 // type="module". Imports below are populated by Waves 1-4.
@@ -689,7 +694,7 @@ import {
   const BASE_TAB_TITLE = "BeDeveloped - The Base Layers";
   function updateTabTitleBadge() {
     const user = currentUser();
-    const unread = user && user.role === "internal" ? unreadChatTotal(user) : 0;
+    const unread = isStaff(user) ? unreadChatTotal(user) : 0;
     // CODE-10 (D-20): memoised title write — only updates when value differs.
     setTitleIfDifferent(unread > 0 ? `(${unread}) ${BASE_TAB_TITLE}` : BASE_TAB_TITLE);
   }
@@ -1262,8 +1267,8 @@ import {
     const respondents = respondentsForRound(org, org.currentRoundId);
     const respUsers = respondents.map((id) => findUser(id)).filter(Boolean);
 
-    // Internal-only: alert banner for unread client chat messages across all orgs
-    if (user.role === "internal") {
+    // Staff-only (admin OR internal): alert banner for unread client chat messages across all orgs
+    if (isStaff(user)) {
       const unreadChat = unreadChatTotal(user);
       if (unreadChat > 0) {
         frag.appendChild(
@@ -2906,9 +2911,9 @@ import {
     }
     frag.appendChild(usersCard);
 
-    // Internal team
+    // Internal team (BeDeveloped staff — admin + internal roles per T17 sweep)
     frag.appendChild(h("h2", {}, "Internal team"));
-    const internals = loadUsers().filter((u) => u.role === "internal");
+    const internals = loadUsers().filter((u) => isStaff(u));
     const intCard = h("div", { class: "card" });
     if (!internals.length) {
       intCard.appendChild(h("p", { class: "muted-paragraph" }, "None."));
@@ -3244,7 +3249,7 @@ import {
         snap.forEach((d) => docs.push({ id: d.id, ...d.data() }));
         docs.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
 
-        const isInternal = user.role === "internal";
+        const isInternal = isStaff(user);
         const visible = docs.filter((d) => {
           if (d.visibility !== "private") return true;
           if (isInternal) return true;
@@ -3301,20 +3306,34 @@ import {
                     "button",
                     {
                       class: "btn ghost sm danger",
+                      // PLATFORM-UAT T15 fix (2026-05-25): swap direct
+                      // firestore.deleteDoc + storageOps.deleteObject for
+                      // the softDelete Cloud Function callable. Direct
+                      // deletes were blocked by firestore.rules:104
+                      // (allow delete: if false — soft-delete-via-CF only).
+                      // The callable marks the Firestore doc deleted=true;
+                      // firestore.rules:101 notDeleted predicate hides it
+                      // from the live snapshot so the list re-renders
+                      // without the row automatically. Storage object
+                      // cleanup is handled by the scheduled purge via
+                      // permanentlyDeleteSoftDeleted — no client-side
+                      // storage call needed (it would also be blocked by
+                      // storage.rules anyway).
                       onclick: () =>
                         confirmDialog(
                           "Delete file?",
-                          `Remove "${d.filename}" for everyone in ${org.name}? This cannot be undone.`,
+                          `Remove "${d.filename}" for everyone in ${org.name}? This can be restored within 30 days.`,
                           async () => {
                             try {
-                              await storageOps.deleteObject(storageOps.ref(storage, d.storagePath));
-                              // eslint-disable-next-line no-unused-vars -- Phase 4: replace with central error logger (Phase 9 observability). See runbooks/phase-4-cleanup-ledger.md
+                              const { softDelete } = await import("./cloud/soft-delete.js");
+                              await softDelete({
+                                type: "document",
+                                orgId: org.id,
+                                id: d.id,
+                              });
                             } catch (e) {
-                              /* file may already be gone */
+                              notify("error", "Couldn't delete file: " + (e.message || e));
                             }
-                            await firestore.deleteDoc(
-                              firestore.doc(db, "orgs", org.id, "documents", d.id),
-                            );
                           },
                           "Delete",
                         ),
@@ -3554,7 +3573,7 @@ import {
         "p",
         { class: "view-sub" },
         org
-          ? `${periodCadence} delivery plan for ${org.name}. ${user.role === "internal" ? `Drag pillars into a ${periodLabelLower} and add outcomes.` : "Your BeDeveloped team will update this as the engagement progresses."}`
+          ? `${periodCadence} delivery plan for ${org.name}. ${isStaff(user) ? `Drag pillars into a ${periodLabelLower} and add outcomes.` : "Your BeDeveloped team will update this as the engagement progresses."}`
           : "Select an organisation to see its plan.",
       ),
     );
@@ -3568,7 +3587,7 @@ import {
     }
 
     const { db, firestore } = window.FB;
-    const canEdit = user.role === "internal";
+    const canEdit = isStaff(user);
     const docRef = firestore.doc(db, "roadmaps", org.id);
 
     const layout = h("div", { class: "roadmap-layout roadmap-grid" });
@@ -5105,8 +5124,8 @@ Any questions, just let me know.`;
     clearOldScaleResponsesIfNeeded();
     const user = currentUser();
     if (user) {
-      // set initial orgId for internal
-      if (user.role === "internal") {
+      // set initial orgId for staff (admin OR internal)
+      if (isStaff(user)) {
         const metas = loadOrgMetas();
         if (metas.length && !state.orgId) state.orgId = metas[0].id;
       }

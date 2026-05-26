@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="index,follow" />
+    <meta
+      name="description"
+      content="How BeDeveloped's Base Layers Diagnostic handles personal data, where it lives, and how to exercise your data-protection rights."
+    />
+    <title>Privacy Notice — Base Layers Diagnostic</title>
+    <link rel="stylesheet" href="/privacy.css" />
+  </head>
+  <body>
+    <main class="doc">
+      <header class="doc-header">
+        <a class="doc-back" href="/">← Back to The Base Layers</a>
+        <h1>Privacy Notice</h1>
+        <p class="doc-sub">
+          How BeDeveloped handles your data inside the Base Layers Diagnostic.
+        </p>
+        <p class="doc-meta">Last updated 26 May 2026 · Plain-English summary</p>
+      </header>
+
+      <section>
+        <h2>The short version</h2>
+        <p>
+          BeDeveloped runs the Base Layers Diagnostic to help your team and
+          ours work through a structured business review together. To do that,
+          we hold a small amount of data about you (your name, work email, the
+          answers you give in the diagnostic) and the documents you upload. We
+          keep everything in the UK and EU, we do not sell it, we do not use
+          it to train AI models, and we delete it on request.
+        </p>
+        <p>
+          The rest of this page spells out what that means in practice. If
+          you have any questions, email
+          <a href="mailto:security@bedeveloped.com">security@bedeveloped.com</a>
+          and we'll respond within 30 days.
+        </p>
+      </section>
+
+      <section>
+        <h2>What we collect</h2>
+        <ul>
+          <li>
+            <strong>Your account.</strong> Work email address, the name your
+            consultant invited you under, and the organisation you belong to.
+            We do not see or store your password — Firebase Authentication
+            handles that on our behalf.
+          </li>
+          <li>
+            <strong>Your diagnostic answers.</strong> The scores, comments,
+            uploaded documents, chat messages, action items, and plan entries
+            you create during your engagement.
+          </li>
+          <li>
+            <strong>Activity records.</strong> An audit log of privileged
+            actions (who changed what, when, in which organisation) and
+            counters used to spot abuse such as repeated failed sign-ins.
+            Personal identifiers in these records are kept to the minimum we
+            need to investigate a security incident.
+          </li>
+        </ul>
+        <p>
+          We do not collect payment details, special-category data (such as
+          health or religion), or biometric data through this tool.
+        </p>
+      </section>
+
+      <section>
+        <h2>Why we hold it</h2>
+        <p>
+          Everything above exists to run the engagement: showing you and your
+          consultant the same view of the diagnostic, keeping a record of who
+          changed what, and producing the final report. Our lawful basis is
+          the contract between your organisation and BeDeveloped (UK GDPR
+          Art. 6(1)(b)), backed by our legitimate interest in keeping the
+          service secure (Art. 6(1)(f)).
+        </p>
+      </section>
+
+      <section>
+        <h2>Where it lives</h2>
+        <p>
+          Customer data is processed and stored in the UK and EU. Specifically:
+        </p>
+        <ul>
+          <li>
+            <strong>Google Firebase (UK / EU).</strong> The Firestore database
+            and Cloud Functions that power the app run in Google's
+            <em>europe-west2</em> region (London). Files you upload live in
+            Google Cloud Storage in the same region. Authentication is handled
+            by Google Identity Platform in its EU multi-region.
+          </li>
+          <li>
+            <strong>Sentry (EU).</strong> When something goes wrong in the
+            browser or on our servers, an error trace is sent to Sentry's EU
+            data centre so we can fix it. Names, emails, chat content, and
+            comment bodies are stripped out of the trace before it leaves
+            your browser.
+          </li>
+        </ul>
+        <p>
+          Data does not leave the UK / EU under normal operation. Where a
+          sub-processor's support staff outside the UK / EU occasionally need
+          access (for example, Google engineers diagnosing a Firebase issue),
+          the transfer is covered by Standard Contractual Clauses inside the
+          underlying data-processing agreement.
+        </p>
+      </section>
+
+      <section>
+        <h2>How long we keep it</h2>
+        <ul>
+          <li>
+            <strong>Your account and diagnostic data.</strong> Kept for as
+            long as your organisation has an active engagement with
+            BeDeveloped. If your account or data is deleted, it is first
+            soft-deleted with a 30-day restore window, then permanently
+            removed.
+          </li>
+          <li>
+            <strong>Audit log.</strong> Twelve months in our live database,
+            then up to seven years in archive storage. We keep audit entries
+            even after an account is erased so we can prove what happened in
+            the event of a security investigation; the user's identifiers in
+            those entries are replaced with an irreversible pseudonym so they
+            can't be tied back to you.
+          </li>
+          <li>
+            <strong>Backups.</strong> Daily encrypted backups are kept for
+            up to a year, then archived. Backups are restored only to
+            recover from data loss.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Your rights</h2>
+        <p>
+          Under UK GDPR you have the right to:
+        </p>
+        <ul>
+          <li>
+            <strong>Ask for a copy of your data</strong> (Art. 15). We will
+            send you a JSON bundle of everything we hold about you across
+            the diagnostic.
+          </li>
+          <li>
+            <strong>Ask us to delete your data</strong> (Art. 17). We will
+            remove your account and replace your identifiers across
+            comments, messages, and documents with a pseudonym that cannot
+            be reversed. Audit-log entries are retained for the regulatory
+            reasons described above.
+          </li>
+          <li>
+            <strong>Ask us to correct or restrict your data</strong>
+            (Art. 16 and Art. 18), and to
+            <strong>object to a specific processing activity</strong>
+            (Art. 21).
+          </li>
+          <li>
+            <strong>Complain to the UK Information Commissioner's Office</strong>
+            (<a href="https://ico.org.uk" rel="noopener" target="_blank">ico.org.uk</a>)
+            if you think we have not handled your data properly.
+          </li>
+        </ul>
+        <p>
+          To exercise any of these rights, email
+          <a href="mailto:security@bedeveloped.com">security@bedeveloped.com</a>.
+          We respond within 30 days, with a one-time extension to 60 days for
+          complex requests (we will tell you within the first 30 days if that
+          applies).
+        </p>
+      </section>
+
+      <section>
+        <h2>Security</h2>
+        <p>
+          The diagnostic requires multi-factor authentication for everyone
+          on the BeDeveloped consulting team, encrypts data in transit and
+          at rest, and logs every privileged action. Files you upload are
+          restricted to a safe set of types (PDF, images, Microsoft Office
+          documents, plain text), capped at 25 MB each, and have their
+          contents sniffed against the declared type before they are stored.
+          A full technical description of our controls lives in
+          <a href="https://github.com/lukebadiali/base-layers-diagnostic/blob/main/SECURITY.md" rel="noopener" target="_blank">SECURITY.md</a>
+          in the project repository.
+        </p>
+      </section>
+
+      <section>
+        <h2>Contact</h2>
+        <p>
+          BeDeveloped is the controller for the data described above. Reach
+          us at
+          <a href="mailto:security@bedeveloped.com">security@bedeveloped.com</a>
+          for data-protection questions, security disclosures, or any of the
+          rights listed above. For the underlying technical detail referenced
+          in security questionnaires, our compliance team maintains a more
+          detailed
+          <a href="https://github.com/lukebadiali/base-layers-diagnostic/blob/main/PRIVACY.md" rel="noopener" target="_blank">technical privacy reference</a>
+          alongside this notice.
+        </p>
+      </section>
+
+      <footer class="doc-footer">
+        <a class="doc-back" href="/">← Back to The Base Layers</a>
+      </footer>
+    </main>
+  </body>
+</html>

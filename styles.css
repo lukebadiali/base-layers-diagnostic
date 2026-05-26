@@ -1534,6 +1534,18 @@ a:hover {
 .footer-actions {
   display: flex;
   gap: 6px;
+  align-items: center;
+}
+.footer-link {
+  color: var(--ink-3);
+  text-decoration: none;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.footer-link:hover {
+  color: var(--brand);
+  background: var(--surface-muted);
 }
 
 /* ------------------- Print / export ------------------- */

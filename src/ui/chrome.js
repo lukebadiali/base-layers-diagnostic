@@ -273,14 +273,29 @@ export function createChrome(deps) {
    * @param {*} org
    */
   function renderFooter(user, org) {
+    // The privacy notice lives at /privacy.html (a static page in public/
+    // copied to dist/ by Vite). It's reachable without auth and opens in a
+    // new tab so clients can review the data-handling story without losing
+    // their place in the diagnostic.
+    const privacyLink = h(
+      "a",
+      {
+        class: "footer-link",
+        href: "/privacy.html",
+        target: "_blank",
+        rel: "noopener",
+      },
+      "Privacy",
+    );
     if (!user || user.role === "client") {
       // minimal footer for clients
       return h("footer", { class: "footer" }, [
         h("span", {}, `The Base Layers — ${org ? org.name : "client view"}`),
-        h("span", {}),
+        privacyLink,
       ]);
     }
     const actions = h("span", { class: "footer-actions" }, [
+      privacyLink,
       h(
         "button",
         {

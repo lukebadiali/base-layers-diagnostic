@@ -8,12 +8,12 @@ source:
   - .planning/phases/06.1-.../06.1-UAT.md (recent auth + admin CRUD work)
 started: 2026-05-25T16:00:00Z
 updated: 2026-05-25T17:30:00Z
-completed: 2026-05-25T17:30:00Z
+completed: 2026-05-25T20:55:00Z
 target_url: https://baselayers.bedeveloped.com
 test_accounts:
   admin: Luke or George (BeDeveloped internal)
   client: invite from admin during Test 5
-outcome: 15 pass / 4 issues / 2 skipped (blocked by Test 19 client-auth blocker)
+outcome: 19 pass / 3 issues (T13 T15 T17, all major, none blockers) / 0 skipped — T19 blocker fully resolved via 4 PRs (#46 #48 #49 #50)
 ---
 
 ## Current Test
@@ -148,8 +148,8 @@ fix_candidates:
 
 ### 16. Chat — Post + Unread Badge Updates
 expected: Open Chat tab. Post a message — appears immediately in the thread. Open the same org in an incognito window as the other admin (or as the client invited in Test 5). The chat nav button in the second window shows an unread count badge that increments.
-result: skipped
-reason: Blocked by Test 19 — second-user session (hugh+uat1@assume-ai.com) is broken with orgId:null custom claim corruption. Other admin (Luke/George) wasn't available in this session. Re-test after Test 19 fix lands and a fresh invitee can complete first-run cleanly.
+result: pass
+note: Re-verified 2026-05-25 after T19 fix chain (#46 auth race + #49 F1-B + #50 F1-C). Confirmed unread badge updates cross-user between admin tab + incognito client tab. Initially skipped because T19's orgId-corruption bug blocked having a working client session.
 
 ### 17. Plan — Edit + Persist
 expected: Open Plan tab (route=roadmap, label="Plan"). Add or edit a plan entry (e.g. drag a pillar into a quarter, add an outcome). Refresh the page. The edit persists. (Backed by Firestore `roadmaps/{orgId}`.)
@@ -205,7 +205,14 @@ note: Confirms funnel editing is NOT gated by the role==="internal" check that b
 
 ### 19. Client First-Run — Accept Invite + Set Password
 expected: Open the invite email from Test 5 in a fresh browser/incognito. Click the sign-in link. Lands on a first-run screen prompting to set a password. Set a strong password. Lands on Dashboard scoped to the invited org. Top nav does NOT show Admin. Topright does NOT show the org switcher or mode toggle. (06.1 surface.)
-result: issue
+result: pass
+resolved_by:
+  - PR #46 fix(auth) — closed the orgId-corruption race in updatePassword
+  - PR #49 fix(app-check F1-B) — dropped enforceAppCheck on 7 client-facing callables
+  - PR #50 fix(app-check F1-C) — dropped enforceAppCheck on 3 admin-only callables for incognito admin actions
+  - Functions deploy via scripts/deploy-functions/run.mjs (2x)
+note: Re-verified 2026-05-25 in incognito. Fresh invitee completed first-run cleanly, landed on Dashboard scoped to Alpha. getIdTokenResult(true).claims confirmed role:"client" + orgId populated.
+original_finding: |
 reported: "ive just signed in to my new account set up under alpha but it says im not connected to the org"
 severity: blocker
 diagnosis: |
@@ -260,8 +267,8 @@ operator_remediation_for_hugh+uat1:
 
 ### 20. Client View — Scope Enforced
 expected: As the client signed in in Test 19, try to navigate to another org via the URL or the dashboard — not possible (no org switcher, no admin route). Client only ever sees their own org's data. Console clean.
-result: skipped
-reason: Blocked by Test 19 — cannot land in any org as a client because orgId claim was corrupted to null. Re-test after Test 19 fix lands.
+result: pass
+note: Re-verified 2026-05-25 after T19 chain unblock. Client sees only Alpha (no admin nav, no org switcher, no Internal/Client-preview mode toggle). Initially skipped because T19's orgId-corruption prevented landing in any org as a client.
 
 ### G. Lifecycle / safety
 
@@ -276,20 +283,24 @@ result: pass
 ## Summary
 
 total: 22
-passed: 16
-issues: 4
+passed: 19
+issues: 3
 pending: 0
-skipped: 2
-blocked_by_19:
-  - 16 (chat — needs second working user)
-  - 20 (client scope — needs working client session)
+skipped: 0
+final_outcome_2026_05_25: |
+  Blocker T19 resolved end-to-end via 4 PRs:
+    - #46 fix(auth): orgId-corruption race in updatePassword
+    - #48 revert(#47): ReCaptcha v3 swap couldn't pair (v3 removed from Console)
+    - #49 fix(app-check F1-B): drop enforceAppCheck on 7 client-facing callables
+    - #50 fix(app-check F1-C): drop enforceAppCheck on 3 admin-only callables
+  T16 + T20 unblocked + re-verified pass.
+  T13, T15, T17 remain open as separate follow-ups (major, not blockers).
 issues_by_severity:
-  blocker: 1   # Test 19
+  blocker: 0   # T19 closed
   major: 3     # Tests 13, 15, 17
   minor: 0
   cosmetic: 0
 issues_by_fix_size:
-  one_liner: 1                 # Test 19 (getIdTokenResult(true)) — though safer fixes recommended
   small_targeted: 1            # Test 15 (swap deleteDoc for softDelete callable)
   mechanical_sweep: 1          # Test 17 (role check fix across 8 sites)
   decision_then_wire: 1        # Test 13 (re-wire renderComments OR down-scope PROJECT.md)

@@ -3408,20 +3408,34 @@ import {
                     "button",
                     {
                       class: "btn ghost sm danger",
+                      // PLATFORM-UAT T15 fix (2026-05-25): swap direct
+                      // firestore.deleteDoc + storageOps.deleteObject for
+                      // the softDelete Cloud Function callable. Direct
+                      // deletes were blocked by firestore.rules:104
+                      // (allow delete: if false — soft-delete-via-CF only).
+                      // The callable marks the Firestore doc deleted=true;
+                      // firestore.rules:101 notDeleted predicate hides it
+                      // from the live snapshot so the list re-renders
+                      // without the row automatically. Storage object
+                      // cleanup is handled by the scheduled purge via
+                      // permanentlyDeleteSoftDeleted — no client-side
+                      // storage call needed (it would also be blocked by
+                      // storage.rules anyway).
                       onclick: () =>
                         confirmDialog(
                           "Delete file?",
-                          `Remove "${d.filename}" for everyone in ${org.name}? This cannot be undone.`,
+                          `Remove "${d.filename}" for everyone in ${org.name}? This can be restored within 30 days.`,
                           async () => {
                             try {
-                              await storageOps.deleteObject(storageOps.ref(storage, d.storagePath));
-                              // eslint-disable-next-line no-unused-vars -- Phase 4: replace with central error logger (Phase 9 observability). See runbooks/phase-4-cleanup-ledger.md
+                              const { softDelete } = await import("./cloud/soft-delete.js");
+                              await softDelete({
+                                type: "document",
+                                orgId: org.id,
+                                id: d.id,
+                              });
                             } catch (e) {
-                              /* file may already be gone */
+                              notify("error", "Couldn't delete file: " + (e.message || e));
                             }
-                            await firestore.deleteDoc(
-                              firestore.doc(db, "orgs", org.id, "documents", d.id),
-                            );
                           },
                           "Delete",
                         ),

@@ -18,7 +18,8 @@ Client diagnostic data must remain confidential, intact, and recoverable — and
 - ✓ **Radar chart and report donut visualisations** — `app.js:1565`, `app.js:2377` (Chart.js 4.4.1)
 - ✓ **Multi-org workspace** — internal users can manage many client organisations — `app.js:91-141`, Firestore `orgs/{id}`
 - ✓ **Internal-vs-client role gating** — including "internal-as-client preview" mode — `app.js:579-605`
-- ✓ **Per-pillar comments thread** — with internal-only filter — `app.js:286-302`
+<!-- Per-pillar comments thread: REMOVED 2026-05-25 (PLATFORM-UAT T13) — see Out of Scope -->
+
 - ✓ **Action tracking** — CRUD + modal — `app.js:1981-2122`
 - ✓ **Engagement lifecycle staging** — `app.js:2123-2194`
 - ✓ **Document uploads** — Firebase Storage with real-time list — `app.js:2722-2876`
@@ -74,6 +75,7 @@ Client diagnostic data must remain confidential, intact, and recoverable — and
 
 ### Out of Scope
 
+- **Per-pillar comments thread** — Down-scoped 2026-05-25 (PLATFORM-UAT T13). The UI surface was orphaned during the Phase 4 modular split (renderComments() defined but never called from renderPillar()) and surfaced during cross-cutting UAT when a user noticed there's no comments section on pillar pages. Decision: per-pillar discussion happens via the per-org Chat tab; rebuilding the per-pillar surface adds UI complexity without a user-driven need. The `commentsFor()` read helper + the unread-count machinery + the diagnostic-nav dot remain in place so legacy comments from prior engagements still register, but no new comments can be created from the UI. Was previously listed in Validated requirements.
 - **Framework rewrite (React / Vue / Svelte)** — orthogonal to the hardening goal. Auditors don't care which framework you ran on; they care about controls. Adding a rewrite to this milestone doubles risk and dilutes the security narrative. Defer to a separate milestone if hiring/maintainability ever motivates it.
 - **Platform migration to Vercel + Supabase** — explicitly considered. Decision: stay on Firebase. Translating `SECURITY_AUDIT.md`'s Vercel/Supabase guidance to Firebase is the lighter lift than migrating; Firebase has parity for every control we need (Auth, Rules, App Check, Cloud Functions, Storage Rules).
 - **Native mobile apps** — out of scope for this milestone; web-only.

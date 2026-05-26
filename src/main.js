@@ -4712,10 +4712,19 @@ import {
     // with the first time). PassphraseInvalidError / CrossOrgError /
     // PassphraseNotSetError surface err.message inline; modal stays open so
     // the admin can correct.
-    const name = h("input", { type: "text", placeholder: "Client contact name" });
-    const email = h("input", { type: "email", placeholder: "client@company.com" });
+    const name = h("input", {
+      type: "text",
+      class: "settings-textarea-comment",
+      placeholder: "Client contact name",
+    });
+    const email = h("input", {
+      type: "email",
+      class: "settings-textarea-comment",
+      placeholder: "client@company.com",
+    });
     const orgPassphrase = h("input", {
       type: "password",
+      class: "settings-textarea-comment",
       placeholder: "Re-enter the company passphrase",
     });
     const select = h("select", { class: "settings-textarea-comment" });

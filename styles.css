@@ -2065,6 +2065,15 @@ a:hover {
   .report {
     padding: 28px 28px;
   }
+  /* PLATFORM-UAT post-fix 2026-05-26: stack dashboard top cards earlier.
+     The 1.2fr/1fr grid was overflowing horizontally by ~7px on 982-1100px
+     viewports because the right card's natural minimum width exceeded its
+     allocated 1fr share. Stacking to a single column here matches what the
+     ≤900px rule already did, just at a wider threshold. */
+  .dash-top {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 }
 
 /* iPad portrait & landscape phones — stack topbar, collapse grids */

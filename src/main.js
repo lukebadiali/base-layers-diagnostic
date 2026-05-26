@@ -2967,13 +2967,35 @@ import {
     // Settings
     frag.appendChild(h("h2", {}, "Settings"));
     const settingsCard = h("div", { class: "card" });
+
+    // MFA status — read-only chip showing whether the signed-in admin has
+    // a second factor enrolled. The actual enrol/un-enrol flow still lives
+    // in the renderMfaEnrol substrate (reached from sign-in); this row
+    // just surfaces the current state so admins can see at a glance.
+    // user.appEnrolledFactors is hydrated by main.js after every auth
+    // state change (multiFactor(currentUser).enrolledFactors).
+    const enrolledFactors = (state.fbUser && state.fbUser.appEnrolledFactors) || [];
+    const hasMfa = enrolledFactors.length > 0;
     settingsCard.appendChild(
-      h(
-        "p",
-        { class: "invite-explainer" },
-        "Internal sign-in uses Firebase Auth + custom-claim role assignment + TOTP MFA. Admin accounts are seeded via internalAllowlist/{email} and bootstrapped through the Firebase Console; see runbooks/phase6-bootstrap.md.",
-      ),
+      h("div", { class: "settings-row" }, [
+        h("div", { class: "settings-row-label" }, [
+          h("div", { class: "settings-row-title" }, "Two-factor authentication"),
+          h(
+            "div",
+            { class: "settings-row-sub" },
+            hasMfa
+              ? "You have a TOTP authenticator on file. Use it whenever you sign in."
+              : "No second factor on file yet. You'll be asked to enrol an authenticator next time you sign in.",
+          ),
+        ]),
+        h(
+          "span",
+          { class: `badge ${hasMfa ? "green" : "amber"}` },
+          hasMfa ? "Enrolled" : "Not configured",
+        ),
+      ]),
     );
+
     frag.appendChild(settingsCard);
 
     return frag;

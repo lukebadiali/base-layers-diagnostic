@@ -3520,6 +3520,28 @@ a:hover {
   color: var(--ink-2);
   font-weight: 600;
 }
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0;
+}
+.settings-row-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.settings-row-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.settings-row-sub {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
 .settings-textarea-comment {
   width: 100%;
   padding: 10px;

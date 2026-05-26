@@ -3039,6 +3039,24 @@ a:hover {
 .section-meta-faint { font-weight: 400; font-size: 12px; color: var(--ink-3); }
 .section-explainer { color: var(--ink-3); font-size: 13px; margin: 0; }
 
+/* --- Compound: in-page section heading + divider (used by the Delivery
+   framework section now embedded inside the Diagnostic page) --- */
+.section-h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+.section-divider {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 32px 0 24px;
+}
+.delivery-section { margin-top: 4px; }
+
 /* --- Compound: roadmap card empty state --- */
 .empty-card {
   padding: 14px 16px;

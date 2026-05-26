@@ -63,13 +63,17 @@ describe("renderTopbar() — internal user", () => {
     expect(el.querySelector(".topright")).not.toBeNull();
   });
 
-  it("renders a 9-button nav (dashboard, diagnostic, report, engagement, documents, chat, actions, roadmap, funnel)", () => {
+  it("renders an 8-button nav (dashboard, diagnostic, report, documents, chat, actions, roadmap, funnel)", () => {
+    // The "Delivery" (engagement) tab was removed from the topnav and folded
+    // into the bottom of the Diagnostic page (src/main.js renderDiagnosticIndex)
+    // to keep the admin topbar from overflowing horizontally on laptop widths.
     const { renderTopbar } = createChrome(makeDeps());
     const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
     const buttons = el.querySelectorAll(".topnav .nav-btn");
-    expect(buttons.length).toBe(9);
+    expect(buttons.length).toBe(8);
     expect(buttons[0].getAttribute("data-route")).toBe("dashboard");
-    expect(buttons[8].getAttribute("data-route")).toBe("funnel");
+    expect(buttons[7].getAttribute("data-route")).toBe("funnel");
+    expect(el.querySelector('button[data-route="engagement"]')).toBeNull();
   });
 
   it("renders the mode toggle + org select for non-client users", () => {

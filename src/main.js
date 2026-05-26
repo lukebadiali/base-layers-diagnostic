@@ -1799,6 +1799,14 @@ import {
       tiles.appendChild(tile);
     });
     frag.appendChild(tiles);
+
+    // Delivery framework — formerly its own top-nav route ("engagement").
+    // Consolidated into Diagnostic so the topnav fits on laptop widths
+    // without horizontal scroll. renderEngagement renders an h2 section
+    // (not an h1 page title) so it sits cleanly under the pillar tiles.
+    frag.appendChild(h("hr", { class: "section-divider" }));
+    frag.appendChild(renderEngagement(user, org));
+
     return frag;
   }
 
@@ -2310,9 +2318,14 @@ import {
   // ================================================================
   // ENGAGEMENT
   // ================================================================
+  // Renders the Delivery (engagement) framework as a section. Reachable
+  // only from inside renderDiagnosticIndex now — the "Delivery" tab was
+  // removed from the topnav and /engagement redirects to /diagnostic
+  // (src/router.js). Uses section-level h2 instead of page-level h1 so
+  // it composes correctly underneath the Diagnostic page title.
   function renderEngagement(user, org) {
-    const frag = h("div");
-    frag.appendChild(h("h1", { class: "view-title" }, "Delivery framework"));
+    const frag = h("div", { class: "delivery-section" });
+    frag.appendChild(h("h2", { class: "section-h2" }, "Delivery framework"));
     frag.appendChild(
       h(
         "p",

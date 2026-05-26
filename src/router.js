@@ -129,8 +129,14 @@ export function renderRoute(main, user, org, deps) {
     const id = Number(route.split(":")[1]);
     main.appendChild(deps.renderPillar(user, org, id));
   } else if (route === "actions") main.appendChild(deps.renderActions(user, org));
-  else if (route === "engagement") main.appendChild(deps.renderEngagement(user, org));
-  else if (route === "report") main.appendChild(deps.renderReport(user, org));
+  else if (route === "engagement") {
+    // The Delivery framework now lives at the bottom of the Diagnostic page
+    // (renderDiagnosticIndex inlines it). Redirect any persisted state.route
+    // = "engagement" (from before consolidation) or external bookmarks to
+    // /diagnostic so the user lands on the page that now contains it.
+    state.route = "diagnostic";
+    main.appendChild(deps.renderDiagnosticIndex(user, org));
+  } else if (route === "report") main.appendChild(deps.renderReport(user, org));
   else if (route === "documents") main.appendChild(deps.renderDocuments(user, org));
   else if (route === "chat") main.appendChild(deps.renderChat(user, org));
   else if (route === "roadmap") main.appendChild(deps.renderRoadmap(user, org));

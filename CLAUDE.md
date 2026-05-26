@@ -1,4 +1,4 @@
-# Claude Project Guide — Base Layers Diagnostic
+# Claude Project Guide — Base Layers Diagnostic 
 
 This repo is managed under the **GSD (Get Shit Done)** workflow. The canonical project context lives in `.planning/`.
 

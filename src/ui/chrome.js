@@ -330,8 +330,12 @@ export function createChrome(deps) {
         return h("span", {}, [btn, input]);
       })(),
     ]);
+    // Footer copy was previously "local build. Data stays in this browser."
+    // — a leftover from the pre-Firebase localStorage-only era. Replaced
+    // with the active-org name (same shape as the client footer) so the
+    // line is both accurate and useful when internal users switch orgs.
     return h("footer", { class: "footer" }, [
-      h("span", {}, "The Base Layers — local build. Data stays in this browser."),
+      h("span", {}, `The Base Layers — ${org ? org.name : "BeDeveloped"}`),
       actions,
     ]);
   }

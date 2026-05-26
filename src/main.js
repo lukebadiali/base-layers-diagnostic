@@ -88,6 +88,11 @@ import { state } from "./state.js";
 // (D-02 / Pattern D DI per Phase 2 D-05). The IIFE closure provides the
 // renderX functions via a deps object at the dispatcher call site.
 import { setRoute as routerSetRoute, renderRoute as routerRenderRoute } from "./router.js";
+// PLATFORM-UAT T17: role-predicate helpers. Most legacy
+// `user.role === "internal"` checks across this file actually meant "is
+// BeDeveloped staff" (admin OR internal). isStaff is the right predicate
+// at almost every site; see src/auth/role-predicates.js for the contract.
+import { isStaff } from "./auth/role-predicates.js";
 
 // Phase 2 (D-04 supersedes Phase 1 D-14): index.html now loads this file as
 // type="module". Imports below are populated by Waves 1-4.
@@ -106,7 +111,6 @@ import { setRoute as routerSetRoute, renderRoute as routerRenderRoute } from "./
 import {
   uid,
   iso,
-  formatWhen,
   initials,
   // CODE-08 (Wave 4): firstNameFromAuthor moved to renderConversationBubble
   // helper in src/views/_shared/render-conversation.js. Aliased _* per
@@ -571,21 +575,14 @@ import {
   }
 
   // ---------- Comments ----------
-  function addComment(org, pillarId, authorId, text, internal = false) {
-    org.comments = org.comments || {};
-    org.comments[pillarId] = org.comments[pillarId] || [];
-    const c = {
-      id: uid("c_"),
-      authorId,
-      text,
-      internal: !!internal,
-      createdAt: iso(),
-    };
-    org.comments[pillarId].push(c);
-    saveOrg(org);
-    return c;
-  }
-
+  // PLATFORM-UAT T13 (2026-05-25): per-pillar comments down-scoped — the
+  // composer + thread UI (renderComments at L2094) was orphaned during the
+  // Phase 4 modular split and never rewired. Local addComment() that backed
+  // it has been removed. Per-pillar discussion now happens via the per-org
+  // Chat tab. commentsFor() below is retained for backwards compatibility
+  // with the unread-count machinery (chrome.js diagnostic-nav dot) so any
+  // legacy comments in Firestore from prior engagements still register —
+  // but no new comments can be created from the UI.
   function commentsFor(org, pillarId, user) {
     const list = (org.comments || {})[pillarId] || [];
     if (user && user.role === "client") return list.filter((c) => !c.internal);
@@ -697,7 +694,7 @@ import {
   const BASE_TAB_TITLE = "BeDeveloped - The Base Layers";
   function updateTabTitleBadge() {
     const user = currentUser();
-    const unread = user && user.role === "internal" ? unreadChatTotal(user) : 0;
+    const unread = isStaff(user) ? unreadChatTotal(user) : 0;
     // CODE-10 (D-20): memoised title write — only updates when value differs.
     setTitleIfDifferent(unread > 0 ? `(${unread}) ${BASE_TAB_TITLE}` : BASE_TAB_TITLE);
   }
@@ -1270,8 +1267,8 @@ import {
     const respondents = respondentsForRound(org, org.currentRoundId);
     const respUsers = respondents.map((id) => findUser(id)).filter(Boolean);
 
-    // Internal-only: alert banner for unread client chat messages across all orgs
-    if (user.role === "internal") {
+    // Staff-only (admin OR internal): alert banner for unread client chat messages across all orgs
+    if (isStaff(user)) {
       const unreadChat = unreadChatTotal(user);
       if (unreadChat > 0) {
         frag.appendChild(
@@ -2085,105 +2082,6 @@ import {
     // for both roles. See PR #37 / #38 trail for the full thread.
     jset(K.org(o.id), o);
     cloudPushResponse(o.id, o.currentRoundId, user.id, pillarId, idx, merged);
-  }
-
-  // ================================================================
-  // COMMENTS (Slack-style)
-  // ================================================================
-  // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead code or wire up call site. See runbooks/phase-4-cleanup-ledger.md
-  function renderComments(user, org, p) {
-    const wrap = h("div", { class: "comments" });
-    const list = commentsFor(org, p.id, user);
-    const lastRead = ((org.readStates || {})[user.id] || {})[p.id];
-    const lastReadT = lastRead ? new Date(lastRead).getTime() : 0;
-
-    wrap.appendChild(
-      h("h3", {}, [
-        h("span", {}, `Discussion (${list.length})`),
-        list.length ? h("span", { class: "section-meta-faint" }, "Most recent first") : null,
-      ]),
-    );
-
-    const listEl = h("div", { class: "comment-list" });
-    if (list.length === 0) {
-      listEl.appendChild(
-        h(
-          "p",
-          { class: "section-explainer" },
-          "No comments yet. Ask a question or leave a note — BeDeveloped and the team will see it here.",
-        ),
-      );
-    } else {
-      list
-        .slice()
-        .reverse()
-        .forEach((c) => {
-          const author = findUser(c.authorId);
-          const isSelf = c.authorId === user.id;
-          const isNew = !isSelf && new Date(c.createdAt).getTime() > lastReadT;
-          const row = h("div", { class: "comment" + (isNew ? " unread" : "") });
-          row.appendChild(
-            h(
-              "span",
-              { class: "avatar" + (author?.role === "internal" ? " internal" : "") },
-              initials(author?.name || author?.email || "?"),
-            ),
-          );
-          const body = h("div");
-          body.appendChild(
-            h("div", { class: "head" }, [
-              h("span", { class: "name" }, author?.name || author?.email || "Unknown"),
-              h("span", { class: "when" }, formatWhen(c.createdAt)),
-              c.internal ? h("span", { class: "tag-internal" }, "Internal") : null,
-            ]),
-          );
-          body.appendChild(h("div", { class: "body" }, c.text));
-          row.appendChild(body);
-          listEl.appendChild(row);
-        });
-    }
-    wrap.appendChild(listEl);
-
-    // Composer
-    const composer = h("div", { class: "comment-composer" });
-    const ta = h("textarea", {
-      placeholder: isClientView(user)
-        ? "Ask a question or leave a comment for the BeDeveloped team…"
-        : "Reply to the client, or leave a note for your team…",
-    });
-    const optsCol = h("div", { class: "opts" });
-    let internalOnly = false;
-    if (!isClientView(user)) {
-      const lbl = h("label", {}, [
-        h("input", {
-          type: "checkbox",
-          onchange: (e) => (internalOnly = e.target.checked),
-        }),
-        h("span", {}, "Internal only"),
-      ]);
-      optsCol.appendChild(lbl);
-    }
-    const post = h(
-      "button",
-      {
-        class: "btn",
-        onclick: () => {
-          const text = ta.value.trim();
-          if (!text) return;
-          const o = loadOrg(org.id);
-          addComment(o, p.id, user.id, text, internalOnly);
-          ta.value = "";
-          render();
-        },
-      },
-      "Post",
-    );
-    optsCol.appendChild(post);
-
-    composer.appendChild(ta);
-    composer.appendChild(optsCol);
-    wrap.appendChild(composer);
-    return wrap;
   }
 
   // ================================================================
@@ -3013,9 +2911,9 @@ import {
     }
     frag.appendChild(usersCard);
 
-    // Internal team
+    // Internal team (BeDeveloped staff — admin + internal roles per T17 sweep)
     frag.appendChild(h("h2", {}, "Internal team"));
-    const internals = loadUsers().filter((u) => u.role === "internal");
+    const internals = loadUsers().filter((u) => isStaff(u));
     const intCard = h("div", { class: "card" });
     if (!internals.length) {
       intCard.appendChild(h("p", { class: "muted-paragraph" }, "None."));
@@ -3351,7 +3249,7 @@ import {
         snap.forEach((d) => docs.push({ id: d.id, ...d.data() }));
         docs.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
 
-        const isInternal = user.role === "internal";
+        const isInternal = isStaff(user);
         const visible = docs.filter((d) => {
           if (d.visibility !== "private") return true;
           if (isInternal) return true;
@@ -3408,20 +3306,34 @@ import {
                     "button",
                     {
                       class: "btn ghost sm danger",
+                      // PLATFORM-UAT T15 fix (2026-05-25): swap direct
+                      // firestore.deleteDoc + storageOps.deleteObject for
+                      // the softDelete Cloud Function callable. Direct
+                      // deletes were blocked by firestore.rules:104
+                      // (allow delete: if false — soft-delete-via-CF only).
+                      // The callable marks the Firestore doc deleted=true;
+                      // firestore.rules:101 notDeleted predicate hides it
+                      // from the live snapshot so the list re-renders
+                      // without the row automatically. Storage object
+                      // cleanup is handled by the scheduled purge via
+                      // permanentlyDeleteSoftDeleted — no client-side
+                      // storage call needed (it would also be blocked by
+                      // storage.rules anyway).
                       onclick: () =>
                         confirmDialog(
                           "Delete file?",
-                          `Remove "${d.filename}" for everyone in ${org.name}? This cannot be undone.`,
+                          `Remove "${d.filename}" for everyone in ${org.name}? This can be restored within 30 days.`,
                           async () => {
                             try {
-                              await storageOps.deleteObject(storageOps.ref(storage, d.storagePath));
-                              // eslint-disable-next-line no-unused-vars -- Phase 4: replace with central error logger (Phase 9 observability). See runbooks/phase-4-cleanup-ledger.md
+                              const { softDelete } = await import("./cloud/soft-delete.js");
+                              await softDelete({
+                                type: "document",
+                                orgId: org.id,
+                                id: d.id,
+                              });
                             } catch (e) {
-                              /* file may already be gone */
+                              notify("error", "Couldn't delete file: " + (e.message || e));
                             }
-                            await firestore.deleteDoc(
-                              firestore.doc(db, "orgs", org.id, "documents", d.id),
-                            );
                           },
                           "Delete",
                         ),
@@ -3661,7 +3573,7 @@ import {
         "p",
         { class: "view-sub" },
         org
-          ? `${periodCadence} delivery plan for ${org.name}. ${user.role === "internal" ? `Drag pillars into a ${periodLabelLower} and add outcomes.` : "Your BeDeveloped team will update this as the engagement progresses."}`
+          ? `${periodCadence} delivery plan for ${org.name}. ${isStaff(user) ? `Drag pillars into a ${periodLabelLower} and add outcomes.` : "Your BeDeveloped team will update this as the engagement progresses."}`
           : "Select an organisation to see its plan.",
       ),
     );
@@ -3675,7 +3587,7 @@ import {
     }
 
     const { db, firestore } = window.FB;
-    const canEdit = user.role === "internal";
+    const canEdit = isStaff(user);
     const docRef = firestore.doc(db, "roadmaps", org.id);
 
     const layout = h("div", { class: "roadmap-layout roadmap-grid" });
@@ -5212,8 +5124,8 @@ Any questions, just let me know.`;
     clearOldScaleResponsesIfNeeded();
     const user = currentUser();
     if (user) {
-      // set initial orgId for internal
-      if (user.role === "internal") {
+      // set initial orgId for staff (admin OR internal)
+      if (isStaff(user)) {
         const metas = loadOrgMetas();
         if (metas.length && !state.orgId) state.orgId = metas[0].id;
       }

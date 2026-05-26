@@ -82,7 +82,6 @@ export function createChrome(deps) {
       ["dashboard", "Dashboard"],
       ["diagnostic", "Diagnostic"],
       ["report", "Report"],
-      ["engagement", "Delivery"],
       ["documents", "Documents"],
       ["chat", "Chat"],
       ["actions", "Actions"],
@@ -90,6 +89,11 @@ export function createChrome(deps) {
       ["funnel", "Funnel"],
     ];
     // Admin access moved to the user dropdown ("Admin · manage people").
+    // The Delivery (engagement) framework now lives at the bottom of the
+    // Diagnostic page (renderDiagnosticIndex appends it after the pillar
+    // tiles). The /engagement route remains in src/router.js as an alias
+    // that redirects to /diagnostic for any persisted state.route or
+    // bookmarks from before the consolidation.
 
     const unread = org ? unreadCountTotal(org, user) : 0;
     const unreadChat = unreadChatTotal(user);
@@ -100,8 +104,7 @@ export function createChrome(deps) {
         {
           class:
             "nav-btn" +
-            (state.route === route ||
-            (route === "diagnostic" && state.route.startsWith("pillar:"))
+            (state.route === route || (route === "diagnostic" && state.route.startsWith("pillar:"))
               ? " active"
               : ""),
           "data-route": route,
@@ -111,9 +114,7 @@ export function createChrome(deps) {
       );
       // Unread indicator on diagnostic (since comments live on pillar pages)
       if (route === "diagnostic" && unread > 0) {
-        btn.appendChild(
-          h("span", { class: "dot", title: `${unread} unread comment(s)` }),
-        );
+        btn.appendChild(h("span", { class: "dot", title: `${unread} unread comment(s)` }));
       }
       // Unread indicator on chat
       if (route === "chat" && unreadChat > 0) {
@@ -139,15 +140,10 @@ export function createChrome(deps) {
         "label",
         {
           class: "mode-toggle",
-          title:
-            "Internal view shows private commentary. Client view previews what a client sees.",
+          title: "Internal view shows private commentary. Client view previews what a client sees.",
         },
         [
-          h(
-            "span",
-            {},
-            state.mode === "internal" ? "Internal" : "Client preview",
-          ),
+          h("span", {}, state.mode === "internal" ? "Internal" : "Client preview"),
           (() => {
             const input = /** @type {HTMLInputElement} */ (
               h("input", {
@@ -196,11 +192,7 @@ export function createChrome(deps) {
     );
     const who = h("div", { class: "who" }, [
       h("div", { class: "name" }, user.name || user.email),
-      h(
-        "div",
-        { class: "role" },
-        isClient ? (org ? org.name : "Client") : "BeDeveloped team",
-      ),
+      h("div", { class: "role" }, isClient ? (org ? org.name : "Client") : "BeDeveloped team"),
     ]);
     const chip = h(
       "button",
@@ -293,8 +285,7 @@ export function createChrome(deps) {
         "button",
         {
           class: "btn ghost",
-          title:
-            "Full backup of all orgs, users and responses. For internal recovery only.",
+          title: "Full backup of all orgs, users and responses. For internal recovery only.",
           onclick: exportData,
         },
         "Export backup",
@@ -316,8 +307,7 @@ export function createChrome(deps) {
           "button",
           {
             class: "btn ghost",
-            title:
-              "Restore a previously exported JSON backup. Overwrites current data.",
+            title: "Restore a previously exported JSON backup. Overwrites current data.",
             onclick: () => input.click(),
           },
           "Restore backup",
@@ -326,11 +316,7 @@ export function createChrome(deps) {
       })(),
     ]);
     return h("footer", { class: "footer" }, [
-      h(
-        "span",
-        {},
-        "The Base Layers — local build. Data stays in this browser.",
-      ),
+      h("span", {}, "The Base Layers — local build. Data stays in this browser."),
       actions,
     ]);
   }

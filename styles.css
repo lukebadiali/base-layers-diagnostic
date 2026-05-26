@@ -234,6 +234,13 @@ option {
   border-bottom: 1px solid var(--line);
   box-shadow: 0 1px 0 rgba(16, 24, 40, 0.02);
 }
+/* Grid items default to min-width: auto (= min-content), which prevents
+   the column from shrinking below its content. Without this, a long user
+   email or org name in the right column pushes the grid past the viewport
+   and creates a horizontal scrollbar even on 1920px+ displays. */
+.topbar > * {
+  min-width: 0;
+}
 
 .brand {
   display: flex;
@@ -332,6 +339,7 @@ option {
   font: inherit;
   font-size: 13px;
   min-width: 180px;
+  max-width: 220px;
   cursor: pointer;
 }
 #orgSelect:hover {
@@ -416,10 +424,16 @@ option {
 .user-chip .who {
   font-size: 12.5px;
   line-height: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 .user-chip .who .name {
   font-weight: 600;
   color: var(--ink);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .user-chip .who .role {
   font-size: 10.5px;
@@ -427,6 +441,10 @@ option {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-top: 2px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .user-menu {
@@ -3020,6 +3038,24 @@ a:hover {
 .section-h3-tight { margin-top: 0; }
 .section-meta-faint { font-weight: 400; font-size: 12px; color: var(--ink-3); }
 .section-explainer { color: var(--ink-3); font-size: 13px; margin: 0; }
+
+/* --- Compound: in-page section heading + divider (used by the Delivery
+   framework section now embedded inside the Diagnostic page) --- */
+.section-h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+.section-divider {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 32px 0 24px;
+}
+.delivery-section { margin-top: 4px; }
 
 /* --- Compound: roadmap card empty state --- */
 .empty-card {

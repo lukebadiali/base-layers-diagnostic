@@ -25,6 +25,33 @@ const inviteClientCallable = httpsCallable(functions, "inviteClient");
 // inviteClient — clientReqId generated per call, error codes mapped to typed
 // errors where the modal cares about the distinction.
 const deleteClientCallable = httpsCallable(functions, "deleteClient");
+// 2026-06: internal-member lifecycle wrappers (admin-only create + delete of
+// staff accounts). Mirror the inviteClient/deleteClient Pattern D shape.
+const inviteInternalCallable = httpsCallable(functions, "inviteInternal");
+const deleteInternalCallable = httpsCallable(functions, "deleteInternal");
+
+/**
+ * Extract the server HttpsError sub-code from a callable rejection.
+ * @param {*} err
+ * @returns {string}
+ */
+function errCode(err) {
+  return /** @type {any} */ (err)?.details?.code ?? /** @type {any} */ (err)?.code ?? "";
+}
+
+/**
+ * Wrap a friendly message as an Error carrying the original as `.cause`.
+ * Constructor-arg `cause` isn't in the es2020 lib target, so attach it after
+ * construction (same pattern as src/firebase/auth.js).
+ * @param {string} message
+ * @param {*} cause
+ * @returns {Error}
+ */
+function friendlyError(message, cause) {
+  const e = new Error(message);
+  /** @type {*} */ (e).cause = cause;
+  return e;
+}
 
 /**
  * @param {{ email: string, name: string, orgId: string, orgPassphrase: string, confirmReset?: boolean }} input
@@ -57,4 +84,49 @@ export async function deleteClient(input) {
   const clientReqId = crypto.randomUUID();
   const res = await deleteClientCallable({ ...input, clientReqId });
   return /** @type {{ uid: string, deleted: true }} */ (res.data);
+}
+
+/**
+ * Create an internal/admin (staff) account. Admin-only server-side. Returns the
+ * server-generated temporary password for the admin to relay out-of-band; the
+ * member is forced to set their own password + enrol MFA on first sign-in.
+ *
+ * @param {{ email: string, name: string, role: "internal" | "admin" }} input
+ * @returns {Promise<{ uid: string, tempPassword: string, existed: boolean }>}
+ */
+export async function inviteInternal(input) {
+  const clientReqId = crypto.randomUUID();
+  try {
+    const res = await inviteInternalCallable({ ...input, clientReqId });
+    return /** @type {{ uid: string, tempPassword: string, existed: boolean }} */ (res.data);
+  } catch (err) {
+    if (errCode(err) === "auth/email-already-exists") {
+      throw friendlyError("An account with this email already exists.", err);
+    }
+    throw err;
+  }
+}
+
+/**
+ * Delete an internal/admin (staff) account atomically (Auth user + /users mirror
+ * doc). Admin-only; the server refuses self-deletion and non-privileged targets.
+ *
+ * @param {{ uid: string }} input
+ * @returns {Promise<{ uid: string, deleted: true }>}
+ */
+export async function deleteInternal(input) {
+  const clientReqId = crypto.randomUUID();
+  try {
+    const res = await deleteInternalCallable({ ...input, clientReqId });
+    return /** @type {{ uid: string, deleted: true }} */ (res.data);
+  } catch (err) {
+    const code = errCode(err);
+    if (code === "auth/cannot-delete-self") {
+      throw friendlyError("You can't remove your own account.", err);
+    }
+    if (code === "auth/not-an-internal-user") {
+      throw friendlyError("That account isn't an internal member.", err);
+    }
+    throw err;
+  }
 }

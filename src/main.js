@@ -164,7 +164,12 @@ import { ORG_PASSPHRASE_MIN_LENGTH, validateOrgPassphrase } from "./auth/passphr
 // PassphraseNotSetError surface err.message inline so the modal stays open
 // for the admin to correct. Wave 1 added the 3 error classes at src/firebase/
 // auth.js; Wave 2 wires them into the modal here.
-import { inviteClient, deleteClient } from "./cloud/invite-admin.js";
+import {
+  inviteClient,
+  deleteClient,
+  inviteInternal,
+  deleteInternal,
+} from "./cloud/invite-admin.js";
 import { PassphraseInvalidError, CrossOrgError, PassphraseNotSetError } from "./firebase/auth.js";
 // Phase 4 Wave 2 (D-12): ui/* helpers extracted from app.js IIFE.
 // Closes runbooks/phase-4-cleanup-ledger.md row at app.js:676 (CODE-04 — html:
@@ -330,10 +335,6 @@ import {
     else users.push(user);
     saveUsers(users);
     cloudPushUser(user);
-  }
-  function deleteUser(id) {
-    saveUsers(loadUsers().filter((u) => u.id !== id));
-    cloudDeleteUser(id);
   }
 
   // ---------- Orgs ----------
@@ -2931,8 +2932,23 @@ import {
     frag.appendChild(h("h2", {}, "Internal team"));
     const internals = loadUsers().filter((u) => isStaff(u));
     const intCard = h("div", { class: "card" });
+    intCard.appendChild(
+      h("div", { class: "toolbar-end" }, [
+        h(
+          "button",
+          { class: "btn", onclick: () => openAddInternalModal() },
+          "+ Add internal member",
+        ),
+      ]),
+    );
     if (!internals.length) {
-      intCard.appendChild(h("p", { class: "muted-paragraph" }, "None."));
+      intCard.appendChild(
+        h(
+          "p",
+          { class: "muted-paragraph" },
+          "No internal members yet. Add one to let them log in.",
+        ),
+      );
     } else {
       internals.forEach((u) => {
         intCard.appendChild(
@@ -2951,9 +2967,23 @@ import {
                       confirmDialog(
                         "Remove team member?",
                         `${u.email} will no longer be able to sign in with internal access.`,
-                        () => {
-                          deleteUser(u.id);
-                          render();
+                        async () => {
+                          // 2026-06: route through the server-side deleteInternal
+                          // callable (Admin SDK deleteUser + /users mirror delete).
+                          // The legacy local-only deleteUser(u.id) left a
+                          // sign-in-capable Firebase Auth orphan. Update the local
+                          // cache inline after success; subscribeUsers reflects it
+                          // too.
+                          try {
+                            await deleteInternal({ uid: u.id });
+                            saveUsers(loadUsers().filter((x) => x.id !== u.id));
+                            render();
+                          } catch (err) {
+                            notify(
+                              "error",
+                              "Couldn't remove member: " + /** @type {*} */ (err.message || err),
+                            );
+                          }
                         },
                         "Remove",
                       ),
@@ -4983,6 +5013,150 @@ Any questions, just let me know.`;
   // password-management UI for clients will surface via the Security
   // panel (CONTEXT D-10). The chrome user-menu entry that opened the
   // modal was deleted in the same atomic commit.
+
+  // 2026-06: Add-internal-member modal. Mirrors openInviteClientModal but for
+  // BeDeveloped staff — calls the admin-only inviteInternal callable (via
+  // src/cloud/invite-admin.js). There is no shared org passphrase: the server
+  // generates a strong temp password and returns it here, shown ONCE via
+  // openInternalCredentialsModal for the admin to relay. The new member is
+  // forced to set their own password + enrol MFA on first sign-in (firstRun).
+  function openAddInternalModal() {
+    const name = h("input", {
+      type: "text",
+      class: "settings-textarea-comment",
+      placeholder: "Team member name",
+    });
+    const email = h("input", {
+      type: "email",
+      class: "settings-textarea-comment",
+      placeholder: "name@bedeveloped.com",
+    });
+    const role = h("select", { class: "settings-textarea-comment" });
+    [
+      ["internal", "Internal"],
+      ["admin", "Admin"],
+    ].forEach(([val, label]) => {
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = label;
+      role.appendChild(opt);
+    });
+    const errBox = h("div");
+    const createBtn = h("button", { class: "btn" }, "Create account");
+
+    async function doAdd() {
+      const em = (email.value || "").trim().toLowerCase();
+      const nameVal = (name.value || "").trim();
+      const roleVal = /** @type {"internal" | "admin"} */ (role.value);
+
+      errBox.replaceChildren();
+      if (!em || !em.includes("@")) {
+        errBox.appendChild(h("div", { class: "auth-error" }, "Enter a valid email."));
+        return;
+      }
+      if (!nameVal) {
+        errBox.appendChild(h("div", { class: "auth-error" }, "Enter the member's name."));
+        return;
+      }
+
+      createBtn.setAttribute("disabled", "");
+      try {
+        const res = await inviteInternal({ email: em, name: nameVal, role: roleVal });
+        m.close();
+        render();
+        openInternalCredentialsModal({ email: em, name: nameVal }, res.tempPassword);
+      } catch (err) {
+        errBox.replaceChildren();
+        errBox.appendChild(
+          h(
+            "div",
+            { class: "auth-error" },
+            (err && /** @type {*} */ (err).message) || "Something went wrong — try again.",
+          ),
+        );
+      } finally {
+        createBtn.removeAttribute("disabled");
+      }
+    }
+
+    createBtn.addEventListener("click", () => {
+      void doAdd();
+    });
+
+    const m = modal([
+      h("h3", {}, "Add an internal member"),
+      h(
+        "p",
+        { class: "settings-explainer" },
+        "We'll create their account and generate a one-time temporary password for you to share. They'll set their own password and enrol two-factor authentication on first sign-in.",
+      ),
+      h("div", { class: "settings-form-stack" }, [
+        h("div", {}, [h("label", { class: "settings-form-label" }, "Name"), name]),
+        h("div", {}, [h("label", { class: "settings-form-label" }, "Email"), email]),
+        h("div", {}, [h("label", { class: "settings-form-label" }, "Role"), role]),
+      ]),
+      errBox,
+      h("div", { class: "row" }, [
+        h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
+        createBtn,
+      ]),
+    ]);
+    setTimeout(() => name.focus(), 10);
+  }
+
+  // 2026-06: one-time temp-password reveal after a successful inviteInternal.
+  // The temp password is NOT stored anywhere client-side beyond this modal —
+  // closing it discards it (the server never returns it again). Mirrors the
+  // copy-to-clipboard affordance of openInviteInstructionsModal.
+  function openInternalCredentialsModal(member, tempPassword) {
+    const signInUrl = "https://baselayers.bedeveloped.com";
+    const firstName = (member.name || "").split(" ")[0] || "there";
+    const emailBody = `Hi ${firstName},
+
+You've been set up with internal access to The Base Layers.
+
+To sign in:
+1. Go to ${signInUrl}
+2. Enter your email: ${member.email}
+3. Enter this temporary password: ${tempPassword}
+4. You'll set your own password and enrol two-factor authentication on first sign-in.
+
+Any questions, just let me know.`;
+
+    const textArea = h("textarea", { readonly: "", class: "settings-textarea-tall" });
+    textArea.value = emailBody;
+
+    const copyBtn = h("button", { class: "btn secondary" }, "Copy text");
+    copyBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(emailBody);
+        copyBtn.textContent = "Copied ✓";
+        setTimeout(() => (copyBtn.textContent = "Copy text"), 1500);
+      } catch (_e) {
+        notify("error", "Couldn't copy — select the text and copy manually.");
+      }
+    };
+
+    const cm = modal([
+      h("h3", {}, "Account created"),
+      h(
+        "p",
+        { class: "settings-explainer" },
+        `${member.email} can now sign in. Share the temporary password below via your usual secure channel — it is shown once and cannot be retrieved again.`,
+      ),
+      h("div", { class: "settings-form-stack" }, [
+        h("div", {}, [
+          h("label", { class: "settings-form-label" }, "Temporary password"),
+          h("code", { class: "temp-password-reveal" }, tempPassword),
+        ]),
+      ]),
+      textArea,
+      h("div", { class: "row" }, [
+        copyBtn,
+        h("button", { class: "btn", onclick: () => cm.close() }, "Done"),
+      ]),
+    ]);
+  }
 
   function openSetOrgPassphrase(orgId, orgName) {
     const org = loadOrg(orgId);

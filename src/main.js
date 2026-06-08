@@ -3179,7 +3179,7 @@ import {
         "p",
         { class: "view-sub" },
         org
-          ? `Shared with ${org.name}. Everyone in this organisation can see documents unless marked private.`
+          ? `Shared with ${org.name}. Everyone in this organisation can see these documents.`
           : "Select an organisation to see its documents.",
       ),
     );
@@ -3198,7 +3198,6 @@ import {
     // Upload card
     const uploadCard = h("div", { class: "card" });
     const fileInput = h("input", { type: "file", class: "u-display-none" });
-    const privateChk = h("input", { type: "checkbox" });
     const progressBar = h("div", { class: "docs-progress-meta" });
 
     const upload = async (file) => {
@@ -3235,12 +3234,9 @@ import {
           size: file.size,
           contentType: file.type,
           storagePath: path,
-          visibility: privateChk.checked ? "private" : "org",
-          allowedUserIds: privateChk.checked ? [user.id] : [],
           createdAt: firestore.serverTimestamp(),
         });
         progressBar.textContent = `✓ Uploaded ${file.name}`;
-        privateChk.checked = false;
       } catch (e) {
         progressBar.textContent = "Upload failed: " + (e.message || e);
       }
@@ -3256,10 +3252,6 @@ import {
       h("div", { class: "docs-toolbar-row" }, [
         h("button", { class: "btn", onclick: () => fileInput.click() }, "+ Upload file"),
         fileInput,
-        h("label", { class: "docs-toolbar-label" }, [
-          privateChk,
-          h("span", {}, "Private (only I can see it)"),
-        ]),
       ]),
     );
     uploadCard.appendChild(progressBar);
@@ -3282,28 +3274,19 @@ import {
         docs.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
 
         const isInternal = isStaff(user);
-        const visible = docs.filter((d) => {
-          if (d.visibility !== "private") return true;
-          if (isInternal) return true;
-          return (d.allowedUserIds || []).includes(user.id);
-        });
 
         // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
         listBody.replaceChildren();
-        if (!visible.length) {
+        if (!docs.length) {
           listBody.appendChild(h("p", { class: "docs-list-empty" }, "No files yet."));
           return;
         }
-        visible.forEach((d) => {
+        docs.forEach((d) => {
           const row = h("div", { class: "docs-table-row" });
           row.appendChild(
             h("div", {}, [
               h("div", { class: "docs-row-filename" }, d.filename),
-              h(
-                "div",
-                { class: "docs-row-meta" },
-                formatBytes(d.size) + (d.visibility === "private" ? " · private" : ""),
-              ),
+              h("div", { class: "docs-row-meta" }, formatBytes(d.size)),
             ]),
           );
           row.appendChild(h("div", {}, d.uploaderName || d.uploaderEmail || "—"));

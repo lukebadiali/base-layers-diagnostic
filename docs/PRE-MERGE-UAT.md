@@ -108,6 +108,29 @@ stage-card click interaction + the client read-only view are not.
 
 ---
 
+## 5. Documents → private upload removed (org-shared only)
+**Change:** `renderDocuments` — removed the "Private (only I can see it)" checkbox
+and the client-side `visibility` / `allowedUserIds` filter. Every uploaded document
+is now visible to everyone in the org.
+**Why manual:** the Documents view runs against live Firebase Storage + Firestore
+(no snapshot harness — it renders "Connecting to shared storage…" without FB).
+**Security note (no server change needed):** "private" was only ever a client-side
+filter — `storage.rules` grants read to any org member (`allow read: if inOrg`) and
+`getDocumentSignedUrl` authorises on org membership only, never on `visibility`/
+`allowedUserIds`. Removing it makes the UI honest; it does not widen real access.
+
+- [ ] ☐ Documents tab → upload toolbar shows **only** "+ Upload file" — **no
+      "Private" checkbox**.
+- [ ] ☐ Upload a file → it appears in **Files** for everyone in the org, with **no
+      "· private"** tag on any row.
+- [ ] ☐ Sign in as a **client** in that org → sees all the org's documents; download
+      works; staff-only delete still soft-deletes.
+- [ ] ☐ Sanity-check the target Firestore for any **pre-existing `visibility:
+      "private"` docs** — they will now be listed to all org members (acceptable
+      while between engagements; flag if any must stay hidden).
+
+---
+
 ## Known pre-existing flakes (NOT introduced by this branch)
 Surfaced while verifying — present on `main`, unrelated to these fixes. The
 plain test suite (`npm test`) is fully green (646 pass); these only appear under

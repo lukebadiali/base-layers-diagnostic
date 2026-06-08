@@ -28,5 +28,65 @@ test harness; only the `mfaEnrolmentRequiredForRole` predicate is unit-tested.
 
 ---
 
+## 2. Company passphrase minimum lowered 12 → 6
+**Commit:** `aa5795f` feat(auth): lower org passphrase floor 12 to 6
+**⚠ GATING operator action — do this BEFORE testing or merging:** the passphrase
+doubles as the client's first sign-in password, validated by Firebase's
+Identity Platform password policy. The code floor is now 6, so the **platform
+policy must also be lowered to 6 and the leaked-password (HIBP) check relaxed**,
+or 6-char passphrases will brick clients at first sign-in.
+
+- [ ] ☐ **Operator:** Firebase console → Authentication → Settings → Password
+      policy → set minimum length to **6** and disable "require non-compromised
+      password" (HIBP). Project `bedeveloped-base-layers`.
+- [ ] ☐ Settings → Set passphrase accepts a **6-char** passphrase (rejects 5).
+- [ ] ☐ Invite a client under a 6-char passphrase → that client can **actually
+      sign in** with it (not bricked with "password does not meet requirements").
+- [ ] ☐ Regression: internal/admin users with existing ≥6-char passwords still
+      sign in.
+
+## 3. Create + delete internal members from the admin page
+**Commits:** `764ecac` feat(functions): inviteInternal + deleteInternal · `8727d55` feat(admin): add + remove internal members
+**Why manual:** the callables are unit-tested but the live Admin-SDK path
+(createUser, setCustomUserClaims, /users mirror) and the admin UI only run
+end-to-end against real Firebase.
+
+Create:
+- [ ] ☐ Admin → Admin page → Internal team → **"+ Add internal member"** opens a
+      modal with Name, Email, and a **Role selector (Internal / Admin)**.
+- [ ] ☐ Submit → success modal shows a **temporary password** (shown once) with
+      a working **Copy** button.
+- [ ] ☐ New member appears in the **Internal team** list immediately.
+- [ ] ☐ New member signs in with email + temp password → forced to set their own
+      password (firstRun) → **forced MFA enrol** → reaches the app.
+- [ ] ☐ Create with **Admin** role → the new account has admin privileges.
+- [ ] ☐ Adding an **email that already exists** → clean "account already exists"
+      error, no account changed.
+
+Delete:
+- [ ] ☐ Internal team **Remove** on another member → they are gone from the list
+      AND can no longer sign in (Firebase Auth user actually deleted, not just
+      local cache).
+- [ ] ☐ Your **own** row shows "you" (no Remove) — and if forced, the server
+      refuses self-deletion (lock-out guard).
+- [ ] ☐ Only **admins** see/act on Add + Remove (internal-role staff cannot mint
+      or remove members).
+
+---
+
+## Known pre-existing flakes (NOT introduced by this branch)
+Surfaced while verifying — present on `main`, unrelated to these fixes. The
+plain test suite (`npm test`) is fully green (646 pass); these only appear under
+`npm run test:coverage` (what CI runs) and may intermittently fail it:
+- **View snapshot timeouts:** `tests/views/{dashboard,diagnostic,report}.test.js`
+  render large views (~4s each); under v8 coverage instrumentation they can
+  exceed the test timeout on a slow/loaded machine. Pass reliably without
+  coverage.
+- **`src/data/**` branch threshold (90%) flaps:** `src/data/rate-limit.js` keys
+  a branch on `Date.now()` minute-windows, so branch coverage is time-dependent
+  and occasionally dips below 90%.
+Worth a separate hardening pass (raise snapshot timeouts; inject a clock into
+rate-limit) but out of scope for these features.
+
 ## Upcoming fixes
 _Add new items here as they land on the branch._

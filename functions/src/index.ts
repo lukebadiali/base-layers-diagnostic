@@ -23,6 +23,13 @@ export { inviteClient } from "./auth/inviteClient.js";
 // invariant per D-09), and deleting only the mirror would leave an orphan
 // Auth user that can still sign in.
 export { deleteClient } from "./auth/deleteClient.js";
+// 2026-06: internal-member lifecycle. Admin-only callables to create + delete
+// staff (admin/internal) accounts from the admin panel. inviteInternal mirrors
+// inviteClient (createUser + claims + /users mirror) with a server-generated
+// temp password; deleteInternal mirrors deleteClient but for privileged targets
+// (which deleteClient refuses) with a self-delete lock-out guard.
+export { inviteInternal } from "./auth/inviteInternal.js";
+export { deleteInternal } from "./auth/deleteInternal.js";
 export { auditWrite } from "./audit/auditWrite.js";
 export { onOrgDelete } from "./audit/triggers/onOrgDelete.js";
 export { onUserDelete } from "./audit/triggers/onUserDelete.js";

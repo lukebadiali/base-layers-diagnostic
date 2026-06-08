@@ -37,7 +37,11 @@ if (!getApps().length) initializeApp();
 
 const SENTRY_DSN = defineSecret("SENTRY_DSN");
 
-const UPLOADS_BUCKET = "bedeveloped-base-layers-uploads";
+// The app uploads documents to the project's DEFAULT Firebase Storage bucket
+// (src/firebase/app.js storageBucket), not a dedicated "-uploads" bucket — the
+// latter was specced in the Phase-8 runbook but never created. Signing against
+// the real bucket is required or getSignedUrl mints a URL for a ghost bucket.
+const UPLOADS_BUCKET = "bedeveloped-base-layers.firebasestorage.app";
 const SIGNED_URL_TTL_MS = 60 * 60 * 1000; // BACKUP-05 — exactly 1 hour
 
 const SignedUrlInput = z.object({
@@ -49,6 +53,15 @@ const SignedUrlInput = z.object({
 export const getDocumentSignedUrl = onCall(
   {
     region: "europe-west2",
+    // FN-04 / BACKUP-05: run as the dedicated storage-reader-sa. V4 signing
+    // (getSignedUrl below) calls iam.serviceAccounts.signBlob, which requires
+    // the runtime identity to hold roles/iam.serviceAccountTokenCreator on
+    // itself — granted to storage-reader-sa in runbooks/phase-8-backup-setup.md
+    // (§5). Without this line the function deploys under the DEFAULT compute SA,
+    // which cannot signBlob, so getSignedUrl throws SigningError -> HTTP 500.
+    // (Full email form required; the short name is rejected by Secret Manager
+    // setIamPolicy — see inviteClient.ts.)
+    serviceAccount: "storage-reader-sa@bedeveloped-base-layers.iam.gserviceaccount.com",
     // PLATFORM-UAT post-T19 F1-B (2026-05-25): enforceAppCheck dropped.
     // Client document downloads (Documents tab) call this callable to
     // get a 1h-TTL signed URL. App Check enforcement blocks incognito
@@ -79,10 +92,15 @@ export const getDocumentSignedUrl = onCall(
     const file = getStorage().bucket(UPLOADS_BUCKET).file(path);
 
     const expiresAt = Date.now() + SIGNED_URL_TTL_MS;
+    // Force a save dialog (Content-Disposition: attachment) instead of letting the
+    // browser render images/PDFs inline — the UI affordance is "Download". The
+    // filename is re-sanitised to [\w.\- ] so it can't break/inject the header.
+    const safeName = data.filename.replace(/[^\w.\- ]/g, "_");
     const [url] = await file.getSignedUrl({
       version: "v4",
       action: "read",
       expires: expiresAt,
+      responseDisposition: `attachment; filename="${safeName}"`,
     });
 
     logger.info("storage.signed_url.issued", {

@@ -60,6 +60,13 @@ const GdprExportInput = z.object({
 export const gdprExportUser = onCall(
   {
     region: "europe-west2",
+    // FN-04 / GDPR-01: run as the dedicated gdpr-reader-sa. The 24h V4 signed
+    // URL below calls iam.serviceAccounts.signBlob, which requires the runtime
+    // identity to hold roles/iam.serviceAccountTokenCreator on itself. Without
+    // this line the function deploys under the DEFAULT compute SA, which cannot
+    // signBlob, so getSignedUrl throws SigningError -> HTTP 500 (same defect as
+    // getDocumentSignedUrl). Full email form required (see inviteClient.ts).
+    serviceAccount: "gdpr-reader-sa@bedeveloped-base-layers.iam.gserviceaccount.com",
     // PLATFORM-UAT post-T19 F1-B (2026-05-25): enforceAppCheck dropped.
     // GDPR Art. 12(3) right-of-access — clients self-service their own
     // data export. A client locked out of an export request because

@@ -66,6 +66,18 @@ lowered to 6, or the sign-in checks below will fail.
 (createUser, setCustomUserClaims, /users mirror) and the admin UI only run
 end-to-end against real Firebase.
 
+> **Deploy gap found 2026-06-08 (blocks live test — NOT a code defect).** The
+> `inviteInternal` / `deleteInternal` callables **and** their `firebase.json`
+> hosting rewrites were committed (764ecac) but never deployed. The functions are
+> now deployed to prod manually, but the **hosting rewrites are still not live**
+> (deployed hosting predates them), so `baselayers.bedeveloped.com/inviteInternal`
+> falls through to the SPA catch-all (`** → /index.html`) and the browser reports
+> a CORS error. Verified via `OPTIONS`: `getDocumentSignedUrl` → 204 + ACAO (hits
+> the function); `inviteInternal` → 200 `text/html` (SPA). **Resolves on the
+> merge/CI hosting deploy.** A local hosting deploy is blocked (prod build needs
+> `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY`, absent from `.env.local`). **Re-test §3
+> after hosting deploys.**
+
 Create:
 - [ ] ☐ Admin → Admin page → Internal team → **"+ Add internal member"** opens a
       modal with Name, Email, and a **Role selector (Internal / Admin)**.
@@ -129,6 +141,18 @@ filter — `storage.rules` grants read to any org member (`allow read: if inOrg`
       "private"` docs** — they will now be listed to all org members (acceptable
       while between engagements; flag if any must stay hidden).
 
+**Document download 500 — RESOLVED 2026-06-08 (separate pre-existing infra bug, not this branch).**
+`getDocumentSignedUrl` ran as the default compute SA (no `signBlob`), signed a
+non-existent `-uploads` bucket, and forced no download. Fixes (code): pinned
+`storage-reader-sa`, pointed signing at the real bucket
+`bedeveloped-base-layers.firebasestorage.app`, added `Content-Disposition: attachment`.
+**Prod IAM applied (the Phase-8 SAs had never been created):** created
+`storage-reader-sa` + `gdpr-reader-sa`; granted each `serviceAccountTokenCreator` on
+itself; `storage-reader-sa` → `objectViewer` on the bucket; `gdpr-reader-sa` →
+`datastore.viewer` + `objectAdmin` (backups); `serviceAccountUser` (actAs) to the
+deployer + `github-actions-deployer`. **Open follow-ups:** redeploy `gdprExportUser`
+(same SA fix, code already done) and fix `gdprEraseUser`'s ghost-bucket constant.
+
 ---
 
 ## Known pre-existing flakes (NOT introduced by this branch)
@@ -147,3 +171,12 @@ rate-limit) but out of scope for these features.
 
 ## Upcoming fixes
 _Add new items here as they land on the branch._
+
+### Fractional role (DESIGNED — NOT YET BUILT · not a merge gate)
+A restricted **Fractional** option for the Add-internal-member modal. Agreed design:
+store as `role: "internal"` + a `fractional: true` flag; on the front end, grey out
+(disable, non-clickable) every nav tab except **Documents · Actions · Plan**, plus a
+route guard so a persisted/bookmarked route can't render a greyed view. **UI
+convenience only — explicitly NOT a server-side access control** (Firestore/Storage
+rules unchanged; the account retains internal-level data access). Parked pending a
+go-ahead to build. **Do not test in this pass — it does not exist yet.**

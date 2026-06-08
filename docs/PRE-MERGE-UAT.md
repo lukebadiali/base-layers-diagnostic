@@ -9,6 +9,27 @@ Status legend: ☐ untested · ✅ pass · ❌ fail (note the issue inline)
 
 ---
 
+## 0. Prerequisite — DO THIS FIRST (before any testing)
+
+**Lower the Firebase Identity Platform password policy.** The company passphrase
+doubles as the client's first sign-in password, so the platform minimum must
+match the new code floor (6) — otherwise 6-char passphrases brick clients at
+first sign-in with `auth/password-does-not-meet-requirements`. This is a console
+change (no working gcloud/firebase auth in the dev env to script it).
+
+- [ ] ☐ Firebase console → project **`bedeveloped-base-layers`** →
+      **Authentication → Settings → Password policy**:
+  - set **Minimum length = 6**
+  - turn **off** any "require non-compromised / leaked password" enforcement
+    (a 6-char passphrase will otherwise be rejected as compromised)
+  - keep enforcement **mode = Enforce**
+- [ ] ☐ Confirm the change saved (the policy panel shows min length 6).
+
+Until this is done, section 2 below (and any client invited under a 6-char
+passphrase) will fail.
+
+---
+
 ## 1. MFA required for client sign-ins
 **Commit:** `f755001` feat(auth): require MFA enrolment for client sign-ins
 **Why manual:** the enrol gate lives in `render()`'s IIFE ladder, which has no
@@ -30,15 +51,9 @@ test harness; only the `mfaEnrolmentRequiredForRole` predicate is unit-tested.
 
 ## 2. Company passphrase minimum lowered 12 → 6
 **Commit:** `aa5795f` feat(auth): lower org passphrase floor 12 to 6
-**⚠ GATING operator action — do this BEFORE testing or merging:** the passphrase
-doubles as the client's first sign-in password, validated by Firebase's
-Identity Platform password policy. The code floor is now 6, so the **platform
-policy must also be lowered to 6 and the leaked-password (HIBP) check relaxed**,
-or 6-char passphrases will brick clients at first sign-in.
+**Requires section 0 done first** — the platform password policy must already be
+lowered to 6, or the sign-in checks below will fail.
 
-- [ ] ☐ **Operator:** Firebase console → Authentication → Settings → Password
-      policy → set minimum length to **6** and disable "require non-compromised
-      password" (HIBP). Project `bedeveloped-base-layers`.
 - [ ] ☐ Settings → Set passphrase accepts a **6-char** passphrase (rejects 5).
 - [ ] ☐ Invite a client under a 6-char passphrase → that client can **actually
       sign in** with it (not bricked with "password does not meet requirements").

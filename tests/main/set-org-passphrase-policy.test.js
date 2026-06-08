@@ -1,18 +1,17 @@
 // tests/main/set-org-passphrase-policy.test.js
 // @ts-check
-// Phase 06.1 Wave 1 Task 1 (AUTH-16 / RESEARCH § Critical Pinned Fact 1.1):
-// pins the ≥12-char length floor for the org client passphrase. Admin SDK
-// auth.createUser({password}) bypasses Identity Platform passwordPolicy
-// (research finding A1) — if a weak passphrase is hashed and stored, every
-// client invited under it will be bricked at first signInWithEmailAndPassword
-// (auth/password-does-not-meet-requirements). The chokepoint is the modal-
-// submit-driven setOrgClientPassphrase in src/main.js, but the testable seam
-// is the pure validateOrgPassphrase helper in src/auth/passphrase-policy.js
-// (which setOrgClientPassphrase calls before hashing).
+// Pins the org client-passphrase length floor. The passphrase doubles as the
+// client's first Firebase Auth password (inviteClient.ts createUser), so this
+// floor MUST stay >= the Identity Platform passwordPolicy minimum — otherwise
+// a client invited under a weaker passphrase is bricked at first
+// signInWithEmailAndPassword (auth/password-does-not-meet-requirements).
 //
-// TDD RED gate (Wave 1 Task 1 Step 1a):
-// This test file lands BEFORE src/auth/passphrase-policy.js exists. The
-// module-not-found error is the canonical RED signal.
+// 2026-06 change: floor lowered 12 -> 6 per product decision (shorter
+// passphrase). This is only safe alongside the matching operator change that
+// lowers the Identity Platform passwordPolicy minLength to 6 + relaxes the
+// leaked-password (HIBP) check — see docs/PRE-MERGE-UAT.md gating item. The
+// chokepoint is setOrgClientPassphrase in src/main.js; the testable seam is the
+// pure validateOrgPassphrase helper in src/auth/passphrase-policy.js.
 
 import { describe, it, expect } from "vitest";
 
@@ -22,8 +21,8 @@ import {
 } from "../../src/auth/passphrase-policy.js";
 
 describe("ORG_PASSPHRASE_MIN_LENGTH", () => {
-  it("is exactly 12 (RESEARCH § Critical Pinned Fact 1.1 floor)", () => {
-    expect(ORG_PASSPHRASE_MIN_LENGTH).toBe(12);
+  it("is exactly 6 (2026-06 lowered floor; mirrors relaxed passwordPolicy)", () => {
+    expect(ORG_PASSPHRASE_MIN_LENGTH).toBe(6);
   });
 });
 
@@ -50,12 +49,12 @@ describe("validateOrgPassphrase — non-string / empty / undefined inputs", () =
 });
 
 describe("validateOrgPassphrase — length boundary", () => {
-  it("returns false at 11 chars (one below floor)", () => {
-    expect(validateOrgPassphrase("a".repeat(11))).toBe(false);
+  it("returns false at 5 chars (one below floor)", () => {
+    expect(validateOrgPassphrase("a".repeat(5))).toBe(false);
   });
 
-  it("returns true at exactly 12 chars (floor)", () => {
-    expect(validateOrgPassphrase("a".repeat(12))).toBe(true);
+  it("returns true at exactly 6 chars (floor)", () => {
+    expect(validateOrgPassphrase("a".repeat(6))).toBe(true);
   });
 
   it("returns true at 16 chars (well above floor)", () => {

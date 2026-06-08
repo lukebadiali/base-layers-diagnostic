@@ -815,7 +815,7 @@ Each row's evidence + test path is a direct verification of the control. A revie
 
 Phase 6 Wave 5 cutover replaced the Anonymous-Auth-plus-hardcoded-password substrate with real Firebase Auth Email/Password identities. Every production user now signs in with email + password; ID tokens carry custom claims `{role, orgId}` set by the `beforeUserCreated` blocking Cloud Function (commit SHA recorded in 06-PREFLIGHT.md `## Cutover Log: rules_deploy_sha`).
 
-**passwordPolicy (AUTH-04):** ≥ 12 character minimum; HIBP leaked-password check enabled at the Identity Platform level (verified at Wave 1 preflight: `06-PREFLIGHT.md ## passwordPolicy`).
+**passwordPolicy (AUTH-04):** ≥ 6 character minimum at the Identity Platform level; HIBP leaked-password check relaxed. **2026-06 product decision** — the minimum was lowered from 12 to 6 and the leaked-password check relaxed to reduce passphrase-setting friction (the per-org client passphrase doubles as the client's first sign-in password, so the platform minimum and the `ORG_PASSPHRASE_MIN_LENGTH` code floor must match). This is a deliberate, documented reduction in password-strength posture. Operator change applied in the Firebase console (see `06-PREFLIGHT.md ## passwordPolicy`).
 
 **AUTH-12 unified-error wrapper (D-13):** `src/firebase/auth.js` exports `signInEmailPassword` which catches the Firebase auth-credential error codes (`auth/user-not-found`, `auth/wrong-password`, `auth/invalid-credential`, `auth/too-many-requests`, `auth/user-disabled`, `auth/invalid-email`, `auth/missing-password`, `auth/missing-email`) and re-throws a single `SignInError("Email or password incorrect")`. Account-enumeration mitigation per AUTH-12 + L1.
 
@@ -837,7 +837,7 @@ Clients are provisioned via the admin-only `inviteClient` callable Cloud Functio
 
 ### Bootstrap-credential mechanism
 
-The per-org `clientPassphraseHash` (SHA-256, set via `setOrgClientPassphrase` in `src/main.js` with a ≥12-char length floor enforced at `src/auth/passphrase-policy.js validateOrgPassphrase` — Wave 1 substrate) serves as the initial Firebase Auth password for invited clients. The plaintext passphrase is transient only — it lives in the admin browser, transits over HTTPS to the callable, gets hashed for verification, gets passed as `password` to `auth.createUser`, then is dropped at function return. It is never persisted server-side beyond the per-org hash. Identity Platform's `passwordPolicy` does NOT validate Admin SDK `createUser` passwords (RESEARCH § Critical Pinned Fact 1.1), which is why the ≥12-char floor lives at the `setOrgClientPassphrase` chokepoint client-side.
+The per-org `clientPassphraseHash` (SHA-256, set via `setOrgClientPassphrase` in `src/main.js` with a ≥6-char length floor enforced at `src/auth/passphrase-policy.js validateOrgPassphrase` — lowered from 12 in the 2026-06 product decision, see AUTH-04 above) serves as the initial Firebase Auth password for invited clients. The plaintext passphrase is transient only — it lives in the admin browser, transits over HTTPS to the callable, gets hashed for verification, gets passed as `password` to `auth.createUser`, then is dropped at function return. It is never persisted server-side beyond the per-org hash. Identity Platform's `passwordPolicy` does NOT validate Admin SDK `createUser` passwords, but it IS enforced at the client's first `signInWithEmailAndPassword` — which is why the code floor must stay ≥ the live platform `passwordPolicy` minimum (both are 6 as of 2026-06).
 
 ### First-run forced password change
 

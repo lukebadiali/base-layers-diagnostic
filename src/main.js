@@ -4951,7 +4951,7 @@ Any questions, just let me know.`;
           ? h(
               "div",
               { class: "settings-amber-banner" },
-              `⚠ ${org?.name || "This organisation"} doesn't have a company passphrase set. Set one (min 12 characters) from Settings → Set passphrase before inviting clients.`,
+              `⚠ ${org?.name || "This organisation"} doesn't have a company passphrase set. Set one (min 6 characters) from Settings → Set passphrase before inviting clients.`,
             )
           : null,
         h("label", { class: "settings-section-h" }, "Suggested message"),
@@ -4987,12 +4987,11 @@ Any questions, just let me know.`;
   function openSetOrgPassphrase(orgId, orgName) {
     const org = loadOrg(orgId);
     const existing = !!(org && org.clientPassphraseHash);
-    // Phase 06.1 Wave 1 Task 1 (AUTH-16 / RESEARCH § Critical Pinned Fact 1.1):
-    // placeholder raised from "min 4 chars" to "min 12 chars" — matches the
-    // length floor in setOrgClientPassphrase + the gate below.
+    // Placeholder mirrors the ORG_PASSPHRASE_MIN_LENGTH floor in
+    // src/auth/passphrase-policy.js + the gate below (2026-06: 6 chars).
     const nw = h("input", {
       type: "password",
-      placeholder: "New company passphrase (min 12 chars)",
+      placeholder: "New company passphrase (min 6 chars)",
     });
     const confirm = h("input", { type: "password", placeholder: "Confirm passphrase" });
     const errBox = h("div");

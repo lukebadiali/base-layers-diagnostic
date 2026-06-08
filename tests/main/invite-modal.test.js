@@ -134,7 +134,7 @@ describe("openInviteInstructionsModal — copy revision (Phase 06.1 Wave 2)", ()
     expect(instructionsModalBlock).toMatch(/via your usual secure channel/);
   });
 
-  it("revised amber-banner mentions the min-12-char floor", () => {
-    expect(instructionsModalBlock).toMatch(/min 12 characters/);
+  it("revised amber-banner mentions the min-6-char floor", () => {
+    expect(instructionsModalBlock).toMatch(/min 6 characters/);
   });
 });

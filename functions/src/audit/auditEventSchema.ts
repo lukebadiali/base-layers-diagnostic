@@ -112,6 +112,14 @@ export const auditEventType = z.enum([
   // privileged-user reuse).
   "auth.client.delete", // success: client user + /users mirror deleted
   "auth.client.delete.failed", // failure: payload.reason discriminator
+  // 2026-06: internal-member lifecycle. Admin-only inviteInternal /
+  // deleteInternal callables (privileged-account create + delete). Mirrors the
+  // auth.client.* invite/delete shape: success enums + a single delete-failure
+  // enum with a payload.reason discriminator ("self-delete" | "not-privileged"
+  // | "user-not-found") rather than fanning out the enum.
+  "auth.internal.invite", // success: admin/internal account created
+  "auth.internal.delete", // success: admin/internal user + /users mirror deleted
+  "auth.internal.delete.failed", // failure: payload.reason discriminator
 ]);
 
 export type AuditEventType = z.infer<typeof auditEventType>;

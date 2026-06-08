@@ -110,11 +110,14 @@ export function renderRoute(main, user, org, deps) {
   // same Wave 6 / 06-06 work that restores main.js's gate (alongside the
   // enrollTotp + qrcodeDataUrl wiring in src/firebase/auth.js).
   // ORIGINAL GATE (commented for restoration — DO NOT DELETE):
+  // MFA enrolment is mandatory for every signed-in role — staff AND clients
+  // (clients were exempt before 2026-06). mfaEnrolmentRequiredForRole is the
+  // single source of truth; the inline role list below mirrors it.
   //   if (user && deps.renderMfaEnrol) {
   //     const role = user.appClaims && user.appClaims.role;
   //     const enrolled = user.appEnrolledFactors;
   //     const hasMfa = enrolled && enrolled.length > 0;
-  //     if ((role === "admin" || role === "internal") && !hasMfa) {
+  //     if ((role === "admin" || role === "internal" || role === "client") && !hasMfa) {
   //       main.appendChild(deps.renderMfaEnrol());
   //       return;
   //     }

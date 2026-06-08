@@ -21,52 +21,24 @@ window.BASE_LAYERS = {
       name: "Diagnose",
       summary:
         "Assess the business against all ten pillars. Fast, evidence-based, interview-led. Finds the real constraints - rarely where the client first assumed.",
-      checklist: [
-        "All ten pillars scored with evidence",
-        "Diagnostic interviews completed with commercial leadership",
-        "Closed-won and closed-lost data reviewed",
-        "Top 3 constraints identified and agreed",
-        "Written diagnostic report delivered",
-      ],
     },
     {
       id: "designed",
       name: "Design",
       summary:
         "Design the future state for the in-scope pillars. Tailored to the client's buying motion, segment and stage. Artefacts built to be operated, not admired.",
-      checklist: [
-        "Target operating model documented for in-scope pillars",
-        "Every artefact has a named owner",
-        "Operating rhythm defined (weekly, monthly, quarterly)",
-        "Success measures agreed per pillar",
-        "Design signed off by client leadership",
-      ],
     },
     {
       id: "deployed",
       name: "Deploy",
       summary:
         "Deploy alongside the client's team. CRM changes, process roll out, enablement content, manager training, first cycles of operating cadence.",
-      checklist: [
-        "CRM changes live",
-        "Processes rolled out to the team",
-        "Enablement content delivered",
-        "Managers trained and coaching in cadence",
-        "Adoption measured alongside outcome",
-      ],
     },
     {
       id: "developed",
-      name: "BeDeveloped",
+      name: "Develop",
       summary:
         "Operational Excellence. A fully embedded, self-sustaining model the team confidently runs. Clear ownership, consistent measurement cadence, and ongoing optimisation built in.",
-      checklist: [
-        "Internal owners coached to run each pillar",
-        "Measurement rhythm running without us",
-        "Handover pack delivered",
-        "Checkpoints agreed for ongoing review",
-        "BeDeveloped team to scope for future improvements",
-      ],
     },
   ],
 

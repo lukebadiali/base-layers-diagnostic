@@ -6,7 +6,11 @@
 // is the signal to revisit the 8+ sweep sites that import isStaff.
 
 import { describe, it, expect } from "vitest";
-import { isStaff, isInternalOnly } from "../../src/auth/role-predicates.js";
+import {
+  isStaff,
+  isInternalOnly,
+  mfaEnrolmentRequiredForRole,
+} from "../../src/auth/role-predicates.js";
 
 describe("isStaff", () => {
   it("returns true for admin", () => {
@@ -46,5 +50,30 @@ describe("isInternalOnly", () => {
   it("returns false for null/undefined", () => {
     expect(isInternalOnly(null)).toBe(false);
     expect(isInternalOnly(undefined)).toBe(false);
+  });
+});
+
+describe("mfaEnrolmentRequiredForRole", () => {
+  // Takes the bare role string (state.fbUser.appClaims.role), not a user
+  // object — the sign-in-ladder gate in main.js has already extracted `role`.
+  it("requires MFA enrolment for every known app role", () => {
+    expect(mfaEnrolmentRequiredForRole("admin")).toBe(true);
+    expect(mfaEnrolmentRequiredForRole("internal")).toBe(true);
+    // The client case is the behaviour this predicate exists to add — clients
+    // were previously exempt from the forced-enrolment gate.
+    expect(mfaEnrolmentRequiredForRole("client")).toBe(true);
+  });
+
+  it("does NOT force enrolment for unknown roles (explicit taxonomy)", () => {
+    // A future role must be added here deliberately — never force MFA on a
+    // role we haven't reasoned about.
+    expect(mfaEnrolmentRequiredForRole("viewer")).toBe(false);
+    expect(mfaEnrolmentRequiredForRole("client-preview")).toBe(false);
+    expect(mfaEnrolmentRequiredForRole("")).toBe(false);
+  });
+
+  it("returns false for null/undefined role (terse caller pattern)", () => {
+    expect(mfaEnrolmentRequiredForRole(null)).toBe(false);
+    expect(mfaEnrolmentRequiredForRole(undefined)).toBe(false);
   });
 });

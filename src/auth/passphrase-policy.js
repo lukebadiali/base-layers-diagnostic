@@ -1,20 +1,26 @@
 // src/auth/passphrase-policy.js
 // @ts-check
-// Phase 06.1 Wave 1 Task 1 (AUTH-16 / RESEARCH § Critical Pinned Fact 1.1):
-// pure-logic length-floor gate for the org client passphrase. Admin SDK
-// auth.createUser({password}) bypasses Identity Platform passwordPolicy
-// (≥12 chars + HIBP), so without this gate setOrgClientPassphrase would
-// accept arbitrarily-weak passphrases and Wave 2's inviteClient.ts would
-// succeed at createUser — but the invited client would be bricked at first
-// signInWithEmailAndPassword (auth/password-does-not-meet-requirements).
-// Enforce the length floor at the modal-submit chokepoint.
+// Pure-logic length-floor gate for the org client passphrase. The passphrase
+// doubles as the client's first Firebase Auth password (inviteClient.ts
+// createUser({password: orgPassphrase})), and Admin SDK createUser bypasses the
+// Identity Platform passwordPolicy — so without this gate setOrgClientPassphrase
+// would accept a passphrase that the client is then BRICKED on at first
+// signInWithEmailAndPassword (auth/password-does-not-meet-requirements, the
+// policy IS enforced at sign-in). Enforce the floor at the modal-submit
+// chokepoint.
+//
+// This floor MUST stay >= the live Identity Platform passwordPolicy minLength.
+// 2026-06: lowered 12 -> 6 per product decision. SAFE ONLY alongside the
+// matching operator change that lowers passwordPolicy minLength to 6 + relaxes
+// the leaked-password (HIBP) check in the Firebase console — otherwise 6-char
+// passphrases silently brick clients at sign-in. See docs/PRE-MERGE-UAT.md.
 //
 // Per CLAUDE.md "no Firebase imports in domain/*" and CONVENTIONS.md: this
 // module is pure data validation — zero firebase/* or firebase-admin/*
 // imports. Safe to consume from tests, views, and (in future) a server-side
 // callable parity helper.
 
-export const ORG_PASSPHRASE_MIN_LENGTH = 12;
+export const ORG_PASSPHRASE_MIN_LENGTH = 6;
 
 /**
  * Returns true iff `pass` is a string of length >= ORG_PASSPHRASE_MIN_LENGTH.

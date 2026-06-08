@@ -58,3 +58,23 @@ export function isStaff(user) {
 export function isInternalOnly(user) {
   return !!user && user.role === "internal";
 }
+
+/**
+ * True if a user holding this role must hold a second factor — i.e. the
+ * sign-in ladder forces TOTP enrolment when they have none. Every known app
+ * role qualifies: admin + internal (BeDeveloped staff) AND client. Clients
+ * were exempt before 2026-06 — adding them here is the single source of truth
+ * for "MFA is mandatory for everyone who signs in", matching the
+ * compliance-credible posture.
+ *
+ * Takes the bare role string (state.fbUser.appClaims.role) rather than a user
+ * object — by the time the gate runs, main.js has already extracted `role`.
+ * Unknown / null / undefined roles return false: a new role must be added
+ * here deliberately, never force MFA on a role we haven't reasoned about.
+ *
+ * @param {string | null | undefined} role
+ * @returns {boolean}
+ */
+export function mfaEnrolmentRequiredForRole(role) {
+  return role === "admin" || role === "internal" || role === "client";
+}

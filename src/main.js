@@ -92,7 +92,7 @@ import { setRoute as routerSetRoute, renderRoute as routerRenderRoute } from "./
 // `user.role === "internal"` checks across this file actually meant "is
 // BeDeveloped staff" (admin OR internal). isStaff is the right predicate
 // at almost every site; see src/auth/role-predicates.js for the contract.
-import { isStaff } from "./auth/role-predicates.js";
+import { isStaff, mfaEnrolmentRequiredForRole } from "./auth/role-predicates.js";
 
 // Phase 2 (D-04 supersedes Phase 1 D-14): index.html now loads this file as
 // type="module". Imports below are populated by Waves 1-4.
@@ -881,7 +881,10 @@ import {
       // makes the route reachable. Also gives the gate below a non-forced way
       // in (e.g. operator chooses to re-enrol).
       const wantsMfaEnrol = state.route === "mfa-enrol";
-      const mustMfaEnrol = (role === "admin" || role === "internal") && !hasMfa;
+      // MFA enrolment is mandatory for every signed-in role — staff AND
+      // clients (clients were exempt before 2026-06). See
+      // mfaEnrolmentRequiredForRole for the single-source-of-truth role set.
+      const mustMfaEnrol = mfaEnrolmentRequiredForRole(role) && !hasMfa;
       if (wantsMfaEnrol || mustMfaEnrol) {
         if (!state.qrcodeDataUrl) startMfaEnrolFlow();
         app.appendChild(authView.renderMfaEnrol());

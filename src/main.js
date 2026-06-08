@@ -374,7 +374,7 @@ import {
       responses: { [roundId]: {} },
       internalNotes: {},
       actions: [],
-      engagement: { currentStageId: "diagnosed", stageChecks: {} },
+      engagement: { currentStageId: "diagnosed" },
       comments: {},
       readStates: {},
     };
@@ -2331,20 +2331,13 @@ import {
     const frag = h("div", { class: "delivery-section" });
     frag.appendChild(h("h2", { class: "section-h2" }, "Delivery framework"));
     frag.appendChild(
-      h(
-        "p",
-        { class: "view-sub" },
-        "Every BeDeveloped engagement runs through four stages. Track progress and readiness to move on.",
-      ),
+      h("p", { class: "view-sub" }, "Every BeDeveloped engagement runs through four stages."),
     );
 
     const current = org.engagement?.currentStageId || "diagnosed";
     const stages = h("div", { class: "stages" });
     const readOnly = isClientView(user);
     DATA.engagementStages.forEach((s, i) => {
-      const checks = (org.engagement?.stageChecks || {})[s.id] || {};
-      const checkedCount = s.checklist.filter((_, idx) => checks[idx]).length;
-      const pct = Math.round((checkedCount / s.checklist.length) * 100);
       const isActive = current === s.id;
 
       const cardAttrs = {
@@ -2362,46 +2355,17 @@ import {
         h("div", { class: "n" }, `STAGE ${i + 1}`),
         h("div", { class: "name" }, s.name),
         h("div", { class: "sum" }, s.summary),
-        h("div", { class: "progress" }, h("span", { style: `width:${pct}%;` })),
-        h("div", { class: "stage-meta-tiny" }, `${checkedCount}/${s.checklist.length} complete`),
       ]);
       stages.appendChild(card);
     });
     frag.appendChild(stages);
-
-    const stage = DATA.engagementStages.find((s) => s.id === current);
-    const checklist = h("div", { class: "checklist" });
-    checklist.appendChild(h("h3", { class: "section-h3-tight" }, `${stage.name} — checklist`));
-    stage.checklist.forEach((item, idx) => {
-      const done = !!((org.engagement?.stageChecks || {})[current] || {})[idx];
-      const row = h("div", { class: `check-item ${done ? "done" : ""}` });
-      const cb = h("input", { type: "checkbox", id: `chk-${current}-${idx}` });
-      cb.checked = done;
-      cb.disabled = isClientView(user);
-      cb.addEventListener("change", () => {
-        toggleStageCheck(org.id, current, idx, cb.checked);
-        render();
-      });
-      row.appendChild(cb);
-      row.appendChild(h("label", { for: `chk-${current}-${idx}` }, item));
-      checklist.appendChild(row);
-    });
-    frag.appendChild(checklist);
     return frag;
   }
 
   function setEngagementStage(orgId, stageId) {
     const o = loadOrg(orgId);
-    o.engagement = o.engagement || { stageChecks: {} };
+    o.engagement = o.engagement || {};
     o.engagement.currentStageId = stageId;
-    saveOrg(o);
-  }
-  function toggleStageCheck(orgId, stageId, idx, val) {
-    const o = loadOrg(orgId);
-    o.engagement = o.engagement || { stageChecks: {} };
-    o.engagement.stageChecks = o.engagement.stageChecks || {};
-    o.engagement.stageChecks[stageId] = o.engagement.stageChecks[stageId] || {};
-    o.engagement.stageChecks[stageId][idx] = val;
     saveOrg(o);
   }
 

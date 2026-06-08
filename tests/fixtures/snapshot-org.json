@@ -812,7 +812,7 @@
     },
     {
       "id": "developed",
-      "name": "BeDeveloped",
+      "name": "Develop",
       "summary": "Operational Excellence. A fully embedded, self-sustaining model the team confidently runs. Clear ownership, consistent measurement cadence, and ongoing optimisation built in.",
       "checklist": [
         "Internal owners coached to run each pillar",

@@ -89,6 +89,25 @@ Delete:
 
 ---
 
+## 4. Diagnostic → Delivery framework — checklist removed, stage 4 renamed
+**Change:** `renderEngagement` + `data/pillars.js` / `public/data/pillars.js` — drop the
+per-stage checklist (and its progress bar + "X/Y complete" meta); rename stage 4
+**BeDeveloped → Develop**.
+**Why manual:** the rendered DOM is covered by the `tests/views/diagnostic.test.js`
+snapshot (no checklist, name "Develop"), but the live browser render + the
+stage-card click interaction + the client read-only view are not.
+
+- [ ] ☐ Diagnostic tab → **Delivery framework** shows exactly **four** stage cards:
+      **Diagnose · Design · Deploy · Develop** (stage 4 reads "Develop", **not**
+      "BeDeveloped").
+- [ ] ☐ There is **no checklist** below the cards, and **no progress bar / "X/Y
+      complete"** text on any card.
+- [ ] ☐ (Internal view) Clicking a stage card highlights it as the active stage and
+      **persists** (reload → same stage highlighted).
+- [ ] ☐ (Client view) The cards render **read-only** — clicking does nothing.
+
+---
+
 ## Known pre-existing flakes (NOT introduced by this branch)
 Surfaced while verifying — present on `main`, unrelated to these fixes. The
 plain test suite (`npm test`) is fully green (646 pass); these only appear under

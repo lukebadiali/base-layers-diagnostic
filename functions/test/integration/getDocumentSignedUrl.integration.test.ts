@@ -81,7 +81,7 @@ describe("getDocumentSignedUrl — integration (firebase-functions-test v3)", ()
     // Storage record
     const urls = adminSdk.adminMockState._allSignedUrls();
     expect(urls).toHaveLength(1);
-    expect(urls[0].bucket).toBe("bedeveloped-base-layers-uploads");
+    expect(urls[0].bucket).toBe("bedeveloped-base-layers.firebasestorage.app");
     expect(urls[0].path).toBe("orgs/orgA/documents/d_xyz/report.pdf");
     expect(urls[0].action).toBe("read");
   });

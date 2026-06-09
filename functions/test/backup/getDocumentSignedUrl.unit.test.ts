@@ -132,7 +132,7 @@ describe("getDocumentSignedUrl — unit", () => {
     });
   });
 
-  it("Test 7: signed URL is recorded with bucket='bedeveloped-base-layers-uploads', action='read', expires within 1h", async () => {
+  it("Test 7: signed URL is recorded with bucket='bedeveloped-base-layers.firebasestorage.app', action='read', expires within 1h", async () => {
     const wrapped = await loadWrapped();
     const before = Date.now();
     await wrapped(makeReq(VALID_DATA, adminAuth));
@@ -141,7 +141,7 @@ describe("getDocumentSignedUrl — unit", () => {
     const urls = adminSdk.adminMockState._allSignedUrls();
     expect(urls).toHaveLength(1);
     const entry = urls[0];
-    expect(entry.bucket).toBe("bedeveloped-base-layers-uploads");
+    expect(entry.bucket).toBe("bedeveloped-base-layers.firebasestorage.app");
     expect(entry.path).toBe("orgs/orgA/documents/doc1/report.pdf");
     expect(entry.action).toBe("read");
     expect(entry.expires).toBeGreaterThanOrEqual(before + 3_600_000 - 1000);

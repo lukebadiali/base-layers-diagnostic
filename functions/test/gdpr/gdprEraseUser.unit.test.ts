@@ -262,7 +262,7 @@ describe("gdprEraseUser — unit tests", () => {
 
   // Test 7: Storage deletion — 2 seeded objects deleted; counts.storageObjectsDeleted===2
   it("deletes Storage objects for document rows; counts.storageObjectsDeleted===2", async () => {
-    const UPLOADS_BUCKET = "bedeveloped-base-layers-uploads";
+    const UPLOADS_BUCKET = "bedeveloped-base-layers.firebasestorage.app";
     const ORG_ID = "orgA";
     const DOC_ID_1 = "doc1";
     const DOC_ID_2 = "doc2";

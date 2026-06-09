@@ -45,6 +45,15 @@ if (!getApps().length) initializeApp();
 const SENTRY_DSN = defineSecret("SENTRY_DSN");
 const GDPR_PSEUDONYM_SECRET = defineSecret("GDPR_PSEUDONYM_SECRET");
 
+// GDPR-03: user-uploaded documents live in the project's DEFAULT Firebase
+// Storage bucket (src/firebase/app.js storageBucket), NOT a dedicated
+// "-uploads" bucket — the latter was specced in the Phase-8 runbook but never
+// created. Must match getDocumentSignedUrl.ts UPLOADS_BUCKET exactly: erasure
+// has to delete from the SAME bucket the app uploads to and signs URLs against,
+// or Art. 17 object deletion silently misses every file (delete() on a ghost
+// bucket no-ops instead of erasing).
+const UPLOADS_BUCKET = "bedeveloped-base-layers.firebasestorage.app";
+
 const GdprEraseInput = z.object({
   userId: z.string().min(1).max(128),
   clientReqId: z.string().uuid(),
@@ -213,7 +222,7 @@ export const gdprEraseUser = onCall(
     // Wrap each delete in try/catch so a missing object does not abort the cascade.
     let storageObjectsDeleted = 0;
     let storageObjectsMissing = 0;
-    const uploadsBucket = getStorage().bucket("bedeveloped-base-layers-uploads");
+    const uploadsBucket = getStorage().bucket(UPLOADS_BUCKET);
     const allDocRows = [...docsByPath.values(), ...legacyByPath.values()];
     for (const docRow of allDocRows) {
       const docData = docRow.data as Record<string, unknown>;

@@ -30,6 +30,15 @@ Chart.register(
   Title,
 );
 
+// Perf (per-click <1s goal): Chart.js v4's default animation runs for 1000ms
+// (animation.duration). Both charts (dashboard radar + report donut) are
+// rebuilt on every render() — including snapshot-triggered re-renders — so that
+// 1s tween was the dominant perceived latency when navigating to those pages.
+// Disabling animation globally makes charts paint synchronously with the rest
+// of the view. Set once here, before any `new Chart`, so it covers every
+// chart created via window.Chart or createChart().
+Chart.defaults.animation = false;
+
 /**
  * Chart factory — accepts a canvas context + Chart.js config; returns a Chart
  * instance. Brand colors injected from CSS custom properties so styles.css owns

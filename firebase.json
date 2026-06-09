@@ -88,6 +88,14 @@
         "source": "/deleteClient",
         "function": { "functionId": "deleteClient", "region": "europe-west2" }
       },
+      {
+        "source": "/inviteInternal",
+        "function": { "functionId": "inviteInternal", "region": "europe-west2" }
+      },
+      {
+        "source": "/deleteInternal",
+        "function": { "functionId": "deleteInternal", "region": "europe-west2" }
+      },
       { "source": "**", "destination": "/index.html" }
     ]
   },

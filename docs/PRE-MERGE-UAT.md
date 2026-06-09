@@ -66,17 +66,18 @@ lowered to 6, or the sign-in checks below will fail.
 (createUser, setCustomUserClaims, /users mirror) and the admin UI only run
 end-to-end against real Firebase.
 
-> **Deploy gap found 2026-06-08 (blocks live test — NOT a code defect).** The
-> `inviteInternal` / `deleteInternal` callables **and** their `firebase.json`
-> hosting rewrites were committed (764ecac) but never deployed. The functions are
-> now deployed to prod manually, but the **hosting rewrites are still not live**
-> (deployed hosting predates them), so `baselayers.bedeveloped.com/inviteInternal`
-> falls through to the SPA catch-all (`** → /index.html`) and the browser reports
-> a CORS error. Verified via `OPTIONS`: `getDocumentSignedUrl` → 204 + ACAO (hits
-> the function); `inviteInternal` → 200 `text/html` (SPA). **Resolves on the
-> merge/CI hosting deploy.** A local hosting deploy is blocked (prod build needs
-> `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY`, absent from `.env.local`). **Re-test §3
-> after hosting deploys.**
+> **Root cause found 2026-06-09 — missing hosting routes (corrected diagnosis).**
+> Commit 764ecac added the `inviteInternal` / `deleteInternal` callables + client
+> wrappers but **never added their `firebase.json` hosting rewrites** — only
+> `/inviteClient` + `/deleteClient` exist. The functions are deployed (manually),
+> but `baselayers.bedeveloped.com/inviteInternal` has no route → falls through to
+> the SPA catch-all (`** → /index.html`), so the callable SDK errors with CORS
+> (cross-origin) or "Response is not valid JSON object" (same-origin). This was
+> NOT fixed by merging #63 (the rewrites were never in the config to deploy).
+> Verified: `firebase.json` rewrites listed `/inviteClient` but not the *Internal*
+> variants; `/deleteInternal` (uncached) → 200 `text/html`; `/getDocumentSignedUrl`
+> → 400 `application/json`. **Fix: the two rewrites are added in the follow-up PR;
+> §3 works once that hosting deploy lands. Re-test §3 then.**
 
 Create:
 - [ ] ☐ Admin → Admin page → Internal team → **"+ Add internal member"** opens a

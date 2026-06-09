@@ -116,7 +116,7 @@ describe("gdprEraseUser — integration test (Test 9)", () => {
 
     // Seed Storage object for the document
     adminMockState._seedStorageObject(
-      "bedeveloped-base-layers-uploads",
+      "bedeveloped-base-layers.firebasestorage.app",
       "orgs/intOrg/documents/intDoc1/report.pdf",
       Buffer.from("pdf-content"),
       "application/pdf",

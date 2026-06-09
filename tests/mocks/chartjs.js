@@ -21,6 +21,10 @@ class ChartStub {
   render() {}
 }
 ChartStub.register = vi.fn();
+// src/ui/charts.js sets `Chart.defaults.animation = false` (per-click <1s perf
+// goal). Mirror the real Chart.defaults object so that side-effect assignment
+// doesn't throw at module-eval time under happy-dom.
+ChartStub.defaults = { animation: false };
 
 export const GlobalChartStub = ChartStub;
 

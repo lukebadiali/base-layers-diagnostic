@@ -669,7 +669,13 @@ import {
     // comparator (domain/unread.js) is built around. Tracked in Wave 6 06-06.
     const targetOrgId = user.orgId || state.activeOrgId;
     if (!targetOrgId) return;
-    q = firestore.collection(db, "orgs", targetOrgId, "messages");
+    // Soft-delete (Phase 8): the messages read rule requires notDeleted, so a
+    // list query MUST constrain deletedAt or Firestore denies the whole query
+    // ("rules are not filters"). Mirrors src/data/messages.js subscribeMessages.
+    q = firestore.query(
+      firestore.collection(db, "orgs", targetOrgId, "messages"),
+      firestore.where("deletedAt", "==", null),
+    );
     state.chatSubscribedFor = user.id;
     state.chatSubscription = firestore.onSnapshot(
       q,
@@ -3235,6 +3241,7 @@ import {
           contentType: file.type,
           storagePath: path,
           createdAt: firestore.serverTimestamp(),
+          deletedAt: null, // soft-delete sentinel — required for notDeleted reads
         });
         progressBar.textContent = `✓ Uploaded ${file.name}`;
       } catch (e) {
@@ -3265,7 +3272,12 @@ import {
     listCard.appendChild(listBody);
     frag.appendChild(listCard);
 
-    const q = firestore.collection(db, "orgs", org.id, "documents");
+    // Soft-delete (Phase 8): documents read rule requires notDeleted — the list
+    // query must constrain deletedAt or the whole query is permission-denied.
+    const q = firestore.query(
+      firestore.collection(db, "orgs", org.id, "documents"),
+      firestore.where("deletedAt", "==", null),
+    );
     firestore.onSnapshot(
       q,
       (snap) => {
@@ -3512,6 +3524,7 @@ import {
           authorRole: user.role,
           text,
           createdAt: firestore.serverTimestamp(),
+          deletedAt: null, // soft-delete sentinel — required for notDeleted reads
         });
       } catch (e) {
         textInput.value = text;
@@ -3528,7 +3541,13 @@ import {
     });
 
     // Phase 6 Wave 5 cutover-recovery: subcollection path matches rules.
-    const q = firestore.collection(db, "orgs", org.id, "messages");
+    // Soft-delete (Phase 8): messages read rule requires notDeleted — the list
+    // query must constrain deletedAt or the whole query is permission-denied
+    // ("rules are not filters"). Mirrors src/data/messages.js subscribeMessages.
+    const q = firestore.query(
+      firestore.collection(db, "orgs", org.id, "messages"),
+      firestore.where("deletedAt", "==", null),
+    );
     firestore.onSnapshot(
       q,
       (snap) => {
@@ -4666,6 +4685,7 @@ import {
           authorRole: user.role,
           text,
           createdAt: firestore.serverTimestamp(),
+          deletedAt: null, // soft-delete sentinel — required for notDeleted reads
         });
       } catch (e) {
         commentInput.value = text;
@@ -4680,9 +4700,13 @@ import {
       }
     });
 
+    // Soft-delete (Phase 8): funnelComments read rule requires notDeleted — the
+    // list query must constrain deletedAt too or the whole query is denied
+    // ("rules are not filters"). Mirrors data/funnel-comments.js subscribe.
     const commentsQ = firestore.query(
       firestore.collection(db, "funnelComments"),
       firestore.where("orgId", "==", org.id),
+      firestore.where("deletedAt", "==", null),
     );
     firestore.onSnapshot(
       commentsQ,

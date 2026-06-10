@@ -10,7 +10,16 @@
 //   - orgs/{orgId}/documents/{docId}
 //   - orgs/{orgId}/messages/{msgId}
 //   - funnelComments/{id}
-import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  Timestamp,
+} from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
 import { initRulesEnv, asUser, ROLES, assertSucceeds, assertFails } from "./setup.js";
 
@@ -219,5 +228,60 @@ describe("soft-delete predicate notDeleted(r) - funnelComments/{id} (Phase 8)", 
   it("internal reads soft-deleted funnelComment - deny", async () => {
     const db = asUser(testEnv, "internal", claimsByRole.internal);
     await assertFails(getDoc(doc(db, "funnelComments/fcDeleted")));
+  });
+});
+
+// ── Regression: LIST queries vs notDeleted (Phase: chat/docs/funnel-comments
+//    permission-denied 2026-06-10). The Phase 5/8 getDoc cases above never
+//    exercised list/query reads. "Rules are not filters": an unconstrained list
+//    query against a notDeleted rule is DENIED WHOLESALE — it could return a
+//    soft-deleted doc. The live src/main.js listeners omitted the deletedAt
+//    constraint and so were permission-denied; the fix adds
+//    where("deletedAt","==",null) (matching src/data/* modules). These cases
+//    lock that in: unconstrained list → deny; deletedAt-constrained list → allow.
+
+describe("soft-delete notDeleted(r) - LIST queries (regression)", () => {
+  // messages subcollection (chat)
+  it("messages: unconstrained list - DENY (reproduces the chat bug)", async () => {
+    const db = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertFails(getDocs(collection(db, "orgs/orgA/messages")));
+  });
+  it("messages: list constrained to deletedAt==null - ALLOW (the fix)", async () => {
+    const db = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertSucceeds(
+      getDocs(query(collection(db, "orgs/orgA/messages"), where("deletedAt", "==", null))),
+    );
+  });
+
+  // documents subcollection
+  it("documents: unconstrained list - DENY", async () => {
+    const db = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertFails(getDocs(collection(db, "orgs/orgA/documents")));
+  });
+  it("documents: list constrained to deletedAt==null - ALLOW", async () => {
+    const db = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertSucceeds(
+      getDocs(query(collection(db, "orgs/orgA/documents"), where("deletedAt", "==", null))),
+    );
+  });
+
+  // funnelComments (top-level, scoped by orgId field)
+  it("funnelComments: orgId-only list - DENY (reproduces the funnel bug)", async () => {
+    const db = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertFails(
+      getDocs(query(collection(db, "funnelComments"), where("orgId", "==", "orgA"))),
+    );
+  });
+  it("funnelComments: orgId + deletedAt==null list - ALLOW (the fix)", async () => {
+    const db = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertSucceeds(
+      getDocs(
+        query(
+          collection(db, "funnelComments"),
+          where("orgId", "==", "orgA"),
+          where("deletedAt", "==", null),
+        ),
+      ),
+    );
   });
 });

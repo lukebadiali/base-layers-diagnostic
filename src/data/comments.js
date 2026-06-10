@@ -75,6 +75,7 @@ export async function addComment(orgId, pillarId, comment) {
       pillarId: String(pillarId),
       legacyAuthorId: uid, // D-03 inline legacy field
       createdAt: serverTimestamp(),
+      deletedAt: null, // soft-delete sentinel — filtered reads require it present
     },
   );
 }

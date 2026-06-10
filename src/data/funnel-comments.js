@@ -45,6 +45,7 @@ export async function addFunnelComment(orgId, comment) {
     ...comment,
     orgId,
     createdAt: serverTimestamp(),
+    deletedAt: null, // soft-delete sentinel — filtered reads require it present
   });
   return { id: /** @type {*} */ (ref).id };
 }

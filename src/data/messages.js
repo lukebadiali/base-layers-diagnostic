@@ -101,6 +101,7 @@ export async function addMessage(orgId, message) {
       legacyAuthorId: uid, // D-03 inline legacy field
       body: message?.body,
       createdAt: serverTimestamp(),
+      deletedAt: null, // soft-delete sentinel — filtered reads require it present
     },
   );
   return msgId;

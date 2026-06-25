@@ -366,7 +366,10 @@ jobs:
       # github-actions/auth has already populated GOOGLE_APPLICATION_CREDENTIALS.
       - name: Deploy to PR preview channel
         run: |
+          # TEMP DIAGNOSTIC (remove after): surface the real firebase-tools auth error
+          node -e "const c=require(process.env.GOOGLE_APPLICATION_CREDENTIALS);console.log('CRED_TYPE:',c.type)"
           npx firebase-tools@15.16.0 hosting:channel:deploy pr-${{ github.event.pull_request.number }} \
             --project bedeveloped-base-layers \
             --expires 7d \
-            --non-interactive
+            --non-interactive \
+            --debug

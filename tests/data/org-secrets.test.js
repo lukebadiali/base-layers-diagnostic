@@ -47,4 +47,17 @@ describe("src/data/org-secrets.js", () => {
   it("returns null when no secret is stored for the org", async () => {
     expect(await getOrgPassphraseSecret("ghost")).toBeNull();
   });
+
+  it("returns null when the doc exists but has no string passphrase field", async () => {
+    // e.g. a partial/legacy doc — the ternary's false branch must return null,
+    // not undefined.
+    /** @type {any} */ (dbMod).__store.set("orgSecrets/orgA", { updatedAt: "SERVER_TS" });
+    expect(await getOrgPassphraseSecret("orgA")).toBeNull();
+  });
+
+  it("returns null when the doc exists but its data is empty", async () => {
+    // Guards the `snap.data() || {}` fallback (data() falsy while exists()).
+    /** @type {any} */ (dbMod).__store.set("orgSecrets/orgA", undefined);
+    expect(await getOrgPassphraseSecret("orgA")).toBeNull();
+  });
 });

@@ -50,6 +50,64 @@ describe("renderSignIn (Phase 6 D-16)", () => {
   });
 });
 
+describe("renderSignIn — pending state on submit (tactile feedback)", () => {
+  it("disables the submit button + shows a pending label while sign-in is in flight", () => {
+    /** @type {() => void} */
+    let resolveSignIn = () => {};
+    const view = createAuthView({
+      signInEmailPassword: () =>
+        new Promise((res) => {
+          resolveSignIn = res;
+        }),
+    });
+    const el = view.renderSignIn();
+    const form = /** @type {HTMLFormElement} */ (el.querySelector("form"));
+    const submit = /** @type {HTMLButtonElement} */ (el.querySelector('button[type="submit"]'));
+
+    expect(submit.disabled).toBe(false);
+    expect(submit.textContent).toBe("Sign in");
+
+    // The synchronous head of the async submit handler runs during dispatch,
+    // before it awaits signInEmailPassword — so the pending state is visible
+    // immediately, with no microtask flush.
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    expect(submit.disabled).toBe(true);
+    expect(submit.classList.contains("is-loading")).toBe(true);
+    expect(submit.textContent).toBe("Signing in…");
+
+    resolveSignIn(); // let the in-flight promise settle so no unhandled state lingers
+  });
+
+  it("clears the pending state after a failed sign-in so the user can retry", async () => {
+    /** @type {(reason?: unknown) => void} */
+    let rejectSignIn = () => {};
+    const view = createAuthView({
+      signInEmailPassword: () =>
+        new Promise((_res, rej) => {
+          rejectSignIn = rej;
+        }),
+      notify: () => {},
+    });
+    const el = view.renderSignIn();
+    const form = /** @type {HTMLFormElement} */ (el.querySelector("form"));
+    const submit = /** @type {HTMLButtonElement} */ (el.querySelector('button[type="submit"]'));
+
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    // In flight: button is locked (fails on pre-implementation code).
+    expect(submit.disabled).toBe(true);
+
+    rejectSignIn(new Error("nope"));
+    // Flush microtasks so the rejection, catch and reset all run.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(submit.disabled).toBe(false);
+    expect(submit.classList.contains("is-loading")).toBe(false);
+    expect(submit.textContent).toBe("Sign in");
+  });
+});
+
 describe("renderFirstRun (Phase 6 D-16)", () => {
   it("exports renderFirstRun as a function", () => {
     expect(typeof renderFirstRun).toBe("function");

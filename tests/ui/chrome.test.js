@@ -122,3 +122,66 @@ describe("renderFooter()", () => {
     ]);
   });
 });
+
+describe("renderTopbar() — sign-out pending state (tactile feedback)", () => {
+  /** @param {*} el @returns {HTMLButtonElement} */
+  const signOutButton = (el) =>
+    /** @type {HTMLButtonElement} */ (
+      Array.from(el.querySelectorAll(".user-menu button")).find((b) => b.textContent === "Sign out")
+    );
+
+  it("locks the sign-out button with a pending label while sign-out is in flight", () => {
+    let renderCalls = 0;
+    const { renderTopbar } = createChrome(
+      makeDeps({
+        state: { route: "dashboard", mode: "internal", userMenuOpen: true, orgId: null },
+        render: () => {
+          renderCalls++;
+        },
+        // Never settles during the test — hold the in-flight state.
+        signOut: () => new Promise(() => {}),
+      }),
+    );
+    const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
+    document.body.appendChild(el);
+    const btn = signOutButton(el);
+    expect(btn).toBeTruthy();
+
+    btn.click();
+
+    expect(btn.disabled).toBe(true);
+    expect(btn.classList.contains("is-loading")).toBe(true);
+    expect(btn.textContent).toBe("Signing out…");
+    // No eager render() — that would tear the button down and swallow the
+    // feedback. The post-sign-out flip is driven by onAuthStateChanged.
+    expect(renderCalls).toBe(0);
+  });
+
+  it("restores the sign-out button if sign-out fails", async () => {
+    /** @type {(reason?: unknown) => void} */
+    let rejectSignOut = () => {};
+    const { renderTopbar } = createChrome(
+      makeDeps({
+        state: { route: "dashboard", mode: "internal", userMenuOpen: true, orgId: null },
+        signOut: () =>
+          new Promise((_res, rej) => {
+            rejectSignOut = rej;
+          }),
+      }),
+    );
+    const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
+    document.body.appendChild(el);
+    const btn = signOutButton(el);
+
+    btn.click();
+    expect(btn.disabled).toBe(true);
+
+    rejectSignOut(new Error("nope"));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(btn.disabled).toBe(false);
+    expect(btn.classList.contains("is-loading")).toBe(false);
+    expect(btn.textContent).toBe("Sign out");
+  });
+});

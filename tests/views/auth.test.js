@@ -52,7 +52,7 @@ describe("renderSignIn (Phase 6 D-16)", () => {
 
 describe("renderSignIn — pending state on submit (tactile feedback)", () => {
   it("disables the submit button + shows a pending label while sign-in is in flight", () => {
-    /** @type {() => void} */
+    /** @type {(value?: unknown) => void} */
     let resolveSignIn = () => {};
     const view = createAuthView({
       signInEmailPassword: () =>

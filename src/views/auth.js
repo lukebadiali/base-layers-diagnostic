@@ -98,7 +98,9 @@ export function createAuthView(deps) {
     form.appendChild(h("div", { class: "auth-field" }, [h("label", {}, "Email"), email]));
     form.appendChild(h("div", { class: "auth-field" }, [h("label", {}, "Password"), password]));
 
-    const submit = h("button", { type: "submit", class: "auth-submit" }, "Sign in");
+    const submit = /** @type {HTMLButtonElement} */ (
+      h("button", { type: "submit", class: "auth-submit" }, "Sign in")
+    );
     form.appendChild(submit);
 
     form.addEventListener("submit", async (/** @type {Event} */ e) => {

@@ -244,7 +244,7 @@ export function createChrome(deps) {
       // eager render() — that would tear this button down and swallow the
       // feedback; the flip to the sign-in screen is driven by main.js's
       // onAuthStateChanged(null). On failure the button is restored for retry.
-      const signOutBtn = h("button", {}, "Sign out");
+      const signOutBtn = /** @type {HTMLButtonElement} */ (h("button", {}, "Sign out"));
       signOutBtn.addEventListener("click", async () => {
         state.userMenuOpen = false;
         const idleLabel = signOutBtn.textContent;

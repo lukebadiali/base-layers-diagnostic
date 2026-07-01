@@ -24,6 +24,7 @@
  *   chatSubscription: (() => void) | null,
  *   chatSubscribedFor: string|null,
  *   fbUser: *,
+ *   authResolved: boolean,
  *   qrcodeDataUrl: string|null,
  *   mfaResolver: *,
  * }} AppState
@@ -74,6 +75,12 @@ export const state = {
   // shape (id, role, name, orgId) so existing render functions work
   // unchanged. Phase 7+ tightens this when the legacy substrate retires.
   fbUser: null,
+  // False until Firebase Auth has reported the initial persisted-session
+  // state (the first onAuthStateChanged fire, user OR null). Until then,
+  // render() paints a neutral splash instead of the sign-in screen — this is
+  // what stops the login screen flashing for already-signed-in users while
+  // Firebase resolves the persisted session asynchronously on cold load.
+  authResolved: false,
   // Pre-rendered QR-code data URL for renderMfaEnrol. Populated when MFA
   // enrolment is initiated (deferred to user-testing phase).
   qrcodeDataUrl: null,

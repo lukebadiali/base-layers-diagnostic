@@ -139,6 +139,21 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ── orgSecrets/{orgId} (staff-viewable plaintext company passphrase) ──
+    // Recoverable copy of the org's client passphrase so internal/admin staff
+    // can view it later. The org doc's clientPassphraseHash stays the verify
+    // source of truth (inviteClient contract). This MUST be its own top-level
+    // collection — NOT a field on orgs/{orgId}, which is client-readable via
+    // inOrg() — so a client (role "client") can never read the plaintext, even
+    // for their own org. isInternal() = role in ["internal","admin"]; clients
+    // fail it. Written client-side by staff via src/data/org-secrets.js.
+    match /orgSecrets/{orgId} {
+      allow read:   if isInternal();
+      allow create: if isInternal();
+      allow update: if isInternal();
+      allow delete: if false;
+    }
+
     // ── auditLog/{eventId} (AUDIT-07 / Pitfall 17) ────────────────────
     match /auditLog/{eventId} {
       allow read:  if isAdmin();   // internal CANNOT read own audit records

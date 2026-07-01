@@ -238,19 +238,28 @@ export function createChrome(deps) {
       // (sendPasswordResetEmail — src/firebase/auth.js). The Security
       // panel referenced in CONTEXT D-10 (future opt-in MFA surface)
       // will expose any future password-management UI for clients.
-      menu.appendChild(
-        h(
-          "button",
-          {
-            onclick: () => {
-              state.userMenuOpen = false;
-              signOut();
-              render();
-            },
-          },
-          "Sign out",
-        ),
-      );
+      // Immediate tactile feedback: lock the button + swap in a pending label
+      // so the click visibly registers and holds through the sign-out
+      // round-trip (an awaited audit-event emit + fbSignOut). Deliberately no
+      // eager render() — that would tear this button down and swallow the
+      // feedback; the flip to the sign-in screen is driven by main.js's
+      // onAuthStateChanged(null). On failure the button is restored for retry.
+      const signOutBtn = /** @type {HTMLButtonElement} */ (h("button", {}, "Sign out"));
+      signOutBtn.addEventListener("click", async () => {
+        state.userMenuOpen = false;
+        const idleLabel = signOutBtn.textContent;
+        signOutBtn.disabled = true;
+        signOutBtn.classList.add("is-loading");
+        signOutBtn.textContent = "Signing out…";
+        try {
+          await signOut();
+        } catch (_err) {
+          signOutBtn.disabled = false;
+          signOutBtn.classList.remove("is-loading");
+          signOutBtn.textContent = idleLabel;
+        }
+      });
+      menu.appendChild(signOutBtn);
       chip.appendChild(menu);
 
       // click-outside to close

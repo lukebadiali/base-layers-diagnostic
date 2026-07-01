@@ -98,17 +98,31 @@ export function createAuthView(deps) {
     form.appendChild(h("div", { class: "auth-field" }, [h("label", {}, "Email"), email]));
     form.appendChild(h("div", { class: "auth-field" }, [h("label", {}, "Password"), password]));
 
-    const submit = h("button", { type: "submit", class: "auth-submit" }, "Sign in");
+    const submit = /** @type {HTMLButtonElement} */ (
+      h("button", { type: "submit", class: "auth-submit" }, "Sign in")
+    );
     form.appendChild(submit);
 
     form.addEventListener("submit", async (/** @type {Event} */ e) => {
       e.preventDefault();
       const emailVal = /** @type {HTMLInputElement} */ (email).value;
       const passVal = /** @type {HTMLInputElement} */ (password).value;
+      // Immediate tactile feedback: lock the button + swap in a pending label so
+      // the click visibly registers and the state holds through the auth
+      // round-trip and the page swap. On success (and on the MFA-required path)
+      // the post-auth render tears this view down, so only the failure path
+      // needs to restore the button for a retry.
+      const idleLabel = submit.textContent;
+      submit.disabled = true;
+      submit.classList.add("is-loading");
+      submit.textContent = "Signing in…";
       try {
         if (deps.signInEmailPassword) await deps.signInEmailPassword(emailVal, passVal);
       } catch (err) {
         notify("error", (err && /** @type {*} */ (err).message) || "Sign-in failed");
+        submit.disabled = false;
+        submit.classList.remove("is-loading");
+        submit.textContent = idleLabel;
       }
     });
     wrap.appendChild(form);

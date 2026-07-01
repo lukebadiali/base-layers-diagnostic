@@ -9,8 +9,17 @@
     <!-- Phase 4 Wave 1 (D-08): self-hosted fonts (assets/fonts/, OFL); Chart.js bundled via npm (loaded transitively by src/main.js). -->
   </head>
   <body>
-    <!-- App shell: gets mounted by src/main.js depending on session state -->
-    <div id="app"></div>
+    <!-- App shell: gets mounted by src/main.js depending on session state.
+         Seeded with the splash so there is zero white flash before main.js
+         runs. main.js's first render() replaces this: it holds the splash
+         until Firebase Auth resolves the persisted session (authResolved),
+         then paints the app or the sign-in screen. Keep in sync with
+         renderSplash() in src/main.js and .auth-splash in styles.css. -->
+    <div id="app">
+      <div class="auth-splash" role="status" aria-label="Loading">
+        <img class="auth-splash-logo" src="assets/logo.png?v=54" alt="BeDeveloped" />
+      </div>
+    </div>
 
     <!-- Modal host -->
     <div id="modalRoot" class="modal-root hidden" role="dialog" aria-modal="true"></div>

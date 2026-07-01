@@ -1572,6 +1572,45 @@ a:hover {
 }
 
 /* ============================================================
+   SPLASH (cold-load holding screen)
+   ============================================================ */
+/* Shown on the initial paint while Firebase Auth resolves the persisted
+   session, so an already-signed-in user never sees the sign-in form flash.
+   Seeded statically in index.html #app and re-rendered by renderSplash() in
+   src/main.js until authResolved flips. Muted app background + centred
+   wordmark reads as an intentional loading state, not a broken white page. */
+.auth-splash {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-muted);
+}
+.auth-splash-logo {
+  width: 180px;
+  max-width: 55%;
+  height: auto;
+  opacity: 0.9;
+  animation: auth-splash-pulse 1.4s ease-in-out infinite;
+}
+@keyframes auth-splash-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+/* Respect reduced-motion: hold a steady logo instead of pulsing. */
+@media (prefers-reduced-motion: reduce) {
+  .auth-splash-logo {
+    animation: none;
+    opacity: 0.8;
+  }
+}
+
+/* ============================================================
    LOGIN SCREEN
    ============================================================ */
 .auth-wrap {
@@ -1744,6 +1783,49 @@ a:hover {
 }
 .auth-submit:hover {
   background: var(--brand-2);
+}
+.auth-submit:disabled,
+.user-menu button:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+/* Pending state for auth actions: the JS click handler adds .is-loading and
+   swaps the label ("Signing in…" / "Signing out…"). The ::before renders a
+   spinner in currentColor so it reads on both the brand-filled submit button
+   and the light user-menu button — immediate tactile feedback that holds
+   through the auth round-trip and the page swap. */
+.auth-submit.is-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.user-menu button.is-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.auth-submit.is-loading::before,
+.user-menu button.is-loading::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: auth-spin 0.6s linear infinite;
+}
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-submit.is-loading::before,
+  .user-menu button.is-loading::before {
+    animation-duration: 1.6s;
+  }
 }
 .auth-error {
   color: var(--red);

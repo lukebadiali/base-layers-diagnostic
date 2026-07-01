@@ -93,6 +93,11 @@ import { setRoute as routerSetRoute, renderRoute as routerRenderRoute } from "./
 // BeDeveloped staff" (admin OR internal). isStaff is the right predicate
 // at almost every site; see src/auth/role-predicates.js for the contract.
 import { isStaff, mfaEnrolmentRequiredForRole } from "./auth/role-predicates.js";
+// Client-side 30-day session-age cap. Firebase's default persistence keeps
+// returning users signed in indefinitely; isSessionExpired gates the boot path
+// so a user whose last interactive sign-in is older than 30 days is bounced
+// back to the sign-in screen. See src/auth/session-policy.js for the rationale.
+import { isSessionExpired } from "./auth/session-policy.js";
 
 // Phase 2 (D-04 supersedes Phase 1 D-14): index.html now loads this file as
 // type="module". Imports below are populated by Waves 1-4.
@@ -832,6 +837,19 @@ import {
     ensureChatSubscription(user);
     document.body.classList.toggle("client-view", !!(user && user.role === "client"));
     if (!user) {
+      // Cold-load flash guard: on first paint Firebase hasn't yet reported the
+      // persisted session (onAuthStateChanged is async), so `user` is null even
+      // for an already-signed-in user. Painting the sign-in screen here and
+      // then swapping to the app a beat later is the "login screen flashes"
+      // glitch. Until auth resolves, show a neutral branded splash instead —
+      // the first onAuthStateChanged fire (user OR null) flips authResolved and
+      // re-renders into the real screen. Legacy localStorage users are never
+      // null here (currentUser() resolved them synchronously), so they skip the
+      // splash entirely.
+      if (!state.authResolved) {
+        app.appendChild(renderSplash());
+        return;
+      }
       // Pre-auth routes: forgot-password (and forgot-mfa) need to be reachable
       // without an active Firebase session, so check them before falling
       // through to the legacy renderAuth login screen.
@@ -1082,6 +1100,21 @@ import {
     },
     unenrollAllMfa: fbUnenrollAllMfa,
   });
+
+  // ================================================================
+  // SPLASH (cold-load, pre-auth-resolution)
+  // ================================================================
+  // Neutral holding screen shown on the initial paint while Firebase Auth
+  // resolves the persisted session (see the authResolved gate in render()).
+  // Deliberately minimal — just the wordmark on the app background — so a
+  // returning, already-signed-in user sees a calm loading state that dissolves
+  // straight into the app, never the sign-in form. Mirrors the static markup
+  // seeded in index.html's #app so there is no white flash before this mounts.
+  function renderSplash() {
+    return h("div", { class: "auth-splash", role: "status", "aria-label": "Loading" }, [
+      h("img", { class: "auth-splash-logo", src: "assets/logo.png?v=54", alt: "BeDeveloped" }),
+    ]);
+  }
 
   // ================================================================
   // AUTH / LOGIN SCREEN (legacy)
@@ -3945,6 +3978,12 @@ import {
   // work unchanged. Also keeps window.FB.currentUser in sync until the IIFE
   // body migrates to fully use state.fbUser (Phase 7+ cleanup-ledger).
   fbOnAuthStateChanged(fbAuthInstance, async (fbUser) => {
+    // Firebase has now reported the persisted-session state (this is the first
+    // fire on cold load). Flip the flash guard so render() stops showing the
+    // splash and paints the real screen — sign-in when null, app when signed
+    // in. Set unconditionally, before the null split, so both paths clear it.
+    state.authResolved = true;
+
     if (!fbUser) {
       state.fbUser = null;
       if (typeof window !== "undefined") {
@@ -3952,6 +3991,23 @@ import {
         /** @type {*} */ (window).FB.currentUser = null;
       }
       render();
+      return;
+    }
+
+    // 30-day session cap (see src/auth/session-policy.js). Persistence keeps the
+    // user signed in indefinitely; if their last interactive sign-in is older
+    // than 30 days, sign them out here. fbSignOut fires onAuthStateChanged again
+    // with null, which repaints the sign-in screen (authResolved is already
+    // true, so no splash). Runs before the heavier claims/orgs hydration so an
+    // expired session does no needless work.
+    if (isSessionExpired(fbUser.metadata && fbUser.metadata.lastSignInTime, Date.now())) {
+      notify("info", "Your session has expired — please sign in again.");
+      try {
+        await signOut();
+      } catch (_signOutErr) {
+        // Best-effort: if the sign-out call itself fails, the next boot will
+        // re-evaluate the same expired timestamp and try again.
+      }
       return;
     }
 
@@ -4076,6 +4132,19 @@ import {
 
     render();
   });
+
+  // Splash safety net: if Firebase Auth never reports (SDK init stalls, App
+  // Check origin failure, offline cold-start), authResolved would stay false
+  // and the splash would hang forever. After a short grace period, flip the
+  // gate and render anyway — with no user that falls through to the sign-in
+  // screen, which is the correct, actionable fallback. Harmless once auth has
+  // already resolved (render() is idempotent for a signed-in user).
+  setTimeout(() => {
+    if (!state.authResolved) {
+      state.authResolved = true;
+      render();
+    }
+  }, 2500);
 
   // Phase 6 follow-up (firstRun loop part 2): onAuthStateChanged does NOT fire
   // on a forced ID-token refresh — only sign-in / sign-out / user-changed.

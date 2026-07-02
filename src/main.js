@@ -5217,9 +5217,11 @@ Any questions, just let me know.`;
   // modal. The eye lazily fetches the plaintext from the staff-only
   // orgSecrets/{orgId} doc (src/data/org-secrets.js) and caches it; toggling
   // off re-masks without re-fetching. Orgs whose passphrase predates this
-  // feature have only the hash, so the reveal shows a "not saved" note. Each
-  // reveal emits a best-effort org.passphrase.viewed audit event — NEVER with
-  // the secret in the payload (Pitfall 17).
+  // feature have only the hash, so the reveal shows a "not saved" note; a
+  // FAILED fetch shows a distinct retry message and is never cached, so the
+  // two states can't be confused. Each reveal emits a best-effort
+  // org.passphrase.viewed audit event — NEVER with the secret in the payload
+  // (Pitfall 17).
   function buildCurrentPassphraseRow(orgId) {
     const value = h("code", { class: "pw-current-value" }, "••••••••");
     const btn = /** @type {HTMLButtonElement} */ (
@@ -5253,12 +5255,20 @@ Any questions, just let me know.`;
       if (cached === undefined) {
         btn.disabled = true;
         value.textContent = "Loading…";
+        let fetched;
         try {
-          cached = await getOrgPassphraseSecret(orgId);
+          fetched = await getOrgPassphraseSecret(orgId);
         } catch (_e) {
-          cached = null;
+          // Leave `cached` undefined so the next reveal retries — a transient
+          // failure (offline, permission hiccup) must not read as "not saved".
+          fetched = undefined;
         }
         btn.disabled = false;
+        if (fetched === undefined) {
+          value.textContent = "Couldn't load the passphrase — hide and retry.";
+          return;
+        }
+        cached = fetched;
       }
       value.textContent = cached
         ? cached

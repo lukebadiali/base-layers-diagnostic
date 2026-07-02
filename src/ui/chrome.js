@@ -18,6 +18,7 @@
 // through deps.
 import { h } from "./dom.js";
 import { initials } from "./format.js";
+import { pendingButton } from "./pending-button.js";
 
 /**
  * @typedef {{
@@ -247,16 +248,12 @@ export function createChrome(deps) {
       const signOutBtn = /** @type {HTMLButtonElement} */ (h("button", {}, "Sign out"));
       signOutBtn.addEventListener("click", async () => {
         state.userMenuOpen = false;
-        const idleLabel = signOutBtn.textContent;
-        signOutBtn.disabled = true;
-        signOutBtn.classList.add("is-loading");
-        signOutBtn.textContent = "Signing out…";
+        const pending = pendingButton(signOutBtn, "Signing out…");
+        pending.start();
         try {
           await signOut();
         } catch (_err) {
-          signOutBtn.disabled = false;
-          signOutBtn.classList.remove("is-loading");
-          signOutBtn.textContent = idleLabel;
+          pending.stop();
         }
       });
       menu.appendChild(signOutBtn);

@@ -1785,7 +1785,8 @@ a:hover {
   background: var(--brand-2);
 }
 .auth-submit:disabled,
-.user-menu button:disabled {
+.user-menu button:disabled,
+.btn:disabled {
   cursor: default;
   opacity: 0.72;
 }

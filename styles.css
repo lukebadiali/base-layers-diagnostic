@@ -3626,6 +3626,25 @@ a:hover {
   border-radius: 6px;
   word-break: break-all;
 }
+/* Compact reveal inside the Manage-people org row's green "passphrase set"
+   badge — same elements as .pw-current-row, scaled to the 11px badge line.
+   The value stays ink-coloured (not green) so the secret reads as content,
+   not status. */
+.pw-badge-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pw-badge-line .pw-current-value {
+  font-size: 11px;
+  padding: 1px 6px;
+  color: var(--ink-2);
+}
+.pw-badge-line .pw-toggle {
+  font-size: 12px;
+  padding: 2px 4px;
+}
 .settings-text-narrow {
   color: var(--ink-2);
   font-size: 13.5px;

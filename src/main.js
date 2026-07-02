@@ -188,6 +188,7 @@ import { PassphraseInvalidError, CrossOrgError, PassphraseNotSetError } from "./
 import { h, $, $$ as _$$ } from "./ui/dom.js";
 import { createVisibilityToggle } from "./ui/password-toggle.js";
 import { pendingButton } from "./ui/pending-button.js";
+import { createPassphraseReveal } from "./ui/passphrase-reveal.js";
 import { modal, promptText, confirmDialog } from "./ui/modal.js";
 // formatWhen/iso/initials/firstNameFromAuthor already imported above from
 // ./src/util/ids.js — Wave 4 may switch consumers to ./src/ui/format.js
@@ -2762,16 +2763,27 @@ import {
           ]),
         );
         const hasPass = !!(o && o.clientPassphraseHash);
+        // With a passphrase set, the green badge carries the same masked
+        // value + eye reveal as the Set-passphrase modal so admins can look
+        // it up without opening the modal. Lazy: the orgSecrets doc is only
+        // fetched when THIS row's eye is clicked — never in bulk on render.
+        const passBadge = h(
+          "div",
+          {
+            class: "pw-badge-line",
+            style: `font-size:11px; margin-top:2px; color: ${hasPass ? "var(--green)" : "var(--amber)"};`,
+          },
+          hasPass ? "✓ passphrase set" : "⚠ no passphrase",
+        );
+        if (hasPass) {
+          const { value, btn } = orgPassphraseReveal(m.id);
+          passBadge.appendChild(value);
+          passBadge.appendChild(btn);
+        }
         row.appendChild(
           h("div", {}, [
             h("div", {}, `${clients.length} client user${clients.length === 1 ? "" : "s"}`),
-            h(
-              "div",
-              {
-                style: `font-size:11px; margin-top:2px; color: ${hasPass ? "var(--green)" : "var(--amber)"};`,
-              },
-              hasPass ? "✓ passphrase set" : "⚠ no passphrase",
-            ),
+            passBadge,
           ]),
         );
         row.appendChild(h("div", {}, formatDate(o?.createdAt)));
@@ -5205,62 +5217,24 @@ Any questions, just let me know.`;
     ]);
   }
 
-  // Builds the masked "Current passphrase" reveal row for the Set-passphrase
-  // modal. The eye lazily fetches the plaintext from the staff-only
-  // orgSecrets/{orgId} doc (src/data/org-secrets.js) and caches it; toggling
-  // off re-masks without re-fetching. Orgs whose passphrase predates this
-  // feature have only the hash, so the reveal shows a "not saved" note. Each
-  // reveal emits a best-effort org.passphrase.viewed audit event — NEVER with
-  // the secret in the payload (Pitfall 17).
-  function buildCurrentPassphraseRow(orgId) {
-    const value = h("code", { class: "pw-current-value" }, "••••••••");
-    const btn = /** @type {HTMLButtonElement} */ (
-      h(
-        "button",
-        {
-          type: "button",
-          class: "pw-toggle",
-          "aria-pressed": "false",
-          "aria-label": "Show current passphrase",
-          title: "Show current passphrase",
-        },
-        "👁",
-      )
-    );
-    let revealed = false;
-    /** @type {string|null|undefined} */
-    let cached; // undefined = not fetched yet
-    btn.addEventListener("click", async () => {
-      revealed = !revealed;
-      if (!revealed) {
-        value.textContent = "••••••••";
-        btn.setAttribute("aria-pressed", "false");
-        btn.setAttribute("aria-label", "Show current passphrase");
-        btn.classList.remove("is-revealed");
-        return;
-      }
-      btn.setAttribute("aria-pressed", "true");
-      btn.setAttribute("aria-label", "Hide current passphrase");
-      btn.classList.add("is-revealed");
-      if (cached === undefined) {
-        btn.disabled = true;
-        value.textContent = "Loading…";
-        try {
-          cached = await getOrgPassphraseSecret(orgId);
-        } catch (_e) {
-          cached = null;
-        }
-        btn.disabled = false;
-      }
-      value.textContent = cached
-        ? cached
-        : "Not saved for viewing — set/rotate the passphrase to enable.";
-      try {
-        emitAuditEvent("org.passphrase.viewed", { type: "org", id: orgId, orgId }, {});
-      } catch (_e) {
-        /* best-effort — never block the reveal on audit failure */
-      }
+  // Wires the shared masked-value + eye reveal (src/ui/passphrase-reveal.js)
+  // to this org's staff-only orgSecrets/{orgId} doc and audit trail. Every
+  // reveal surface (Set-passphrase modal row, Manage-people org rows) goes
+  // through here so the fetch/cache/error contract and the best-effort
+  // org.passphrase.viewed audit event — NEVER with the secret in the payload
+  // (Pitfall 17) — stay identical everywhere.
+  function orgPassphraseReveal(orgId) {
+    return createPassphraseReveal({
+      fetchSecret: () => getOrgPassphraseSecret(orgId),
+      onReveal: () =>
+        emitAuditEvent("org.passphrase.viewed", { type: "org", id: orgId, orgId }, {}),
     });
+  }
+
+  // Builds the labelled "Current passphrase" reveal row for the Set-passphrase
+  // modal.
+  function buildCurrentPassphraseRow(orgId) {
+    const { value, btn } = orgPassphraseReveal(orgId);
     return h("div", { class: "pw-current-row" }, [
       h("span", { class: "pw-current-label" }, "Current passphrase:"),
       value,

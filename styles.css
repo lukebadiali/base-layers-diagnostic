@@ -1789,12 +1789,14 @@ a:hover {
   cursor: default;
   opacity: 0.72;
 }
-/* Pending state for auth actions: the JS click handler adds .is-loading and
-   swaps the label ("Signing in…" / "Signing out…"). The ::before renders a
-   spinner in currentColor so it reads on both the brand-filled submit button
-   and the light user-menu button — immediate tactile feedback that holds
-   through the auth round-trip and the page swap. */
-.auth-submit.is-loading {
+/* Pending state for auth + account-creation actions: the JS click handler adds
+   .is-loading and swaps the label ("Signing in…" / "Signing out…" / "Creating…").
+   The ::before renders a spinner in currentColor so it reads on the brand-filled
+   submit button, the light user-menu button, and the modal .btn "Create account"
+   buttons alike — immediate tactile feedback that holds through the 1–2s
+   round-trip and the page/modal swap. */
+.auth-submit.is-loading,
+.btn.is-loading {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1806,7 +1808,8 @@ a:hover {
   gap: 8px;
 }
 .auth-submit.is-loading::before,
-.user-menu button.is-loading::before {
+.user-menu button.is-loading::before,
+.btn.is-loading::before {
   content: "";
   width: 13px;
   height: 13px;
@@ -1823,7 +1826,8 @@ a:hover {
 }
 @media (prefers-reduced-motion: reduce) {
   .auth-submit.is-loading::before,
-  .user-menu button.is-loading::before {
+  .user-menu button.is-loading::before,
+  .btn.is-loading::before {
     animation-duration: 1.6s;
   }
 }

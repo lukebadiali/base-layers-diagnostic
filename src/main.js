@@ -4821,6 +4821,20 @@ import {
     const errBox = h("div");
 
     const createBtn = h("button", { class: "btn" }, "Create account");
+    // Processing feedback: mirror the sign-in button's pending state so the
+    // 1–2s inviteClient round-trip reads as "working", not "stuck" — same
+    // .is-loading spinner as the auth buttons (styles.css) plus a label swap.
+    const createIdleLabel = createBtn.textContent;
+    const setCreatePending = () => {
+      createBtn.setAttribute("disabled", "");
+      createBtn.classList.add("is-loading");
+      createBtn.textContent = "Creating…";
+    };
+    const clearCreatePending = () => {
+      createBtn.removeAttribute("disabled");
+      createBtn.classList.remove("is-loading");
+      createBtn.textContent = createIdleLabel;
+    };
 
     /**
      * @param {Error} err
@@ -4862,7 +4876,7 @@ import {
         return;
       }
 
-      createBtn.setAttribute("disabled", "");
+      setCreatePending();
       try {
         const res = await inviteClient({
           email: em,
@@ -4874,7 +4888,7 @@ import {
         if (res && res.existed === true && !confirmReset) {
           // Existed-user path: prompt admin to confirm reset (re-flips firstRun
           // and overwrites the existing password back to the org passphrase).
-          createBtn.removeAttribute("disabled");
+          clearCreatePending();
           const chosenOrgForCopy = loadOrgMetas().find((o) => o.id === orgIdVal);
           const orgName = (chosenOrgForCopy && chosenOrgForCopy.name) || "this organisation";
           const stateDesc = res.hasFirstRun ? "first-run" : "completed";
@@ -4925,7 +4939,7 @@ import {
       } catch (err) {
         surfaceError(/** @type {Error} */ (err));
       } finally {
-        createBtn.removeAttribute("disabled");
+        clearCreatePending();
       }
     }
 
@@ -5071,6 +5085,19 @@ Any questions, just let me know.`;
     });
     const errBox = h("div");
     const createBtn = h("button", { class: "btn" }, "Create account");
+    // Processing feedback: same pending-spinner treatment as the client invite
+    // + sign-in buttons so the 1–2s inviteInternal round-trip shows progress.
+    const createIdleLabel = createBtn.textContent;
+    const setCreatePending = () => {
+      createBtn.setAttribute("disabled", "");
+      createBtn.classList.add("is-loading");
+      createBtn.textContent = "Creating…";
+    };
+    const clearCreatePending = () => {
+      createBtn.removeAttribute("disabled");
+      createBtn.classList.remove("is-loading");
+      createBtn.textContent = createIdleLabel;
+    };
 
     async function doAdd() {
       const em = (email.value || "").trim().toLowerCase();
@@ -5087,7 +5114,7 @@ Any questions, just let me know.`;
         return;
       }
 
-      createBtn.setAttribute("disabled", "");
+      setCreatePending();
       try {
         const res = await inviteInternal({ email: em, name: nameVal, role: roleVal });
         m.close();
@@ -5103,7 +5130,7 @@ Any questions, just let me know.`;
           ),
         );
       } finally {
-        createBtn.removeAttribute("disabled");
+        clearCreatePending();
       }
     }
 

@@ -43,6 +43,7 @@ export const AUDIT_EVENTS = Object.freeze({
   DATA_DOCUMENT_PERMANENTLY_DELETE_REQUESTED: "data.document.permanentlyDelete.requested",
   DATA_MESSAGE_PERMANENTLY_DELETE_REQUESTED: "data.message.permanentlyDelete.requested",
   DATA_FUNNELCOMMENT_PERMANENTLY_DELETE_REQUESTED: "data.funnelComment.permanentlyDelete.requested",
+  ORG_PASSPHRASE_VIEWED: "org.passphrase.viewed",
 });
 
 /**

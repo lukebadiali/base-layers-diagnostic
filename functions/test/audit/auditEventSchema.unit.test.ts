@@ -202,6 +202,17 @@ describe("auditEventInput — Phase 9 enum extension (Wave 3 substrate)", () => 
     expect(out.type).toBe("iam.claims.set");
   });
 
+  // 2026-07: org.passphrase.viewed — client-emitted when staff reveal an org's
+  // stored plaintext passphrase in the Set-passphrase modal.
+  it("accepts org.passphrase.viewed (staff viewed an org's stored passphrase)", () => {
+    const out = auditEventInput.parse({
+      type: "org.passphrase.viewed",
+      target: { type: "org", id: "org_1", orgId: "org_1" },
+      clientReqId: FIXED_UUID,
+    });
+    expect(out.type).toBe("org.passphrase.viewed");
+  });
+
   // Test 9: data.action.delete bare is NOT in the enum (action only has soft/restore/perm new variants;
   // the Phase 7 baseline only added bare `delete` for document/message/comment/user/org).
   // This test pins the enum is exactly the intended shape, not over-broad.

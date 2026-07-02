@@ -3576,6 +3576,55 @@ a:hover {
   flex-direction: column;
   gap: 10px;
 }
+/* Passphrase visibility toggle (eye) — src/ui/password-toggle.js + the
+   Set-passphrase modal reveal row (src/main.js buildCurrentPassphraseRow). */
+.pw-field {
+  position: relative;
+  display: block;
+}
+.pw-field > input {
+  width: 100%;
+  padding-right: 40px;
+  box-sizing: border-box;
+}
+.pw-toggle {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+  opacity: 0.55;
+}
+.pw-toggle:hover,
+.pw-toggle.is-revealed {
+  opacity: 1;
+}
+.pw-field > .pw-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.pw-current-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 12px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.pw-current-label {
+  color: var(--ink-3);
+}
+.pw-current-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--surface-muted);
+  padding: 2px 8px;
+  border-radius: 6px;
+  word-break: break-all;
+}
 .settings-text-narrow {
   color: var(--ink-2);
   font-size: 13.5px;

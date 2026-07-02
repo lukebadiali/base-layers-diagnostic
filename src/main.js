@@ -79,6 +79,7 @@ import { createAuthView } from "./views/auth.js";
 // (kill-switch + local-dev path; mirrors the FN-07 reCAPTCHA placeholder
 // pattern in vite.config.js).
 import { initSentryBrowser, setUser as sentrySetUser } from "./observability/sentry.js";
+import { emitAuditEvent } from "./observability/audit-events.js";
 
 // Application state singleton — extracted byte-identical to src/state.js
 // (D-02). The IIFE closure references the imported binding directly; no
@@ -163,6 +164,7 @@ import {
 // invited clients out of the bricked-first-sign-in failure mode. Pure-logic
 // helper — zero firebase/* imports per CLAUDE.md domain/* invariant.
 import { ORG_PASSPHRASE_MIN_LENGTH, validateOrgPassphrase } from "./auth/passphrase-policy.js";
+import { setOrgPassphraseSecret, getOrgPassphraseSecret } from "./data/org-secrets.js";
 // Phase 06.1 Wave 2 (AUTH-16 / D-14): inviteClient callable wrapper + AUTH-12
 // chokepoint error classes. The Invite Client modal (openInviteClientModal,
 // l.~4906) calls inviteClient on submit; PassphraseInvalidError / CrossOrgError /
@@ -184,6 +186,7 @@ import { PassphraseInvalidError, CrossOrgError, PassphraseNotSetError } from "./
 // here so app.js's per-file `no-unused-vars` rule (^_ argsIgnorePattern)
 // permits the unused import without re-introducing an eslint-disable.
 import { h, $, $$ as _$$ } from "./ui/dom.js";
+import { createVisibilityToggle } from "./ui/password-toggle.js";
 import { modal, promptText, confirmDialog } from "./ui/modal.js";
 // formatWhen/iso/initials/firstNameFromAuthor already imported above from
 // ./src/util/ids.js — Wave 4 may switch consumers to ./src/ui/format.js
@@ -740,6 +743,15 @@ import {
     if (!org) return false;
     org.clientPassphraseHash = await hashString(pass);
     saveOrg(org);
+    // Also stash the plaintext in the staff-only orgSecrets/{orgId} doc so
+    // internal/admin can view it later (Set-passphrase modal reveal row). The
+    // hash above stays the verify source of truth — this is best-effort so a
+    // secrets-write failure never blocks setting the passphrase itself.
+    try {
+      await setOrgPassphraseSecret(orgId, pass);
+    } catch (_e) {
+      /* best-effort — passphrase still works; only the reveal degrades */
+    }
     return true;
   }
   // Phase 06.1 Wave 3 (AUTH-17 / D-16): the legacy reader's sole caller
@@ -5201,6 +5213,69 @@ Any questions, just let me know.`;
     ]);
   }
 
+  // Builds the masked "Current passphrase" reveal row for the Set-passphrase
+  // modal. The eye lazily fetches the plaintext from the staff-only
+  // orgSecrets/{orgId} doc (src/data/org-secrets.js) and caches it; toggling
+  // off re-masks without re-fetching. Orgs whose passphrase predates this
+  // feature have only the hash, so the reveal shows a "not saved" note. Each
+  // reveal emits a best-effort org.passphrase.viewed audit event — NEVER with
+  // the secret in the payload (Pitfall 17).
+  function buildCurrentPassphraseRow(orgId) {
+    const value = h("code", { class: "pw-current-value" }, "••••••••");
+    const btn = /** @type {HTMLButtonElement} */ (
+      h(
+        "button",
+        {
+          type: "button",
+          class: "pw-toggle",
+          "aria-pressed": "false",
+          "aria-label": "Show current passphrase",
+          title: "Show current passphrase",
+        },
+        "👁",
+      )
+    );
+    let revealed = false;
+    /** @type {string|null|undefined} */
+    let cached; // undefined = not fetched yet
+    btn.addEventListener("click", async () => {
+      revealed = !revealed;
+      if (!revealed) {
+        value.textContent = "••••••••";
+        btn.setAttribute("aria-pressed", "false");
+        btn.setAttribute("aria-label", "Show current passphrase");
+        btn.classList.remove("is-revealed");
+        return;
+      }
+      btn.setAttribute("aria-pressed", "true");
+      btn.setAttribute("aria-label", "Hide current passphrase");
+      btn.classList.add("is-revealed");
+      if (cached === undefined) {
+        btn.disabled = true;
+        value.textContent = "Loading…";
+        try {
+          cached = await getOrgPassphraseSecret(orgId);
+        } catch (_e) {
+          cached = null;
+        }
+        btn.disabled = false;
+      }
+      value.textContent = cached
+        ? cached
+        : "Not saved for viewing — set/rotate the passphrase to enable.";
+      try {
+        emitAuditEvent("org.passphrase.viewed", { type: "org", id: orgId, orgId }, {});
+      } catch (_e) {
+        /* best-effort — never block the reveal on audit failure */
+      }
+    });
+    return h("div", { class: "pw-current-row" }, [
+      h("span", { class: "pw-current-label" }, "Current passphrase:"),
+      value,
+      btn,
+    ]);
+  }
+
   function openSetOrgPassphrase(orgId, orgName) {
     const org = loadOrg(orgId);
     const existing = !!(org && org.clientPassphraseHash);
@@ -5212,6 +5287,21 @@ Any questions, just let me know.`;
     });
     const confirm = h("input", { type: "password", placeholder: "Confirm passphrase" });
     const errBox = h("div");
+
+    // Show-while-typing: an eye toggle beside each masked input so the admin can
+    // unmask what they're entering as they set the passphrase.
+    const nwField = h("div", { class: "pw-field" }, [
+      nw,
+      createVisibilityToggle(/** @type {HTMLInputElement} */ (nw), { label: "passphrase" }),
+    ]);
+    const confirmField = h("div", { class: "pw-field" }, [
+      confirm,
+      createVisibilityToggle(/** @type {HTMLInputElement} */ (confirm), { label: "passphrase" }),
+    ]);
+
+    // View-existing: masked "Current passphrase" row when one is already set.
+    const currentRow = existing ? buildCurrentPassphraseRow(orgId) : null;
+
     const m = modal([
       h("h3", {}, (existing ? "Change" : "Set") + " passphrase — " + orgName),
       h(
@@ -5221,7 +5311,8 @@ Any questions, just let me know.`;
           orgName +
           " the new one.",
       ),
-      h("div", { class: "settings-form-flex" }, [nw, confirm]),
+      currentRow,
+      h("div", { class: "settings-form-flex" }, [nwField, confirmField]),
       errBox,
       h("div", { class: "row" }, [
         h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),

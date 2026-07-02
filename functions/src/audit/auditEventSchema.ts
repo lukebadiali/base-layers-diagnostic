@@ -120,6 +120,12 @@ export const auditEventType = z.enum([
   "auth.internal.invite", // success: admin/internal account created
   "auth.internal.delete", // success: admin/internal user + /users mirror deleted
   "auth.internal.delete.failed", // failure: payload.reason discriminator
+  // 2026-07: staff viewed an org's stored plaintext company passphrase via the
+  // Set-passphrase modal reveal row (src/main.js buildCurrentPassphraseRow).
+  // Pure client-emitted "admin looked at the secret" event — no server-side
+  // producer, no .requested companion. NEVER carries the passphrase in payload
+  // (Pitfall 17 — actor is server-overlaid from request.auth.token).
+  "org.passphrase.viewed",
 ]);
 
 export type AuditEventType = z.infer<typeof auditEventType>;

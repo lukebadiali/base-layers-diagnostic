@@ -187,6 +187,7 @@ import { PassphraseInvalidError, CrossOrgError, PassphraseNotSetError } from "./
 // permits the unused import without re-introducing an eslint-disable.
 import { h, $, $$ as _$$ } from "./ui/dom.js";
 import { createVisibilityToggle } from "./ui/password-toggle.js";
+import { pendingButton } from "./ui/pending-button.js";
 import { modal, promptText, confirmDialog } from "./ui/modal.js";
 // formatWhen/iso/initials/firstNameFromAuthor already imported above from
 // ./src/util/ids.js — Wave 4 may switch consumers to ./src/ui/format.js
@@ -4822,19 +4823,9 @@ import {
 
     const createBtn = h("button", { class: "btn" }, "Create account");
     // Processing feedback: mirror the sign-in button's pending state so the
-    // 1–2s inviteClient round-trip reads as "working", not "stuck" — same
-    // .is-loading spinner as the auth buttons (styles.css) plus a label swap.
-    const createIdleLabel = createBtn.textContent;
-    const setCreatePending = () => {
-      createBtn.setAttribute("disabled", "");
-      createBtn.classList.add("is-loading");
-      createBtn.textContent = "Creating…";
-    };
-    const clearCreatePending = () => {
-      createBtn.removeAttribute("disabled");
-      createBtn.classList.remove("is-loading");
-      createBtn.textContent = createIdleLabel;
-    };
+    // 1–2s inviteClient round-trip reads as "working", not "stuck" — shared
+    // pending-button controller (.is-loading spinner in styles.css).
+    const createPending = pendingButton(/** @type {HTMLButtonElement} */ (createBtn), "Creating…");
 
     /**
      * @param {Error} err
@@ -4852,7 +4843,13 @@ import {
       }
     }
 
-    async function doInvite(/** @type {boolean} */ confirmReset) {
+    /**
+     * @param {boolean} confirmReset
+     * @returns {Promise<boolean>} true when the invite completed (account
+     *   created or reset) and the flow has moved on to the instructions
+     *   modal; false on validation failure or error (surfaced in errBox).
+     */
+    async function doInvite(confirmReset) {
       const em = (email.value || "").trim().toLowerCase();
       const nameVal = (name.value || "").trim();
       const orgIdVal = select.value;
@@ -4861,22 +4858,22 @@ import {
       errBox.replaceChildren();
       if (!em || !em.includes("@")) {
         errBox.appendChild(h("div", { class: "auth-error" }, "Enter a valid email."));
-        return;
+        return false;
       }
       if (!nameVal) {
         errBox.appendChild(h("div", { class: "auth-error" }, "Enter the client's name."));
-        return;
+        return false;
       }
       if (!orgs.length || !orgIdVal) {
         errBox.appendChild(h("div", { class: "auth-error" }, "Create an organisation first."));
-        return;
+        return false;
       }
       if (!passVal) {
         errBox.appendChild(h("div", { class: "auth-error" }, "Re-enter the company passphrase."));
-        return;
+        return false;
       }
 
-      setCreatePending();
+      createPending.start();
       try {
         const res = await inviteClient({
           email: em,
@@ -4888,10 +4885,26 @@ import {
         if (res && res.existed === true && !confirmReset) {
           // Existed-user path: prompt admin to confirm reset (re-flips firstRun
           // and overwrites the existing password back to the org passphrase).
-          clearCreatePending();
           const chosenOrgForCopy = loadOrgMetas().find((o) => o.id === orgIdVal);
           const orgName = (chosenOrgForCopy && chosenOrgForCopy.name) || "this organisation";
           const stateDesc = res.hasFirstRun ? "first-run" : "completed";
+          // Pending state must live on the button the admin actually clicks:
+          // opening this modal evicts the invite modal (and createBtn) from
+          // the shared modal root, so decorating createBtn shows nothing.
+          const resetBtn = h("button", { class: "btn" }, "Yes, reset");
+          const resetPending = pendingButton(
+            /** @type {HTMLButtonElement} */ (resetBtn),
+            "Resetting…",
+          );
+          resetBtn.addEventListener("click", async () => {
+            resetPending.start();
+            const ok = await doInvite(true);
+            // Success replaced this modal with the instructions modal — do NOT
+            // close here, that would wipe it from the shared root.
+            if (ok) return;
+            // Failure surfaced in errBox (below); keep the modal open to retry.
+            resetPending.stop();
+          });
           const confirmModal = modal([
             h("h3", {}, "Email already has an account"),
             h(
@@ -4899,6 +4912,9 @@ import {
               { class: "section-explainer" },
               `That email already has a ${stateDesc} account for ${orgName}. Reset their password back to the current company passphrase and re-flip first-run? Their current sign-in will be invalidated.`,
             ),
+            // Re-parent errBox from the (now-evicted) invite modal so the
+            // reset attempt's validation/network errors land somewhere visible.
+            errBox,
             h("div", { class: "row" }, [
               h(
                 "button",
@@ -4908,26 +4924,10 @@ import {
                 },
                 "Cancel",
               ),
-              h(
-                "button",
-                {
-                  class: "btn",
-                  onclick: async () => {
-                    try {
-                      await doInvite(true);
-                      confirmModal.close();
-                    } catch (_e) {
-                      // doInvite already surfaced; ensure the confirm modal closes
-                      // so the admin can see the underlying modal's error.
-                      confirmModal.close();
-                    }
-                  },
-                },
-                "Yes, reset",
-              ),
+              resetBtn,
             ]),
           ]);
-          return;
+          return false;
         }
 
         // Success — close + open instructions modal.
@@ -4936,10 +4936,12 @@ import {
         m.close();
         render();
         openInviteInstructionsModal(client, chosenOrg, true);
+        return true;
       } catch (err) {
         surfaceError(/** @type {Error} */ (err));
+        return false;
       } finally {
-        clearCreatePending();
+        createPending.stop();
       }
     }
 
@@ -5087,17 +5089,7 @@ Any questions, just let me know.`;
     const createBtn = h("button", { class: "btn" }, "Create account");
     // Processing feedback: same pending-spinner treatment as the client invite
     // + sign-in buttons so the 1–2s inviteInternal round-trip shows progress.
-    const createIdleLabel = createBtn.textContent;
-    const setCreatePending = () => {
-      createBtn.setAttribute("disabled", "");
-      createBtn.classList.add("is-loading");
-      createBtn.textContent = "Creating…";
-    };
-    const clearCreatePending = () => {
-      createBtn.removeAttribute("disabled");
-      createBtn.classList.remove("is-loading");
-      createBtn.textContent = createIdleLabel;
-    };
+    const createPending = pendingButton(/** @type {HTMLButtonElement} */ (createBtn), "Creating…");
 
     async function doAdd() {
       const em = (email.value || "").trim().toLowerCase();
@@ -5114,7 +5106,7 @@ Any questions, just let me know.`;
         return;
       }
 
-      setCreatePending();
+      createPending.start();
       try {
         const res = await inviteInternal({ email: em, name: nameVal, role: roleVal });
         m.close();
@@ -5130,7 +5122,7 @@ Any questions, just let me know.`;
           ),
         );
       } finally {
-        clearCreatePending();
+        createPending.stop();
       }
     }
 

@@ -12,6 +12,7 @@
 // Phase 4 carry-forward: renderAuth is preserved as a backward-compat alias
 // for renderSignIn so existing callers do not break during the Wave 5 cutover.
 import { h as defaultH } from "../ui/dom.js";
+import { pendingButton } from "../ui/pending-button.js";
 
 /**
  * @typedef {{
@@ -112,17 +113,13 @@ export function createAuthView(deps) {
       // round-trip and the page swap. On success (and on the MFA-required path)
       // the post-auth render tears this view down, so only the failure path
       // needs to restore the button for a retry.
-      const idleLabel = submit.textContent;
-      submit.disabled = true;
-      submit.classList.add("is-loading");
-      submit.textContent = "Signing in…";
+      const pending = pendingButton(submit, "Signing in…");
+      pending.start();
       try {
         if (deps.signInEmailPassword) await deps.signInEmailPassword(emailVal, passVal);
       } catch (err) {
         notify("error", (err && /** @type {*} */ (err).message) || "Sign-in failed");
-        submit.disabled = false;
-        submit.classList.remove("is-loading");
-        submit.textContent = idleLabel;
+        pending.stop();
       }
     });
     wrap.appendChild(form);

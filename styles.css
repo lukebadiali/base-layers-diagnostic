@@ -1051,6 +1051,12 @@ a:hover {
 .likert button.sel .t {
   color: #fff;
 }
+.likert.read-only button {
+  cursor: default;
+}
+.likert.read-only button:not(.sel):hover {
+  border-color: var(--line);
+}
 
 .note {
   width: 100%;

@@ -131,10 +131,7 @@ import {
   respondentsForRound,
   answeredCount as _answeredCount,
 } from "./domain/scoring.js";
-import {
-  userCompletionPct as _userCompletionPct,
-  orgSummary as _orgSummary,
-} from "./domain/completion.js";
+import { orgSummary as _orgSummary } from "./domain/completion.js";
 import {
   unreadCountForPillar as _unreadCountForPillar,
   unreadCountTotal as _unreadCountTotal,
@@ -470,12 +467,10 @@ import {
 
   // Phase 2 Wave 3 (D-05): wrappers for completion + unread (Pattern E).
   // Bodies extracted to src/domain/completion.js + src/domain/unread.js.
-  // userCompletionPct + orgSummary inject DATA + pillarScore; unread wrappers
+  // orgSummary injects DATA + pillarScore; unread wrappers
   // inject saveOrg / commentsFor / state / lastReadMillis / msgMillis
   // (all defined later in the IIFE — safe because wrappers resolve those names
   // at call time, by which point they exist in scope).
-  const userCompletionPct = (org, roundId, userId) =>
-    _userCompletionPct(org, roundId, userId, DATA);
   const orgSummary = (org) => _orgSummary(org, DATA, pillarScore);
   // Phase 5 Wave 4 (DATA-07 / H7 fix): the domain comparators were rewritten
   // to consume server-time Timestamp values via duck-typed toMillis(). The
@@ -1776,35 +1771,10 @@ import {
         "p",
         { class: "view-sub" },
         isClientView(user)
-          ? "Score each pillar honestly against the diagnostic questions. Your responses join the team view."
+          ? "Review how the business scored against each pillar's diagnostic questions."
           : "Score each pillar against its diagnostic questions.",
       ),
     );
-
-    // Show current user's own completion if client/internal preview
-    if (isClientView(user)) {
-      const pct = userCompletionPct(org, org.currentRoundId, user.id);
-      frag.appendChild(
-        h("div", { class: "client-progress-banner" }, [
-          h("span", { class: "avatar" }, initials(user.name || user.email)),
-          h("div", { class: "u-flex-1" }, [
-            h("div", { class: "u-fw-600" }, "Your progress"),
-            h(
-              "div",
-              { class: "client-progress-meta" },
-              `${pct}% of ${DATA.pillars.length * DATA.pillars[0].diagnostics.length} questions answered`,
-            ),
-          ]),
-          h(
-            "div",
-            { class: "client-progress-track" },
-            h("span", {
-              style: `display:block; height:100%; width:${pct}%; background:var(--brand);`,
-            }),
-          ),
-        ]),
-      );
-    }
 
     const tiles = h("div", { class: "tiles" });
     DATA.pillars.forEach((p) => {
@@ -1831,7 +1801,7 @@ import {
           "div",
           { class: "tag" },
           isClientView(user)
-            ? `${userDone}/${total} of your answers · team score ${s !== null ? s + "/100" : "—"}`
+            ? `Team score ${s !== null ? s + "/100" : "—"}`
             : `${userDone}/${total} of your answers · team score ${s !== null ? s + "/100" : "—"}`,
         ),
       );
@@ -1905,25 +1875,28 @@ import {
     // Left: diagnostic questions (user's own)
     const left = h("div");
     left.appendChild(
-      h("h3", {}, isClient ? "Your responses" : "Diagnostic questions (your responses)"),
+      h("h3", {}, isClient ? "Diagnostic questions" : "Diagnostic questions (your responses)"),
     );
     p.diagnostics.forEach((q, idx) => {
       left.appendChild(renderQuestion(user, org, p, idx, q));
     });
 
-    // Complete button - returns to the diagnostic landing
-    left.appendChild(
-      h("div", { class: "pillar-actions-foot" }, [
-        h(
-          "button",
-          {
-            class: "btn",
-            onclick: () => setRoute("diagnostic"),
-          },
-          "Complete",
-        ),
-      ]),
-    );
+    // Complete button - returns to the diagnostic landing (staff only:
+    // clients have nothing to complete in the view-only diagnostic)
+    if (!isClient) {
+      left.appendChild(
+        h("div", { class: "pillar-actions-foot" }, [
+          h(
+            "button",
+            {
+              class: "btn",
+              onclick: () => setRoute("diagnostic"),
+            },
+            "Complete",
+          ),
+        ]),
+      );
+    }
 
     // Team average (if more than self-has-answered)
     const teamPanel = renderTeamResponses(user, org, p);
@@ -1952,18 +1925,20 @@ import {
       [
         h("div", { class: "actions-card-header" }, [
           h("h3", { class: "u-m-0" }, "Actions"),
-          h(
-            "button",
-            {
-              class: "btn sm",
-              onclick: () =>
-                promptText("New action", "e.g. Validate ICP with closed-won data", (title) => {
-                  addAction(user.id, p.id, title);
-                  render();
-                }),
-            },
-            "+ Add",
-          ),
+          isClient
+            ? null
+            : h(
+                "button",
+                {
+                  class: "btn sm",
+                  onclick: () =>
+                    promptText("New action", "e.g. Validate ICP with closed-won data", (title) => {
+                      addAction(user.id, p.id, title);
+                      render();
+                    }),
+                },
+                "+ Add",
+              ),
         ]),
         filteredActions.length === 0
           ? h("p", { class: "actions-empty-meta" }, "No actions yet.")
@@ -2010,22 +1985,30 @@ import {
       ]),
     );
 
-    // Buttons
+    // Buttons — inert for clients (view-only diagnostic): no handler,
+    // disabled, saved answers keep the `sel` highlight so previously
+    // captured scoring stays visible.
+    const readOnly = isClientView(user);
     const scaleClass = meta.scale === 10 ? "likert likert-10" : "likert likert-" + meta.scale;
-    const likert = h("div", { class: scaleClass });
+    const likert = h("div", { class: scaleClass + (readOnly ? " read-only" : "") });
     // Clamp any stale responses to this question's scale so old data doesn't get stuck selected out-of-range.
     const selectedScore = resp.score >= 1 && resp.score <= meta.scale ? resp.score : null;
     for (let n = 1; n <= meta.scale; n++) {
+      const attrs = {
+        class: selectedScore === n ? "sel" : "",
+        title: (meta.labels && meta.labels[n]) || DATA.scoreLabels[n] || String(n),
+      };
+      if (readOnly) {
+        attrs.disabled = true;
+      } else {
+        attrs.onclick = () => {
+          setResponse(user, org, p.id, idx, { score: n });
+          render();
+        };
+      }
       const btn = h(
         "button",
-        {
-          class: selectedScore === n ? "sel" : "",
-          title: (meta.labels && meta.labels[n]) || DATA.scoreLabels[n] || String(n),
-          onclick: () => {
-            setResponse(user, org, p.id, idx, { score: n });
-            render();
-          },
-        },
+        attrs,
         [
           h("span", { class: "n" }, String(n)),
           meta.labels && meta.labels[n] ? h("span", { class: "t" }, meta.labels[n]) : null,

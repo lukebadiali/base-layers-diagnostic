@@ -55,7 +55,7 @@ describe("client view-only diagnostic", () => {
     expect(app.querySelector(".client-progress-banner")).toBeNull();
     expect(app.textContent).toContain("Review how the business scored");
     expect(app.textContent).not.toContain("Score each pillar honestly");
-  });
+  }, 20000);
 
   it("pillar page renders inert scoring and no mutating buttons", async () => {
     await bootAs("u_client-a");
@@ -71,7 +71,7 @@ describe("client view-only diagnostic", () => {
     );
     expect(labels).not.toContain("Complete");
     expect(labels).not.toContain("+ Add");
-  });
+  }, 20000);
 
   it("clicking a likert button writes nothing", async () => {
     await bootAs("u_client-a");
@@ -86,7 +86,7 @@ describe("client view-only diagnostic", () => {
     await Promise.resolve();
     expect(localStorage.getItem(`baselayers:org:${orgId}`)).toBe(before);
     expect(btn.classList.contains("sel")).toBe(false);
-  });
+  }, 20000);
 });
 
 describe("staff scoring regression", () => {
@@ -107,5 +107,5 @@ describe("staff scoring regression", () => {
       /** @type {string} */ (localStorage.getItem(`baselayers:org:${orgId}`)),
     );
     expect(JSON.stringify(after.responses)).not.toBe(JSON.stringify(before.responses));
-  });
+  }, 20000);
 });

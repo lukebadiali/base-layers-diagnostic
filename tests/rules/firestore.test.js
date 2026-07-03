@@ -171,7 +171,7 @@ afterAll(async () => {
 function createPayload(role, path) {
   const uid = role === "anonymous" ? null : role;
   if (path === "orgs/orgA") return { orgId: "orgA", name: "Org A new", createdAt: Timestamp.now() };
-  if (path === "orgs/orgA/responses/r2")
+  if (path.startsWith("orgs/orgA/responses/"))
     return {
       orgId: "orgA",
       userId: uid,
@@ -350,13 +350,15 @@ const CELLS = [
     label: "admin can update org doc that lacks orgId field",
   },
 
-  // orgs/orgA/responses/{respId}
+  // orgs/orgA/responses/{respId} — writes are staff-only since the client
+  // view-only diagnostic change (2026-07); reads stay org-wide so clients
+  // can view previously captured scoring.
   {
     role: "client_orgA",
     path: "orgs/orgA/responses/r2",
     op: "create",
-    expected: "allow",
-  }, // userId = uid
+    expected: "deny",
+  }, // client scoring removed
   {
     role: "client_orgA",
     path: "orgs/orgA/responses/r1",
@@ -373,14 +375,32 @@ const CELLS = [
     role: "client_orgA",
     path: "orgs/orgA/responses/r1",
     op: "update",
-    expected: "allow",
-  },
+    expected: "deny",
+  }, // client scoring removed
   {
     role: "client_orgA",
     path: "orgs/orgA/responses/r1",
     op: "delete",
     expected: "deny",
   },
+  {
+    role: "internal",
+    path: "orgs/orgA/responses/r3",
+    op: "create",
+    expected: "allow",
+  }, // userId = uid
+  {
+    role: "internal",
+    path: "orgs/orgA/responses/r1",
+    op: "update",
+    expected: "allow",
+  },
+  {
+    role: "admin",
+    path: "orgs/orgA/responses/r4",
+    op: "create",
+    expected: "allow",
+  }, // userId = uid
 
   // orgs/orgA/comments/{cmtId}
   {

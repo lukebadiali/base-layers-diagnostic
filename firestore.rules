@@ -62,11 +62,13 @@ service cloud.firestore {
       allow delete: if false;  // soft-delete via Cloud Function only
 
       // ── responses subcollection ─────────────────────────────────────
+      // Writes are staff-only (2026-07, client view-only diagnostic):
+      // clients read prior scoring but can no longer submit or edit it.
       match /responses/{respId} {
         allow read:   if inOrg(orgId);
-        allow create: if inOrg(orgId)
+        allow create: if isInternal()
                       && request.resource.data.userId == request.auth.uid;
-        allow update: if inOrg(orgId)
+        allow update: if isInternal()
                       && immutable("userId")
                       && immutable("orgId")
                       && mutableOnly(["values", "updatedAt", "legacyAppUserId"]);

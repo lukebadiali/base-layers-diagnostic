@@ -1228,28 +1228,8 @@ a:hover {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 16px;
-  cursor: pointer;
   position: relative;
-  transition:
-    border-color 0.1s,
-    box-shadow 0.12s;
   box-shadow: var(--shadow-sm);
-}
-.stage-card:hover {
-  border-color: var(--brand);
-}
-.stage-card.read-only {
-  cursor: default;
-}
-.stage-card.read-only:hover {
-  border-color: var(--line);
-}
-.stage-card.active {
-  border-color: var(--brand);
-  background: var(--brand-tint);
-  box-shadow:
-    0 0 0 3px rgba(87, 158, 192, 0.25),
-    var(--shadow-sm);
 }
 .stage-card .n {
   font-family: var(--font-display);

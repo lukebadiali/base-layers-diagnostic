@@ -1856,7 +1856,7 @@ import {
     // without horizontal scroll. renderEngagement renders an h2 section
     // (not an h1 page title) so it sits cleanly under the pillar tiles.
     frag.appendChild(h("hr", { class: "section-divider" }));
-    frag.appendChild(renderEngagement(user, org));
+    frag.appendChild(renderEngagement());
 
     return frag;
   }
@@ -2374,46 +2374,27 @@ import {
   // removed from the topnav and /engagement redirects to /diagnostic
   // (src/router.js). Uses section-level h2 instead of page-level h1 so
   // it composes correctly underneath the Diagnostic page title.
-  function renderEngagement(user, org) {
+  function renderEngagement() {
     const frag = h("div", { class: "delivery-section" });
     frag.appendChild(h("h2", { class: "section-h2" }, "Delivery framework"));
     frag.appendChild(
       h("p", { class: "view-sub" }, "Every BeDeveloped engagement runs through four stages."),
     );
 
-    const current = org.engagement?.currentStageId || "diagnosed";
+    // Static info cards — the click-to-highlight stage selector was removed
+    // 2026-07 (the selected stage was read nowhere else in the app).
     const stages = h("div", { class: "stages" });
-    const readOnly = isClientView(user);
     DATA.engagementStages.forEach((s, i) => {
-      const isActive = current === s.id;
-
-      const cardAttrs = {
-        class: `stage-card ${isActive ? "active" : ""} ${readOnly ? "read-only" : ""}`,
-      };
-      if (!readOnly) {
-        cardAttrs.onclick = (ev) => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          setEngagementStage(org.id, s.id);
-          render();
-        };
-      }
-      const card = h("div", cardAttrs, [
-        h("div", { class: "n" }, `STAGE ${i + 1}`),
-        h("div", { class: "name" }, s.name),
-        h("div", { class: "sum" }, s.summary),
-      ]);
-      stages.appendChild(card);
+      stages.appendChild(
+        h("div", { class: "stage-card" }, [
+          h("div", { class: "n" }, `STAGE ${i + 1}`),
+          h("div", { class: "name" }, s.name),
+          h("div", { class: "sum" }, s.summary),
+        ]),
+      );
     });
     frag.appendChild(stages);
     return frag;
-  }
-
-  function setEngagementStage(orgId, stageId) {
-    const o = loadOrg(orgId);
-    o.engagement = o.engagement || {};
-    o.engagement.currentStageId = stageId;
-    saveOrg(o);
   }
 
   // ================================================================
@@ -2425,10 +2406,6 @@ import {
     const frag = h("div");
     const summary = orgSummary(org);
     const constraints = topConstraints(org, 3);
-    // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead binding or wire up render. See runbooks/phase-4-cleanup-ledger.md
-    const stage = DATA.engagementStages.find(
-      (s) => s.id === (org.engagement?.currentStageId || "diagnosed"),
-    );
     const isClient = isClientView(user);
     const round = roundById(org, org.currentRoundId);
     const prevRoundId = previousRoundId(org);

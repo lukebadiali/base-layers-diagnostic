@@ -1771,7 +1771,7 @@ import {
         "p",
         { class: "view-sub" },
         isClientView(user)
-          ? "Review how the business scored against each pillar's diagnostic questions."
+          ? "View your responses here. If anything is empty, please contact Luke or George to complete it."
           : "Score each pillar against its diagnostic questions.",
       ),
     );

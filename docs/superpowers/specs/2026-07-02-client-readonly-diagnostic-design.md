@@ -41,8 +41,10 @@ experience exactly).
    prior work is visible. CSS suppresses hover/cursor affordances under
    `.likert.read-only`.
 2. **Diagnostic index copy** (client only):
-   - Subtext: "Review how the business scored against each pillar's
-     diagnostic questions." (replaces "Score each pillar honestly…").
+   - Subtext: "View your responses here. If anything is empty, please
+     contact Luke or George to complete it." (replaces "Score each pillar
+     honestly…"; wording per the 2 Jul scope call — helper text covering
+     the empty case).
    - Remove the "Your progress" completion banner.
    - Pillar tile tag: "team score N/100" (drops "X/Y of your answers ·").
 3. **Pillar page** (client only):

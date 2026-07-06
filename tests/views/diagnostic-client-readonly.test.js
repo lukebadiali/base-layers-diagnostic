@@ -53,7 +53,7 @@ describe("client view-only diagnostic", () => {
     await bootAs("u_client-a");
     const app = /** @type {HTMLElement} */ (document.getElementById("app"));
     expect(app.querySelector(".client-progress-banner")).toBeNull();
-    expect(app.textContent).toContain("Review how the business scored");
+    expect(app.textContent).toContain("View your responses here");
     expect(app.textContent).not.toContain("Score each pillar honestly");
   }, 20000);
 

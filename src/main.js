@@ -638,6 +638,7 @@ import {
   }
   async function signOut() {
     stopActivitySubscriptions();
+    state.bellOpen = false;
     LS.removeItem(K.session);
     await fbSignOut();
   }
@@ -5498,6 +5499,14 @@ Any questions, just let me know.`;
     // itself). Registered once here in init(), which itself runs once.
     document.addEventListener("click", () => {
       if (state.bellOpen) {
+        state.bellOpen = false;
+        render();
+      }
+    });
+    // Scope item 7 final review fix: Escape also closes the bell panel
+    // (spec calls for outside click OR Escape; only outside click shipped).
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && state.bellOpen) {
         state.bellOpen = false;
         render();
       }

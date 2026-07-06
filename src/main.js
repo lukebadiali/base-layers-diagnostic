@@ -569,7 +569,7 @@ import {
   // legacy localStorage path remains for client/user role flows.
   const currentUser = () => state.fbUser || legacyCurrentUser();
 
-  // Phase 2 (D-05): userCompletionPct + orgSummary extracted to src/domain/completion.js — wrappers above.
+  // Phase 2 (D-05): orgSummary extracted to src/domain/completion.js — wrapper above.
 
   function topConstraints(org, n = 3) {
     return DATA.pillars

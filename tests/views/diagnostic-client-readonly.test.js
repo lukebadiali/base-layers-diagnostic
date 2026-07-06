@@ -65,6 +65,8 @@ describe("client view-only diagnostic", () => {
     expect(likertButtons.length).toBeGreaterThan(0);
     likertButtons.forEach((b) => expect(b.hasAttribute("disabled")).toBe(true));
     expect(document.querySelector(".likert.read-only")).not.toBeNull();
+    // Saved answers stay highlighted even though the buttons are inert
+    expect(document.querySelector(".likert button.sel")).not.toBeNull();
 
     const labels = Array.from(document.querySelectorAll("button")).map((b) =>
       (b.textContent || "").trim(),

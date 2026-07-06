@@ -16,6 +16,7 @@ describe("Delivery stage cards are static", () => {
     };
     /** @type {*} */ (window).FB = { ready: false, currentUser: null, db: null };
 
+    localStorage.clear();
     localStorage.setItem("baselayers:orgs", JSON.stringify(snapshotOrg.orgMetas));
     snapshotOrg.orgs.forEach((/** @type {*} */ o) => {
       localStorage.setItem(`baselayers:org:${o.id}`, JSON.stringify(o));

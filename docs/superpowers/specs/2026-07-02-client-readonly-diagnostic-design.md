@@ -90,8 +90,10 @@ spec review.
 
 No new error paths: client mutation affordances are removed rather than
 rejected at runtime. If a stale client session still fires a write (e.g. a
-tab open across the deploy), Firestore rejects with `permission-denied`;
-the existing cloud-sync error handling already surfaces that case.
+tab open across the deploy), Firestore rejects with `permission-denied` and
+the write drops silently (cloud-sync logs to console only — nothing
+user-visible). Acceptable: no live client users, and the dropped write is
+one product has decided clients must not make.
 
 ## Testing
 

@@ -191,7 +191,7 @@ import { modal, promptText, confirmDialog } from "./ui/modal.js";
 // ./src/util/ids.js — Wave 4 may switch consumers to ./src/ui/format.js
 // per ARCHITECTURE.md §2 helpers-table import path. The re-export module
 // exists; consumers stay on util/ids.js this wave (D-12 faithful extraction).
-import { notify } from "./ui/toast.js";
+import { notify, dismissAllToasts } from "./ui/toast.js";
 import {
   validateUpload,
   ALLOWED_MIME_TYPES as _ALLOWED_MIME_TYPES,
@@ -3978,6 +3978,15 @@ import {
       render();
       return;
     }
+
+    // Scope item 1 (2026-07): sticky auth-flow error toasts ("Invalid
+    // verification code" from a TOTP retry) otherwise survive the successful
+    // sign-in into the app render — #toastRoot lives on <body>, outside the
+    // #app re-render, and D-14 makes errors persist until closed. Clear them
+    // the moment sign-in lands. Signed-in branch ONLY: the session-expiry
+    // path below notifies right before signOut() re-fires this callback with
+    // null, and that message must survive.
+    dismissAllToasts();
 
     // 30-day session cap (see src/auth/session-policy.js). Persistence keeps the
     // user signed in indefinitely; if their last interactive sign-in is older

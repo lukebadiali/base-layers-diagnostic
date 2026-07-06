@@ -4,7 +4,7 @@
 // + role=status/role=alert + auto-dismiss tiers + MAX_VISIBLE=3 + eviction
 // + focus-on-error + pause-on-hover. Per-view alert→notify wiring is Wave 4 (D-20).
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { notify } from "../../src/ui/toast.js";
+import { notify, dismissAllToasts } from "../../src/ui/toast.js";
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -113,5 +113,20 @@ describe("notify() — error focus + pause-on-hover (D-14)", () => {
     node.dispatchEvent(new Event("mouseleave"));
     vi.advanceTimersByTime(4000);
     expect(document.querySelectorAll(".toast.toast-info").length).toBe(0);
+  });
+});
+
+describe("dismissAllToasts() — auth-transition clear (scope item 1, 2026-07)", () => {
+  it("removes every visible toast, including sticky errors", () => {
+    notify("error", "Invalid verification code");
+    notify("info", "hello");
+    expect(document.querySelectorAll(".toast").length).toBe(2);
+    dismissAllToasts();
+    expect(document.querySelectorAll(".toast").length).toBe(0);
+  });
+
+  it("is a no-op when no toast container exists", () => {
+    expect(document.getElementById("toastRoot")).toBeNull();
+    expect(() => dismissAllToasts()).not.toThrow();
   });
 });

@@ -52,6 +52,21 @@ compatible:
   immediately. No call-site changes required in this phase; call sites can
   adopt async returns incrementally.
 
+**Downstream callers (behavior change, reviewed 2026-07).** Five pre-existing
+`confirmDialog` callers in src/main.js already pass `async` callbacks:
+"Remove client access?" (~2870), "Remove team member?" (~2949), "Delete
+file?" (~3356), "Delete message?" (~3498), "Delete comment?" (~4700). Each
+try/catches internally and raises its own error toast, so its promise always
+resolves. Under the async-aware dispatcher these five change from
+instant-close fire-and-forget to pending-spinner-then-close-on-settle: the
+Confirm button shows "Working…" while the (possibly cold-starting) backend
+call runs, and the modal closes once the callback settles — on failure the
+user sees the caller's own error toast AND the modal closes. The dispatcher's
+stay-open-on-reject branch only engages for callbacks that rethrow; these
+five never reject, so it is unreachable for them until they are migrated to
+rethrow. Documented by the "async onOk that self-catches still closes on
+settle" test in tests/ui/modal.test.js.
+
 **2b. MFA setup QR generation.** `renderMfaEnrol` (src/views/auth.js:233)
 renders an `<img>` with no `src` while `startMfaEnrolFlow` (src/main.js:1017)
 does a Firebase round-trip + dynamic ~80KB `qrcode` import + `toDataURL` —

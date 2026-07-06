@@ -182,4 +182,44 @@ describe("confirmDialog() — async onOk (scope item 2, 2026-07)", () => {
     await Promise.resolve();
     expect(root.classList.contains("hidden")).toBe(true);
   });
+
+  it("async onOk that self-catches still closes on settle (fire-and-forget callers keep closing)", async () => {
+    // Documents the five pre-existing src/main.js callers ("Remove client
+    // access?" ~2870, "Remove team member?" ~2949, "Delete file?" ~3356,
+    // "Delete message?" ~3498, "Delete comment?" ~4700) whose async callbacks
+    // try/catch internally and resolve either way. Under the pending
+    // dispatcher they gain a spinner while the work is in flight, and the
+    // modal closes once the callback settles — even when the underlying work
+    // failed and the callback swallowed the error (the caller's own error
+    // toast is the failure surface). The stay-open-on-reject branch only
+    // engages for callbacks that rethrow.
+    /** @type {(e: Error) => void} */
+    let failBackend = () => {};
+    const backendCall = new Promise((_res, rej) => (failBackend = rej));
+    confirmDialog("Delete file?", "m", async () => {
+      try {
+        await backendCall;
+      } catch (_err) {
+        // self-catching caller: raises its own toast, does not rethrow
+      }
+    });
+    const root = /** @type {HTMLElement} */ (document.getElementById("modalRoot"));
+    const ok = /** @type {HTMLButtonElement} */ (
+      Array.from(root.querySelectorAll("button")).find((b) => b.textContent?.includes("Confirm"))
+    );
+    ok.click();
+    // In flight: modal stays open with the pending spinner (new behavior —
+    // previously the modal closed instantly, fire-and-forget).
+    expect(root.classList.contains("hidden")).toBe(false);
+    expect(ok.classList.contains("is-loading")).toBe(true);
+    expect(ok.disabled).toBe(true);
+    failBackend(new Error("cloud function cold-start timeout"));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    // Settled (resolved, error swallowed): modal closes; the dispatcher's
+    // stay-open + toast path never ran.
+    expect(root.classList.contains("hidden")).toBe(true);
+    expect(document.querySelector(".toast-error")).toBeNull();
+  });
 });

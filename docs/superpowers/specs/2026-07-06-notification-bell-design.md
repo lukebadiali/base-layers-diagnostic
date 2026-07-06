@@ -37,26 +37,36 @@ portal open.)"
 
 ## Architecture
 
-### Data layer (main.js IIFE, post-auth, staff only)
+### Data layer (main.js IIFE, post-auth, ALL users)
 
-`startActivitySubscriptions()` — called from the signed-in
-`onAuthStateChanged` path when `isStaff(user)`; torn down on sign-out.
-For each org meta in `loadOrgMetas()` (kept fresh by `_subscribeOrgs`,
-which triggers re-render; resync listeners when the org-id set changes):
+`startActivitySubscriptions(user)` — called from the signed-in
+`onAuthStateChanged` path for every user; torn down on sign-out. Staff
+subscribe per org meta in `loadOrgMetas()` (kept fresh by `_subscribeOrgs`;
+resync listeners when the org-id set changes); clients subscribe to their
+single `user.orgId`. Running it for clients keeps their working chat nav
+badge alive once `state.chatMessages` is deleted (see below).
 
-- `onSnapshot(orgs/{orgId}/messages)` → `state.activity.messages[orgId]`
-  = array of `{id, authorId, createdAt}` **stamped with orgId client-side**
-  (message docs deliberately don't carry orgId — main.js:3525).
-- `onSnapshot(orgs/{orgId}/documents)` → `state.activity.documents[orgId]`
-  = array of `{id, uploaderId, createdAt, filename}`.
+- `onSnapshot(query(orgs/{orgId}/messages, orderBy("createdAt","desc"),
+  limit(30)))` → `state.activity.messages[orgId]` = docs **stamped with
+  orgId client-side** (message docs deliberately don't carry orgId —
+  main.js:3525). The window.FB firestore shim exposes query/orderBy/limit
+  (src/firebase/db.js:80-85).
+- Same for `orgs/{orgId}/documents` → `state.activity.documents[orgId]`.
 
-Unsubscribe handles keyed by `type:orgId` in a module-scoped map (NOT in
+Unsubscribe handles keyed by `type:orgId` in a closure-scoped map (NOT in
 render functions — the existing per-render Documents onSnapshot leak is a
 known concern, don't repeat it). Each snapshot calls `render()`.
-Prefer `firestore.query(col, orderBy("createdAt","desc"), limit(30))` if
-the window.FB firestore shim exposes query/orderBy/limit; otherwise
-subscribe to the full collection (matches the existing chat view pattern)
-— implementer verifies the shim surface and documents the choice.
+
+### unreadChatTotal repoint (revives four dead consumers)
+
+The existing wrapper (main.js:510-525) reads `state.chatMessages`, which
+is empty for staff (the `state.activeOrgId` bug). Repoint it to
+`Object.values(state.activity.messages).flat()` — the orgId stamp is
+exactly what `_unreadChatTotal`'s staff branch needs. This revives, with
+no signature changes: the chat nav badge (chrome.js:100), the staff
+dashboard unread-client-chat banner (main.js:1318), the tab-title badge
+(main.js:703), and keeps the client path working. The 30-doc cap makes
+these counts floor at 30 per org — acceptable.
 
 ### Domain (pure, new file src/domain/activity.js)
 
@@ -104,12 +114,9 @@ DI-pure like the existing unread deps).
 
 ### Deletions
 
-- `startChatSubscription` + `state.chatMessages` wiring (dead for staff,
-  unused by the chat view, which runs its own listener).
-- The `unreadChatTotal` topbar/deps path IF nothing else consumes it after
-  the above (dashboard alert banner may consume `unreadChatTotal` — check;
-  if it does, feed it from `state.activity.messages` for the active org
-  instead. Implementer verifies consumers before deleting anything).
+- `startChatSubscription` + all `state.chatMessages` writes/reads (its
+  consumers move to the activity store via the unreadChatTotal repoint;
+  the Chat view is unaffected — it runs its own independent listener).
 
 ## Out of scope
 

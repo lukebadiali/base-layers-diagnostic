@@ -137,6 +137,7 @@ import {
   unreadCountTotal as _unreadCountTotal,
   unreadChatTotal as _unreadChatTotal,
 } from "./domain/unread.js";
+import { activitySummary as _activitySummary } from "./domain/activity.js";
 import { setPillarRead } from "./data/read-states.js";
 import {
   migrateV1IfNeeded as _migrateV1IfNeeded,
@@ -525,6 +526,26 @@ import {
     const lastReadForOrg = (orgId) => ({ toMillis: () => lastReadMillis(user.id, orgId) });
     return _unreadChatTotal(user, messages, lastReadForOrg);
   };
+  // Scope item 7 (2026-07): bell aggregation wrapper — injects live org
+  // metas, the activity store and the per-browser surface-visit markers.
+  const bellSummary = () => {
+    const user = currentUser();
+    if (!user) return { total: 0, orgs: [] };
+    /** @type {Record<string, number>} */
+    const chatMs = {};
+    const chatIso = loadChatLastRead(user.id);
+    Object.keys(chatIso).forEach((k) => (chatMs[k] = new Date(chatIso[k]).getTime()));
+    /** @type {Record<string, number>} */
+    const docsMs = {};
+    const docsIso = loadDocsSeen(user.id);
+    Object.keys(docsIso).forEach((k) => (docsMs[k] = new Date(docsIso[k]).getTime()));
+    return _activitySummary(
+      loadOrgMetas(),
+      state.activity,
+      { chatLastRead: chatMs, docsLastSeen: docsMs },
+      user.id,
+    );
+  };
   // The legacy per-org client unread helper was deleted (caller migrated to
 
   // Phase 2 Wave 4 (D-05): wrappers for migration helpers (Pattern E).
@@ -738,7 +759,7 @@ import {
   const BASE_TAB_TITLE = "BeDeveloped - The Base Layers";
   function updateTabTitleBadge() {
     const user = currentUser();
-    const unread = isStaff(user) ? unreadChatTotal(user) : 0;
+    const unread = isStaff(user) ? bellSummary().total : 0;
     // CODE-10 (D-20): memoised title write — only updates when value differs.
     setTitleIfDifferent(unread > 0 ? `(${unread}) ${BASE_TAB_TITLE}` : BASE_TAB_TITLE);
   }
@@ -1032,6 +1053,18 @@ import {
     // user-menu entry that consumed it.
     exportData,
     importData,
+    // Scope item 7 (2026-07): staff notification bell deps.
+    activitySummary: bellSummary,
+    bellOpen: () => state.bellOpen,
+    toggleBell: () => {
+      state.bellOpen = !state.bellOpen;
+      render();
+    },
+    openOrgActivity: (orgId, route) => {
+      state.bellOpen = false;
+      state.orgId = orgId;
+      setRoute(route);
+    },
   });
 
   // ================================================================
@@ -5460,6 +5493,15 @@ Any questions, just let me know.`;
         if (metas.length && !state.orgId) state.orgId = metas[0].id;
       }
     }
+    // Scope item 7 (2026-07): bell panel closes on any outside click (the
+    // panel stopPropagation()s its own clicks; the bell button toggles
+    // itself). Registered once here in init(), which itself runs once.
+    document.addEventListener("click", () => {
+      if (state.bellOpen) {
+        state.bellOpen = false;
+        render();
+      }
+    });
     render();
   }
 

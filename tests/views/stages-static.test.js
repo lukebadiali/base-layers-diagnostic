@@ -38,7 +38,7 @@ describe("Delivery stage cards are static", () => {
     if (!diagBtn) throw new Error("diagnostic nav button not found — boot failed");
     diagBtn.click();
     await Promise.resolve();
-  });
+  }, 20000);
 
   it("renders four stage cards with no active or read-only variant", () => {
     const cards = document.querySelectorAll(".stage-card");

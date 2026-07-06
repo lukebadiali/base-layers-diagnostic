@@ -4,8 +4,12 @@
 // bell. Counts per-org chat messages / document uploads strictly newer than
 // the caller's per-org surface-visit markers, excluding the user's own
 // items. No Firebase imports (domain purity is lint-enforced): createdAt is
-// duck-typed via toMillis(); a null/absent createdAt is a pending
-// serverTimestamp write and counts as newest.
+// duck-typed via toMillis(); legacy items may carry an ISO-string createdAt
+// instead (mirrors main.js's msgMillis) and are compared the same way; a
+// null/absent createdAt is a pending serverTimestamp write and counts as
+// newest. Items with no author field are skipped rather than counted: they
+// can't be attributed, so they also can't be safely excluded as "own" —
+// an unset authorField would otherwise equal an unset selfUid.
 
 /**
  * @param {*} item
@@ -14,6 +18,7 @@
 function itemMillis(item) {
   const t = item && item.createdAt;
   if (t && typeof t.toMillis === "function") return t.toMillis();
+  if (typeof t === "string") return new Date(t).getTime() || 0;
   return Number.MAX_SAFE_INTEGER;
 }
 
@@ -28,7 +33,7 @@ function countNewer(items, authorField, markerMs, selfUid) {
   let count = 0;
   let latestMs = 0;
   for (const item of items || []) {
-    if (!item || item[authorField] === selfUid) continue;
+    if (!item || item[authorField] == null || item[authorField] === selfUid) continue;
     const ms = itemMillis(item);
     if (ms > markerMs) {
       count += 1;

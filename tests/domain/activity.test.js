@@ -80,6 +80,43 @@ describe("activitySummary", () => {
     expect(s.orgs.map((o) => o.orgId)).toEqual(["orgB", "orgA"]);
   });
 
+  it("legacy ISO-string createdAt is compared against the marker like a Timestamp", () => {
+    const older = new Date(500).toISOString();
+    const newer = new Date(2000).toISOString();
+    const activity = {
+      messages: {
+        orgA: [
+          { authorId: "x", createdAt: older }, // older than marker — excluded
+          { authorId: "x", createdAt: newer }, // newer than marker — counted
+        ],
+      },
+      documents: {},
+    };
+    const s = activitySummary(
+      METAS,
+      activity,
+      { chatLastRead: { orgA: 1000 }, docsLastSeen: {} },
+      "me",
+    );
+    expect(s.total).toBe(1);
+    expect(s.orgs[0].latestMs).toBe(2000);
+  });
+
+  it("authorless items are skipped — they can't be attributed, so they can't be excluded as 'own' either; treat as unattributable rather than risk an undefined-matches-undefined false exclusion", () => {
+    const activity = {
+      messages: { orgA: [{ createdAt: ts(2000) }] }, // no authorId field at all
+      documents: {},
+    };
+    const s = activitySummary(
+      METAS,
+      activity,
+      { chatLastRead: { orgA: 1000 }, docsLastSeen: {} },
+      "me",
+    );
+    expect(s.total).toBe(0);
+    expect(s.orgs).toEqual([]);
+  });
+
   it("unknown orgIds in activity (meta not loaded yet) are skipped, and empty inputs are safe", () => {
     const activity = { messages: { ghost: [{ authorId: "x", createdAt: ts(5) }] }, documents: {} };
     const s = activitySummary(METAS, activity, { chatLastRead: {}, docsLastSeen: {} }, "me");

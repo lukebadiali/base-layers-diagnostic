@@ -130,4 +130,70 @@ describe("activitySummary", () => {
       ).total,
     ).toBe(0);
   });
+
+  it("skips null entries in an org's list without counting or throwing", () => {
+    const activity = {
+      messages: { orgA: [null, { authorId: "x", createdAt: ts(2000) }] },
+      documents: {},
+    };
+    const s = activitySummary(
+      METAS,
+      activity,
+      { chatLastRead: { orgA: 1000 }, docsLastSeen: {} },
+      "me",
+    );
+    expect(s.total).toBe(1);
+  });
+
+  it("an unparseable string createdAt falls back to epoch 0", () => {
+    const activity = {
+      messages: { orgA: [{ authorId: "x", createdAt: "not-a-date" }] },
+      documents: {},
+    };
+    // Marker below 0 so the epoch-0 fallback still reads as newer and counts.
+    const s = activitySummary(
+      METAS,
+      activity,
+      { chatLastRead: { orgA: -1 }, docsLastSeen: {} },
+      "me",
+    );
+    expect(s.total).toBe(1);
+    expect(s.orgs[0].latestMs).toBe(0);
+  });
+
+  it("keeps the newest latestMs when a later item in the list is older", () => {
+    const activity = {
+      messages: {
+        orgA: [
+          { authorId: "x", createdAt: ts(3000) },
+          { authorId: "y", createdAt: ts(2000) }, // counted, but older — must not lower latestMs
+        ],
+      },
+      documents: {},
+    };
+    const s = activitySummary(
+      METAS,
+      activity,
+      { chatLastRead: { orgA: 1000 }, docsLastSeen: {} },
+      "me",
+    );
+    expect(s.total).toBe(2);
+    expect(s.orgs[0].latestMs).toBe(3000);
+  });
+
+  it("tolerates activity and marker objects missing their sub-maps", () => {
+    const s = activitySummary(METAS, {}, {}, "me");
+    expect(s.total).toBe(0);
+    expect(s.orgs).toEqual([]);
+  });
+
+  it("tolerates a null orgMetas list", () => {
+    const s = activitySummary(
+      /** @type {any} */ (null),
+      { messages: {}, documents: {} },
+      { chatLastRead: {}, docsLastSeen: {} },
+      "me",
+    );
+    expect(s).toEqual({ total: 0, orgs: [] });
+  });
 });

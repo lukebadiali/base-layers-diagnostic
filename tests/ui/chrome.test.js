@@ -93,6 +93,26 @@ describe("renderTopbar() — client user", () => {
   });
 });
 
+describe("renderTopbar() — mode toggle label (scope item 6, 2026-07)", () => {
+  it('says "Client" (not "Client preview") when mode is external', () => {
+    const deps = makeDeps();
+    deps.state.mode = "external";
+    const { renderTopbar } = createChrome(deps);
+    const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
+    const label = el.querySelector(".mode-toggle span");
+    expect(label?.textContent).toBe("Client");
+  });
+
+  it('says "Internal" when mode is internal', () => {
+    const deps = makeDeps();
+    deps.state.mode = "internal";
+    const { renderTopbar } = createChrome(deps);
+    const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
+    const label = el.querySelector(".mode-toggle span");
+    expect(label?.textContent).toBe("Internal");
+  });
+});
+
 describe("renderFooter()", () => {
   it("returns a minimal <footer class='footer'> for client users", () => {
     const { renderFooter } = createChrome(makeDeps());

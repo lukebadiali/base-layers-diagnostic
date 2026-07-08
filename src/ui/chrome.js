@@ -144,7 +144,7 @@ export function createChrome(deps) {
           title: "Internal view shows private commentary. Client view previews what a client sees.",
         },
         [
-          h("span", {}, state.mode === "internal" ? "Internal" : "Client preview"),
+          h("span", {}, state.mode === "internal" ? "Internal" : "Client"),
           (() => {
             const input = /** @type {HTMLInputElement} */ (
               h("input", {

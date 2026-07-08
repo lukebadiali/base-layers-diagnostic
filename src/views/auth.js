@@ -230,9 +230,22 @@ export function createAuthView(deps) {
       ),
     );
 
-    const qr = h("img", { class: "qr-code", alt: "TOTP enrolment QR code" });
-    if (deps.qrcodeDataUrl) /** @type {HTMLImageElement} */ (qr).src = deps.qrcodeDataUrl;
-    formSide.appendChild(qr);
+    // Scope item 2 (2026-07): the QR data-URL arrives async (Firebase secret
+    // round-trip + dynamic qrcode import in main.js startMfaEnrolFlow). Show
+    // a same-size loading placeholder instead of an empty <img>; the render()
+    // on completion swaps the real QR in.
+    if (deps.qrcodeDataUrl) {
+      const qr = h("img", { class: "qr-code", alt: "TOTP enrolment QR code" });
+      /** @type {HTMLImageElement} */ (qr).src = deps.qrcodeDataUrl;
+      formSide.appendChild(qr);
+    } else {
+      formSide.appendChild(
+        h("div", { class: "qr-code qr-code-loading", role: "status" }, [
+          h("span", { class: "qr-spinner", "aria-hidden": "true" }),
+          h("span", {}, "Generating QR code…"),
+        ]),
+      );
+    }
 
     const form = h("form", { method: "post" });
     const code = h("input", {

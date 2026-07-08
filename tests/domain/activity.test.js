@@ -182,7 +182,7 @@ describe("activitySummary", () => {
   });
 
   it("tolerates activity and marker objects missing their sub-maps", () => {
-    const s = activitySummary(METAS, {}, {}, "me");
+    const s = activitySummary(METAS, /** @type {any} */ ({}), /** @type {any} */ ({}), "me");
     expect(s.total).toBe(0);
     expect(s.orgs).toEqual([]);
   });

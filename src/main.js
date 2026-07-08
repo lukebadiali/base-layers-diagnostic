@@ -137,6 +137,7 @@ import {
   unreadCountTotal as _unreadCountTotal,
   unreadChatTotal as _unreadChatTotal,
 } from "./domain/unread.js";
+import { activitySummary as _activitySummary } from "./domain/activity.js";
 import { setPillarRead } from "./data/read-states.js";
 import {
   migrateV1IfNeeded as _migrateV1IfNeeded,
@@ -475,7 +476,7 @@ import {
   // Phase 5 Wave 4 (DATA-07 / H7 fix): the domain comparators were rewritten
   // to consume server-time Timestamp values via duck-typed toMillis(). The
   // IIFE here still works against the legacy parent-doc readStates (ISO
-  // strings) + state.chatMessages (mixed ISO/Timestamp via msgMillis); the
+  // strings) + state.activity.messages (mixed ISO/Timestamp via msgMillis); the
   // wrappers below adapt those legacy shapes to the new Timestamp-shaped
   // signatures so the IIFE boot path keeps rendering. The Phase 4 4.1
   // main.js-body-migration sub-wave migrates these IIFE-resident render
@@ -509,19 +510,41 @@ import {
   };
   const unreadChatTotal = (user) => {
     if (!user) return 0;
-    const messages = (state.chatMessages || []).map((m) => {
-      if (
-        m &&
-        m.createdAt &&
-        typeof m.createdAt === "object" &&
-        typeof m.createdAt.toMillis === "function"
-      )
-        return m;
-      return { ...m, createdAt: { toMillis: () => msgMillis(m) } };
-    });
+    const messages = Object.values(state.activity.messages)
+      .flat()
+      .map((m) => {
+        if (
+          m &&
+          m.createdAt &&
+          typeof m.createdAt === "object" &&
+          typeof m.createdAt.toMillis === "function"
+        )
+          return m;
+        return { ...m, createdAt: { toMillis: () => msgMillis(m) } };
+      });
     /** @param {string} orgId */
     const lastReadForOrg = (orgId) => ({ toMillis: () => lastReadMillis(user.id, orgId) });
     return _unreadChatTotal(user, messages, lastReadForOrg);
+  };
+  // Scope item 7 (2026-07): bell aggregation wrapper — injects live org
+  // metas, the activity store and the per-browser surface-visit markers.
+  const bellSummary = () => {
+    const user = currentUser();
+    if (!user) return { total: 0, orgs: [] };
+    /** @type {Record<string, number>} */
+    const chatMs = {};
+    const chatIso = loadChatLastRead(user.id);
+    Object.keys(chatIso).forEach((k) => (chatMs[k] = new Date(chatIso[k]).getTime()));
+    /** @type {Record<string, number>} */
+    const docsMs = {};
+    const docsIso = loadDocsSeen(user.id);
+    Object.keys(docsIso).forEach((k) => (docsMs[k] = new Date(docsIso[k]).getTime()));
+    return _activitySummary(
+      loadOrgMetas(),
+      state.activity,
+      { chatLastRead: chatMs, docsLastSeen: docsMs },
+      user.id,
+    );
   };
   // The legacy per-org client unread helper was deleted (caller migrated to
 
@@ -614,7 +637,8 @@ import {
     jset(K.session, { userId });
   }
   async function signOut() {
-    stopChatSubscription();
+    stopActivitySubscriptions();
+    state.bellOpen = false;
     LS.removeItem(K.session);
     await fbSignOut();
   }
@@ -639,6 +663,21 @@ import {
     const m = loadChatLastRead(userId);
     return m[orgId] ? new Date(m[orgId]).getTime() : 0;
   }
+  // Scope item 7 (2026-07): documents twin of the chat marker — written when
+  // the Documents view renders for an org, read by the bell aggregation.
+  // Same per-browser localStorage contract as chatLastRead.
+  function docsSeenKey(userId) {
+    return `baselayers:docsLastSeen:${userId}`;
+  }
+  function loadDocsSeen(userId) {
+    return jget(docsSeenKey(userId), {});
+  }
+  function markDocsSeenFor(userId, orgId) {
+    if (!userId || !orgId) return;
+    const m = loadDocsSeen(userId);
+    m[orgId] = iso();
+    jset(docsSeenKey(userId), m);
+  }
   function msgMillis(msg) {
     return msg.createdAt?.toMillis?.() || (msg.createdAt ? new Date(msg.createdAt).getTime() : 0);
   }
@@ -649,58 +688,79 @@ import {
   // the same domain function path now.
   // Phase 2 (D-05): unreadChatTotal extracted to src/domain/unread.js — wrapper above.
 
-  function stopChatSubscription() {
-    if (state.chatSubscription) {
+  // Scope item 7 (2026-07): per-org activity listeners (messages + documents)
+  // feeding state.activity for the bell, the chat nav badge, the dashboard
+  // unread banner and the tab title. Replaces the old single-org chat
+  // listener, which was dead for staff — it targeted
+  // `user.orgId || state.activeOrgId` and state.activeOrgId never existed
+  // (only state.orgId does), so the guard bailed and the chat message list
+  // stayed empty. Clients get their single org; staff get every org meta.
+  // Handles live outside state so they can't serialize; keyed "type:orgId".
+  /** @type {Map<string, () => void>} */
+  const activityUnsubs = new Map();
+  let activitySubscribedFor = /** @type {string|null} */ (null);
+
+  function stopActivitySubscriptions() {
+    activityUnsubs.forEach((unsub) => {
       try {
-        state.chatSubscription();
-        // eslint-disable-next-line no-empty -- Phase 4: replace with explicit ignore + comment. See runbooks/phase-4-cleanup-ledger.md
-      } catch {}
-      state.chatSubscription = null;
-    }
-    state.chatMessages = [];
-    state.chatSubscribedFor = null;
+        unsub();
+      } catch (_e) {
+        /* listener already torn down */
+      }
+    });
+    activityUnsubs.clear();
+    activitySubscribedFor = null;
+    state.activity = { messages: {}, documents: {} };
   }
-  function startChatSubscription(user) {
-    stopChatSubscription();
-    if (!user) return;
-    if (!(window.FB && window.FB.currentUser && window.FB.firestore)) return;
-    const { db, firestore } = window.FB;
-    let q;
-    // Phase 6 Wave 5 cutover-recovery (2026-05-09): top-level /messages was the
-    // pre-migration legacy path; Phase 5 rules only cover /orgs/{orgId}/messages
-    // (subcollection). Internal users no longer get a cross-org global view here
-    // (that wider read pattern was always unsound under the strict rules); for
-    // Step 11 we use the active-org subcollection which is what the unread-count
-    // comparator (domain/unread.js) is built around. Tracked in Wave 6 06-06.
-    const targetOrgId = user.orgId || state.activeOrgId;
-    if (!targetOrgId) return;
-    q = firestore.collection(db, "orgs", targetOrgId, "messages");
-    state.chatSubscribedFor = user.id;
-    state.chatSubscription = firestore.onSnapshot(
-      q,
-      (snap) => {
-        const list = [];
-        snap.forEach((d) => list.push({ id: d.id, ...d.data() }));
-        state.chatMessages = list;
-        render();
-      },
-      (err) => console.error("Chat subscription error:", err),
-    );
-  }
-  function ensureChatSubscription(user) {
+
+  function ensureActivitySubscriptions(user) {
     if (!user) {
-      stopChatSubscription();
+      stopActivitySubscriptions();
       return;
     }
-    if (state.chatSubscribedFor === user.id && state.chatSubscription) return;
-    if (!(window.FB && window.FB.currentUser)) return;
-    startChatSubscription(user);
+    if (!(window.FB && window.FB.currentUser && window.FB.firestore)) return;
+    const { db, firestore } = window.FB;
+    const orgIds = isStaff(user) ? loadOrgMetas().map((o) => o.id) : user.orgId ? [user.orgId] : [];
+    // Resubscribe from scratch when the user or the org set changes (org
+    // metas stay fresh via _subscribeOrgs, which re-renders on change).
+    const key = user.id + "|" + orgIds.slice().sort().join(",");
+    if (activitySubscribedFor === key) return;
+    stopActivitySubscriptions();
+    activitySubscribedFor = key;
+
+    orgIds.forEach((orgId) => {
+      [
+        { type: "messages", store: state.activity.messages },
+        { type: "documents", store: state.activity.documents },
+      ].forEach(({ type, store }) => {
+        const q = firestore.query(
+          firestore.collection(db, "orgs", orgId, type),
+          firestore.orderBy("createdAt", "desc"),
+          firestore.limit(30),
+        );
+        activityUnsubs.set(
+          `${type}:${orgId}`,
+          firestore.onSnapshot(
+            q,
+            (snap) => {
+              const list = [];
+              // Stamp orgId client-side: message docs deliberately don't
+              // carry it (it lives in the path).
+              snap.forEach((d) => list.push({ id: d.id, orgId, ...d.data() }));
+              store[orgId] = list;
+              render();
+            },
+            (err) => console.error(`Activity subscription error (${type}:${orgId}):`, err),
+          ),
+        );
+      });
+    });
   }
 
   const BASE_TAB_TITLE = "BeDeveloped - The Base Layers";
   function updateTabTitleBadge() {
     const user = currentUser();
-    const unread = isStaff(user) ? unreadChatTotal(user) : 0;
+    const unread = isStaff(user) ? bellSummary().total : 0;
     // CODE-10 (D-20): memoised title write — only updates when value differs.
     setTitleIfDifferent(unread > 0 ? `(${unread}) ${BASE_TAB_TITLE}` : BASE_TAB_TITLE);
   }
@@ -843,7 +903,7 @@ import {
     app.replaceChildren();
 
     const user = currentUser();
-    ensureChatSubscription(user);
+    ensureActivitySubscriptions(user);
     document.body.classList.toggle("client-view", !!(user && user.role === "client"));
     if (!user) {
       // Cold-load flash guard: on first paint Firebase hasn't yet reported the
@@ -994,6 +1054,18 @@ import {
     // user-menu entry that consumed it.
     exportData,
     importData,
+    // Scope item 7 (2026-07): staff notification bell deps.
+    activitySummary: bellSummary,
+    bellOpen: () => state.bellOpen,
+    toggleBell: () => {
+      state.bellOpen = !state.bellOpen;
+      render();
+    },
+    openOrgActivity: (orgId, route) => {
+      state.bellOpen = false;
+      state.orgId = orgId;
+      setRoute(route);
+    },
   });
 
   // ================================================================
@@ -3204,6 +3276,9 @@ import {
 
     if (!org) return frag;
 
+    // Mark everything up to now as seen for this user/org combination.
+    markDocsSeenFor(user.id, org.id);
+
     if (!fbReady()) {
       frag.appendChild(
         h("div", { class: "card docs-empty-card" }, "Connecting to shared storage…"),
@@ -4064,7 +4139,7 @@ import {
     }
 
     // Post-auth setup (was previously gated on the firebase-ready event):
-    ensureChatSubscription(state.fbUser);
+    ensureActivitySubscriptions(state.fbUser);
 
     // Phase 4.1 / D-13 follow-up: Firestore is the source of truth for the
     // orgs + users top-level collections. Live snapshot listeners hydrate
@@ -5419,6 +5494,23 @@ Any questions, just let me know.`;
         if (metas.length && !state.orgId) state.orgId = metas[0].id;
       }
     }
+    // Scope item 7 (2026-07): bell panel closes on any outside click (the
+    // panel stopPropagation()s its own clicks; the bell button toggles
+    // itself). Registered once here in init(), which itself runs once.
+    document.addEventListener("click", () => {
+      if (state.bellOpen) {
+        state.bellOpen = false;
+        render();
+      }
+    });
+    // Scope item 7 final review fix: Escape also closes the bell panel
+    // (spec calls for outside click OR Escape; only outside click shipped).
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && state.bellOpen) {
+        state.bellOpen = false;
+        render();
+      }
+    });
     render();
   }
 

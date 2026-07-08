@@ -32,6 +32,12 @@ function makeDeps(overrides = {}) {
     // user-menu entry that consumed it.
     exportData: () => {},
     importData: () => {},
+    // Scope item 7 (2026-07): staff notification bell defaults — zero
+    // activity, closed panel, no-op handlers.
+    activitySummary: () => ({ total: 0, orgs: [] }),
+    bellOpen: () => false,
+    toggleBell: () => {},
+    openOrgActivity: () => {},
     ...overrides,
   };
 }
@@ -203,5 +209,87 @@ describe("renderTopbar() — sign-out pending state (tactile feedback)", () => {
     expect(btn.disabled).toBe(false);
     expect(btn.classList.contains("is-loading")).toBe(false);
     expect(btn.textContent).toBe("Sign out");
+  });
+});
+
+describe("renderTopbar() — notification bell (scope item 7, 2026-07)", () => {
+  const SUMMARY = {
+    total: 3,
+    orgs: [{ orgId: "orgA", orgName: "Acme", chatCount: 2, docCount: 1, latestMs: 5 }],
+  };
+
+  it("renders the bell with a count badge for staff", () => {
+    const deps = makeDeps();
+    deps.activitySummary = () => SUMMARY;
+    const { renderTopbar } = createChrome(deps);
+    const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
+    const bell = el.querySelector(".bell-btn");
+    expect(bell).not.toBeNull();
+    expect(bell?.getAttribute("aria-label")).toBe("Activity notifications");
+    expect(el.querySelector(".bell-btn .count-badge")?.textContent).toBe("3");
+  });
+
+  it("hides the badge at zero and never renders for clients", () => {
+    const deps = makeDeps();
+    deps.activitySummary = () => ({ total: 0, orgs: [] });
+    const { renderTopbar } = createChrome(deps);
+    const staffEl = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
+    expect(staffEl.querySelector(".bell-btn")).not.toBeNull();
+    expect(staffEl.querySelector(".bell-btn .count-badge")).toBeNull();
+    const clientEl = renderTopbar({ role: "client", name: "C", email: "c@x.com" });
+    expect(clientEl.querySelector(".bell-btn")).toBeNull();
+  });
+
+  it("caps the badge display at 30+", () => {
+    const deps = makeDeps();
+    deps.activitySummary = () => ({ total: 31, orgs: [] });
+    const { renderTopbar } = createChrome(deps);
+    const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
+    expect(el.querySelector(".bell-btn .count-badge")?.textContent).toBe("30+");
+  });
+
+  it("open panel lists org rows and clicking one calls openOrgActivity", () => {
+    const calls = /** @type {Array<*>} */ ([]);
+    const deps = makeDeps();
+    deps.activitySummary = () => SUMMARY;
+    deps.bellOpen = () => true;
+    deps.openOrgActivity = (/** @type {string} */ orgId, /** @type {string} */ route) =>
+      calls.push([orgId, route]);
+    const { renderTopbar } = createChrome(deps);
+    const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
+    const panel = el.querySelector(".bell-panel");
+    expect(panel).not.toBeNull();
+    expect(panel?.textContent).toContain("Acme");
+    expect(panel?.textContent).toContain("2 new messages");
+    expect(panel?.textContent).toContain("1 new document");
+    const chatRow = /** @type {HTMLButtonElement} */ (
+      Array.from(panel?.querySelectorAll("button.bell-row") || []).find((b) =>
+        b.textContent?.includes("message"),
+      )
+    );
+    chatRow.click();
+    expect(calls).toEqual([["orgA", "chat"]]);
+  });
+
+  it("open panel with no activity shows the empty state", () => {
+    const deps = makeDeps();
+    deps.activitySummary = () => ({ total: 0, orgs: [] });
+    deps.bellOpen = () => true;
+    const { renderTopbar } = createChrome(deps);
+    const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
+    expect(el.querySelector(".bell-panel")?.textContent).toContain("No new activity");
+  });
+
+  it("bell click calls toggleBell", () => {
+    let toggled = 0;
+    const deps = makeDeps();
+    deps.activitySummary = () => ({ total: 0, orgs: [] });
+    deps.toggleBell = () => {
+      toggled += 1;
+    };
+    const { renderTopbar } = createChrome(deps);
+    const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
+    /** @type {HTMLButtonElement} */ (el.querySelector(".bell-btn")).click();
+    expect(toggled).toBe(1);
   });
 });

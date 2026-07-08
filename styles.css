@@ -390,6 +390,78 @@ option {
   transform: translateX(14px);
 }
 
+/* Notification bell (scope item 7, 2026-07) — staff-only topbar control. */
+.bell-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.bell-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.bell-btn:hover {
+  border-color: var(--brand);
+  color: var(--ink);
+}
+.bell-btn .count-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+}
+.bell-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 260px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 8px;
+  z-index: 50;
+}
+.bell-org {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--brand);
+  padding: 6px 8px 2px;
+}
+.bell-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.bell-row:hover {
+  background: var(--surface-muted);
+  color: var(--ink);
+}
+.bell-empty {
+  padding: 10px 8px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
 /* ------------------- User chip (in topbar) ------------------- */
 .user-chip {
   display: inline-flex;

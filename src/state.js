@@ -20,9 +20,8 @@
  *   authTab: string,
  *   authError: string,
  *   expandedPillars: Set<number>,
- *   chatMessages: Array<*>,
- *   chatSubscription: (() => void) | null,
- *   chatSubscribedFor: string|null,
+ *   activity: { messages: Record<string, Array<*>>, documents: Record<string, Array<*>> },
+ *   bellOpen: boolean,
  *   fbUser: *,
  *   authResolved: boolean,
  *   qrcodeDataUrl: string|null,
@@ -65,9 +64,11 @@ export const state = {
   authTab: "client",
   authError: "",
   expandedPillars: new Set(), // dashboard-tile accordion state
-  chatMessages: [], // live feed from Firestore, filtered by role
-  chatSubscription: null, // unsubscribe function for the live listener
-  chatSubscribedFor: null, // user.id the current subscription is for
+  // Scope item 7 (2026-07): per-org live activity feeds for the bell +
+  // unread badges. Keyed by orgId; populated by ensureActivitySubscriptions
+  // in main.js (one messages + one documents listener per org, limit 30).
+  activity: { messages: {}, documents: {} },
+  bellOpen: false, // bell dropdown open state (survives re-renders)
   // Phase 6 Wave 5 (BLOCKER-FIX 1): Firebase Auth user shim — null when
   // unauthenticated; populated by main.js's onAuthStateChanged callback with
   // a hybrid object that exposes BOTH the Firebase User properties (uid,

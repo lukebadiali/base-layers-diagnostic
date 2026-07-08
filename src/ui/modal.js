@@ -14,6 +14,8 @@
 // so promptText/confirmDialog are NOT replacements for native prompts —
 // they're the existing custom modal helper (used by views/* in Wave 4).
 import { h } from "./dom.js";
+import { pendingButton } from "./pending-button.js";
+import { notify } from "./toast.js";
 
 /** @param {(HTMLElement|string|null|false)[]} content */
 export function modal(content) {
@@ -41,30 +43,80 @@ export function modal(content) {
 }
 
 /**
+ * Async-aware dispatch for modal confirm buttons. Sync callbacks (returning
+ * undefined) close immediately — the original contract. A thenable return
+ * keeps the modal open with a pending spinner (shared pendingButton
+ * vocabulary) until it settles: close on resolve; on reject stay open,
+ * restore the buttons and surface the error as a toast so the user can
+ * retry or cancel. Scope item 2 (2026-07): gives slow Cloud-Function-backed
+ * actions visible feedback instead of an instantly-closing modal.
+ *
+ * @param {HTMLButtonElement} okBtn
+ * @param {HTMLButtonElement} cancelBtn
+ * @param {string} pendingLabel
+ * @param {() => *} action
+ * @param {() => void} close
+ */
+function runModalAction(okBtn, cancelBtn, pendingLabel, action, close) {
+  let result;
+  try {
+    result = action();
+  } catch (err) {
+    notify("error", (err && /** @type {*} */ (err).message) || "Action failed");
+    return;
+  }
+  if (!result || typeof result.then !== "function") {
+    close();
+    return;
+  }
+  const pending = pendingButton(okBtn, pendingLabel);
+  pending.start();
+  cancelBtn.disabled = true;
+  result.then(
+    () => close(),
+    (/** @type {*} */ err) => {
+      pending.stop();
+      cancelBtn.disabled = false;
+      notify("error", (err && err.message) || "Action failed");
+    },
+  );
+}
+
+/**
  * @param {string} title
  * @param {string} placeholder
- * @param {(value: string) => void} onSubmit
+ * @param {(value: string) => (void|Promise<*>)} onSubmit
  * @param {string} [initial]
  */
 export function promptText(title, placeholder, onSubmit, initial = "") {
   const input = /** @type {HTMLInputElement} */ (h("input", { type: "text", placeholder }));
   input.value = initial;
-  const cancel = h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel");
-  const ok = h(
-    "button",
-    {
-      class: "btn",
-      onclick: () => {
-        const v = input.value.trim();
-        if (!v) return;
-        onSubmit(v);
-        m.close();
+  const cancel = /** @type {HTMLButtonElement} */ (
+    h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel")
+  );
+  const ok = /** @type {HTMLButtonElement} */ (
+    h(
+      "button",
+      {
+        class: "btn",
+        onclick: () => {
+          const v = input.value.trim();
+          if (!v) return;
+          runModalAction(
+            ok,
+            cancel,
+            "Saving…",
+            () => onSubmit(v),
+            () => m.close(),
+          );
+        },
       },
-    },
-    "Save",
+      "Save",
+    )
   );
   input.addEventListener("keydown", (e) => {
-    if (/** @type {KeyboardEvent} */ (e).key === "Enter") /** @type {HTMLButtonElement} */ (ok).click();
+    if (/** @type {KeyboardEvent} */ (e).key === "Enter")
+      /** @type {HTMLButtonElement} */ (ok).click();
   });
   const m = modal([h("h3", {}, title), input, h("div", { class: "row" }, [cancel, ok])]);
   setTimeout(() => input.focus(), 10);
@@ -73,26 +125,26 @@ export function promptText(title, placeholder, onSubmit, initial = "") {
 /**
  * @param {string} title
  * @param {string} message
- * @param {() => void} onOk
+ * @param {() => (void|Promise<*>)} onOk
  * @param {string} [okLabel]
  */
 export function confirmDialog(title, message, onOk, okLabel = "Confirm") {
+  const cancel = /** @type {HTMLButtonElement} */ (
+    h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel")
+  );
+  const ok = /** @type {HTMLButtonElement} */ (
+    h(
+      "button",
+      {
+        class: "btn",
+        onclick: () => runModalAction(ok, cancel, "Working…", onOk, () => m.close()),
+      },
+      okLabel,
+    )
+  );
   const m = modal([
     h("h3", {}, title),
     h("p", { style: "color: var(--ink-2); font-size: 14px;" }, message),
-    h("div", { class: "row" }, [
-      h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-      h(
-        "button",
-        {
-          class: "btn",
-          onclick: () => {
-            onOk();
-            m.close();
-          },
-        },
-        okLabel,
-      ),
-    ]),
+    h("div", { class: "row" }, [cancel, ok]),
   ]);
 }

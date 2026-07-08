@@ -142,7 +142,11 @@ describe("renderMfaEnrol (Phase 6 D-16)", () => {
     expect(typeof renderMfaEnrol).toBe("function");
   });
   it("renders QR-code img + verification-code input + submit button", () => {
-    const view = createAuthView({});
+    // qrcodeDataUrl set (scope item 2, 2026-07): once the TOTP secret + QR
+    // data-URL are ready, renderMfaEnrol swaps the loading placeholder for
+    // the real <img>. The empty-qrcodeDataUrl / placeholder branch is
+    // covered separately by tests/views/mfa-enrol-qr.test.js.
+    const view = createAuthView({ qrcodeDataUrl: "data:image/png;base64,AAAA" });
     const el = view.renderMfaEnrol();
     expect(el.querySelector("img.qr-code")).toBeTruthy();
     expect(el.querySelector('input[name="verificationCode"]')).toBeTruthy();
@@ -161,7 +165,9 @@ describe("renderMfaEnrol (Phase 6 D-16)", () => {
     expect(el.querySelector(".auth-form")).toBeTruthy();
   });
   it("matches the mfa-enrol snapshot", async () => {
-    const view = createAuthView({});
+    // qrcodeDataUrl set so the snapshot captures the settled (real QR image)
+    // state rather than the loading placeholder — see comment above.
+    const view = createAuthView({ qrcodeDataUrl: "data:image/png;base64,AAAA" });
     const el = view.renderMfaEnrol();
     document.body.innerHTML = "";
     document.body.appendChild(el);

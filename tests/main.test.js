@@ -82,4 +82,26 @@ describe("src/main.js — boot path shape", () => {
       expect(codeOnly).not.toMatch(/function\s+cloudFetchAllUsers\b/);
     });
   });
+
+  // Client org hydration (2026-07 ux-polish): a collection-level subscribeOrgs
+  // query is permission-denied for role "client" under firestore.rules — a
+  // client may read only its single orgs/{orgId} doc. The unconstrained query
+  // left K.org(orgId) empty so a correctly-linked client saw "your account
+  // isn't linked to an organisation yet". The post-auth wiring must branch
+  // clients onto the single-doc subscribeOrg listener. If this regresses,
+  // linked clients fall back to the "not linked" screen.
+  describe("client org hydration via single-doc subscribeOrg", () => {
+    it("imports subscribeOrg and wires it as a live single-doc listener", () => {
+      const src = readFileSync(resolve("src/main.js"), "utf8");
+      const codeOnly = src.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+      expect(codeOnly).toMatch(/subscribeOrg\s+as\s+_subscribeOrg/);
+      expect(codeOnly).toMatch(/_subscribeOrg\s*\(/);
+    });
+
+    it("branches the post-auth hydration on the client role", () => {
+      const src = readFileSync(resolve("src/main.js"), "utf8");
+      const codeOnly = src.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+      expect(codeOnly).toMatch(/===\s*["']client["']/);
+    });
+  });
 });

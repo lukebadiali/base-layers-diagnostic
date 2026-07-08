@@ -234,6 +234,7 @@ import {
   saveOrg as _saveOrg,
   deleteOrg as _deleteOrg,
   subscribeOrgs as _subscribeOrgs,
+  subscribeOrg as _subscribeOrg,
 } from "./data/orgs.js";
 import {
   getUser as _getUser,
@@ -4158,46 +4159,80 @@ import {
     // changes (genuinely new data) still trigger a render. The JSON.stringify
     // compare is O(payload-size) per snapshot — acceptable here because the
     // orgs collection is small (one doc per engagement).
-    let _orgsHydratedOnce = false;
-    _subscribeOrgs({
-      onChange: (orgs) => {
-        const newMeta = orgs.map((o) => ({ id: o.id, name: o.name }));
-        let changed = JSON.stringify(jget(K.orgs, [])) !== JSON.stringify(newMeta);
-        jset(K.orgs, newMeta);
-        for (const org of orgs) {
-          const prev = jget(K.org(org.id), null);
-          // Phase 5 (DATA-01) moved responses to the
-          // /orgs/{orgId}/responses subcollection; the parent doc's
-          // `responses` field is stale (or absent) and the
-          // ensureResponsesSubscription() listener below owns the truth.
-          // Preserve the locally-cached responses across parent-doc
-          // hydrations so a snapshot doesn't wipe the diagnostic clicks
-          // setResponse() just wrote to the subcollection.
-          const merged =
-            prev && prev.responses ? Object.assign({}, org, { responses: prev.responses }) : org;
-          if (!changed && JSON.stringify(prev) !== JSON.stringify(merged)) changed = true;
-          jset(K.org(org.id), merged);
-        }
-        if (!_orgsHydratedOnce) {
-          _orgsHydratedOnce = true;
-          clearResponsesForFrameworkV2IfNeeded();
-          // First snapshot must always paint — the inline render() below
-          // fires before this listener completes, so the initial render
-          // doesn't have the hydrated orgs yet.
-          changed = true;
-        }
-        if (changed) render();
-      },
-      onError: (err) => console.error("subscribeOrgs failed:", err),
-    });
-    _subscribeUsers({
-      onChange: (users) => {
-        const changed = JSON.stringify(jget(K.users, [])) !== JSON.stringify(users);
-        jset(K.users, users);
-        if (changed) render();
-      },
-      onError: (err) => console.error("subscribeUsers failed:", err),
-    });
+    // Hydration is role-split. Internal/admin read the whole orgs + users
+    // collections via collection-level snapshots. CLIENTS CANNOT: firestore.rules
+    // lets a client read only its single orgs/{orgId} doc (inOrg(orgId) →
+    // orgId()==o) and its own users/{uid} doc, so an unconstrained collection
+    // query is permission-denied. That silent denial left K.org(orgId) empty and
+    // rendered the "your account isn't linked to an organisation yet" screen for
+    // a correctly-linked client (2026-07 ux-polish fix). Clients subscribe to the
+    // single org doc instead — no users-collection listener (author names come
+    // from inline authorName fields on each message/comment doc) and no
+    // framework-V2 wipe (it calls saveOrg, an org write clients are forbidden
+    // from making).
+    if ((claims.role || "internal") === "client") {
+      const clientOrgId = claims.orgId || null;
+      if (clientOrgId) {
+        _subscribeOrg(clientOrgId, {
+          onChange: (org) => {
+            if (!org) return; // absent / deleted doc — keep the "not linked" screen
+            const newMeta = [{ id: org.id, name: org.name }];
+            let changed = JSON.stringify(jget(K.orgs, [])) !== JSON.stringify(newMeta);
+            jset(K.orgs, newMeta);
+            const prev = jget(K.org(org.id), null);
+            // Preserve locally-cached responses across parent-doc hydrations —
+            // ensureResponsesSubscription() owns that field (mirrors internal path).
+            const merged =
+              prev && prev.responses ? Object.assign({}, org, { responses: prev.responses }) : org;
+            if (JSON.stringify(prev) !== JSON.stringify(merged)) changed = true;
+            jset(K.org(org.id), merged);
+            if (changed) render();
+          },
+          onError: (err) => console.error("subscribeOrg failed:", err),
+        });
+      }
+    } else {
+      let _orgsHydratedOnce = false;
+      _subscribeOrgs({
+        onChange: (orgs) => {
+          const newMeta = orgs.map((o) => ({ id: o.id, name: o.name }));
+          let changed = JSON.stringify(jget(K.orgs, [])) !== JSON.stringify(newMeta);
+          jset(K.orgs, newMeta);
+          for (const org of orgs) {
+            const prev = jget(K.org(org.id), null);
+            // Phase 5 (DATA-01) moved responses to the
+            // /orgs/{orgId}/responses subcollection; the parent doc's
+            // `responses` field is stale (or absent) and the
+            // ensureResponsesSubscription() listener below owns the truth.
+            // Preserve the locally-cached responses across parent-doc
+            // hydrations so a snapshot doesn't wipe the diagnostic clicks
+            // setResponse() just wrote to the subcollection.
+            const merged =
+              prev && prev.responses ? Object.assign({}, org, { responses: prev.responses }) : org;
+            if (!changed && JSON.stringify(prev) !== JSON.stringify(merged)) changed = true;
+            jset(K.org(org.id), merged);
+          }
+          if (!_orgsHydratedOnce) {
+            _orgsHydratedOnce = true;
+            clearResponsesForFrameworkV2IfNeeded();
+            // First snapshot must always paint — the inline render() below
+            // fires before this listener completes, so the initial render
+            // doesn't have the hydrated orgs yet.
+            changed = true;
+          }
+          if (changed) render();
+        },
+        onError: (err) => console.error("subscribeOrgs failed:", err),
+      });
+      _subscribeUsers({
+        onChange: (users) => {
+          const changed = JSON.stringify(jget(K.users, [])) !== JSON.stringify(users);
+          jset(K.users, users);
+          if (changed) render();
+        },
+        onError: (err) => console.error("subscribeUsers failed:", err),
+      });
+    }
 
     render();
   });

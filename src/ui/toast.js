@@ -93,3 +93,15 @@ export function notify(level, message, opts = {}) {
   // Focus the close button on errors (D-14 a11y win for keyboard users)
   if (level === "error") closeBtn.focus();
 }
+
+/**
+ * Remove every visible toast. Called at the successful-sign-in chokepoint
+ * (src/main.js onAuthStateChanged, signed-in branch) so sticky auth-flow
+ * errors ("Invalid verification code" after a TOTP retry) don't survive
+ * into the app render. D-14 in-app stickiness is unchanged — auth-state
+ * transitions are the only caller.
+ */
+export function dismissAllToasts() {
+  const root = document.getElementById("toastRoot");
+  if (root) root.replaceChildren();
+}

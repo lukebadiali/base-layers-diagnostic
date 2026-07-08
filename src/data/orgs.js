@@ -75,3 +75,22 @@ export function subscribeOrgs({ onChange, onError }) {
     onError,
   );
 }
+
+/**
+ * Single-document live subscription for one org. Clients can read only their
+ * own orgs/{orgId} doc under firestore.rules (inOrg(orgId) → orgId()==o); an
+ * unconstrained collection query (subscribeOrgs) is permission-denied for them
+ * and left the client's org cache empty. This single-doc listener is the
+ * client-safe hydration path main.js wires for role "client". onChange fires
+ * with the org (id merged) or null when the doc is absent / deleted.
+ * @param {string} orgId
+ * @param {{ onChange: (org: any|null) => void, onError: (err: Error) => void }} cb
+ * @returns {() => void}
+ */
+export function subscribeOrg(orgId, { onChange, onError }) {
+  return onSnapshot(
+    doc(db, "orgs", orgId),
+    (/** @type {any} */ snap) => onChange(snap.exists() ? { id: snap.id, ...snap.data() } : null),
+    onError,
+  );
+}

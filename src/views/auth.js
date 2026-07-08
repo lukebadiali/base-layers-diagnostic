@@ -178,7 +178,9 @@ export function createAuthView(deps) {
     form.appendChild(
       h("div", { class: "auth-field" }, [h("label", {}, "Confirm password"), confirm]),
     );
-    const submit = h("button", { type: "submit", class: "auth-submit" }, "Set password");
+    const submit = /** @type {HTMLButtonElement} */ (
+      h("button", { type: "submit", class: "auth-submit" }, "Set password")
+    );
     form.appendChild(submit);
     form.addEventListener("submit", async (/** @type {Event} */ e) => {
       e.preventDefault();
@@ -188,10 +190,17 @@ export function createAuthView(deps) {
         notify("error", "Passwords do not match");
         return;
       }
+      // Mirror renderSignIn: lock the button + swap in a pending label so the
+      // click visibly registers and the state holds through the updatePassword
+      // round-trip and the post-auth page swap. On success the re-render tears
+      // this view down, so only the failure path restores the button for a retry.
+      const pending = pendingButton(submit, "Setting password…");
+      pending.start();
       try {
         if (deps.updatePassword) await deps.updatePassword(a);
       } catch (err) {
         notify("error", (err && /** @type {*} */ (err).message) || "Password update failed");
+        pending.stop();
       }
     });
     formSide.appendChild(form);
@@ -230,9 +239,22 @@ export function createAuthView(deps) {
       ),
     );
 
-    const qr = h("img", { class: "qr-code", alt: "TOTP enrolment QR code" });
-    if (deps.qrcodeDataUrl) /** @type {HTMLImageElement} */ (qr).src = deps.qrcodeDataUrl;
-    formSide.appendChild(qr);
+    // Scope item 2 (2026-07): the QR data-URL arrives async (Firebase secret
+    // round-trip + dynamic qrcode import in main.js startMfaEnrolFlow). Show
+    // a same-size loading placeholder instead of an empty <img>; the render()
+    // on completion swaps the real QR in.
+    if (deps.qrcodeDataUrl) {
+      const qr = h("img", { class: "qr-code", alt: "TOTP enrolment QR code" });
+      /** @type {HTMLImageElement} */ (qr).src = deps.qrcodeDataUrl;
+      formSide.appendChild(qr);
+    } else {
+      formSide.appendChild(
+        h("div", { class: "qr-code qr-code-loading", role: "status" }, [
+          h("span", { class: "qr-spinner", "aria-hidden": "true" }),
+          h("span", {}, "Generating QR code…"),
+        ]),
+      );
+    }
 
     const form = h("form", { method: "post" });
     const code = h("input", {
@@ -356,8 +378,14 @@ export function createAuthView(deps) {
         if (deps.verifyMfaCode && deps.mfaResolver) {
           await deps.verifyMfaCode(deps.mfaResolver, codeVal);
         }
-      } catch (err) {
-        notify("error", (err && /** @type {*} */ (err).message) || "Verification failed");
+      } catch (_err) {
+        // Deliberately silent on a wrong/expired authenticator code. Error
+        // toasts are sticky (AUTO_DISMISS_MS.error = null) and #toastRoot lives
+        // outside #app, so a fumbled TOTP — and codes rotate every 30s, so this
+        // is a common, innocent path — would pin an alarming red toast top-right
+        // that survives even a successful retry into the app. Not worth the bad
+        // look in front of a client, and nothing here is worth surfacing: the
+        // code input stays populated for an immediate re-try.
       }
     });
     formSide.appendChild(form);

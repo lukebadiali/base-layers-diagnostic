@@ -350,12 +350,12 @@ option {
 .mode-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-size: 12px;
   color: var(--ink-3);
   cursor: pointer;
   user-select: none;
-  padding: 4px 10px;
+  padding: 4px 8px;
   border-radius: 999px;
   background: var(--surface-muted);
   border: 1px solid var(--line);
@@ -388,6 +388,78 @@ option {
 }
 .mode-toggle input:checked + .switch::after {
   transform: translateX(14px);
+}
+
+/* Notification bell (scope item 7, 2026-07) — staff-only topbar control. */
+.bell-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.bell-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.bell-btn:hover {
+  border-color: var(--brand);
+  color: var(--ink);
+}
+.bell-btn .count-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+}
+.bell-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 260px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 8px;
+  z-index: 50;
+}
+.bell-org {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--brand);
+  padding: 6px 8px 2px;
+}
+.bell-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.bell-row:hover {
+  background: var(--surface-muted);
+  color: var(--ink);
+}
+.bell-empty {
+  padding: 10px 8px;
+  color: var(--ink-3);
+  font-size: 13px;
 }
 
 /* ------------------- User chip (in topbar) ------------------- */
@@ -3814,6 +3886,32 @@ a:hover {
   border-radius: 9px;
   padding: 8px;
   box-sizing: content-box;
+}
+
+/* Loading placeholder while main.js generates the TOTP secret + QR data-URL
+   (scope item 2, 2026-07). Same box as .qr-code so the layout doesn't jump;
+   spinner reuses the auth-spin keyframes from the pending-button contract. */
+.auth-mfa-enrol .qr-code-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.auth-mfa-enrol .qr-code-loading .qr-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: auth-spin 0.7s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-mfa-enrol .qr-code-loading .qr-spinner {
+    animation-duration: 1.6s;
+  }
 }
 
 /* Sign-out escape inside the form column for MFA enrol — sits in .auth-help

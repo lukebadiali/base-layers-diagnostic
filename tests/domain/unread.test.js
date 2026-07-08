@@ -23,43 +23,50 @@ describe("unreadCountForPillar (H7 fix - server-clock comparator)", () => {
     // Inline duck-typed { toMillis: () => N } proves comparator only consumes
     // server-time-shaped values; client clock is irrelevant.
     const lastReadTs = { toMillis: () => 999000 };
-    const comments = [
-      { authorId: "u_other", createdAt: { toMillis: () => 1000000 } },
-    ];
+    const comments = [{ authorId: "u_other", createdAt: { toMillis: () => 1000000 } }];
     expect(unreadCountForPillar(lastReadTs, comments, "u_self")).toBe(1);
   });
 
   it("excludes self-authored comments", () => {
-    expect(unreadCountForPillar(ts(999000), [
-      { authorId: "u_self", createdAt: ts(1000000) },
-    ], "u_self")).toBe(0);
+    expect(
+      unreadCountForPillar(ts(999000), [{ authorId: "u_self", createdAt: ts(1000000) }], "u_self"),
+    ).toBe(0);
   });
 
   it("treats lastReadTs=null as no-prior-read (counts all other-author comments)", () => {
-    expect(unreadCountForPillar(null, [
-      { authorId: "u_other", createdAt: ts(1000000) },
-      { authorId: "u_other", createdAt: ts(2000000) },
-    ], "u_self")).toBe(2);
+    expect(
+      unreadCountForPillar(
+        null,
+        [
+          { authorId: "u_other", createdAt: ts(1000000) },
+          { authorId: "u_other", createdAt: ts(2000000) },
+        ],
+        "u_self",
+      ),
+    ).toBe(2);
   });
 
   it("treats lastReadTs=undefined as no-prior-read (defensive guard)", () => {
-    expect(unreadCountForPillar(undefined, [
-      { authorId: "u_other", createdAt: ts(1000000) },
-    ], "u_self")).toBe(1);
+    expect(
+      unreadCountForPillar(undefined, [{ authorId: "u_other", createdAt: ts(1000000) }], "u_self"),
+    ).toBe(1);
   });
 
   it("skips comments with no createdAt (defensive guard)", () => {
-    expect(unreadCountForPillar(ts(999000), [
-      { authorId: "u_other" },
-      { authorId: "u_other", createdAt: ts(1000000) },
-    ], "u_self")).toBe(1);
+    expect(
+      unreadCountForPillar(
+        ts(999000),
+        [{ authorId: "u_other" }, { authorId: "u_other", createdAt: ts(1000000) }],
+        "u_self",
+      ),
+    ).toBe(1);
   });
 
   it("excludes comments with createdAt before lastReadTs (inline duck-typed Timestamps)", () => {
     // Ensure inline literal Timestamp objects work in addition to the ts() factory.
     const lastReadTs = { toMillis: () => 2000000 };
     const before = { authorId: "u_other", createdAt: { toMillis: () => 1000000 } };
-    const after  = { authorId: "u_other", createdAt: { toMillis: () => 3000000 } };
+    const after = { authorId: "u_other", createdAt: { toMillis: () => 3000000 } };
     expect(unreadCountForPillar(lastReadTs, [before, after], "u_self")).toBe(1);
   });
 
@@ -74,31 +81,33 @@ describe("unreadCountForPillar (H7 fix - server-clock comparator)", () => {
 
   it("5-minute client clock skew does NOT change unread count (H7 / ROADMAP SC#4)", () => {
     // Inline duck-typed Timestamps - the comparator must NEVER reach for Date.now().
-    const commentTs  = { toMillis: () => 1000000 };
+    const commentTs = { toMillis: () => 1000000 };
     const lastReadTs = { toMillis: () => 999000 };
     const dateNowSpy = vi.spyOn(Date, "now");
     // +5min skew
     dateNowSpy.mockReturnValue(1000000 + 5 * 60 * 1000);
-    expect(unreadCountForPillar(lastReadTs, [
-      { authorId: "u_other", createdAt: commentTs },
-    ], "u_self")).toBe(1);
+    expect(
+      unreadCountForPillar(lastReadTs, [{ authorId: "u_other", createdAt: commentTs }], "u_self"),
+    ).toBe(1);
     // -5min skew
     dateNowSpy.mockReturnValue(1000000 - 5 * 60 * 1000);
-    expect(unreadCountForPillar(lastReadTs, [
-      { authorId: "u_other", createdAt: commentTs },
-    ], "u_self")).toBe(1);
+    expect(
+      unreadCountForPillar(lastReadTs, [{ authorId: "u_other", createdAt: commentTs }], "u_self"),
+    ).toBe(1);
     dateNowSpy.mockRestore();
   });
 });
 
 describe("unreadCountTotal", () => {
   it("sums unreadCountForPillar across pillars; missing pillarReads entry treated as null", () => {
-    const pillarReads = { "1": ts(999000) };
+    const pillarReads = { 1: ts(999000) };
     const commentsByPillar = {
-      "1": [{ authorId: "u_other", createdAt: ts(1000000) }],
-      "2": [{ authorId: "u_other", createdAt: ts(500) }],
+      1: [{ authorId: "u_other", createdAt: ts(1000000) }],
+      2: [{ authorId: "u_other", createdAt: ts(500) }],
     };
-    expect(unreadCountTotal(pillarReads, commentsByPillar, "u_self", [{ id: 1 }, { id: 2 }])).toBe(2);
+    expect(unreadCountTotal(pillarReads, commentsByPillar, "u_self", [{ id: 1 }, { id: 2 }])).toBe(
+      2,
+    );
   });
 
   it("returns 0 for empty pillars list", () => {
@@ -107,13 +116,15 @@ describe("unreadCountTotal", () => {
 
   it("handles undefined pillarReads (defensive fallback)", () => {
     const commentsByPillar = {
-      "1": [{ authorId: "u_other", createdAt: ts(1000000) }],
+      1: [{ authorId: "u_other", createdAt: ts(1000000) }],
     };
-    expect(unreadCountTotal(/** @type {any} */ (undefined), commentsByPillar, "u_self", [{ id: 1 }])).toBe(1);
+    expect(
+      unreadCountTotal(/** @type {any} */ (undefined), commentsByPillar, "u_self", [{ id: 1 }]),
+    ).toBe(1);
   });
 
   it("missing commentsByPillar entry treated as empty list", () => {
-    const pillarReads = { "1": ts(0) };
+    const pillarReads = { 1: ts(0) };
     expect(unreadCountTotal(pillarReads, {}, "u_self", [{ id: 1 }])).toBe(0);
   });
 });
@@ -126,11 +137,11 @@ describe("unreadChatTotal (H7 fix - server-clock comparator)", () => {
   it("client user: counts only their org messages, server-clock vs server-clock", () => {
     const user = { id: "u_self", role: "client", orgId: "orgA" };
     /** @param {string} orgId */
-    const lastReadForOrg = (orgId) => orgId === "orgA" ? ts(1000) : null;
+    const lastReadForOrg = (orgId) => (orgId === "orgA" ? ts(1000) : null);
     const messages = [
       { orgId: "orgA", authorId: "u_other", createdAt: ts(2000) },
       { orgId: "orgA", authorId: "u_other", createdAt: ts(500) },
-      { orgId: "orgA", authorId: "u_self",  createdAt: ts(2000) },
+      { orgId: "orgA", authorId: "u_self", createdAt: ts(2000) },
       { orgId: "orgB", authorId: "u_other", createdAt: ts(2000) },
     ];
     expect(unreadChatTotal(user, messages, lastReadForOrg)).toBe(1);
@@ -169,13 +180,19 @@ describe("unreadChatTotal (H7 fix - server-clock comparator)", () => {
   it("internal user: counts across all orgs via per-message lastReadForOrg lookup", () => {
     const user = { id: "u_self", role: "internal" };
     /** @param {string} orgId */
-    const lastReadForOrg = (orgId) =>
-      ({ orgA: ts(1000), orgB: ts(1500) })[orgId] || null;
+    const lastReadForOrg = (orgId) => ({ orgA: ts(1000), orgB: ts(1500) })[orgId] || null;
     const messages = [
       { orgId: "orgA", authorId: "u_other", createdAt: ts(2000) },
       { orgId: "orgB", authorId: "u_other", createdAt: ts(1000) },
-      { orgId: "orgA", authorId: "u_self",  createdAt: ts(2000) },
+      { orgId: "orgA", authorId: "u_self", createdAt: ts(2000) },
     ];
+    expect(unreadChatTotal(user, messages, lastReadForOrg)).toBe(1);
+  });
+
+  it("internal user with no read-marker for a message's org treats it as unread (lastMs=0)", () => {
+    const user = { id: "u_self", role: "internal" };
+    const lastReadForOrg = () => null; // no marker for any org -> the `: 0` fallback
+    const messages = [{ orgId: "orgA", authorId: "u_other", createdAt: ts(2000) }];
     expect(unreadChatTotal(user, messages, lastReadForOrg)).toBe(1);
   });
 

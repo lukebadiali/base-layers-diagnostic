@@ -35,6 +35,10 @@ import { pendingButton } from "./pending-button.js";
  *   signOut: () => void,
  *   exportData: () => void,
  *   importData: (file: File) => void,
+ *   activitySummary: () => { total: number, orgs: Array<{orgId: string, orgName: string, chatCount: number, docCount: number, latestMs: number}> },
+ *   bellOpen: () => boolean,
+ *   toggleBell: () => void,
+ *   openOrgActivity: (orgId: string, route: string) => void,
  * }} ChromeDeps
  */
 
@@ -60,6 +64,10 @@ export function createChrome(deps) {
     signOut,
     exportData,
     importData,
+    activitySummary,
+    bellOpen,
+    toggleBell,
+    openOrgActivity,
   } = deps;
 
   /** @param {*} user */
@@ -137,6 +145,86 @@ export function createChrome(deps) {
 
     // Internal-only: mode toggle + org switcher
     if (!isClient) {
+      // Scope item 7 (2026-07): staff notification bell — new chat messages
+      // and document uploads across every org, attributed per client.
+      const summary = activitySummary();
+      const bellWrap = h("div", { class: "bell-wrap" });
+      const bellBtn = h(
+        "button",
+        {
+          class: "bell-btn",
+          "aria-label": "Activity notifications",
+          "aria-expanded": bellOpen() ? "true" : "false",
+          onclick: (/** @type {Event} */ e) => {
+            e.stopPropagation();
+            toggleBell();
+          },
+        },
+        [
+          (() => {
+            // Inline SVG bell (no-emojis-in-source convention).
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("viewBox", "0 0 16 16");
+            svg.setAttribute("width", "16");
+            svg.setAttribute("height", "16");
+            svg.setAttribute("aria-hidden", "true");
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute(
+              "d",
+              "M8 1.5a4.5 4.5 0 0 0-4.5 4.5v2.6L2.3 11a.7.7 0 0 0 .6 1h10.2a.7.7 0 0 0 .6-1l-1.2-2.4V6A4.5 4.5 0 0 0 8 1.5Zm-1.6 11.3a1.7 1.7 0 0 0 3.2 0Z",
+            );
+            path.setAttribute("fill", "none");
+            path.setAttribute("stroke", "currentColor");
+            path.setAttribute("stroke-width", "1.3");
+            path.setAttribute("stroke-linejoin", "round");
+            svg.appendChild(path);
+            return /** @type {*} */ (svg);
+          })(),
+          summary.total > 0
+            ? h(
+                "span",
+                { class: "count-badge" },
+                summary.total > 30 ? "30+" : String(summary.total),
+              )
+            : null,
+        ].filter(Boolean),
+      );
+      bellWrap.appendChild(bellBtn);
+
+      if (bellOpen()) {
+        const panel = h("div", {
+          class: "bell-panel",
+          onclick: (/** @type {Event} */ e) => e.stopPropagation(),
+        });
+        if (summary.orgs.length === 0) {
+          panel.appendChild(h("div", { class: "bell-empty" }, "No new activity."));
+        } else {
+          summary.orgs.forEach((o) => {
+            panel.appendChild(h("div", { class: "bell-org" }, o.orgName));
+            if (o.chatCount > 0) {
+              panel.appendChild(
+                h(
+                  "button",
+                  { class: "bell-row", onclick: () => openOrgActivity(o.orgId, "chat") },
+                  `${o.chatCount} new message${o.chatCount === 1 ? "" : "s"}`,
+                ),
+              );
+            }
+            if (o.docCount > 0) {
+              panel.appendChild(
+                h(
+                  "button",
+                  { class: "bell-row", onclick: () => openOrgActivity(o.orgId, "documents") },
+                  `${o.docCount} new document${o.docCount === 1 ? "" : "s"}`,
+                ),
+              );
+            }
+          });
+        }
+        bellWrap.appendChild(panel);
+      }
+      topright.appendChild(bellWrap);
+
       const modeToggle = h(
         "label",
         {
@@ -144,7 +232,7 @@ export function createChrome(deps) {
           title: "Internal view shows private commentary. Client view previews what a client sees.",
         },
         [
-          h("span", {}, state.mode === "internal" ? "Internal" : "Client preview"),
+          h("span", {}, state.mode === "internal" ? "Internal" : "Client"),
           (() => {
             const input = /** @type {HTMLInputElement} */ (
               h("input", {

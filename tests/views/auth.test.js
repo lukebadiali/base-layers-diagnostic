@@ -137,12 +137,102 @@ describe("renderFirstRun (Phase 6 D-16)", () => {
   });
 });
 
+describe("renderFirstRun — pending state on submit (tactile feedback)", () => {
+  it("disables the submit button + shows a pending label while the password update is in flight", () => {
+    /** @type {() => void} */
+    let resolveUpdate = () => {};
+    const view = createAuthView({
+      updatePassword: () =>
+        new Promise((res) => {
+          resolveUpdate = () => res();
+        }),
+    });
+    const el = view.renderFirstRun();
+    const form = /** @type {HTMLFormElement} */ (el.querySelector("form"));
+    const submit = /** @type {HTMLButtonElement} */ (el.querySelector('button[type="submit"]'));
+    const newPass = /** @type {HTMLInputElement} */ (el.querySelector('input[name="newPassword"]'));
+    const confirm = /** @type {HTMLInputElement} */ (
+      el.querySelector('input[name="confirmPassword"]')
+    );
+    newPass.value = "correcthorsebatterystaple";
+    confirm.value = "correcthorsebatterystaple";
+
+    expect(submit.disabled).toBe(false);
+    expect(submit.textContent).toBe("Set password");
+
+    // Synchronous head of the async handler runs during dispatch, before it
+    // awaits updatePassword — pending state is visible with no microtask flush.
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    expect(submit.disabled).toBe(true);
+    expect(submit.classList.contains("is-loading")).toBe(true);
+    expect(submit.textContent).toBe("Setting password…");
+
+    resolveUpdate(); // settle the in-flight promise so no state lingers
+  });
+
+  it("clears the pending state after a failed password update so the user can retry", async () => {
+    /** @type {(reason?: unknown) => void} */
+    let rejectUpdate = () => {};
+    const view = createAuthView({
+      updatePassword: () =>
+        new Promise((_res, rej) => {
+          rejectUpdate = rej;
+        }),
+      notify: () => {},
+    });
+    const el = view.renderFirstRun();
+    const form = /** @type {HTMLFormElement} */ (el.querySelector("form"));
+    const submit = /** @type {HTMLButtonElement} */ (el.querySelector('button[type="submit"]'));
+    const newPass = /** @type {HTMLInputElement} */ (el.querySelector('input[name="newPassword"]'));
+    const confirm = /** @type {HTMLInputElement} */ (
+      el.querySelector('input[name="confirmPassword"]')
+    );
+    newPass.value = "correcthorsebatterystaple";
+    confirm.value = "correcthorsebatterystaple";
+
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    expect(submit.disabled).toBe(true);
+
+    rejectUpdate(new Error("nope"));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(submit.disabled).toBe(false);
+    expect(submit.classList.contains("is-loading")).toBe(false);
+    expect(submit.textContent).toBe("Set password");
+  });
+
+  it("does not enter the pending state when the two passwords do not match", () => {
+    const view = createAuthView({ notify: () => {} });
+    const el = view.renderFirstRun();
+    const form = /** @type {HTMLFormElement} */ (el.querySelector("form"));
+    const submit = /** @type {HTMLButtonElement} */ (el.querySelector('button[type="submit"]'));
+    const newPass = /** @type {HTMLInputElement} */ (el.querySelector('input[name="newPassword"]'));
+    const confirm = /** @type {HTMLInputElement} */ (
+      el.querySelector('input[name="confirmPassword"]')
+    );
+    newPass.value = "aaaaaaaaaaaa";
+    confirm.value = "bbbbbbbbbbbb";
+
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    expect(submit.disabled).toBe(false);
+    expect(submit.classList.contains("is-loading")).toBe(false);
+    expect(submit.textContent).toBe("Set password");
+  });
+});
+
 describe("renderMfaEnrol (Phase 6 D-16)", () => {
   it("exports renderMfaEnrol as a function", () => {
     expect(typeof renderMfaEnrol).toBe("function");
   });
   it("renders QR-code img + verification-code input + submit button", () => {
-    const view = createAuthView({});
+    // qrcodeDataUrl set (scope item 2, 2026-07): once the TOTP secret + QR
+    // data-URL are ready, renderMfaEnrol swaps the loading placeholder for
+    // the real <img>. The empty-qrcodeDataUrl / placeholder branch is
+    // covered separately by tests/views/mfa-enrol-qr.test.js.
+    const view = createAuthView({ qrcodeDataUrl: "data:image/png;base64,AAAA" });
     const el = view.renderMfaEnrol();
     expect(el.querySelector("img.qr-code")).toBeTruthy();
     expect(el.querySelector('input[name="verificationCode"]')).toBeTruthy();
@@ -161,7 +251,9 @@ describe("renderMfaEnrol (Phase 6 D-16)", () => {
     expect(el.querySelector(".auth-form")).toBeTruthy();
   });
   it("matches the mfa-enrol snapshot", async () => {
-    const view = createAuthView({});
+    // qrcodeDataUrl set so the snapshot captures the settled (real QR image)
+    // state rather than the loading placeholder — see comment above.
+    const view = createAuthView({ qrcodeDataUrl: "data:image/png;base64,AAAA" });
     const el = view.renderMfaEnrol();
     document.body.innerHTML = "";
     document.body.appendChild(el);
@@ -222,6 +314,29 @@ describe("renderMfaChallenge (Phase 6 follow-up — sign-in 2nd-factor prompt)",
     await Promise.resolve();
     expect(calls).toEqual([{ resolver: fakeResolver, code: "123456" }]);
   });
+  it("stays silent (no error toast) when the authenticator code is invalid", async () => {
+    /** @type {string[]} */
+    const levels = [];
+    const view = createAuthView({
+      mfaResolver: { hints: [{ uid: "f1" }] },
+      verifyMfaCode: async () => {
+        throw new Error("Invalid verification code");
+      },
+      notify: (/** @type {string} */ level) => levels.push(level),
+    });
+    const el = view.renderMfaChallenge();
+    const input = /** @type {HTMLInputElement} */ (
+      el.querySelector('input[name="verificationCode"]')
+    );
+    input.value = "000000";
+    const form = /** @type {HTMLFormElement} */ (el.querySelector("form"));
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    // Flush microtasks so the rejection + catch run.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(levels).not.toContain("error");
+  });
+
   it("cancel button calls deps.cancelMfaChallenge", () => {
     let called = false;
     const view = createAuthView({ cancelMfaChallenge: () => (called = true) });

@@ -83,9 +83,14 @@ describe("promptText()", () => {
 describe("confirmDialog()", () => {
   it("renders title + message and invokes onOk on the confirm button", () => {
     let confirmed = 0;
-    confirmDialog("Are you sure?", "Permanent action.", () => {
-      confirmed++;
-    }, "Delete");
+    confirmDialog(
+      "Are you sure?",
+      "Permanent action.",
+      () => {
+        confirmed++;
+      },
+      "Delete",
+    );
     const root = /** @type {HTMLElement} */ (document.getElementById("modalRoot"));
     expect(root.querySelector("h3")?.textContent).toBe("Are you sure?");
     expect(root.querySelector("p")?.textContent).toBe("Permanent action.");
@@ -95,5 +100,126 @@ describe("confirmDialog()", () => {
     /** @type {HTMLButtonElement} */ (buttons[1]).click();
     expect(confirmed).toBe(1);
     expect(root.classList.contains("hidden")).toBe(true);
+  });
+});
+
+describe("promptText() — async onSubmit (scope item 2, 2026-07)", () => {
+  it("keeps the modal open with a pending Save while the promise is in flight, closes on resolve", async () => {
+    /** @type {(v?: *) => void} */
+    let resolveAction = () => {};
+    promptText("Title", "ph", () => new Promise((res) => (resolveAction = res)));
+    const root = /** @type {HTMLElement} */ (document.getElementById("modalRoot"));
+    const input = /** @type {HTMLInputElement} */ (root.querySelector("input"));
+    input.value = "v";
+    const buttons = Array.from(root.querySelectorAll("button"));
+    const ok = /** @type {HTMLButtonElement} */ (
+      buttons.find((b) => b.textContent?.includes("Save"))
+    );
+    const cancel = /** @type {HTMLButtonElement} */ (
+      buttons.find((b) => b.textContent === "Cancel")
+    );
+    ok.click();
+    expect(root.classList.contains("hidden")).toBe(false);
+    expect(ok.classList.contains("is-loading")).toBe(true);
+    expect(ok.disabled).toBe(true);
+    expect(cancel.disabled).toBe(true);
+    resolveAction();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(root.classList.contains("hidden")).toBe(true);
+  });
+
+  it("on reject: stays open, restores the buttons, raises an error toast", async () => {
+    /** @type {(e: Error) => void} */
+    let rejectAction = () => {};
+    promptText("Title", "ph", () => new Promise((_res, rej) => (rejectAction = rej)));
+    const root = /** @type {HTMLElement} */ (document.getElementById("modalRoot"));
+    const input = /** @type {HTMLInputElement} */ (root.querySelector("input"));
+    input.value = "v";
+    const ok = /** @type {HTMLButtonElement} */ (
+      Array.from(root.querySelectorAll("button")).find((b) => b.textContent?.includes("Save"))
+    );
+    ok.click();
+    rejectAction(new Error("cloud says no"));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(root.classList.contains("hidden")).toBe(false);
+    expect(ok.disabled).toBe(false);
+    expect(ok.classList.contains("is-loading")).toBe(false);
+    expect(document.querySelector(".toast-error")?.textContent).toContain("cloud says no");
+  });
+
+  it("sync onSubmit still closes immediately (regression)", () => {
+    let got = "";
+    promptText("Title", "ph", (v) => {
+      got = v;
+    });
+    const root = /** @type {HTMLElement} */ (document.getElementById("modalRoot"));
+    const input = /** @type {HTMLInputElement} */ (root.querySelector("input"));
+    input.value = "x";
+    /** @type {HTMLButtonElement} */ (
+      Array.from(root.querySelectorAll("button")).find((b) => b.textContent?.includes("Save"))
+    ).click();
+    expect(got).toBe("x");
+    expect(root.classList.contains("hidden")).toBe(true);
+  });
+});
+
+describe("confirmDialog() — async onOk (scope item 2, 2026-07)", () => {
+  it("pending Confirm during in-flight promise, closes on resolve", async () => {
+    /** @type {(v?: *) => void} */
+    let resolveAction = () => {};
+    confirmDialog("T", "m", () => new Promise((res) => (resolveAction = res)));
+    const root = /** @type {HTMLElement} */ (document.getElementById("modalRoot"));
+    const ok = /** @type {HTMLButtonElement} */ (
+      Array.from(root.querySelectorAll("button")).find((b) => b.textContent?.includes("Confirm"))
+    );
+    ok.click();
+    expect(root.classList.contains("hidden")).toBe(false);
+    expect(ok.classList.contains("is-loading")).toBe(true);
+    resolveAction();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(root.classList.contains("hidden")).toBe(true);
+  });
+
+  it("async onOk that self-catches still closes on settle (fire-and-forget callers keep closing)", async () => {
+    // Documents the five pre-existing src/main.js callers ("Remove client
+    // access?" ~2870, "Remove team member?" ~2949, "Delete file?" ~3356,
+    // "Delete message?" ~3498, "Delete comment?" ~4700) whose async callbacks
+    // try/catch internally and resolve either way. Under the pending
+    // dispatcher they gain a spinner while the work is in flight, and the
+    // modal closes once the callback settles — even when the underlying work
+    // failed and the callback swallowed the error (the caller's own error
+    // toast is the failure surface). The stay-open-on-reject branch only
+    // engages for callbacks that rethrow.
+    /** @type {(e: Error) => void} */
+    let failBackend = () => {};
+    const backendCall = new Promise((_res, rej) => (failBackend = rej));
+    confirmDialog("Delete file?", "m", async () => {
+      try {
+        await backendCall;
+      } catch (_err) {
+        // self-catching caller: raises its own toast, does not rethrow
+      }
+    });
+    const root = /** @type {HTMLElement} */ (document.getElementById("modalRoot"));
+    const ok = /** @type {HTMLButtonElement} */ (
+      Array.from(root.querySelectorAll("button")).find((b) => b.textContent?.includes("Confirm"))
+    );
+    ok.click();
+    // In flight: modal stays open with the pending spinner (new behavior —
+    // previously the modal closed instantly, fire-and-forget).
+    expect(root.classList.contains("hidden")).toBe(false);
+    expect(ok.classList.contains("is-loading")).toBe(true);
+    expect(ok.disabled).toBe(true);
+    failBackend(new Error("cloud function cold-start timeout"));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    // Settled (resolved, error swallowed): modal closes; the dispatcher's
+    // stay-open + toast path never ran.
+    expect(root.classList.contains("hidden")).toBe(true);
+    expect(document.querySelector(".toast-error")).toBeNull();
   });
 });

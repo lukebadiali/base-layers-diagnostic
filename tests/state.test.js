@@ -10,8 +10,12 @@ describe("src/state.js", () => {
     localStorage.clear();
   });
 
-  it("exports state object with expected default fields (D-02 byte-identical)", async () => {
+  it("exports state object with expected default fields", async () => {
     const { state } = await import("../src/state.js");
+    // Matches the current state shape. The old chat-subscription fields
+    // (chatMessages / chatSubscription / chatSubscribedFor) were removed when
+    // the notification bell was reimplemented on the per-org `activity` feed +
+    // `bellOpen` (scope item 7); this test tracked that refactor.
     expect(state).toMatchObject({
       route: "dashboard",
       orgId: null,
@@ -20,9 +24,12 @@ describe("src/state.js", () => {
       userMenuOpen: false,
       authTab: "client",
       authError: "",
-      chatMessages: [],
-      chatSubscription: null,
-      chatSubscribedFor: null,
+      activity: { messages: {}, documents: {} },
+      bellOpen: false,
+      fbUser: null,
+      authResolved: false,
+      qrcodeDataUrl: null,
+      mfaResolver: null,
     });
   });
 

@@ -55,6 +55,15 @@ async function seedFixtures() {
       createdAt: now,
       currentRoundId: "r1",
     });
+    // Soft-deleted org (deletedAt set): staff retain read access (restore
+    // visibility); its own client loses read access. Mirrors the client-side
+    // soft-delete path (admin sets deletedAt via an allowed update).
+    await setDoc(doc(db, "orgs/orgDel"), {
+      orgId: "orgDel",
+      name: "Deleted Org",
+      createdAt: now,
+      deletedAt: now,
+    });
 
     // Subcollection fixtures under orgs/orgA
     await setDoc(doc(db, "orgs/orgA/responses/r1"), {
@@ -95,6 +104,14 @@ async function seedFixtures() {
       orgId: "orgA",
       authorId: "u_orgA_user",
       body: "hi",
+      createdAt: now,
+    });
+    // Authored by client_orgA (asUser sets uid == role name) so the
+    // "author deletes own message" delete cell can exercise isOwnAuthor.
+    await setDoc(doc(db, "orgs/orgA/messages/mOwnA"), {
+      orgId: "orgA",
+      authorId: "client_orgA",
+      body: "mine",
       createdAt: now,
     });
     await setDoc(doc(db, "orgs/orgA/readStates/u_orgA_user"), {
@@ -144,6 +161,13 @@ async function seedFixtures() {
       orgId: "orgA",
       authorId: "u_orgA_user",
       body: "fc body",
+      createdAt: now,
+    });
+    // Authored by client_orgA so the "author deletes own comment" cell works.
+    await setDoc(doc(db, "funnelComments/fcOwnA"), {
+      orgId: "orgA",
+      authorId: "client_orgA",
+      body: "fc mine",
       createdAt: now,
     });
   });
@@ -239,6 +263,11 @@ function updatePayload(path, opts = {}) {
     // Mass-assignment cell - try to inject role:admin into an actions doc.
     return { role: "admin" };
   }
+  if (opts.softDelete) {
+    // Soft-delete an org by tombstoning it. deletedAt/deletedBy are ordinary
+    // mutable fields (only orgId + createdAt are immutable on orgs/{orgId}).
+    return { deletedAt: Timestamp.now(), deletedBy: "uActor", updatedAt: Timestamp.now() };
+  }
   if (path === "orgs/orgA") return { name: "Org A renamed", updatedAt: Timestamp.now() };
   if (path === "orgs/orgA/actions/a1") return { status: "done", updatedAt: Timestamp.now() };
   if (path === "orgs/orgA/responses/r1") return { values: { p1: 5 }, updatedAt: Timestamp.now() };
@@ -329,6 +358,39 @@ const CELLS = [
   { role: "admin", path: "orgs/orgA-new2", op: "create", expected: "allow" },
   { role: "client_orgA", path: "orgs/orgA", op: "delete", expected: "deny" }, // soft-delete via Cloud Function only
   { role: "internal", path: "orgs/orgA", op: "delete", expected: "deny" }, // delete: false for everyone
+
+  // Soft-delete an org: admins tombstone it via an allowed update (deletedAt is
+  // a mutable field). Staff keep read access afterwards so they can see/restore
+  // it; the org's own client loses read access once it's tombstoned.
+  {
+    role: "internal",
+    path: "orgs/orgA",
+    op: "update",
+    opts: { softDelete: true },
+    expected: "allow",
+    label: "internal can soft-delete an org by setting deletedAt",
+  },
+  {
+    role: "internal",
+    path: "orgs/orgDel",
+    op: "read",
+    expected: "allow",
+    label: "staff can read a soft-deleted org (restore visibility)",
+  },
+  {
+    role: "admin",
+    path: "orgs/orgDel",
+    op: "read",
+    expected: "allow",
+    label: "admin can read a soft-deleted org",
+  },
+  {
+    role: "client_orgDel",
+    path: "orgs/orgDel",
+    op: "read",
+    expected: "deny",
+    label: "client loses read on their own org once it is soft-deleted",
+  },
 
   // orgs/orgLegacy — doc missing the optional `orgId` field. Exercises
   // immutable() against absent-on-both-sides, the regression that hit
@@ -508,11 +570,48 @@ const CELLS = [
     op: "update",
     expected: "deny",
   },
+  // Hard-delete: author deletes own, staff deletes any, others denied.
   {
     role: "client_orgA",
     path: "orgs/orgA/messages/m1",
     op: "delete",
     expected: "deny",
+    label: "client cannot delete another user's message",
+  },
+  {
+    role: "client_orgA",
+    path: "orgs/orgA/messages/mOwnA",
+    op: "delete",
+    expected: "allow",
+    label: "client can delete their own message",
+  },
+  {
+    role: "client_orgB",
+    path: "orgs/orgA/messages/mOwnA",
+    op: "delete",
+    expected: "deny",
+    label: "cross-org client cannot delete a message",
+  },
+  {
+    role: "internal",
+    path: "orgs/orgA/messages/m1",
+    op: "delete",
+    expected: "allow",
+    label: "staff can delete any message",
+  },
+  {
+    role: "admin",
+    path: "orgs/orgA/messages/m1",
+    op: "delete",
+    expected: "allow",
+    label: "admin can delete any message",
+  },
+  {
+    role: "anonymous",
+    path: "orgs/orgA/messages/m1",
+    op: "delete",
+    expected: "deny",
+    label: "anonymous cannot delete a message",
   },
 
   // orgs/orgA/readStates/{userId}
@@ -721,6 +820,49 @@ const CELLS = [
     path: "funnelComments/fc1",
     op: "update",
     expected: "deny",
+  },
+  // Hard-delete: author deletes own, staff deletes any, others denied.
+  {
+    role: "client_orgA",
+    path: "funnelComments/fc1",
+    op: "delete",
+    expected: "deny",
+    label: "client cannot delete another user's funnel comment",
+  },
+  {
+    role: "client_orgA",
+    path: "funnelComments/fcOwnA",
+    op: "delete",
+    expected: "allow",
+    label: "client can delete their own funnel comment",
+  },
+  {
+    role: "client_orgB",
+    path: "funnelComments/fcOwnA",
+    op: "delete",
+    expected: "deny",
+    label: "cross-org client cannot delete a funnel comment",
+  },
+  {
+    role: "internal",
+    path: "funnelComments/fc1",
+    op: "delete",
+    expected: "allow",
+    label: "staff can delete any funnel comment",
+  },
+  {
+    role: "admin",
+    path: "funnelComments/fc1",
+    op: "delete",
+    expected: "allow",
+    label: "admin can delete any funnel comment",
+  },
+  {
+    role: "anonymous",
+    path: "funnelComments/fc1",
+    op: "delete",
+    expected: "deny",
+    label: "anonymous cannot delete a funnel comment",
   },
 ];
 

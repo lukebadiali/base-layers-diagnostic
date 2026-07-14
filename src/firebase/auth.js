@@ -51,6 +51,7 @@ import {
 import { auth } from "./app.js";
 import { setClaims } from "../cloud/claims-admin.js";
 import { emitAuditEvent } from "../observability/audit-events.js";
+import { buildTotpUri } from "./totp-uri.js";
 
 export { auth, onAuthStateChanged, onIdTokenChanged };
 
@@ -256,7 +257,19 @@ export async function beginTotpEnrollment() {
   const session = await fbMultiFactor(user).getSession();
   const secret = await TotpMultiFactorGenerator.generateSecret(session);
   const accountName = user.email || user.uid;
-  const totpUri = secret.generateQrCodeUrl(accountName, "BeDeveloped Diagnostic");
+  // 2026-07: build the otpauth URI ourselves (percent-encoded, period pinned)
+  // instead of secret.generateQrCodeUrl — see src/firebase/totp-uri.js. Fixes
+  // the unencoded-space issuer that strict apps (Microsoft Authenticator)
+  // misread. Params come from the secret's own server-side config so the QR
+  // matches exactly what Firebase validates on enrol.
+  const totpUri = buildTotpUri({
+    secretKey: secret.secretKey,
+    accountName,
+    issuer: "BeDeveloped Diagnostic",
+    algorithm: secret.hashingAlgorithm,
+    digits: secret.codeLength,
+    period: secret.codeIntervalSeconds,
+  });
   return { secret, totpUri };
 }
 

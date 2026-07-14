@@ -125,6 +125,7 @@ import {
 } from "./util/ids.js";
 import { hashString } from "./util/hash.js";
 import { pillarStatus, bandLabel, bandStatement, bandColor } from "./domain/banding.js";
+import { toggleScorePatch } from "./domain/diagnostic-select.js";
 import {
   pillarScoreForRound as _pillarScoreForRound,
   pillarScore as _pillarScore,
@@ -360,17 +361,13 @@ import {
     jset(K.org(org.id), org);
     cloudPushOrg(org);
   }
-  function deleteOrg(id) {
-    LS.removeItem(K.org(id));
-    saveOrgMetas(loadOrgMetas().filter((o) => o.id !== id));
-    // cascade: delete client users bound to this org
-    const orphanedClientIds = loadUsers()
-      .filter((u) => u.orgId === id)
-      .map((u) => u.id);
-    saveUsers(loadUsers().filter((u) => u.orgId !== id));
-    cloudDeleteOrg(id);
-    orphanedClientIds.forEach((uid) => cloudDeleteUser(uid));
-  }
+  // 2026-07: the IIFE `deleteOrg` (local removal + client-side cloudDeleteOrg /
+  // cloudDeleteUser) was DELETED. firestore.rules denies client-side `delete`
+  // on orgs/{orgId} and users/{uid} (server-only), so those deletes were
+  // silently permission-denied and the org/user rehydrated on the next
+  // snapshot ("delete → reappears"). Org removal now goes through
+  // softDeleteOrg() (tombstone via an allowed update) + the deleteClient
+  // callable for linked accounts — see the admin "Delete organisation" handler.
   function createOrg(name) {
     const id = uid("org_");
     const roundId = uid("r_");
@@ -2075,7 +2072,9 @@ import {
         attrs.disabled = true;
       } else {
         attrs.onclick = () => {
-          setResponse(user, org, p.id, idx, { score: n });
+          // Re-clicking the already-selected figure clears it (deselect →
+          // unanswered); any other figure switches the selection.
+          setResponse(user, org, p.id, idx, toggleScorePatch(selectedScore, n));
           render();
         };
       }
@@ -2868,9 +2867,42 @@ import {
                 onclick: () =>
                   confirmDialog(
                     "Delete organisation?",
-                    `This deletes ${m.name}, all its diagnostic data, and any client accounts linked to it. Cannot be undone.`,
-                    () => {
-                      deleteOrg(m.id);
+                    `This removes ${m.name} and its linked client accounts from your workspace. Its diagnostic data is retained (soft-deleted) and can be restored by BeDeveloped if needed.`,
+                    async () => {
+                      // Tombstone the org server-side first (the core action).
+                      try {
+                        await softDeleteOrg(m.id, user.id);
+                      } catch (err) {
+                        notify(
+                          "error",
+                          "Couldn't delete organisation: " + /** @type {*} */ (err.message || err),
+                        );
+                        return;
+                      }
+                      // Drop from local caches so it disappears at once; the
+                      // orgs snapshot now filters deletedAt so it won't return.
+                      saveOrgMetas(loadOrgMetas().filter((o) => o.id !== m.id));
+                      LS.removeItem(K.org(m.id));
+                      if (state.orgId === m.id) state.orgId = null;
+                      render();
+                      // Best-effort cascade: remove linked client accounts via
+                      // the server callable so none are left as sign-in-capable
+                      // orphans. Never blocks the org removal above.
+                      const linkedClients = loadUsers().filter(
+                        (u) => u.role === "client" && u.orgId === m.id,
+                      );
+                      for (const c of linkedClients) {
+                        try {
+                          await deleteClient({ uid: c.id });
+                          saveUsers(loadUsers().filter((u) => u.id !== c.id));
+                        } catch (err) {
+                          notify(
+                            "error",
+                            `Removed ${m.name}, but couldn't remove client ${c.email}: ` +
+                              /** @type {*} */ (err.message || err),
+                          );
+                        }
+                      }
                       render();
                     },
                     "Delete",
@@ -3224,24 +3256,27 @@ import {
     );
   }
 
-  async function cloudDeleteOrg(orgId) {
-    if (!fbReady() || !orgId) return;
-    try {
-      const { db, firestore } = window.FB;
-      await firestore.deleteDoc(firestore.doc(db, "orgs", orgId));
-    } catch (e) {
-      console.error("Cloud delete org failed:", e);
-    }
-  }
+  // 2026-07: cloudDeleteOrg + cloudDeleteUser (client-side deleteDoc on
+  // orgs/{orgId} and users/{uid}) DELETED — both were denied by firestore.rules
+  // (server-only delete) and only produced the swallowed-error "delete →
+  // reappears" resurrection. Org removal is softDeleteOrg() below; account
+  // removal is the deleteClient / deleteInternal callables.
 
-  async function cloudDeleteUser(userId) {
-    if (!fbReady() || !userId) return;
-    try {
-      const { db, firestore } = window.FB;
-      await firestore.deleteDoc(firestore.doc(db, "users", userId));
-    } catch (e) {
-      console.error("Cloud delete user failed:", e);
-    }
+  // Soft-delete an org by tombstoning it (deletedAt/deletedBy). firestore.rules
+  // denies hard `delete` on orgs/{orgId} (server-only), but ALLOWS staff to
+  // `update` the doc — and the org read rule hides tombstoned orgs from clients
+  // while staff keep read access for restore. This is the client-side path that
+  // replaces the old hard-delete (which was silently permission-denied, so the
+  // org resurrected on the next orgs snapshot). Errors propagate to the caller
+  // so a failure surfaces a toast instead of a silent rehydrate.
+  async function softDeleteOrg(orgId, deletedBy) {
+    if (!fbReady() || !orgId) throw new Error("offline");
+    const { db, firestore } = window.FB;
+    await firestore.setDoc(
+      firestore.doc(db, "orgs", orgId),
+      { deletedAt: firestore.serverTimestamp(), deletedBy: deletedBy || null },
+      { merge: true },
+    );
   }
 
   // Phase 4.1 / D-13: cloudFetchAllOrgs + cloudFetchAllUsers deleted. They
@@ -3576,7 +3611,11 @@ import {
               "This cannot be undone.",
               async () => {
                 try {
-                  await firestore.deleteDoc(firestore.doc(db, "messages", m.id));
+                  // Messages live in the orgs/{orgId}/messages subcollection
+                  // (see send path above) — the old top-level messages/{id}
+                  // path targeted a non-existent doc. firestore.rules allows
+                  // this delete for the author or internal/admin staff.
+                  await firestore.deleteDoc(firestore.doc(db, "orgs", org.id, "messages", m.id));
                 } catch (err) {
                   notify("error", "Couldn't delete: " + (err.message || err));
                 }
@@ -4195,10 +4234,16 @@ import {
       let _orgsHydratedOnce = false;
       _subscribeOrgs({
         onChange: (orgs) => {
-          const newMeta = orgs.map((o) => ({ id: o.id, name: o.name }));
+          // Staff can read soft-deleted orgs (restore visibility), so the
+          // snapshot includes tombstoned docs — filter them out of the live
+          // roster and purge their local cache so a delete can't resurrect.
+          const deleted = orgs.filter((o) => o.deletedAt);
+          const live = orgs.filter((o) => !o.deletedAt);
+          deleted.forEach((o) => LS.removeItem(K.org(o.id)));
+          const newMeta = live.map((o) => ({ id: o.id, name: o.name }));
           let changed = JSON.stringify(jget(K.orgs, [])) !== JSON.stringify(newMeta);
           jset(K.orgs, newMeta);
-          for (const org of orgs) {
+          for (const org of live) {
             const prev = jget(K.org(org.id), null);
             // Phase 5 (DATA-01) moved responses to the
             // /orgs/{orgId}/responses subcollection; the parent doc's

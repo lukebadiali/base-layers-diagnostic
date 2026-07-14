@@ -28,10 +28,7 @@ export async function initRulesEnv(service, projectIdSuffix = "default") {
       ? {
           projectId,
           firestore: {
-            rules: readFileSync(
-              resolve(process.cwd(), "firestore.rules"),
-              "utf8",
-            ),
+            rules: readFileSync(resolve(process.cwd(), "firestore.rules"), "utf8"),
             host: "127.0.0.1",
             port: 8080,
           },
@@ -39,10 +36,7 @@ export async function initRulesEnv(service, projectIdSuffix = "default") {
       : {
           projectId,
           storage: {
-            rules: readFileSync(
-              resolve(process.cwd(), "storage.rules"),
-              "utf8",
-            ),
+            rules: readFileSync(resolve(process.cwd(), "storage.rules"), "utf8"),
             host: "127.0.0.1",
             port: 9199,
           },
@@ -62,6 +56,12 @@ export const ROLES = [
     claims: { role: "client", orgId: "orgB", email_verified: true },
   },
   {
+    // A client whose org (orgDel) is soft-deleted — exercises that a client
+    // loses read access to their own org once it is tombstoned.
+    role: "client_orgDel",
+    claims: { role: "client", orgId: "orgDel", email_verified: true },
+  },
+  {
     role: "internal",
     claims: { role: "internal", orgId: null, email_verified: true },
   },
@@ -77,8 +77,7 @@ export const ROLES = [
  * @param {object} claims
  */
 export function asUser(testEnv, roleName, claims) {
-  if (roleName === "anonymous")
-    return testEnv.unauthenticatedContext().firestore();
+  if (roleName === "anonymous") return testEnv.unauthenticatedContext().firestore();
   return testEnv
     .authenticatedContext(roleName, {
       ...claims,
@@ -93,8 +92,7 @@ export function asUser(testEnv, roleName, claims) {
  * @param {object} claims
  */
 export function asStorageUser(testEnv, roleName, claims) {
-  if (roleName === "anonymous")
-    return testEnv.unauthenticatedContext().storage();
+  if (roleName === "anonymous") return testEnv.unauthenticatedContext().storage();
   return testEnv
     .authenticatedContext(roleName, {
       ...claims,

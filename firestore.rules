@@ -54,7 +54,12 @@ service cloud.firestore {
 
     // ── orgs/{orgId} parent doc ───────────────────────────────────────
     match /orgs/{orgId} {
-      allow read:   if inOrg(orgId) && notDeleted(resource.data);
+      // Staff keep read access to soft-deleted orgs (roster hides them, but the
+      // admin can see/restore them); clients lose access once tombstoned. An
+      // unconstrained orgs list query would otherwise be denied wholesale the
+      // moment any org carries deletedAt (rules are filters-of-last-resort), so
+      // this staff bypass is what keeps the admin org-list snapshot working.
+      allow read:   if inOrg(orgId) && (isInternal() || notDeleted(resource.data));
       allow create: if isInternal();
       allow update: if isInternal()
                     && immutable("orgId")
@@ -113,7 +118,11 @@ service cloud.firestore {
                       && request.resource.data.authorId == request.auth.uid
                       && rateLimitOk(request.auth.uid);
         allow update: if false;
-        allow delete: if false;
+        // Hard-delete (2026-07 client request): a client removes their OWN
+        // message; internal/admin staff remove ANY (mistaken/wrong content).
+        // Matches the UI gate `canDelete = isSelf || !isClientView(user)`.
+        allow delete: if inOrg(orgId)
+                      && (isOwnAuthor(resource.data) || isInternal());
       }
 
       // ── readStates subcollection (DATA-07 H7 fix lands in Wave 4) ───
@@ -241,7 +250,10 @@ service cloud.firestore {
       allow create: if inOrg(request.resource.data.orgId)
                     && request.resource.data.authorId == request.auth.uid;
       allow update: if false;
-      allow delete: if false;
+      // Hard-delete (2026-07 client request): author removes their OWN funnel
+      // comment; internal/admin staff remove ANY. Mirrors the messages rule.
+      allow delete: if inOrg(resource.data.orgId)
+                    && (isOwnAuthor(resource.data) || isInternal());
     }
   }
 }

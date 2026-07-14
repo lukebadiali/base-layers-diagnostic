@@ -131,9 +131,12 @@ describe("soft-delete predicate notDeleted(r) - orgs/{orgId} (Phase 5)", () => {
     const db = asUser(testEnv, "client_orgDeleted", claims);
     await assertFails(getDoc(doc(db, "orgs/orgDeleted")));
   });
-  it("internal reads orgDeleted - deny (notDeleted applies even for internal)", async () => {
+  it("internal reads orgDeleted - allow (staff keep read access to tombstoned orgs for restore visibility)", async () => {
+    // Org-delete fix (2026-07): orgs read rule is `inOrg(orgId) && (isInternal()
+    // || notDeleted(resource.data))` — staff bypass notDeleted so the admin
+    // roster can see/restore soft-deleted orgs; clients still lose access.
     const db = asUser(testEnv, "internal", claimsByRole.internal);
-    await assertFails(getDoc(doc(db, "orgs/orgDeleted")));
+    await assertSucceeds(getDoc(doc(db, "orgs/orgDeleted")));
   });
 });
 

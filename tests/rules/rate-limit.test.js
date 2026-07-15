@@ -30,21 +30,8 @@ import {
   runTransaction,
   Timestamp,
 } from "firebase/firestore";
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from "vitest";
-import {
-  initRulesEnv,
-  asUser,
-  ROLES,
-  assertSucceeds,
-  assertFails,
-} from "./setup.js";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { initRulesEnv, asUser, ROLES, assertSucceeds, assertFails } from "./setup.js";
 
 let testEnv;
 
@@ -65,6 +52,35 @@ function currentWindow() {
  */
 function bucketPath(uid, win) {
   return `rateLimits/${uid}/buckets/${win}`;
+}
+
+// Burst cells (12/13/15) issue ~30 sequential transactions whose rule predicate
+// requires `windowStart == rateLimitWindow()` — where rateLimitWindow() is the
+// SERVER's request.time floored to a 60s window, re-evaluated on every write.
+// The bucket's windowStart is fixed at burst start (currentWindow()). If a burst
+// starts late in a wall-clock minute, request.time rolls into the next window
+// mid-burst and windowStart stops matching → spurious PERMISSION_DENIED. This
+// flaked CI's "Rules Tests (Emulator)" job and gated a prod deploy (2026-07-14).
+// Runway comfortably exceeds a 30-transaction burst (~12-15s on CI); the burst
+// cells carry a 60s per-test timeout (below) so this bounded wait can't itself
+// trip vitest's default timeout.
+const BURST_RUNWAY_MS = 20_000;
+const BURST_TIMEOUT_MS = 60_000;
+
+/**
+ * Guarantee the current 60s window has at least BURST_RUNWAY_MS left before a
+ * burst starts, so all ~30 writes complete inside ONE window. Deterministic and
+ * bounded (waits at most BURST_RUNWAY_MS, and only when near a boundary) — no
+ * retries. A burst of 30 emulator transactions runs in a few seconds, well
+ * under the runway, so a straddle can no longer occur.
+ * @returns {Promise<void>}
+ */
+async function alignToWindowRunway() {
+  const msLeftInWindow = 60_000 - (Date.now() % 60_000);
+  if (msLeftInWindow < BURST_RUNWAY_MS) {
+    // Cross into a fresh window (+50ms so we're safely past the boundary).
+    await new Promise((resolve) => setTimeout(resolve, msLeftInWindow + 50));
+  }
 }
 
 beforeAll(async () => {
@@ -94,9 +110,7 @@ describe("rateLimits bucket-direct predicates", () => {
   it("Cell 1: anonymous user write to rateLimits/{any}/buckets/{any} → DENY", async () => {
     const db = asUser(testEnv, "anonymous", {});
     const win = currentWindow();
-    await assertFails(
-      setDoc(doc(db, bucketPath("anyUid", win)), { uid: "anyUid", count: 1 }),
-    );
+    await assertFails(setDoc(doc(db, bucketPath("anyUid", win)), { uid: "anyUid", count: 1 }));
   });
 
   it("Cell 2: user A reads own rateLimits/userA/buckets/{currentWindow} → ALLOW", async () => {
@@ -166,9 +180,7 @@ describe("rateLimits bucket-direct predicates", () => {
       });
     });
     const db = asUser(testEnv, "client_orgA", claimsByRole["client_orgA"]);
-    await assertSucceeds(
-      updateDoc(doc(db, bucketPath("client_orgA", win)), { count: 6 }),
-    );
+    await assertSucceeds(updateDoc(doc(db, bucketPath("client_orgA", win)), { count: 6 }));
   });
 
   it("Cell 8: user A updates own bucket count from 5 to 7 (skip) → DENY (must be n+1)", async () => {
@@ -180,9 +192,7 @@ describe("rateLimits bucket-direct predicates", () => {
       });
     });
     const db = asUser(testEnv, "client_orgA", claimsByRole["client_orgA"]);
-    await assertFails(
-      updateDoc(doc(db, bucketPath("client_orgA", win)), { count: 7 }),
-    );
+    await assertFails(updateDoc(doc(db, bucketPath("client_orgA", win)), { count: 7 }));
   });
 
   it("Cell 9: user A updates with count > 30 → DENY (hard cap)", async () => {
@@ -194,9 +204,7 @@ describe("rateLimits bucket-direct predicates", () => {
       });
     });
     const db = asUser(testEnv, "client_orgA", claimsByRole["client_orgA"]);
-    await assertFails(
-      updateDoc(doc(db, bucketPath("client_orgA", win)), { count: 31 }),
-    );
+    await assertFails(updateDoc(doc(db, bucketPath("client_orgA", win)), { count: 31 }));
   });
 
   it("Cell 10: user A deletes own bucket → DENY", async () => {
@@ -220,36 +228,79 @@ describe("rateLimits bucket-direct predicates", () => {
       });
     });
     const db = asUser(testEnv, "client_orgA", claimsByRole["client_orgA"]);
-    await assertFails(
-      updateDoc(doc(db, bucketPath("client_orgB", win)), { count: 6 }),
-    );
+    await assertFails(updateDoc(doc(db, bucketPath("client_orgB", win)), { count: 6 }));
   });
 });
 
 // ─── Composed-predicate burst cells (12-15) — Phase 7 SC#5 evidence ──────
 
 describe("rateLimits composed predicate on messages/comments (FN-09 SC#5)", () => {
-  it("Cell 12: user A 30 messages in same window all succeed", async () => {
-    const db = asUser(testEnv, "client_orgA", claimsByRole["client_orgA"]);
-    const win = currentWindow();
-    const bucketRef = doc(db, bucketPath("client_orgA", win));
+  it(
+    "Cell 12: user A 30 messages in same window all succeed",
+    async () => {
+      const db = asUser(testEnv, "client_orgA", claimsByRole["client_orgA"]);
+      await alignToWindowRunway();
+      const win = currentWindow();
+      const bucketRef = doc(db, bucketPath("client_orgA", win));
 
-    // First write — create bucket with count:1 + protected message
-    await assertSucceeds(
-      runTransaction(db, async (tx) => {
+      // First write — create bucket with count:1 + protected message
+      await assertSucceeds(
+        runTransaction(db, async (tx) => {
+          tx.set(bucketRef, { uid: "client_orgA", count: 1 });
+          tx.set(doc(db, "orgs/orgA/messages/m1"), {
+            authorId: "client_orgA",
+            body: "m1",
+            createdAt: Timestamp.now(),
+          });
+        }),
+      );
+
+      // 29 more writes — each transactionally increments count and writes a message
+      for (let i = 2; i <= 30; i++) {
+        await assertSucceeds(
+          runTransaction(db, async (tx) => {
+            const cur = await tx.get(bucketRef);
+            tx.update(bucketRef, { count: cur.data().count + 1 });
+            tx.set(doc(db, `orgs/orgA/messages/m${i}`), {
+              authorId: "client_orgA",
+              body: `m${i}`,
+              createdAt: Timestamp.now(),
+            });
+          }),
+        );
+      }
+
+      // Verify the bucket reached 30 (read via security-rules-disabled to avoid
+      // depending on the read-self-bucket cell's outcome).
+      let finalCount = 0;
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        const snap = await getDoc(doc(ctx.firestore(), bucketPath("client_orgA", win)));
+        finalCount = snap.data()?.count;
+      });
+      expect(finalCount).toBe(30);
+    },
+    BURST_TIMEOUT_MS,
+  );
+
+  it(
+    "Cell 13: user A 31st message in same window denies — Phase 7 SC#5 burst test",
+    async () => {
+      const db = asUser(testEnv, "client_orgA", claimsByRole["client_orgA"]);
+      await alignToWindowRunway();
+      const win = currentWindow();
+      const bucketRef = doc(db, bucketPath("client_orgA", win));
+
+      // Build up to count:30
+      await runTransaction(db, async (tx) => {
         tx.set(bucketRef, { uid: "client_orgA", count: 1 });
         tx.set(doc(db, "orgs/orgA/messages/m1"), {
           authorId: "client_orgA",
           body: "m1",
           createdAt: Timestamp.now(),
         });
-      }),
-    );
-
-    // 29 more writes — each transactionally increments count and writes a message
-    for (let i = 2; i <= 30; i++) {
-      await assertSucceeds(
-        runTransaction(db, async (tx) => {
+      });
+      for (let i = 2; i <= 30; i++) {
+        await runTransaction(db, async (tx) => {
           const cur = await tx.get(bucketRef);
           tx.update(bucketRef, { count: cur.data().count + 1 });
           tx.set(doc(db, `orgs/orgA/messages/m${i}`), {
@@ -257,61 +308,24 @@ describe("rateLimits composed predicate on messages/comments (FN-09 SC#5)", () =
             body: `m${i}`,
             createdAt: Timestamp.now(),
           });
+        });
+      }
+
+      // 31st write — predicate denies because bucket.count already === 30.
+      await assertFails(
+        runTransaction(db, async (tx) => {
+          const cur = await tx.get(bucketRef);
+          tx.update(bucketRef, { count: cur.data().count + 1 });
+          tx.set(doc(db, "orgs/orgA/messages/m31"), {
+            authorId: "client_orgA",
+            body: "m31",
+            createdAt: Timestamp.now(),
+          });
         }),
       );
-    }
-
-    // Verify the bucket reached 30 (read via security-rules-disabled to avoid
-    // depending on the read-self-bucket cell's outcome).
-    let finalCount = 0;
-    await testEnv.withSecurityRulesDisabled(async (ctx) => {
-      const snap = await getDoc(
-        doc(ctx.firestore(), bucketPath("client_orgA", win)),
-      );
-      finalCount = snap.data()?.count;
-    });
-    expect(finalCount).toBe(30);
-  });
-
-  it("Cell 13: user A 31st message in same window denies — Phase 7 SC#5 burst test", async () => {
-    const db = asUser(testEnv, "client_orgA", claimsByRole["client_orgA"]);
-    const win = currentWindow();
-    const bucketRef = doc(db, bucketPath("client_orgA", win));
-
-    // Build up to count:30
-    await runTransaction(db, async (tx) => {
-      tx.set(bucketRef, { uid: "client_orgA", count: 1 });
-      tx.set(doc(db, "orgs/orgA/messages/m1"), {
-        authorId: "client_orgA",
-        body: "m1",
-        createdAt: Timestamp.now(),
-      });
-    });
-    for (let i = 2; i <= 30; i++) {
-      await runTransaction(db, async (tx) => {
-        const cur = await tx.get(bucketRef);
-        tx.update(bucketRef, { count: cur.data().count + 1 });
-        tx.set(doc(db, `orgs/orgA/messages/m${i}`), {
-          authorId: "client_orgA",
-          body: `m${i}`,
-          createdAt: Timestamp.now(),
-        });
-      });
-    }
-
-    // 31st write — predicate denies because bucket.count already === 30.
-    await assertFails(
-      runTransaction(db, async (tx) => {
-        const cur = await tx.get(bucketRef);
-        tx.update(bucketRef, { count: cur.data().count + 1 });
-        tx.set(doc(db, "orgs/orgA/messages/m31"), {
-          authorId: "client_orgA",
-          body: "m31",
-          createdAt: Timestamp.now(),
-        });
-      }),
-    );
-  });
+    },
+    BURST_TIMEOUT_MS,
+  );
 
   it("Cell 14: user A waits 61s, writes in next window → ALLOW (new bucket)", async () => {
     // Simulating a 61-second wait inside a unit test is impractical.
@@ -347,45 +361,50 @@ describe("rateLimits composed predicate on messages/comments (FN-09 SC#5)", () =
     );
   });
 
-  it("Cell 15: 30 messages + 1 comment in same window → 31st (comment) denies (shared bucket)", async () => {
-    const db = asUser(testEnv, "client_orgA", claimsByRole["client_orgA"]);
-    const win = currentWindow();
-    const bucketRef = doc(db, bucketPath("client_orgA", win));
+  it(
+    "Cell 15: 30 messages + 1 comment in same window → 31st (comment) denies (shared bucket)",
+    async () => {
+      const db = asUser(testEnv, "client_orgA", claimsByRole["client_orgA"]);
+      await alignToWindowRunway();
+      const win = currentWindow();
+      const bucketRef = doc(db, bucketPath("client_orgA", win));
 
-    // Build up to count:30 via messages
-    await runTransaction(db, async (tx) => {
-      tx.set(bucketRef, { uid: "client_orgA", count: 1 });
-      tx.set(doc(db, "orgs/orgA/messages/x1"), {
-        authorId: "client_orgA",
-        body: "x1",
-        createdAt: Timestamp.now(),
-      });
-    });
-    for (let i = 2; i <= 30; i++) {
+      // Build up to count:30 via messages
       await runTransaction(db, async (tx) => {
-        const cur = await tx.get(bucketRef);
-        tx.update(bucketRef, { count: cur.data().count + 1 });
-        tx.set(doc(db, `orgs/orgA/messages/x${i}`), {
+        tx.set(bucketRef, { uid: "client_orgA", count: 1 });
+        tx.set(doc(db, "orgs/orgA/messages/x1"), {
           authorId: "client_orgA",
-          body: `x${i}`,
+          body: "x1",
           createdAt: Timestamp.now(),
         });
       });
-    }
-
-    // 31st write attempt — but as a COMMENT this time. Shared per-uid bucket
-    // means the comments path also denies because bucket.count >= 30.
-    await assertFails(
-      runTransaction(db, async (tx) => {
-        const cur = await tx.get(bucketRef);
-        tx.update(bucketRef, { count: cur.data().count + 1 });
-        tx.set(doc(db, "orgs/orgA/comments/c31"), {
-          authorId: "client_orgA",
-          body: "31st across collections",
-          pillarId: "1",
-          createdAt: Timestamp.now(),
+      for (let i = 2; i <= 30; i++) {
+        await runTransaction(db, async (tx) => {
+          const cur = await tx.get(bucketRef);
+          tx.update(bucketRef, { count: cur.data().count + 1 });
+          tx.set(doc(db, `orgs/orgA/messages/x${i}`), {
+            authorId: "client_orgA",
+            body: `x${i}`,
+            createdAt: Timestamp.now(),
+          });
         });
-      }),
-    );
-  });
+      }
+
+      // 31st write attempt — but as a COMMENT this time. Shared per-uid bucket
+      // means the comments path also denies because bucket.count >= 30.
+      await assertFails(
+        runTransaction(db, async (tx) => {
+          const cur = await tx.get(bucketRef);
+          tx.update(bucketRef, { count: cur.data().count + 1 });
+          tx.set(doc(db, "orgs/orgA/comments/c31"), {
+            authorId: "client_orgA",
+            body: "31st across collections",
+            pillarId: "1",
+            createdAt: Timestamp.now(),
+          });
+        }),
+      );
+    },
+    BURST_TIMEOUT_MS,
+  );
 });

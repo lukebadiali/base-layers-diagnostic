@@ -10,6 +10,25 @@
 // pending Phase 4 cleanup (see runbooks/phase-4-cleanup-ledger.md).
 
 /**
+ * A response counts toward scoring / "answered" ONLY when its score is a finite
+ * number within the question's current 1..scale range — the SAME rule the
+ * diagnostic UI uses to light a figure (renderQuestion in src/main.js). Stale
+ * answers left over from an earlier question-set/scale (e.g. a score of 8
+ * captured when a question was 1..10, now that it is 1..5) fall outside the
+ * range and MUST NOT affect the average (2026-07 fix). Before this, the UI
+ * hid such scores as unselected while the average still counted them —
+ * normalized against the wrong scale — so the pillar number reflected figures
+ * that weren't shown selected. Centralised here so display, score, and the
+ * answered-count can never diverge again.
+ * @param {*} score
+ * @param {number} scale
+ * @returns {boolean}
+ */
+export function isScoredInScale(score, scale) {
+  return Number.isFinite(score) && score >= 1 && score <= scale;
+}
+
+/**
  * @param {*} org JSDoc-was-`any` (D-06): the org tree shape is byte-identical
  *   to the IIFE's loose-object reads of `org.responses[roundId][userId][pillarId][idx]`.
  *   Tightening to a concrete type would force a behavioural change we are not
@@ -29,9 +48,11 @@ export function pillarScoreForRound(org, roundId, pillarId, DATA, questionMeta) 
   Object.values(byUser).forEach((perPillar) => {
     const perQ = (perPillar || {})[pillarId] || {};
     Object.entries(perQ).forEach(([idx, r]) => {
-      if (!Number.isFinite(r.score)) return;
       const meta = questionMeta(p.diagnostics[Number(idx)]);
       if (!meta || !meta.scale) return;
+      // Only in-scale scores count — excludes stale out-of-range answers that
+      // the UI already hides (parity with renderQuestion's display clamp).
+      if (!isScoredInScale(r.score, meta.scale)) return;
       normalized.push((r.score / meta.scale) * 100);
     });
   });

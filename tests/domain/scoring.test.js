@@ -11,6 +11,7 @@ import {
   pillarScore,
   respondentsForRound,
   answeredCount,
+  isScoredInScale,
 } from "../../src/domain/scoring.js";
 
 // Minimal DATA fixture matching app.js's questionMeta shape.
@@ -77,6 +78,31 @@ describe("pillarScoreForRound", () => {
     expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBe(50);
   });
 
+  it("excludes a stale score that exceeds the question's current scale", () => {
+    // pillar 1 question 1 has scale 5. A leftover score of 8 (captured when
+    // that question was a 1..10 item) must NOT be averaged in — the UI already
+    // hides it as unselected (renderQuestion clamps), so the number must too.
+    const org = {
+      currentRoundId: "r1",
+      responses: {
+        r1: {
+          u1: { 1: { 0: { score: 5 }, 1: { score: 8 } } },
+        },
+      },
+    };
+    // Only idx 0 counts: (5/10)*100 = 50. The out-of-range 8 at idx 1 (scale 5)
+    // is skipped, so the average is 50 — NOT (50 + 160)/2 = 105.
+    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBe(50);
+  });
+
+  it("excludes a score below 1", () => {
+    const org = {
+      currentRoundId: "r1",
+      responses: { r1: { u1: { 1: { 0: { score: 0 } } } } },
+    };
+    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBeNull();
+  });
+
   it("skips entries when questionMeta returns null or no scale", () => {
     const badQuestionMeta = () => null;
     const org = {
@@ -113,6 +139,31 @@ describe("pillarScoreForRound", () => {
       },
     };
     expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBe(50);
+  });
+});
+
+describe("isScoredInScale", () => {
+  it("accepts an in-range score", () => {
+    expect(isScoredInScale(3, 5)).toBe(true);
+  });
+
+  it("accepts the boundary scores 1 and scale", () => {
+    expect(isScoredInScale(1, 5)).toBe(true);
+    expect(isScoredInScale(5, 5)).toBe(true);
+  });
+
+  it("rejects a score above the scale (stale higher-scale answer)", () => {
+    expect(isScoredInScale(8, 5)).toBe(false);
+  });
+
+  it("rejects a score below 1", () => {
+    expect(isScoredInScale(0, 5)).toBe(false);
+  });
+
+  it("rejects non-finite scores", () => {
+    expect(isScoredInScale(NaN, 5)).toBe(false);
+    expect(isScoredInScale(undefined, 5)).toBe(false);
+    expect(isScoredInScale(null, 5)).toBe(false);
   });
 });
 

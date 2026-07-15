@@ -131,6 +131,7 @@ import {
   pillarScore as _pillarScore,
   respondentsForRound,
   answeredCount as _answeredCount,
+  isScoredInScale,
 } from "./domain/scoring.js";
 import { orgSummary as _orgSummary } from "./domain/completion.js";
 import {
@@ -1674,12 +1675,18 @@ import {
 
   function answerSummaryForPillar(org, pillarId) {
     const byUser = (org.responses || {})[org.currentRoundId] || {};
+    const pillar = DATA.pillars.find((p) => p.id === pillarId);
     let done = 0,
       total = 0;
     Object.values(byUser).forEach((perPillar) => {
       const qs = (perPillar || {})[pillarId] || {};
-      total += DATA.pillars.find((p) => p.id === pillarId).diagnostics.length;
-      done += Object.values(qs).filter((r) => Number.isFinite(r.score)).length;
+      total += pillar.diagnostics.length;
+      Object.entries(qs).forEach(([idx, r]) => {
+        const meta = questionMeta(pillar.diagnostics[Number(idx)]);
+        // Count only in-scale answers so the "N/M" tally matches the pillar
+        // number, which excludes stale out-of-range scores (2026-07 fix).
+        if (meta && meta.scale && isScoredInScale(r.score, meta.scale)) done += 1;
+      });
     });
     return { done, total };
   }
@@ -2061,8 +2068,9 @@ import {
     const readOnly = isClientView(user);
     const scaleClass = meta.scale === 10 ? "likert likert-10" : "likert likert-" + meta.scale;
     const likert = h("div", { class: scaleClass + (readOnly ? " read-only" : "") });
-    // Clamp any stale responses to this question's scale so old data doesn't get stuck selected out-of-range.
-    const selectedScore = resp.score >= 1 && resp.score <= meta.scale ? resp.score : null;
+    // Only light a figure for an in-scale score — the same rule scoring uses,
+    // so what's shown selected always matches what the pillar number counts.
+    const selectedScore = isScoredInScale(resp.score, meta.scale) ? resp.score : null;
     for (let n = 1; n <= meta.scale; n++) {
       const attrs = {
         class: selectedScore === n ? "sel" : "",

@@ -41,8 +41,13 @@ all of that account's completed rounds**, each a distinct colour.
   diagnostic surface only.
 - **Editing older rounds:** the admin can select an older round for the entered
   account and edit its stored answers directly.
-- **Attribution:** cross-account answer edits are **audit-logged as the admin**,
-  regardless of the UI rendering as the account. (Compliance-hardening milestone.)
+- **Answers store under the entered account's uid.** `setResponse` / `cloudPushResponse`
+  write the response doc with `userId = viewedAccountId` (the entered account),
+  not the staff caller's uid — that is what makes the account's score its own.
+  Existing answers captured under a staff login stay under that login and are not
+  migrated (going forward the admin answers while entered into each account).
+- **Attribution:** cross-account answer edits should be **audit-logged as the admin**
+  — deferred to a fast-follow (see Audit section). Not gating this feature.
 - **Radar:** overlay **all** of the entered account's completed rounds, each a
   distinct colour, legend = round label + date, click-to-toggle (Chart.js native).
   Per-pillar tiles keep the latest-vs-previous delta, per account.
@@ -114,17 +119,29 @@ Edit: form → setResponse(accountId, viewRoundId, pillarId, idx)
 
 ## Security rules
 
-Response docs currently allow a user to write only their **own** `userId`.
-Add a predicate: an **internal** user may write a response doc whose `userId`
-belongs to a client of the same org. Clients remain self-only. Covered by a new
-`tests/rules/*.test.js` cell (admin can write another user's response; client
-cannot).
+Current rule (`firestore.rules:72-81`): writes to `orgs/{orgId}/responses/{respId}`
+are **staff-only** (`isInternal()`), and on **create** additionally require
+`request.resource.data.userId == request.auth.uid` — i.e. the doc's `userId` must
+equal the *staff caller's own* uid. That blocks an admin saving answers under a
+client account's uid, which this feature requires.
 
-## Audit
+Relaxation: drop the `userId == request.auth.uid` clause on create; keep
+`isInternal()` and the tenant scope (the doc lives under `orgs/{orgId}` and
+`orgId` is immutable), so an internal user may create/update a response doc whose
+`userId` is any account, but only within an org, and clients remain fully blocked
+(they fail `isInternal()`). Add `tests/rules/responses.test.js` mirroring the
+`auditLog.test.js` allow/deny matrix: internal create with a non-self `userId`
+→ allow; client create → deny; delete → deny.
 
-Cross-account answer edits write an audit-log entry: actor = admin uid, subject =
-account userId, org, round, pillar, question index. Reuse the existing audit-log
-writer from the hardening milestone.
+## Audit (deferred to fast-follow — decided 2026-07-16)
+
+The audit system exists (`src/cloud/audit.js` → `auditWrite` callable) but is not
+wired to any action yet, and adding a new event type requires editing the
+functions-side Zod enum (`functions/src/audit/auditEventSchema.ts`) and a **manual
+functions deploy** (CI does not deploy functions). To avoid gating the feature on
+that, cross-account answer-edit audit logging is deferred to a tracked fast-follow
+(dovetails with the existing AUDIT-05 "wire call sites" work). The feature itself
+ships via the normal hosting+rules CI deploy.
 
 ## Testing
 
@@ -149,10 +166,16 @@ writer from the hardening milestone.
 
 ## Related work (separate, smaller workstream — not this spec)
 
-- **Bug #1 — auth splash flash:** flip `state.authResolved` only once `fbUser`
-  resolves (`src/main.js:4085` vs `:4156`); stop the 2.5s safety-net timeout
-  (`:4291`) from falling through to the homepage+login.
-- **Bug #3 — chat count:** scope the chat-adjacent count to the currently open
-  org (`unreadChatTotal`, `src/domain/unread.js:84`), keep the notification bell
-  global across all orgs, and exclude `deletedAt` docs from the live count
-  listeners (`src/main.js:734`, `:3664`, `:4901`).
+- **Bug #1 — auth splash flash:** `state.authResolved` is set `true` unconditionally
+  at `src/main.js:4093` *before* `state.fbUser` is assigned (`:4164-4182`); the
+  safety-net `setTimeout(…, 2500)` at `:4299-4304` also flips it. Fix: set
+  `authResolved` only in the null branch and *after* `fbUser` is populated; make
+  the timeout keep a neutral "still connecting" splash instead of falling through
+  to `renderAuth()`.
+- **Bug #3 — chat count:** scope the chat-nav badge to the active org for staff
+  (`unreadChatTotal` staff branch, `src/domain/unread.js:84`), keep the
+  notification bell global (`activitySummary`, unchanged), and exclude
+  soft-deleted via **client-side `!m.deletedAt`** filtering — NOT a
+  `where("deletedAt","==",null)` query, because message docs are created without a
+  `deletedAt` field and such a query would wrongly hide every normal message.
+  Listeners: `src/main.js:730` (activity), `:3671` (chat thread), `:4909` (funnel).

@@ -4200,13 +4200,8 @@ import {
   // work unchanged. Also keeps window.FB.currentUser in sync until the IIFE
   // body migrates to fully use state.fbUser (Phase 7+ cleanup-ledger).
   fbOnAuthStateChanged(fbAuthInstance, async (fbUser) => {
-    // Firebase has now reported the persisted-session state (this is the first
-    // fire on cold load). Flip the flash guard so render() stops showing the
-    // splash and paints the real screen — sign-in when null, app when signed
-    // in. Set unconditionally, before the null split, so both paths clear it.
-    state.authResolved = true;
-
     if (!fbUser) {
+      state.authResolved = true;
       state.fbUser = null;
       if (typeof window !== "undefined") {
         /** @type {*} */ (window).FB = /** @type {*} */ (window).FB || {};
@@ -4294,6 +4289,11 @@ import {
       orgId: claims.orgId || null,
       createdAt: fbUser.metadata && fbUser.metadata.creationTime,
     };
+
+    // Only now do we truly know the signed-in user — flip the splash guard
+    // here (not before the awaits) so no render() in the async gap paints the
+    // login screen for an already-authenticated user.
+    state.authResolved = true;
 
     if (typeof window !== "undefined") {
       /** @type {*} */ (window).FB = /** @type {*} */ (window).FB || {};
@@ -4415,7 +4415,7 @@ import {
       state.authResolved = true;
       render();
     }
-  }, 2500);
+  }, 8000);
 
   // Phase 6 follow-up (firstRun loop part 2): onAuthStateChanged does NOT fire
   // on a forced ID-token refresh — only sign-in / sign-out / user-changed.

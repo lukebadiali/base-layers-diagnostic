@@ -14,6 +14,8 @@
  *   mode: string,
  *   route: string,
  *   orgId: string|null,
+ *   accountId: string|null,
+ *   viewRoundId: string|null,
  *   pillarId: number|null,
  *   chart: *,
  *   userMenuOpen: boolean,
@@ -58,6 +60,8 @@ export const state = {
   mode: readPersistedMode(), // internal view mode (only meaningful for internal role)
   route: "dashboard",
   orgId: null, // current selected org (for internal role; for client it's pinned)
+  accountId: null, // internal-only: the account (client user id) being "entered"
+  viewRoundId: null, // the round being viewed/edited for that account (null = current)
   pillarId: null,
   chart: null,
   userMenuOpen: false,

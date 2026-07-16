@@ -459,8 +459,16 @@ import {
   // extracted to src/domain/scoring.js — wrappers below bind DATA + questionMeta (Pattern E).
   // pillarStatus extracted to src/domain/banding.js (D-02 routes it to banding) — re-imported at module top.
   const pillarScoreForRound = (org, roundId, pillarId) =>
-    _pillarScoreForRound(org, roundId, pillarId, DATA, questionMeta);
-  const pillarScore = (org, pillarId) => _pillarScore(org, pillarId, DATA, questionMeta);
+    _pillarScoreForRound(
+      org,
+      roundId,
+      pillarId,
+      DATA,
+      questionMeta,
+      viewedAccountId(currentUser(), org),
+    );
+  const pillarScore = (org, pillarId) =>
+    _pillarScore(org, pillarId, DATA, questionMeta, viewedAccountId(currentUser(), org));
   // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead code or wire up call site. See runbooks/phase-4-cleanup-ledger.md
   const answeredCount = (org, roundId, userId, pillarId) =>
     _answeredCount(org, roundId, userId, pillarId, DATA);
@@ -868,6 +876,39 @@ import {
     return r === "client" || r === "client-preview";
   }
 
+  // ---------- View-as (account + round) ----------
+  /** Client accounts belonging to an org (internal-only account selector source). */
+  function accountsForOrg(orgId) {
+    return loadUsers().filter((u) => u.role === "client" && u.orgId === orgId);
+  }
+  /** @param {*} org */
+  function firstAccountId(org) {
+    const list = org ? accountsForOrg(org.id) : [];
+    return list.length ? list[0].id : null;
+  }
+  /**
+   * The account whose diagnostic is being viewed/edited. Clients are always
+   * themselves; internal users pick via state.accountId (validated against the
+   * org, else the first account). Returns null only when there is no account.
+   * @param {*} user @param {*} org
+   */
+  function viewedAccountId(user, org) {
+    if (!user || !org) return null;
+    if (user.role === "client") return user.id;
+    if (state.accountId && accountsForOrg(org.id).some((a) => a.id === state.accountId)) {
+      return state.accountId;
+    }
+    return firstAccountId(org);
+  }
+  /** The round currently in view (state.viewRoundId if valid for org, else current). */
+  // eslint-disable-next-line no-unused-vars -- produced for Task 4 (editable older rounds); not yet wired to a call site.
+  function activeRoundId(org) {
+    if (state.viewRoundId && (org.rounds || []).some((r) => r.id === state.viewRoundId)) {
+      return state.viewRoundId;
+    }
+    return org.currentRoundId;
+  }
+
   // ---------- DOM helpers ----------
   // Phase 4 Wave 2 (D-12 / CODE-04): h / $ / $$ extracted to src/ui/dom.js;
   // modal / promptText / confirmDialog extracted to src/ui/modal.js. The
@@ -1043,6 +1084,7 @@ import {
     unreadChatTotal,
     setRoute,
     loadOrgMetas,
+    accountsForOrg,
     jset,
     K,
     render,

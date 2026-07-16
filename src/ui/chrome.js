@@ -22,12 +22,13 @@ import { pendingButton } from "./pending-button.js";
 
 /**
  * @typedef {{
- *   state: { route: string, mode: string, userMenuOpen: boolean, orgId: any },
+ *   state: { route: string, mode: string, userMenuOpen: boolean, orgId: any, accountId: any, viewRoundId: any },
  *   activeOrgForUser: (user: *) => *,
  *   unreadCountTotal: (org: *, user: *) => number,
  *   unreadChatTotal: (user: *) => number,
  *   setRoute: (route: string) => void,
  *   loadOrgMetas: () => Array<{ id: string, name: string }>,
+ *   accountsForOrg: (orgId: string) => Array<*>,
  *   jset: (key: string, value: *) => void,
  *   K: { mode: string },
  *   render: () => void,
@@ -57,6 +58,7 @@ export function createChrome(deps) {
     unreadChatTotal,
     setRoute,
     loadOrgMetas,
+    accountsForOrg,
     jset,
     K,
     render,
@@ -265,10 +267,42 @@ export function createChrome(deps) {
       orgSelect.id = "orgSelect";
       orgSelect.addEventListener("change", (e) => {
         state.orgId = /** @type {HTMLSelectElement} */ (e.target).value;
+        state.accountId = null;
+        state.viewRoundId = null;
         state.route = "dashboard";
         render();
       });
       topright.appendChild(orgSelect);
+
+      const acctSelect = /** @type {HTMLSelectElement} */ (
+        h("select", { "aria-label": "Select account" })
+      );
+      const accounts = org ? accountsForOrg(org.id) : [];
+      if (!accounts.length) {
+        const opt = document.createElement("option");
+        opt.textContent = "No accounts";
+        opt.disabled = true;
+        opt.selected = true;
+        acctSelect.appendChild(opt);
+        acctSelect.disabled = true;
+      } else {
+        const selected = state.accountId || accounts[0].id;
+        accounts.forEach((a) => {
+          const opt = document.createElement("option");
+          opt.value = a.id;
+          opt.textContent = a.name || a.email || a.id;
+          if (a.id === selected) opt.selected = true;
+          acctSelect.appendChild(opt);
+        });
+      }
+      acctSelect.id = "acctSelect";
+      acctSelect.addEventListener("change", (e) => {
+        state.accountId = /** @type {HTMLSelectElement} */ (e.target).value;
+        state.viewRoundId = null;
+        state.route = "dashboard";
+        render();
+      });
+      topright.appendChild(acctSelect);
     }
 
     // User chip

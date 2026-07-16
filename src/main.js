@@ -2719,7 +2719,7 @@ import {
       const s = pillarScore(org, p.id);
       const prevS = prevRoundId ? pillarScoreForRound(org, prevRoundId, p.id) : null;
       const status = pillarStatus(s);
-      const { done, total } = answerSummaryForPillar(org, p.id);
+      const { done, total } = answerSummaryForPillar(org, p.id, viewedAccountId(user, org));
       const band = bandLabel(s);
 
       const block = h("div", { class: "r-pillar" });
@@ -4406,10 +4406,11 @@ import {
 
   // Splash safety net: if Firebase Auth never reports (SDK init stalls, App
   // Check origin failure, offline cold-start), authResolved would stay false
-  // and the splash would hang forever. After a short grace period, flip the
-  // gate and render anyway — with no user that falls through to the sign-in
-  // screen, which is the correct, actionable fallback. Harmless once auth has
-  // already resolved (render() is idempotent for a signed-in user).
+  // and the splash would hang forever. After an 8-second grace period (bounds
+  // a stuck splash if Firebase Auth never reports), flip the gate and render
+  // anyway — with no user that falls through to the sign-in screen, which is
+  // the correct, actionable fallback. Harmless once auth has already
+  // resolved (render() is idempotent for a signed-in user).
   setTimeout(() => {
     if (!state.authResolved) {
       state.authResolved = true;

@@ -1847,7 +1847,9 @@ import {
 
     const datasets = built.map((d, i) => {
       const isLatest = i === built.length - 1;
-      const color = RADAR_COLORS[i % RADAR_COLORS.length];
+      // Newest round is the teal highlight (matches its teal fill below); older
+      // rounds cycle the remaining palette so a border never mismatches its fill.
+      const color = isLatest ? RADAR_COLORS[0] : RADAR_COLORS[1 + (i % (RADAR_COLORS.length - 1))];
       return {
         label: `${d.label}${d.createdAt ? " · " + formatDate(d.createdAt) : ""}`,
         data: d.data,

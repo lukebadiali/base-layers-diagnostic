@@ -22,7 +22,7 @@
 
 ## PART A — Feature
 
-### Task A1: Per-individual scoring (`userId` filter)
+### Task 1: Per-individual scoring (`userId` filter) [A1]
 
 **Files:**
 - Modify: `src/domain/scoring.js:42-61` (`pillarScoreForRound`), `:70-72` (`pillarScore`)
@@ -119,7 +119,7 @@ git commit -m "feat(scoring): optional userId filter for per-individual pillar s
 
 ---
 
-### Task A2: Radar dataset builder (all rounds for one account)
+### Task 2: Radar dataset builder (all rounds for one account) [A2]
 
 **Files:**
 - Create: `src/domain/radar.js`
@@ -215,7 +215,7 @@ git commit -m "feat(radar): per-account multi-round dataset builder"
 
 ---
 
-### Task A3: Account selector + entered-account state + per-account scores
+### Task 3: Account selector + entered-account state + per-account scores [A3]
 
 **Files:**
 - Modify: `src/state.js:12-31` (typedef), `:57-91` (state object) — add `accountId`, `viewRoundId`
@@ -356,7 +356,7 @@ git commit -m "feat(diagnostic): admin account selector; per-account pillar scor
 
 ---
 
-### Task A4: Editable older rounds (view/edit the entered account's answers)
+### Task 4: Editable older rounds (view/edit the entered account's answers) [A4]
 
 **Files:**
 - Modify: `src/main.js:2050-2101` (`renderQuestion` read path), `:2183-2207` (`setResponse`), `:3174-3210` (`cloudPushResponse` — unchanged signature, already takes userId/roundId), `:1676-1692` (`answerSummaryForPillar` userId), `:1857-1897` (diagnostic-index tile score + count), `:2143-2146` (`renderScoreBlock` score + count), `:1949-1975` (round bar / round selector area)
@@ -511,7 +511,7 @@ git commit -m "feat(diagnostic): edit entered account's answers across any round
 
 ---
 
-### Task A5: Multi-round progress radar
+### Task 5: Multi-round progress radar [A5]
 
 **Files:**
 - Modify: `src/main.js:1774-1838` (`drawRadar`), `:1603` (radar invocation — drop `prevRoundId` arg), `:1441-1443`/legend area if needed
@@ -615,7 +615,7 @@ git commit -m "feat(radar): overlay all of the entered account's rounds, colour-
 
 ---
 
-### Task A6: Relax Firestore rule for cross-account response writes (+ rules test)
+### Task 6: Relax Firestore rule for cross-account response writes (+ rules test) [A6]
 
 **Files:**
 - Modify: `firestore.rules:72-81` (responses match block)
@@ -716,7 +716,7 @@ git commit -m "feat(rules): internal may write any in-org account's diagnostic r
 
 ## PART B — Bug fixes (independent of Part A; ship together)
 
-### Task B1: Bug #3 — chat count scope + soft-deleted exclusion
+### Task 7: Bug #3 — chat count scope + soft-deleted exclusion [B1]
 
 **Files:**
 - Modify: `src/domain/unread.js:72-90` (`unreadChatTotal`), `src/domain/activity.js:32-44` (`countNewer`)
@@ -838,7 +838,7 @@ git commit -m "fix(chat): scope chat-nav count to active org; exclude soft-delet
 
 ---
 
-### Task B2: Bug #1 — auth splash flash on reload
+### Task 8: Bug #1 — auth splash flash on reload [B2]
 
 **Files:**
 - Modify: `src/main.js:4093` (remove premature set), `:4095-4103` (null branch set), after `:4182` (success set), `:4299-4304` (timeout)
@@ -887,7 +887,7 @@ git commit -m "fix(auth): resolve splash guard only once user is known; extend s
 
 ## PART C — Deferred follow-up (NOT in the ship sequence)
 
-### Task C1 (deferred): Audit-log cross-account answer edits
+### Task 9 (C1, deferred): Audit-log cross-account answer edits
 
 Wire `emitAuditEvent` into `setResponse` when an internal user edits an account other than a fresh current-round entry. **Blocked on a Cloud Function change + manual deploy** (CI does not deploy functions):
 

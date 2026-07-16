@@ -65,6 +65,36 @@ describe("pillarScoreForRound", () => {
     expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBe(75);
   });
 
+  it("scopes to a single user when userId is given (individual, not team)", () => {
+    // u1 -> 50, u2 -> 100. Team mean is 75, but per-user must be each own.
+    const org = {
+      currentRoundId: "r1",
+      responses: {
+        r1: {
+          u1: { 1: { 0: { score: 5 } } },
+          u2: { 1: { 0: { score: 10 } } },
+        },
+      },
+    };
+    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta, "u1")).toBe(50);
+    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta, "u2")).toBe(100);
+  });
+
+  it("returns null for a user with no answers in the round", () => {
+    const org = { currentRoundId: "r1", responses: { r1: { u1: { 1: { 0: { score: 5 } } } } } };
+    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta, "ghost")).toBeNull();
+  });
+
+  it("still averages across users when userId is omitted (back-compat)", () => {
+    const org = {
+      currentRoundId: "r1",
+      responses: {
+        r1: { u1: { 1: { 0: { score: 5 } } }, u2: { 1: { 0: { score: 10 } } } },
+      },
+    };
+    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBe(75);
+  });
+
   it("skips entries with non-finite scores", () => {
     const org = {
       currentRoundId: "r1",

@@ -37,15 +37,18 @@ export function isScoredInScale(score, scale) {
  * @param {number} pillarId
  * @param {{ pillars: Array<{ id:number, diagnostics:Array<unknown> }> }} DATA
  * @param {(entry: unknown) => { scale:number }|null} questionMeta
+ * @param {string} [userId]
  * @returns {number|null}
  */
-export function pillarScoreForRound(org, roundId, pillarId, DATA, questionMeta) {
+export function pillarScoreForRound(org, roundId, pillarId, DATA, questionMeta, userId) {
   const p = DATA.pillars.find((pp) => pp.id === pillarId);
   if (!p) return null;
   const byUser = (org.responses || {})[roundId] || {};
   /** @type {number[]} */
   const normalized = [];
-  Object.values(byUser).forEach((perPillar) => {
+  // userId != null -> score only that individual's answers; else aggregate the round.
+  const perUsers = userId != null ? [byUser[userId]] : Object.values(byUser);
+  perUsers.forEach((perPillar) => {
     const perQ = (perPillar || {})[pillarId] || {};
     Object.entries(perQ).forEach(([idx, r]) => {
       const meta = questionMeta(p.diagnostics[Number(idx)]);
@@ -65,10 +68,11 @@ export function pillarScoreForRound(org, roundId, pillarId, DATA, questionMeta) 
  * @param {number} pillarId
  * @param {{ pillars: Array<{ id:number, diagnostics:Array<unknown> }> }} DATA
  * @param {(entry: unknown) => { scale:number }|null} questionMeta
+ * @param {string} [userId]
  * @returns {number|null}
  */
-export function pillarScore(org, pillarId, DATA, questionMeta) {
-  return pillarScoreForRound(org, org.currentRoundId, pillarId, DATA, questionMeta);
+export function pillarScore(org, pillarId, DATA, questionMeta, userId) {
+  return pillarScoreForRound(org, org.currentRoundId, pillarId, DATA, questionMeta, userId);
 }
 
 /**

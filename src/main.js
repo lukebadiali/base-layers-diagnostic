@@ -133,6 +133,7 @@ import {
   answeredCount as _answeredCount,
   isScoredInScale,
 } from "./domain/scoring.js";
+import { roundRadarDatasets } from "./domain/radar.js";
 import { orgSummary as _orgSummary } from "./domain/completion.js";
 import {
   unreadCountForPillar as _unreadCountForPillar,
@@ -1644,7 +1645,7 @@ import {
     frag.appendChild(tiles);
 
     // Draw radar after the DOM settles
-    queueMicrotask(() => drawRadar(org, prevRoundId));
+    queueMicrotask(() => drawRadar(org));
     return frag;
   }
 
@@ -1816,41 +1817,48 @@ import {
     return { red: "Red", amber: "Amber", green: "Green" }[status];
   }
 
-  function drawRadar(org, prevRoundId) {
+  // Distinct colours cycled per round (oldest → newest). Newest round is drawn
+  // last (on top) and solid; older rounds are lighter/dashed.
+  const RADAR_COLORS = [
+    "#579EC0",
+    "#ED7D31",
+    "#7A9E5E",
+    "#9B59B6",
+    "#E0A458",
+    "#C0504D",
+    "#4472C4",
+    "#2E8B8B",
+  ];
+
+  function drawRadar(org) {
     if (!window.Chart) {
-      setTimeout(() => drawRadar(org, prevRoundId), 120);
+      setTimeout(() => drawRadar(org), 120);
       return;
     }
     const canvas = $("#radar");
     if (!canvas) return;
 
     const labels = DATA.pillars.map((p) => p.shortName || p.name);
-    const curr = DATA.pillars.map((p) => pillarScore(org, p.id) ?? 0);
+    // One dataset per round that has data for the entered account (account
+    // scoping is inside the pillarScoreForRound wrapper via viewedAccountId).
+    const built = roundRadarDatasets(org.rounds || [], DATA.pillars, (roundId, pillarId) =>
+      pillarScoreForRound(org, roundId, pillarId),
+    );
 
-    const datasets = [];
-    if (prevRoundId) {
-      const prev = DATA.pillars.map((p) => pillarScoreForRound(org, prevRoundId, p.id) ?? 0);
-      datasets.push({
-        label: "Previous",
-        data: prev,
+    const datasets = built.map((d, i) => {
+      const isLatest = i === built.length - 1;
+      const color = RADAR_COLORS[i % RADAR_COLORS.length];
+      return {
+        label: `${d.label}${d.createdAt ? " · " + formatDate(d.createdAt) : ""}`,
+        data: d.data,
         fill: true,
-        backgroundColor: "rgba(237, 125, 49, 0.12)",
-        borderColor: "rgba(237, 125, 49, 0.9)",
-        borderWidth: 1.5,
-        borderDash: [4, 4],
-        pointRadius: 2,
-        pointBackgroundColor: "#ED7D31",
-      });
-    }
-    datasets.push({
-      label: "Current",
-      data: curr,
-      fill: true,
-      backgroundColor: "rgba(87,158,192,0.18)",
-      borderColor: "rgba(87,158,192,1)",
-      borderWidth: 2.5,
-      pointRadius: 3,
-      pointBackgroundColor: "#579EC0",
+        backgroundColor: isLatest ? "rgba(87,158,192,0.18)" : "transparent",
+        borderColor: color,
+        borderWidth: isLatest ? 2.5 : 1.5,
+        borderDash: isLatest ? [] : [4, 4],
+        pointRadius: isLatest ? 3 : 2,
+        pointBackgroundColor: color,
+      };
     });
 
     state.chart = new Chart(canvas.getContext("2d"), {
@@ -1860,7 +1868,11 @@ import {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: !!prevRoundId, position: "bottom", labels: { font: { size: 11 } } },
+          legend: {
+            display: datasets.length > 1,
+            position: "bottom",
+            labels: { font: { size: 11 } },
+          },
           tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.r}/100` } },
         },
         scales: {

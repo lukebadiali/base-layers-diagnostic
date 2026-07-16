@@ -257,4 +257,19 @@ describe("answeredCount", () => {
     const org = {};
     expect(answeredCount(org, "r1", "u1", 1, DATA)).toEqual({ done: 0, total: 2 });
   });
+
+  it("answeredCount isolates a single user's in-scale answers", () => {
+    const org = {
+      currentRoundId: "r1",
+      responses: {
+        r1: {
+          u1: { 1: { 0: { score: 5 }, 1: { score: 3 } } }, // 2 in-scale
+          u2: { 1: { 0: { score: 9 } } },
+        },
+      },
+    };
+    // pillar 1 has 2 questions (scale 10 then 5); u1 answered both in-scale.
+    expect(answeredCount(org, "r1", "u1", 1, DATA)).toEqual({ done: 2, total: 2 });
+    expect(answeredCount(org, "r1", "u2", 1, DATA)).toEqual({ done: 1, total: 2 });
+  });
 });

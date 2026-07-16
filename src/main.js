@@ -901,7 +901,6 @@ import {
     return firstAccountId(org);
   }
   /** The round currently in view (state.viewRoundId if valid for org, else current). */
-  // eslint-disable-next-line no-unused-vars -- produced for Task 4 (editable older rounds); not yet wired to a call site.
   function activeRoundId(org) {
     if (state.viewRoundId && (org.rounds || []).some((r) => r.id === state.viewRoundId)) {
       return state.viewRoundId;
@@ -1549,7 +1548,7 @@ import {
       const s = pillarScore(org, p.id);
       const prevS = prevRoundId ? pillarScoreForRound(org, prevRoundId, p.id) : null;
       const status = pillarStatus(s);
-      const { done, total } = answerSummaryForPillar(org, p.id);
+      const { done, total } = answerSummaryForPillar(org, p.id, viewedAccountId(user, org));
       const isOpen = state.expandedPillars.has(p.id);
 
       const tile = h("div", {
@@ -1715,12 +1714,13 @@ import {
     return tile;
   }
 
-  function answerSummaryForPillar(org, pillarId) {
-    const byUser = (org.responses || {})[org.currentRoundId] || {};
+  function answerSummaryForPillar(org, pillarId, userId) {
+    const byUser = (org.responses || {})[activeRoundId(org)] || {};
     const pillar = DATA.pillars.find((p) => p.id === pillarId);
+    const perUsers = userId != null ? [byUser[userId]] : Object.values(byUser);
     let done = 0,
       total = 0;
-    Object.values(byUser).forEach((perPillar) => {
+    perUsers.forEach((perPillar) => {
       const qs = (perPillar || {})[pillarId] || {};
       total += pillar.diagnostics.length;
       Object.entries(qs).forEach(([idx, r]) => {
@@ -1895,9 +1895,28 @@ import {
       ),
     );
 
+    if (!isClientView(user) && (org.rounds || []).length) {
+      const roundSel = /** @type {HTMLSelectElement} */ (
+        h("select", { "aria-label": "Select round", class: "round-select" })
+      );
+      const activeRid = activeRoundId(org);
+      org.rounds.forEach((r) => {
+        const opt = document.createElement("option");
+        opt.value = r.id;
+        opt.textContent = `${r.label} (${formatDate(r.createdAt)})`;
+        if (r.id === activeRid) opt.selected = true;
+        roundSel.appendChild(opt);
+      });
+      roundSel.addEventListener("change", (e) => {
+        state.viewRoundId = /** @type {HTMLSelectElement} */ (e.target).value;
+        render();
+      });
+      frag.appendChild(h("div", { class: "round-select-wrap" }, ["Round: ", roundSel]));
+    }
+
     const tiles = h("div", { class: "tiles" });
     DATA.pillars.forEach((p) => {
-      const s = pillarScore(org, p.id);
+      const s = pillarScoreForRound(org, activeRoundId(org), p.id);
       const status = pillarStatus(s);
       const unread = unreadCountForPillar(org, p.id, user);
 
@@ -1905,7 +1924,9 @@ import {
       // eslint-disable-next-line no-useless-assignment -- Phase 4: tighten loop control flow (initial value never read before reassignment). See runbooks/phase-4-cleanup-ledger.md
       let userDone = 0;
       const userResp =
-        (((org.responses || {})[org.currentRoundId] || {})[user.id] || {})[p.id] || {};
+        (((org.responses || {})[activeRoundId(org)] || {})[viewedAccountId(user, org)] || {})[
+          p.id
+        ] || {};
       userDone = Object.values(userResp).filter((r) => Number.isFinite(r.score)).length;
       const total = p.diagnostics.length;
 
@@ -1920,8 +1941,8 @@ import {
           "div",
           { class: "tag" },
           isClientView(user)
-            ? `Team score ${s !== null ? s + "/100" : "—"}`
-            : `${userDone}/${total} of your answers · team score ${s !== null ? s + "/100" : "—"}`,
+            ? `Score ${s !== null ? s + "/100" : "—"}`
+            : `${userDone}/${total} answered · score ${s !== null ? s + "/100" : "—"}`,
         ),
       );
       const foot = h("div", { class: "foot" });
@@ -2091,8 +2112,9 @@ import {
 
   function renderQuestion(user, org, p, idx, qEntry) {
     const meta = questionMeta(qEntry);
+    const acct = viewedAccountId(user, org);
     const resp =
-      ((((org.responses || {})[org.currentRoundId] || {})[user.id] || {})[p.id] || {})[idx] || {};
+      ((((org.responses || {})[activeRoundId(org)] || {})[acct] || {})[p.id] || {})[idx] || {};
     const card = h("div", { class: "q-card" });
     card.appendChild(h("div", { class: "q-text" }, `${idx + 1}. ${meta.text}`));
 
@@ -2183,9 +2205,10 @@ import {
   }
 
   function renderScoreBlock(org, p) {
-    const s = pillarScore(org, p.id);
+    const s = pillarScoreForRound(org, activeRoundId(org), p.id);
     const status = pillarStatus(s);
-    const { done, total } = answerSummaryForPillar(org, p.id);
+    const acct = viewedAccountId(currentUser(), org);
+    const { done, total } = answerSummaryForPillar(org, p.id, acct);
     const block = h("div", { class: "side-panel score-block" }, [
       h("div", {}, [
         h("span", { class: "big" }, s !== null ? String(s) : "—"),
@@ -2224,28 +2247,21 @@ import {
 
   function setResponse(user, org, pillarId, idx, patch) {
     const o = loadOrg(org.id);
+    const roundId = activeRoundId(o);
+    const acctId = viewedAccountId(user, o) || user.id;
     o.responses = o.responses || {};
-    o.responses[o.currentRoundId] = o.responses[o.currentRoundId] || {};
-    o.responses[o.currentRoundId][user.id] = o.responses[o.currentRoundId][user.id] || {};
-    o.responses[o.currentRoundId][user.id][pillarId] =
-      o.responses[o.currentRoundId][user.id][pillarId] || {};
-    const cur = o.responses[o.currentRoundId][user.id][pillarId][idx] || {};
+    o.responses[roundId] = o.responses[roundId] || {};
+    o.responses[roundId][acctId] = o.responses[roundId][acctId] || {};
+    o.responses[roundId][acctId][pillarId] = o.responses[roundId][acctId][pillarId] || {};
+    const cur = o.responses[roundId][acctId][pillarId][idx] || {};
     const merged = Object.assign({}, cur, patch);
-    o.responses[o.currentRoundId][user.id][pillarId][idx] = merged;
-    // Local-only write — the in-memory model needs the new score for the
-    // inline render() that follows this call.
-    //
-    // The Phase 5 (DATA-01) cutover moved responses to the
-    // /orgs/{orgId}/responses/{respId} subcollection. The previous path
-    // (saveOrg → cloudPushOrg → setDoc on /orgs/{orgId}) was rejected by
-    // firestore.rules — clients cannot write the parent doc at all, and
-    // internal users hit `immutable("createdAt")` whenever the local cache's
-    // Timestamp-shape drifted from the server's. The subcollection rules
-    // whitelist the right set of writers (userId == request.auth.uid on
-    // create; mutableOnly values/updatedAt on update) so this path works
-    // for both roles. See PR #37 / #38 trail for the full thread.
+    o.responses[roundId][acctId][pillarId][idx] = merged;
+    // Local-only write — the in-memory model needs the new score for the inline
+    // render() that follows. Cloud push mirrors it to the responses subcollection
+    // under the ENTERED account's uid (rules relaxed to allow internal writers;
+    // see firestore.rules responses block).
     jset(K.org(o.id), o);
-    cloudPushResponse(o.id, o.currentRoundId, user.id, pillarId, idx, merged);
+    cloudPushResponse(o.id, roundId, acctId, pillarId, idx, merged);
   }
 
   // ================================================================

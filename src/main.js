@@ -920,6 +920,9 @@ import {
   // closure provides render() via deps so the router module stays
   // independent of IIFE-locals (loadOrg / currentUser / jset / K / etc.).
   function setRoute(route) {
+    if (route !== "diagnostic" && !String(route).startsWith("pillar:")) {
+      state.viewRoundId = null;
+    }
     routerSetRoute(route, { render });
   }
 
@@ -1981,7 +1984,7 @@ import {
     // mark comments read on load (Phase 5 Wave 4 H7 fix: server-clock write via setPillarRead)
     void setPillarRead(org.id, user.id, pillarId);
 
-    const s = pillarScore(org, p.id);
+    const s = pillarScoreForRound(org, activeRoundId(org), p.id);
     const status = pillarStatus(s);
     const isClient = isClientView(user);
 
@@ -2003,7 +2006,7 @@ import {
           h("h1", { class: "view-title pillar-title-h1" }, p.name),
           h("p", { class: "view-sub pillar-tagline" }, p.tagline),
         ]),
-        h("span", { class: `badge ${status}` }, s !== null ? `${s}/100 team` : "Not scored"),
+        h("span", { class: `badge ${status}` }, s !== null ? `${s}/100` : "Not scored"),
       ]),
     );
 
@@ -2219,7 +2222,7 @@ import {
         { class: "bar" },
         h("span", { style: `width:${s ?? 0}%; background:${statusColor(status)};` }),
       ),
-      h("div", { class: "team-row-meta" }, `${done}/${total} team answers`),
+      h("div", { class: "team-row-meta" }, `${done}/${total} answered`),
     ]);
     return block;
   }

@@ -532,7 +532,8 @@ import {
       });
     /** @param {string} orgId */
     const lastReadForOrg = (orgId) => ({ toMillis: () => lastReadMillis(user.id, orgId) });
-    return _unreadChatTotal(user, messages, lastReadForOrg);
+    const scopeOrgId = activeOrgForUser(user)?.id || null;
+    return _unreadChatTotal(user, messages, lastReadForOrg, scopeOrgId);
   };
   // Scope item 7 (2026-07): bell aggregation wrapper — injects live org
   // metas, the activity store and the per-browser surface-visit markers.
@@ -754,7 +755,11 @@ import {
               const list = [];
               // Stamp orgId client-side: message docs deliberately don't
               // carry it (it lives in the path).
-              snap.forEach((d) => list.push({ id: d.id, orgId, ...d.data() }));
+              snap.forEach((d) => {
+                const data = d.data();
+                if (data.deletedAt) return;
+                list.push({ id: d.id, orgId, ...data });
+              });
               store[orgId] = list;
               render();
             },
@@ -3749,7 +3754,11 @@ import {
       q,
       (snap) => {
         allMessages = [];
-        snap.forEach((d) => allMessages.push({ id: d.id, ...d.data() }));
+        snap.forEach((d) => {
+          const data = d.data();
+          if (data.deletedAt) return;
+          allMessages.push({ id: d.id, ...data });
+        });
         allMessages.sort(
           (a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0),
         );
@@ -4989,7 +4998,11 @@ import {
       commentsQ,
       (snap) => {
         allComments = [];
-        snap.forEach((d) => allComments.push({ id: d.id, ...d.data() }));
+        snap.forEach((d) => {
+          const data = d.data();
+          if (data.deletedAt) return;
+          allComments.push({ id: d.id, ...data });
+        });
         allComments.sort(
           (a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0),
         );

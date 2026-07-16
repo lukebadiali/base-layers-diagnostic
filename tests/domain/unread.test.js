@@ -177,33 +177,35 @@ describe("unreadChatTotal (H7 fix - server-clock comparator)", () => {
     expect(unreadChatTotal(user, messages, lastReadForOrg)).toBe(1);
   });
 
-  it("internal user: counts across all orgs via per-message lastReadForOrg lookup", () => {
+  it("internal user: counts only the scoped org (chat-nav badge = active org)", () => {
     const user = { id: "u_self", role: "internal" };
     /** @param {string} orgId */
     const lastReadForOrg = (orgId) => ({ orgA: ts(1000), orgB: ts(1500) })[orgId] || null;
     const messages = [
-      { orgId: "orgA", authorId: "u_other", createdAt: ts(2000) },
-      { orgId: "orgB", authorId: "u_other", createdAt: ts(1000) },
-      { orgId: "orgA", authorId: "u_self", createdAt: ts(2000) },
+      { orgId: "orgA", authorId: "u_other", createdAt: ts(2000) }, // counted
+      { orgId: "orgB", authorId: "u_other", createdAt: ts(2000) }, // other org -> excluded
+      { orgId: "orgA", authorId: "u_self", createdAt: ts(2000) }, // self -> excluded
     ];
-    expect(unreadChatTotal(user, messages, lastReadForOrg)).toBe(1);
+    expect(unreadChatTotal(user, messages, lastReadForOrg, "orgA")).toBe(1);
   });
 
-  it("internal user with no read-marker for a message's org treats it as unread (lastMs=0)", () => {
+  it("internal user: no read-marker for the scoped org treats messages as unread", () => {
     const user = { id: "u_self", role: "internal" };
-    const lastReadForOrg = () => null; // no marker for any org -> the `: 0` fallback
+    const lastReadForOrg = () => null;
     const messages = [{ orgId: "orgA", authorId: "u_other", createdAt: ts(2000) }];
-    expect(unreadChatTotal(user, messages, lastReadForOrg)).toBe(1);
+    expect(unreadChatTotal(user, messages, lastReadForOrg, "orgA")).toBe(1);
   });
 
-  it("internal user: skips messages without createdAt (defensive guard)", () => {
-    const user = { id: "u_self", role: "internal" };
+  it("excludes soft-deleted messages (client and internal)", () => {
+    const internal = { id: "u_self", role: "internal" };
+    const client = { id: "u_self", role: "client", orgId: "orgA" };
     const lastReadForOrg = () => ts(0);
     const messages = [
-      { orgId: "orgA", authorId: "u_other" },
-      { orgId: "orgA", authorId: "u_other", createdAt: ts(2000) },
+      { orgId: "orgA", authorId: "u_other", createdAt: ts(2000), deletedAt: ts(2500) }, // deleted
+      { orgId: "orgA", authorId: "u_other", createdAt: ts(2000) }, // live
     ];
-    expect(unreadChatTotal(user, /** @type {any} */ (messages), lastReadForOrg)).toBe(1);
+    expect(unreadChatTotal(internal, messages, lastReadForOrg, "orgA")).toBe(1);
+    expect(unreadChatTotal(client, messages, lastReadForOrg)).toBe(1);
   });
 
   it("returns 0 when chatMessages is missing (defensive)", () => {

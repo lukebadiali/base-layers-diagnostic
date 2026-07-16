@@ -11,6 +11,7 @@ describe("roundRadarDatasets", () => {
       { id: "r1", label: "Round 1", createdAt: "2026-01-01" },
       { id: "r2", label: "Round 2", createdAt: "2026-02-01" },
     ];
+    /** @type {Record<string, Record<number, number|null>>} */
     const scores = { r1: { 1: 40, 2: 60, 3: null }, r2: { 1: 70, 2: 80, 3: 90 } };
     const out = roundRadarDatasets(rounds, pillars, (rid, pid) => scores[rid][pid]);
     expect(out).toHaveLength(2);
@@ -23,13 +24,14 @@ describe("roundRadarDatasets", () => {
       { id: "r1", label: "R1" },
       { id: "r2", label: "R2" },
     ];
+    /** @type {Record<string, Record<number, number|null>>} */
     const scores = { r1: { 1: null, 2: null, 3: null }, r2: { 1: 50, 2: null, 3: null } };
     const out = roundRadarDatasets(rounds, pillars, (rid, pid) => scores[rid][pid]);
     expect(out.map((d) => d.roundId)).toEqual(["r2"]);
   });
 
   it("handles empty/undefined rounds", () => {
-    expect(roundRadarDatasets(undefined, pillars, () => 1)).toEqual([]);
+    expect(roundRadarDatasets(/** @type {any} */ (undefined), pillars, () => 1)).toEqual([]);
     expect(roundRadarDatasets([], pillars, () => 1)).toEqual([]);
   });
 });

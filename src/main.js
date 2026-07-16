@@ -516,8 +516,14 @@ import {
     }
     return _unreadCountTotal(pillarReads, commentsByPillar, user.id, DATA.pillars);
   };
-  const unreadChatTotal = (user) => {
-    if (!user) return 0;
+  /**
+   * Shared message list + last-read accessor for the chat-unread wrappers
+   * below (unreadChatTotal — active org only; unreadChatTotalAllOrgs —
+   * every org). Factored out so the two wrappers can't drift on how a
+   * message's createdAt gets duck-typed to a server-time-like Timestamp.
+   * @param {*} user
+   */
+  const _chatUnreadInputs = (user) => {
     const messages = Object.values(state.activity.messages)
       .flat()
       .map((m) => {
@@ -532,8 +538,32 @@ import {
       });
     /** @param {string} orgId */
     const lastReadForOrg = (orgId) => ({ toMillis: () => lastReadMillis(user.id, orgId) });
+    return { messages, lastReadForOrg };
+  };
+  const unreadChatTotal = (user) => {
+    if (!user) return 0;
+    const { messages, lastReadForOrg } = _chatUnreadInputs(user);
     const scopeOrgId = activeOrgForUser(user)?.id || null;
     return _unreadChatTotal(user, messages, lastReadForOrg, scopeOrgId);
+  };
+  // Review fix (Task 7 / chat-count bug #3 regression): the nav badge
+  // (unreadChatTotal above) was correctly scoped to the active org, but
+  // that same wrapper is also consumed by the staff-only dashboard alert
+  // banner (renderDashboard), which needs the GLOBAL unread total across
+  // every client org — a staff member viewing Org A must still see the
+  // banner for unread messages in Org B. This wrapper restores that
+  // global behavior without re-widening the (now correctly scoped) nav
+  // badge.
+  const unreadChatTotalAllOrgs = (user) => {
+    if (!user) return 0;
+    const { messages, lastReadForOrg } = _chatUnreadInputs(user);
+    if (user.role === "client") {
+      return _unreadChatTotal(user, messages, lastReadForOrg, user.orgId || "");
+    }
+    return loadOrgMetas().reduce(
+      (sum, m) => sum + _unreadChatTotal(user, messages, lastReadForOrg, m.id),
+      0,
+    );
   };
   // Scope item 7 (2026-07): bell aggregation wrapper — injects live org
   // metas, the activity store and the per-browser surface-visit markers.
@@ -1436,7 +1466,7 @@ import {
 
     // Staff-only (admin OR internal): alert banner for unread client chat messages across all orgs
     if (isStaff(user)) {
-      const unreadChat = unreadChatTotal(user);
+      const unreadChat = unreadChatTotalAllOrgs(user);
       if (unreadChat > 0) {
         frag.appendChild(
           h("div", { class: "unread-chat-banner" }, [

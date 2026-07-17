@@ -34,6 +34,7 @@ function countNewer(items, authorField, markerMs, selfUid) {
   let latestMs = 0;
   for (const item of items || []) {
     if (!item || item[authorField] == null || item[authorField] === selfUid) continue;
+    if (item.deletedAt) continue;
     const ms = itemMillis(item);
     if (ms > markerMs) {
       count += 1;

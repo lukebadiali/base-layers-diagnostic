@@ -71,8 +71,12 @@ service cloud.firestore {
       // clients read prior scoring but can no longer submit or edit it.
       match /responses/{respId} {
         allow read:   if inOrg(orgId);
+        // 2026-07 view-as: internal users may capture/edit answers on behalf of
+        // any account IN THIS ORG (userId is the diagnostic subject, not the
+        // caller). Tenant scope enforced via the path orgId + the orgId field.
+        // Clients stay fully blocked (isInternal() is false for them).
         allow create: if isInternal()
-                      && request.resource.data.userId == request.auth.uid;
+                      && request.resource.data.orgId == orgId;
         allow update: if isInternal()
                       && immutable("userId")
                       && immutable("orgId")

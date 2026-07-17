@@ -133,6 +133,7 @@ import {
   answeredCount as _answeredCount,
   isScoredInScale,
 } from "./domain/scoring.js";
+import { roundRadarDatasets } from "./domain/radar.js";
 import { orgSummary as _orgSummary } from "./domain/completion.js";
 import {
   unreadCountForPillar as _unreadCountForPillar,
@@ -459,8 +460,16 @@ import {
   // extracted to src/domain/scoring.js — wrappers below bind DATA + questionMeta (Pattern E).
   // pillarStatus extracted to src/domain/banding.js (D-02 routes it to banding) — re-imported at module top.
   const pillarScoreForRound = (org, roundId, pillarId) =>
-    _pillarScoreForRound(org, roundId, pillarId, DATA, questionMeta);
-  const pillarScore = (org, pillarId) => _pillarScore(org, pillarId, DATA, questionMeta);
+    _pillarScoreForRound(
+      org,
+      roundId,
+      pillarId,
+      DATA,
+      questionMeta,
+      viewedAccountId(currentUser(), org),
+    );
+  const pillarScore = (org, pillarId) =>
+    _pillarScore(org, pillarId, DATA, questionMeta, viewedAccountId(currentUser(), org));
   // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead code or wire up call site. See runbooks/phase-4-cleanup-ledger.md
   const answeredCount = (org, roundId, userId, pillarId) =>
     _answeredCount(org, roundId, userId, pillarId, DATA);
@@ -507,8 +516,14 @@ import {
     }
     return _unreadCountTotal(pillarReads, commentsByPillar, user.id, DATA.pillars);
   };
-  const unreadChatTotal = (user) => {
-    if (!user) return 0;
+  /**
+   * Shared message list + last-read accessor for the chat-unread wrappers
+   * below (unreadChatTotal — active org only; unreadChatTotalAllOrgs —
+   * every org). Factored out so the two wrappers can't drift on how a
+   * message's createdAt gets duck-typed to a server-time-like Timestamp.
+   * @param {*} user
+   */
+  const _chatUnreadInputs = (user) => {
     const messages = Object.values(state.activity.messages)
       .flat()
       .map((m) => {
@@ -523,7 +538,32 @@ import {
       });
     /** @param {string} orgId */
     const lastReadForOrg = (orgId) => ({ toMillis: () => lastReadMillis(user.id, orgId) });
-    return _unreadChatTotal(user, messages, lastReadForOrg);
+    return { messages, lastReadForOrg };
+  };
+  const unreadChatTotal = (user) => {
+    if (!user) return 0;
+    const { messages, lastReadForOrg } = _chatUnreadInputs(user);
+    const scopeOrgId = activeOrgForUser(user)?.id || null;
+    return _unreadChatTotal(user, messages, lastReadForOrg, scopeOrgId);
+  };
+  // Review fix (Task 7 / chat-count bug #3 regression): the nav badge
+  // (unreadChatTotal above) was correctly scoped to the active org, but
+  // that same wrapper is also consumed by the staff-only dashboard alert
+  // banner (renderDashboard), which needs the GLOBAL unread total across
+  // every client org — a staff member viewing Org A must still see the
+  // banner for unread messages in Org B. This wrapper restores that
+  // global behavior without re-widening the (now correctly scoped) nav
+  // badge.
+  const unreadChatTotalAllOrgs = (user) => {
+    if (!user) return 0;
+    const { messages, lastReadForOrg } = _chatUnreadInputs(user);
+    if (user.role === "client") {
+      return _unreadChatTotal(user, messages, lastReadForOrg, user.orgId || "");
+    }
+    return loadOrgMetas().reduce(
+      (sum, m) => sum + _unreadChatTotal(user, messages, lastReadForOrg, m.id),
+      0,
+    );
   };
   // Scope item 7 (2026-07): bell aggregation wrapper — injects live org
   // metas, the activity store and the per-browser surface-visit markers.
@@ -745,7 +785,11 @@ import {
               const list = [];
               // Stamp orgId client-side: message docs deliberately don't
               // carry it (it lives in the path).
-              snap.forEach((d) => list.push({ id: d.id, orgId, ...d.data() }));
+              snap.forEach((d) => {
+                const data = d.data();
+                if (data.deletedAt) return;
+                list.push({ id: d.id, orgId, ...data });
+              });
               store[orgId] = list;
               render();
             },
@@ -868,6 +912,38 @@ import {
     return r === "client" || r === "client-preview";
   }
 
+  // ---------- View-as (account + round) ----------
+  /** Client accounts belonging to an org (internal-only account selector source). */
+  function accountsForOrg(orgId) {
+    return loadUsers().filter((u) => u.role === "client" && u.orgId === orgId);
+  }
+  /** @param {*} org */
+  function firstAccountId(org) {
+    const list = org ? accountsForOrg(org.id) : [];
+    return list.length ? list[0].id : null;
+  }
+  /**
+   * The account whose diagnostic is being viewed/edited. Clients are always
+   * themselves; internal users pick via state.accountId (validated against the
+   * org, else the first account). Returns null only when there is no account.
+   * @param {*} user @param {*} org
+   */
+  function viewedAccountId(user, org) {
+    if (!user || !org) return null;
+    if (user.role === "client") return user.id;
+    if (state.accountId && accountsForOrg(org.id).some((a) => a.id === state.accountId)) {
+      return state.accountId;
+    }
+    return firstAccountId(org);
+  }
+  /** The round currently in view (state.viewRoundId if valid for org, else current). */
+  function activeRoundId(org) {
+    if (state.viewRoundId && (org.rounds || []).some((r) => r.id === state.viewRoundId)) {
+      return state.viewRoundId;
+    }
+    return org.currentRoundId;
+  }
+
   // ---------- DOM helpers ----------
   // Phase 4 Wave 2 (D-12 / CODE-04): h / $ / $$ extracted to src/ui/dom.js;
   // modal / promptText / confirmDialog extracted to src/ui/modal.js. The
@@ -880,6 +956,9 @@ import {
   // closure provides render() via deps so the router module stays
   // independent of IIFE-locals (loadOrg / currentUser / jset / K / etc.).
   function setRoute(route) {
+    if (route !== "diagnostic" && !String(route).startsWith("pillar:")) {
+      state.viewRoundId = null;
+    }
     routerSetRoute(route, { render });
   }
 
@@ -1043,6 +1122,7 @@ import {
     unreadChatTotal,
     setRoute,
     loadOrgMetas,
+    accountsForOrg,
     jset,
     K,
     render,
@@ -1386,7 +1466,7 @@ import {
 
     // Staff-only (admin OR internal): alert banner for unread client chat messages across all orgs
     if (isStaff(user)) {
-      const unreadChat = unreadChatTotal(user);
+      const unreadChat = unreadChatTotalAllOrgs(user);
       if (unreadChat > 0) {
         frag.appendChild(
           h("div", { class: "unread-chat-banner" }, [
@@ -1507,7 +1587,7 @@ import {
       const s = pillarScore(org, p.id);
       const prevS = prevRoundId ? pillarScoreForRound(org, prevRoundId, p.id) : null;
       const status = pillarStatus(s);
-      const { done, total } = answerSummaryForPillar(org, p.id);
+      const { done, total } = answerSummaryForPillar(org, p.id, viewedAccountId(user, org));
       const isOpen = state.expandedPillars.has(p.id);
 
       const tile = h("div", {
@@ -1600,7 +1680,7 @@ import {
     frag.appendChild(tiles);
 
     // Draw radar after the DOM settles
-    queueMicrotask(() => drawRadar(org, prevRoundId));
+    queueMicrotask(() => drawRadar(org));
     return frag;
   }
 
@@ -1673,12 +1753,13 @@ import {
     return tile;
   }
 
-  function answerSummaryForPillar(org, pillarId) {
-    const byUser = (org.responses || {})[org.currentRoundId] || {};
+  function answerSummaryForPillar(org, pillarId, userId) {
+    const byUser = (org.responses || {})[activeRoundId(org)] || {};
     const pillar = DATA.pillars.find((p) => p.id === pillarId);
+    const perUsers = userId != null ? [byUser[userId]] : Object.values(byUser);
     let done = 0,
       total = 0;
-    Object.values(byUser).forEach((perPillar) => {
+    perUsers.forEach((perPillar) => {
       const qs = (perPillar || {})[pillarId] || {};
       total += pillar.diagnostics.length;
       Object.entries(qs).forEach(([idx, r]) => {
@@ -1771,41 +1852,50 @@ import {
     return { red: "Red", amber: "Amber", green: "Green" }[status];
   }
 
-  function drawRadar(org, prevRoundId) {
+  // Distinct colours cycled per round (oldest → newest). Newest round is drawn
+  // last (on top) and solid; older rounds are lighter/dashed.
+  const RADAR_COLORS = [
+    "#579EC0",
+    "#ED7D31",
+    "#7A9E5E",
+    "#9B59B6",
+    "#E0A458",
+    "#C0504D",
+    "#4472C4",
+    "#2E8B8B",
+  ];
+
+  function drawRadar(org) {
     if (!window.Chart) {
-      setTimeout(() => drawRadar(org, prevRoundId), 120);
+      setTimeout(() => drawRadar(org), 120);
       return;
     }
     const canvas = $("#radar");
     if (!canvas) return;
 
     const labels = DATA.pillars.map((p) => p.shortName || p.name);
-    const curr = DATA.pillars.map((p) => pillarScore(org, p.id) ?? 0);
+    // One dataset per round that has data for the entered account (account
+    // scoping is inside the pillarScoreForRound wrapper via viewedAccountId).
+    const built = roundRadarDatasets(org.rounds || [], DATA.pillars, (roundId, pillarId) =>
+      pillarScoreForRound(org, roundId, pillarId),
+    );
 
-    const datasets = [];
-    if (prevRoundId) {
-      const prev = DATA.pillars.map((p) => pillarScoreForRound(org, prevRoundId, p.id) ?? 0);
-      datasets.push({
-        label: "Previous",
-        data: prev,
+    const datasets = built.map((d, i) => {
+      const isLatest = i === built.length - 1;
+      // Newest round is the teal highlight (matches its teal fill below); older
+      // rounds cycle the remaining palette so a border never mismatches its fill.
+      const color = isLatest ? RADAR_COLORS[0] : RADAR_COLORS[1 + (i % (RADAR_COLORS.length - 1))];
+      return {
+        label: `${d.label}${d.createdAt ? " · " + formatDate(d.createdAt) : ""}`,
+        data: d.data,
         fill: true,
-        backgroundColor: "rgba(237, 125, 49, 0.12)",
-        borderColor: "rgba(237, 125, 49, 0.9)",
-        borderWidth: 1.5,
-        borderDash: [4, 4],
-        pointRadius: 2,
-        pointBackgroundColor: "#ED7D31",
-      });
-    }
-    datasets.push({
-      label: "Current",
-      data: curr,
-      fill: true,
-      backgroundColor: "rgba(87,158,192,0.18)",
-      borderColor: "rgba(87,158,192,1)",
-      borderWidth: 2.5,
-      pointRadius: 3,
-      pointBackgroundColor: "#579EC0",
+        backgroundColor: isLatest ? "rgba(87,158,192,0.18)" : "transparent",
+        borderColor: color,
+        borderWidth: isLatest ? 2.5 : 1.5,
+        borderDash: isLatest ? [] : [4, 4],
+        pointRadius: isLatest ? 3 : 2,
+        pointBackgroundColor: color,
+      };
     });
 
     state.chart = new Chart(canvas.getContext("2d"), {
@@ -1815,7 +1905,11 @@ import {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: !!prevRoundId, position: "bottom", labels: { font: { size: 11 } } },
+          legend: {
+            display: datasets.length > 1,
+            position: "bottom",
+            labels: { font: { size: 11 } },
+          },
           tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.r}/100` } },
         },
         scales: {
@@ -1853,9 +1947,28 @@ import {
       ),
     );
 
+    if (!isClientView(user) && (org.rounds || []).length) {
+      const roundSel = /** @type {HTMLSelectElement} */ (
+        h("select", { "aria-label": "Select round", class: "round-select" })
+      );
+      const activeRid = activeRoundId(org);
+      org.rounds.forEach((r) => {
+        const opt = document.createElement("option");
+        opt.value = r.id;
+        opt.textContent = `${r.label} (${formatDate(r.createdAt)})`;
+        if (r.id === activeRid) opt.selected = true;
+        roundSel.appendChild(opt);
+      });
+      roundSel.addEventListener("change", (e) => {
+        state.viewRoundId = /** @type {HTMLSelectElement} */ (e.target).value;
+        render();
+      });
+      frag.appendChild(h("div", { class: "round-select-wrap" }, ["Round: ", roundSel]));
+    }
+
     const tiles = h("div", { class: "tiles" });
     DATA.pillars.forEach((p) => {
-      const s = pillarScore(org, p.id);
+      const s = pillarScoreForRound(org, activeRoundId(org), p.id);
       const status = pillarStatus(s);
       const unread = unreadCountForPillar(org, p.id, user);
 
@@ -1863,7 +1976,9 @@ import {
       // eslint-disable-next-line no-useless-assignment -- Phase 4: tighten loop control flow (initial value never read before reassignment). See runbooks/phase-4-cleanup-ledger.md
       let userDone = 0;
       const userResp =
-        (((org.responses || {})[org.currentRoundId] || {})[user.id] || {})[p.id] || {};
+        (((org.responses || {})[activeRoundId(org)] || {})[viewedAccountId(user, org)] || {})[
+          p.id
+        ] || {};
       userDone = Object.values(userResp).filter((r) => Number.isFinite(r.score)).length;
       const total = p.diagnostics.length;
 
@@ -1878,8 +1993,8 @@ import {
           "div",
           { class: "tag" },
           isClientView(user)
-            ? `Team score ${s !== null ? s + "/100" : "—"}`
-            : `${userDone}/${total} of your answers · team score ${s !== null ? s + "/100" : "—"}`,
+            ? `Score ${s !== null ? s + "/100" : "—"}`
+            : `${userDone}/${total} answered · score ${s !== null ? s + "/100" : "—"}`,
         ),
       );
       const foot = h("div", { class: "foot" });
@@ -1918,7 +2033,7 @@ import {
     // mark comments read on load (Phase 5 Wave 4 H7 fix: server-clock write via setPillarRead)
     void setPillarRead(org.id, user.id, pillarId);
 
-    const s = pillarScore(org, p.id);
+    const s = pillarScoreForRound(org, activeRoundId(org), p.id);
     const status = pillarStatus(s);
     const isClient = isClientView(user);
 
@@ -1940,7 +2055,7 @@ import {
           h("h1", { class: "view-title pillar-title-h1" }, p.name),
           h("p", { class: "view-sub pillar-tagline" }, p.tagline),
         ]),
-        h("span", { class: `badge ${status}` }, s !== null ? `${s}/100 team` : "Not scored"),
+        h("span", { class: `badge ${status}` }, s !== null ? `${s}/100` : "Not scored"),
       ]),
     );
 
@@ -2049,8 +2164,9 @@ import {
 
   function renderQuestion(user, org, p, idx, qEntry) {
     const meta = questionMeta(qEntry);
+    const acct = viewedAccountId(user, org);
     const resp =
-      ((((org.responses || {})[org.currentRoundId] || {})[user.id] || {})[p.id] || {})[idx] || {};
+      ((((org.responses || {})[activeRoundId(org)] || {})[acct] || {})[p.id] || {})[idx] || {};
     const card = h("div", { class: "q-card" });
     card.appendChild(h("div", { class: "q-text" }, `${idx + 1}. ${meta.text}`));
 
@@ -2141,9 +2257,10 @@ import {
   }
 
   function renderScoreBlock(org, p) {
-    const s = pillarScore(org, p.id);
+    const s = pillarScoreForRound(org, activeRoundId(org), p.id);
     const status = pillarStatus(s);
-    const { done, total } = answerSummaryForPillar(org, p.id);
+    const acct = viewedAccountId(currentUser(), org);
+    const { done, total } = answerSummaryForPillar(org, p.id, acct);
     const block = h("div", { class: "side-panel score-block" }, [
       h("div", {}, [
         h("span", { class: "big" }, s !== null ? String(s) : "—"),
@@ -2154,7 +2271,7 @@ import {
         { class: "bar" },
         h("span", { style: `width:${s ?? 0}%; background:${statusColor(status)};` }),
       ),
-      h("div", { class: "team-row-meta" }, `${done}/${total} team answers`),
+      h("div", { class: "team-row-meta" }, `${done}/${total} answered`),
     ]);
     return block;
   }
@@ -2182,28 +2299,21 @@ import {
 
   function setResponse(user, org, pillarId, idx, patch) {
     const o = loadOrg(org.id);
+    const roundId = activeRoundId(o);
+    const acctId = viewedAccountId(user, o) || user.id;
     o.responses = o.responses || {};
-    o.responses[o.currentRoundId] = o.responses[o.currentRoundId] || {};
-    o.responses[o.currentRoundId][user.id] = o.responses[o.currentRoundId][user.id] || {};
-    o.responses[o.currentRoundId][user.id][pillarId] =
-      o.responses[o.currentRoundId][user.id][pillarId] || {};
-    const cur = o.responses[o.currentRoundId][user.id][pillarId][idx] || {};
+    o.responses[roundId] = o.responses[roundId] || {};
+    o.responses[roundId][acctId] = o.responses[roundId][acctId] || {};
+    o.responses[roundId][acctId][pillarId] = o.responses[roundId][acctId][pillarId] || {};
+    const cur = o.responses[roundId][acctId][pillarId][idx] || {};
     const merged = Object.assign({}, cur, patch);
-    o.responses[o.currentRoundId][user.id][pillarId][idx] = merged;
-    // Local-only write — the in-memory model needs the new score for the
-    // inline render() that follows this call.
-    //
-    // The Phase 5 (DATA-01) cutover moved responses to the
-    // /orgs/{orgId}/responses/{respId} subcollection. The previous path
-    // (saveOrg → cloudPushOrg → setDoc on /orgs/{orgId}) was rejected by
-    // firestore.rules — clients cannot write the parent doc at all, and
-    // internal users hit `immutable("createdAt")` whenever the local cache's
-    // Timestamp-shape drifted from the server's. The subcollection rules
-    // whitelist the right set of writers (userId == request.auth.uid on
-    // create; mutableOnly values/updatedAt on update) so this path works
-    // for both roles. See PR #37 / #38 trail for the full thread.
+    o.responses[roundId][acctId][pillarId][idx] = merged;
+    // Local-only write — the in-memory model needs the new score for the inline
+    // render() that follows. Cloud push mirrors it to the responses subcollection
+    // under the ENTERED account's uid (rules relaxed to allow internal writers;
+    // see firestore.rules responses block).
     jset(K.org(o.id), o);
-    cloudPushResponse(o.id, o.currentRoundId, user.id, pillarId, idx, merged);
+    cloudPushResponse(o.id, roundId, acctId, pillarId, idx, merged);
   }
 
   // ================================================================
@@ -2609,7 +2719,7 @@ import {
       const s = pillarScore(org, p.id);
       const prevS = prevRoundId ? pillarScoreForRound(org, prevRoundId, p.id) : null;
       const status = pillarStatus(s);
-      const { done, total } = answerSummaryForPillar(org, p.id);
+      const { done, total } = answerSummaryForPillar(org, p.id, viewedAccountId(user, org));
       const band = bandLabel(s);
 
       const block = h("div", { class: "r-pillar" });
@@ -3674,7 +3784,11 @@ import {
       q,
       (snap) => {
         allMessages = [];
-        snap.forEach((d) => allMessages.push({ id: d.id, ...d.data() }));
+        snap.forEach((d) => {
+          const data = d.data();
+          if (data.deletedAt) return;
+          allMessages.push({ id: d.id, ...data });
+        });
         allMessages.sort(
           (a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0),
         );
@@ -4086,13 +4200,8 @@ import {
   // work unchanged. Also keeps window.FB.currentUser in sync until the IIFE
   // body migrates to fully use state.fbUser (Phase 7+ cleanup-ledger).
   fbOnAuthStateChanged(fbAuthInstance, async (fbUser) => {
-    // Firebase has now reported the persisted-session state (this is the first
-    // fire on cold load). Flip the flash guard so render() stops showing the
-    // splash and paints the real screen — sign-in when null, app when signed
-    // in. Set unconditionally, before the null split, so both paths clear it.
-    state.authResolved = true;
-
     if (!fbUser) {
+      state.authResolved = true;
       state.fbUser = null;
       if (typeof window !== "undefined") {
         /** @type {*} */ (window).FB = /** @type {*} */ (window).FB || {};
@@ -4180,6 +4289,11 @@ import {
       orgId: claims.orgId || null,
       createdAt: fbUser.metadata && fbUser.metadata.creationTime,
     };
+
+    // Only now do we truly know the signed-in user — flip the splash guard
+    // here (not before the awaits) so no render() in the async gap paints the
+    // login screen for an already-authenticated user.
+    state.authResolved = true;
 
     if (typeof window !== "undefined") {
       /** @type {*} */ (window).FB = /** @type {*} */ (window).FB || {};
@@ -4292,16 +4406,17 @@ import {
 
   // Splash safety net: if Firebase Auth never reports (SDK init stalls, App
   // Check origin failure, offline cold-start), authResolved would stay false
-  // and the splash would hang forever. After a short grace period, flip the
-  // gate and render anyway — with no user that falls through to the sign-in
-  // screen, which is the correct, actionable fallback. Harmless once auth has
-  // already resolved (render() is idempotent for a signed-in user).
+  // and the splash would hang forever. After an 8-second grace period (bounds
+  // a stuck splash if Firebase Auth never reports), flip the gate and render
+  // anyway — with no user that falls through to the sign-in screen, which is
+  // the correct, actionable fallback. Harmless once auth has already
+  // resolved (render() is idempotent for a signed-in user).
   setTimeout(() => {
     if (!state.authResolved) {
       state.authResolved = true;
       render();
     }
-  }, 2500);
+  }, 8000);
 
   // Phase 6 follow-up (firstRun loop part 2): onAuthStateChanged does NOT fire
   // on a forced ID-token refresh — only sign-in / sign-out / user-changed.
@@ -4914,7 +5029,11 @@ import {
       commentsQ,
       (snap) => {
         allComments = [];
-        snap.forEach((d) => allComments.push({ id: d.id, ...d.data() }));
+        snap.forEach((d) => {
+          const data = d.data();
+          if (data.deletedAt) return;
+          allComments.push({ id: d.id, ...data });
+        });
         allComments.sort(
           (a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0),
         );

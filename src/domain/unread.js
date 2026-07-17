@@ -34,9 +34,8 @@
  */
 export function unreadCountForPillar(lastReadTs, comments, currentUserId) {
   const lastMs = lastReadTs ? lastReadTs.toMillis() : 0;
-  return (comments || []).filter((c) =>
-    c.authorId !== currentUserId &&
-    c.createdAt && c.createdAt.toMillis() > lastMs
+  return (comments || []).filter(
+    (c) => c.authorId !== currentUserId && c.createdAt && c.createdAt.toMillis() > lastMs,
   ).length;
 }
 
@@ -65,28 +64,28 @@ export function unreadCountTotal(pillarReads, commentsByPillar, currentUserId, p
  * clock participates in the comparison.
  *
  * @param {UserLike|null} user
- * @param {Array<{ authorId: string, orgId: string, createdAt?: ServerTimeLike }>} chatMessages
+ * @param {Array<{ authorId: string, orgId: string, createdAt?: ServerTimeLike, deletedAt?: * }>} chatMessages
  * @param {(orgId: string) => ServerTimeLike|null} lastReadForOrg
+ * @param {string} [scopeOrgId]
  * @returns {number}
  */
-export function unreadChatTotal(user, chatMessages, lastReadForOrg) {
+export function unreadChatTotal(user, chatMessages, lastReadForOrg, scopeOrgId) {
   if (!user) return 0;
   const list = chatMessages || [];
-  if (user.role === "client") {
-    const orgId = user.orgId || "";
-    const lastReadTs = lastReadForOrg(orgId);
-    const lastMs = lastReadTs ? lastReadTs.toMillis() : 0;
-    return list.filter((m) =>
-      m.orgId === orgId && m.authorId !== user.id &&
-      m.createdAt && m.createdAt.toMillis() > lastMs
-    ).length;
-  }
-  return list.reduce((n, m) => {
-    if (m.authorId === user.id) return n;
-    const lastReadTs = lastReadForOrg(m.orgId);
-    const lastMs = lastReadTs ? lastReadTs.toMillis() : 0;
-    return m.createdAt && m.createdAt.toMillis() > lastMs ? n + 1 : n;
-  }, 0);
+  // Clients are pinned to their own org; staff count the ACTIVE org only
+  // (the chat-nav badge shows "this chat", not a global roll-up — the bell
+  // handles the cross-org total). Soft-deleted messages never count.
+  const orgId = user.role === "client" ? user.orgId || "" : scopeOrgId || "";
+  const lastReadTs = lastReadForOrg(orgId);
+  const lastMs = lastReadTs ? lastReadTs.toMillis() : 0;
+  return list.filter(
+    (m) =>
+      m.orgId === orgId &&
+      m.authorId !== user.id &&
+      !m.deletedAt &&
+      m.createdAt &&
+      m.createdAt.toMillis() > lastMs,
+  ).length;
 }
 
 // The legacy domain-side write helper is INTENTIONALLY DELETED. The WRITE

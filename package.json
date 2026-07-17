@@ -55,6 +55,7 @@
   },
   "overrides": {
     "protobufjs": "^7.6.4",
-    "@grpc/grpc-js": "^1.14.4"
+    "@grpc/grpc-js": "^1.14.4",
+    "websocket-driver": "^0.7.5"
   }
 }

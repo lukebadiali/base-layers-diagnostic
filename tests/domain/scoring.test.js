@@ -65,6 +65,36 @@ describe("pillarScoreForRound", () => {
     expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBe(75);
   });
 
+  it("scopes to a single user when userId is given (individual, not team)", () => {
+    // u1 -> 50, u2 -> 100. Team mean is 75, but per-user must be each own.
+    const org = {
+      currentRoundId: "r1",
+      responses: {
+        r1: {
+          u1: { 1: { 0: { score: 5 } } },
+          u2: { 1: { 0: { score: 10 } } },
+        },
+      },
+    };
+    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta, "u1")).toBe(50);
+    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta, "u2")).toBe(100);
+  });
+
+  it("returns null for a user with no answers in the round", () => {
+    const org = { currentRoundId: "r1", responses: { r1: { u1: { 1: { 0: { score: 5 } } } } } };
+    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta, "ghost")).toBeNull();
+  });
+
+  it("still averages across users when userId is omitted (back-compat)", () => {
+    const org = {
+      currentRoundId: "r1",
+      responses: {
+        r1: { u1: { 1: { 0: { score: 5 } } }, u2: { 1: { 0: { score: 10 } } } },
+      },
+    };
+    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBe(75);
+  });
+
   it("skips entries with non-finite scores", () => {
     const org = {
       currentRoundId: "r1",
@@ -226,5 +256,20 @@ describe("answeredCount", () => {
   it("handles missing responses tree (defensive null-guard branch)", () => {
     const org = {};
     expect(answeredCount(org, "r1", "u1", 1, DATA)).toEqual({ done: 0, total: 2 });
+  });
+
+  it("answeredCount isolates a single user's in-scale answers", () => {
+    const org = {
+      currentRoundId: "r1",
+      responses: {
+        r1: {
+          u1: { 1: { 0: { score: 5 }, 1: { score: 3 } } }, // 2 in-scale
+          u2: { 1: { 0: { score: 9 } } },
+        },
+      },
+    };
+    // pillar 1 has 2 questions (scale 10 then 5); u1 answered both in-scale.
+    expect(answeredCount(org, "r1", "u1", 1, DATA)).toEqual({ done: 2, total: 2 });
+    expect(answeredCount(org, "r1", "u2", 1, DATA)).toEqual({ done: 1, total: 2 });
   });
 });

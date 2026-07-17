@@ -187,6 +187,25 @@ describe("activitySummary", () => {
     expect(s.orgs).toEqual([]);
   });
 
+  it("excludes soft-deleted messages from the bell count", () => {
+    const activity = {
+      messages: {
+        orgA: [
+          { authorId: "x", createdAt: ts(2000), deletedAt: ts(2500) }, // deleted -> excluded
+          { authorId: "x", createdAt: ts(2000) }, // live -> counted
+        ],
+      },
+      documents: {},
+    };
+    const s = activitySummary(
+      METAS,
+      activity,
+      { chatLastRead: { orgA: 1000 }, docsLastSeen: {} },
+      "me",
+    );
+    expect(s.total).toBe(1);
+  });
+
   it("tolerates a null orgMetas list", () => {
     const s = activitySummary(
       /** @type {any} */ (null),

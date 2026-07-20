@@ -1772,6 +1772,28 @@ import {
     return { done, total };
   }
 
+  /**
+   * Shared confirm-and-start flow for the "+ Start new round" buttons on the
+   * dashboard round bar and the diagnostic index. Clears any pinned historic
+   * round view (state.viewRoundId) so the UI jumps to the fresh round — a
+   * no-op on the dashboard, where viewRoundId is already null.
+   * @param {*} org
+   * @param {*} currentRound
+   */
+  function confirmStartNewRound(org, currentRound) {
+    confirmDialog(
+      "Start new assessment round?",
+      `This locks in "${currentRound?.label || "the current round"}" as a historic snapshot and opens a fresh round so the team can retake the diagnostic. Progress against the previous round will appear on the dashboard.`,
+      () => {
+        const org2 = loadOrg(org.id);
+        startNewRound(org2);
+        state.viewRoundId = null;
+        render();
+      },
+      "Start new round",
+    );
+  }
+
   function renderRoundBar(user, org, currentRound, prevRound, respUsers) {
     const bar = h("div", { class: "round-bar" });
     const label = h("div", { class: "round-label" });
@@ -1819,18 +1841,7 @@ import {
           "button",
           {
             class: "btn secondary",
-            onclick: () => {
-              confirmDialog(
-                "Start new assessment round?",
-                `This locks in "${currentRound?.label || "the current round"}" as a historic snapshot and opens a fresh round so the team can retake the diagnostic. Progress against the previous round will appear on the dashboard.`,
-                () => {
-                  const org2 = loadOrg(org.id);
-                  startNewRound(org2);
-                  render();
-                },
-                "Start new round",
-              );
-            },
+            onclick: () => confirmStartNewRound(org, currentRound),
           },
           "+ Start new round",
         ),

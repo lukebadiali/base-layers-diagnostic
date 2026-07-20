@@ -1772,6 +1772,28 @@ import {
     return { done, total };
   }
 
+  /**
+   * Shared confirm-and-start flow for the "+ Start new round" buttons on the
+   * dashboard round bar and the diagnostic index. Clears any pinned historic
+   * round view (state.viewRoundId) so the UI jumps to the fresh round — a
+   * no-op on the dashboard, where viewRoundId is already null.
+   * @param {*} org
+   * @param {*} currentRound
+   */
+  function confirmStartNewRound(org, currentRound) {
+    confirmDialog(
+      "Start new assessment round?",
+      `This locks in "${currentRound?.label || "the current round"}" as a historic snapshot and opens a fresh round so the team can retake the diagnostic. Progress against the previous round will appear on the dashboard.`,
+      () => {
+        const org2 = loadOrg(org.id);
+        startNewRound(org2);
+        state.viewRoundId = null;
+        render();
+      },
+      "Start new round",
+    );
+  }
+
   function renderRoundBar(user, org, currentRound, prevRound, respUsers) {
     const bar = h("div", { class: "round-bar" });
     const label = h("div", { class: "round-label" });
@@ -1819,18 +1841,7 @@ import {
           "button",
           {
             class: "btn secondary",
-            onclick: () => {
-              confirmDialog(
-                "Start new assessment round?",
-                `This locks in "${currentRound?.label || "the current round"}" as a historic snapshot and opens a fresh round so the team can retake the diagnostic. Progress against the previous round will appear on the dashboard.`,
-                () => {
-                  const org2 = loadOrg(org.id);
-                  startNewRound(org2);
-                  render();
-                },
-                "Start new round",
-              );
-            },
+            onclick: () => confirmStartNewRound(org, currentRound),
           },
           "+ Start new round",
         ),
@@ -1956,14 +1967,28 @@ import {
         const opt = document.createElement("option");
         opt.value = r.id;
         opt.textContent = `${r.label} (${formatDate(r.createdAt)})`;
-        if (r.id === activeRid) opt.selected = true;
         roundSel.appendChild(opt);
       });
+      // Selection is applied via the select's value setter after the options
+      // exist: jsdom does not honor `option.selected = true` set while the
+      // option is detached, so the per-option flag pattern silently selects
+      // the wrong round under test while passing in real browsers.
+      roundSel.value = activeRid;
       roundSel.addEventListener("change", (e) => {
         state.viewRoundId = /** @type {HTMLSelectElement} */ (e.target).value;
         render();
       });
-      frag.appendChild(h("div", { class: "round-select-wrap" }, ["Round: ", roundSel]));
+      const newRoundBtn = h(
+        "button",
+        {
+          class: "btn secondary",
+          onclick: () => confirmStartNewRound(org, roundById(org, org.currentRoundId)),
+        },
+        "+ Start new round",
+      );
+      frag.appendChild(
+        h("div", { class: "round-select-wrap" }, ["Round: ", roundSel, newRoundBtn]),
+      );
     }
 
     const tiles = h("div", { class: "tiles" });

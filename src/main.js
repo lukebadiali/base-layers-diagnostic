@@ -1981,10 +1981,11 @@ import {
       const newRoundBtn = h(
         "button",
         {
-          class: "btn secondary",
+          class: "round-new-btn",
+          title: "Start new round",
           onclick: () => confirmStartNewRound(org, roundById(org, org.currentRoundId)),
         },
-        "+ Start new round",
+        "+ New",
       );
       frag.appendChild(
         h("div", { class: "round-select-wrap" }, ["Round: ", roundSel, newRoundBtn]),

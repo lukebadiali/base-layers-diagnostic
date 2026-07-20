@@ -48,7 +48,7 @@ function newRoundButton() {
   if (!wrap) return null;
   return /** @type {HTMLButtonElement|null} */ (
     Array.from(wrap.querySelectorAll("button")).find(
-      (b) => (b.textContent || "").trim() === "+ Start new round",
+      (b) => (b.textContent || "").trim() === "+ New",
     ) || null
   );
 }

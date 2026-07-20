@@ -2183,6 +2183,32 @@ a:hover {
   gap: 10px;
   flex-wrap: wrap;
 }
+.round-select,
+.round-new-btn {
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  background: #fff;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.round-select:hover,
+.round-new-btn:hover {
+  border-color: var(--brand);
+}
+.round-select:focus-visible,
+.round-new-btn:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-tint);
+}
 
 .delta-up {
   color: var(--green);

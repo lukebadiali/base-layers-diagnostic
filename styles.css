@@ -2182,6 +2182,9 @@ a:hover {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  /* Breathing room above the pillar tiles — matches the dashboard round bar's
+     18px rhythm. Only renders for internal users, so client view is unmoved. */
+  margin: 0 0 18px;
 }
 .round-select,
 .round-new-btn {

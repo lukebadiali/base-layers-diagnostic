@@ -40,7 +40,7 @@ start a fresh round, forcing a detour back to the dashboard.
 
 ## Testing
 
-- Update the diagnostic view snapshot (tests/__snapshots__/views/diagnostic.html).
+- Update the diagnostic view snapshot (tests/**snapshots**/views/diagnostic.html).
 - Behavior tests: internal user sees the button; client view does not;
   confirming creates a round, selects it in the dropdown, and clears
   `state.viewRoundId`.

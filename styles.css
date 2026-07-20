@@ -1972,6 +1972,12 @@ a:hover {
   display: flex;
   gap: 8px;
 }
+.round-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 
 .delta-up {
   color: var(--green);

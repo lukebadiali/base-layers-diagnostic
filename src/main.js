@@ -1967,14 +1967,28 @@ import {
         const opt = document.createElement("option");
         opt.value = r.id;
         opt.textContent = `${r.label} (${formatDate(r.createdAt)})`;
-        if (r.id === activeRid) opt.selected = true;
         roundSel.appendChild(opt);
       });
+      // Selection is applied via the select's value setter after the options
+      // exist: jsdom does not honor `option.selected = true` set while the
+      // option is detached, so the per-option flag pattern silently selects
+      // the wrong round under test while passing in real browsers.
+      roundSel.value = activeRid;
       roundSel.addEventListener("change", (e) => {
         state.viewRoundId = /** @type {HTMLSelectElement} */ (e.target).value;
         render();
       });
-      frag.appendChild(h("div", { class: "round-select-wrap" }, ["Round: ", roundSel]));
+      const newRoundBtn = h(
+        "button",
+        {
+          class: "btn secondary",
+          onclick: () => confirmStartNewRound(org, roundById(org, org.currentRoundId)),
+        },
+        "+ Start new round",
+      );
+      frag.appendChild(
+        h("div", { class: "round-select-wrap" }, ["Round: ", roundSel, newRoundBtn]),
+      );
     }
 
     const tiles = h("div", { class: "tiles" });

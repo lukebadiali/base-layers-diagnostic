@@ -82,20 +82,111 @@ describe("renderTopbar() — internal user", () => {
     expect(el.querySelector('button[data-route="engagement"]')).toBeNull();
   });
 
-  it("renders the mode toggle + org select for non-client users", () => {
+  it("renders the mode toggle + scope picker for non-client users", () => {
     const { renderTopbar } = createChrome(makeDeps());
     const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
     expect(el.querySelector(".mode-toggle")).not.toBeNull();
-    expect(el.querySelector("#orgSelect")).not.toBeNull();
+    expect(el.querySelector(".scope-btn")).not.toBeNull();
+  });
+
+  it("collapses the internal identity to an avatar-only chip", () => {
+    const { renderTopbar } = createChrome(makeDeps());
+    const el = renderTopbar({ role: "internal", name: "Luke Badiali", email: "luke@x.com" });
+    const chip = el.querySelector(".user-chip");
+    expect(chip?.classList.contains("avatar-only")).toBe(true);
+    // No name/role block for internal; identity is on the tooltip instead.
+    expect(chip?.querySelector(".who")).toBeNull();
+    expect(chip?.getAttribute("title")).toBe("Luke Badiali");
   });
 });
 
 describe("renderTopbar() — client user", () => {
-  it("does NOT render the mode toggle or org select", () => {
+  it("does NOT render the mode toggle or scope picker", () => {
     const { renderTopbar } = createChrome(makeDeps());
     const el = renderTopbar({ role: "client", name: "Client Co", email: "c@x.com" });
     expect(el.querySelector(".mode-toggle")).toBeNull();
-    expect(el.querySelector("#orgSelect")).toBeNull();
+    expect(el.querySelector(".scope-picker")).toBeNull();
+  });
+
+  it("keeps the name/role block on the client chip", () => {
+    const { renderTopbar } = createChrome(
+      makeDeps({ activeOrgForUser: () => ({ id: "o", name: "Client Co" }) }),
+    );
+    const el = renderTopbar({ role: "client", name: "Alice", email: "a@x.com" });
+    const chip = el.querySelector(".user-chip");
+    expect(chip?.classList.contains("avatar-only")).toBe(false);
+    expect(chip?.querySelector(".who .name")?.textContent).toBe("Alice");
+    expect(chip?.querySelector(".who .role")?.textContent).toBe("Client Co");
+  });
+});
+
+describe("renderTopbar() — scope picker (navbar tidy 2026-07)", () => {
+  /** @returns {*} Internal deps with two orgs; org1 has two client accounts. */
+  const scopeDeps = () =>
+    makeDeps({
+      state: {
+        route: "dashboard",
+        mode: "internal",
+        userMenuOpen: false,
+        scopeOpen: true,
+        orgId: "org1",
+        accountId: "acc2",
+        viewRoundId: null,
+      },
+      activeOrgForUser: () => ({ id: "org1", name: "Acme Corp" }),
+      loadOrgMetas: () => [
+        { id: "org1", name: "Acme Corp" },
+        { id: "org2", name: "Globex" },
+      ],
+      accountsForOrg: (/** @type {string} */ orgId) =>
+        orgId === "org1"
+          ? [
+              { id: "acc1", name: "Jane Smith" },
+              { id: "acc2", name: "Bob Lee" },
+            ]
+          : [],
+    });
+
+  it("closed button shows the current org over the entered client", () => {
+    const deps = scopeDeps();
+    deps.state.scopeOpen = false;
+    const { renderTopbar } = createChrome(deps);
+    const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
+    expect(el.querySelector(".scope-org-name")?.textContent).toBe("Acme Corp");
+    expect(el.querySelector(".scope-acct-name")?.textContent).toBe("Bob Lee");
+    expect(el.querySelector(".scope-panel")).toBeNull();
+  });
+
+  it("open panel lists every org, each with its client flyout", () => {
+    const { renderTopbar } = createChrome(scopeDeps());
+    const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
+    const orgRows = el.querySelectorAll(".scope-panel .scope-org");
+    expect(orgRows.length).toBe(2);
+    // Active org's flyout lists its two clients, with the entered one ticked.
+    expect(orgRows[0].querySelectorAll(".scope-acct").length).toBe(2);
+    expect(orgRows[0].querySelector(".scope-acct.active")?.textContent).toContain("Bob Lee");
+    // An org with no clients shows the empty state, not a broken flyout.
+    expect(orgRows[1].querySelector(".scope-empty")?.textContent).toBe("No clients");
+  });
+
+  it("selecting a client enters that account and closes the picker", () => {
+    let rendered = 0;
+    const deps = scopeDeps();
+    deps.render = () => {
+      rendered++;
+    };
+    const { renderTopbar } = createChrome(deps);
+    const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
+    const janeBtn = /** @type {HTMLButtonElement} */ (
+      Array.from(el.querySelectorAll(".scope-acct")).find((b) =>
+        b.textContent?.includes("Jane Smith"),
+      )
+    );
+    janeBtn.click();
+    expect(deps.state.orgId).toBe("org1");
+    expect(deps.state.accountId).toBe("acc1");
+    expect(deps.state.scopeOpen).toBe(false);
+    expect(rendered).toBeGreaterThan(0);
   });
 });
 

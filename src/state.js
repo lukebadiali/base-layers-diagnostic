@@ -19,6 +19,7 @@
  *   pillarId: number|null,
  *   chart: *,
  *   userMenuOpen: boolean,
+ *   scopeOpen: boolean,
  *   authTab: string,
  *   authError: string,
  *   expandedPillars: Set<number>,
@@ -65,6 +66,7 @@ export const state = {
   pillarId: null,
   chart: null,
   userMenuOpen: false,
+  scopeOpen: false, // org/client scope-picker dropdown open state (internal only)
   authTab: "client",
   authError: "",
   expandedPillars: new Set(), // dashboard-tile accordion state

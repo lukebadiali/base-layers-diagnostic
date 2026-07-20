@@ -22,7 +22,7 @@ import { pendingButton } from "./pending-button.js";
 
 /**
  * @typedef {{
- *   state: { route: string, mode: string, userMenuOpen: boolean, orgId: any, accountId: any, viewRoundId: any },
+ *   state: { route: string, mode: string, userMenuOpen: boolean, scopeOpen: boolean, orgId: any, accountId: any, viewRoundId: any },
  *   activeOrgForUser: (user: *) => *,
  *   unreadCountTotal: (org: *, user: *) => number,
  *   unreadChatTotal: (user: *) => number,
@@ -254,58 +254,128 @@ export function createChrome(deps) {
       );
       topright.appendChild(modeToggle);
 
-      const orgSelect = /** @type {HTMLSelectElement} */ (
-        h("select", { "aria-label": "Select organisation" })
-      );
-      loadOrgMetas().forEach((o) => {
-        const opt = document.createElement("option");
-        opt.value = o.id;
-        opt.textContent = o.name;
-        if (o.id === org?.id) opt.selected = true;
-        orgSelect.appendChild(opt);
-      });
-      orgSelect.id = "orgSelect";
-      orgSelect.addEventListener("change", (e) => {
-        state.orgId = /** @type {HTMLSelectElement} */ (e.target).value;
-        state.accountId = null;
-        state.viewRoundId = null;
-        state.route = "dashboard";
-        render();
-      });
-      topright.appendChild(orgSelect);
-
-      const acctSelect = /** @type {HTMLSelectElement} */ (
-        h("select", { "aria-label": "Select account" })
-      );
+      // Scope picker (2026-07 navbar tidy) — one cascading control replaces the
+      // separate org + account <select>s. Pick an org, then "go across" into its
+      // client accounts. Mirrors the view-as-per-account model: selecting an org
+      // auto-enters its first account (accountId=null → viewedAccountId resolves
+      // to the first), and picking a client enters that individual. Closed state
+      // shows the current org (primary) over the entered client (secondary).
+      const orgs = loadOrgMetas();
       const accounts = org ? accountsForOrg(org.id) : [];
-      if (!accounts.length) {
-        const opt = document.createElement("option");
-        opt.textContent = "No accounts";
-        opt.disabled = true;
-        opt.selected = true;
-        acctSelect.appendChild(opt);
-        acctSelect.disabled = true;
-      } else {
-        const selected = state.accountId || accounts[0].id;
-        accounts.forEach((a) => {
-          const opt = document.createElement("option");
-          opt.value = a.id;
-          opt.textContent = a.name || a.email || a.id;
-          if (a.id === selected) opt.selected = true;
-          acctSelect.appendChild(opt);
+      const currentAcct = accounts.find((a) => a.id === state.accountId) || accounts[0] || null;
+
+      const scopePicker = h("div", { class: "scope-picker" });
+      const scopeBtn = h(
+        "button",
+        {
+          class: "scope-btn",
+          "aria-haspopup": "true",
+          "aria-expanded": state.scopeOpen ? "true" : "false",
+          onclick: (/** @type {Event} */ e) => {
+            e.stopPropagation();
+            state.scopeOpen = !state.scopeOpen;
+            render();
+          },
+        },
+        [
+          h("span", { class: "scope-lines" }, [
+            h("span", { class: "scope-org-name" }, org ? org.name : "No organisation"),
+            h(
+              "span",
+              { class: "scope-acct-name" },
+              currentAcct ? currentAcct.name || currentAcct.email || currentAcct.id : "No clients",
+            ),
+          ]),
+          h("span", { class: "scope-caret", "aria-hidden": "true" }, "▾"),
+        ],
+      );
+      scopePicker.appendChild(scopeBtn);
+
+      if (state.scopeOpen) {
+        const panel = h("div", {
+          class: "scope-panel",
+          onclick: (/** @type {Event} */ e) => e.stopPropagation(),
         });
+        if (!orgs.length) {
+          panel.appendChild(h("div", { class: "scope-empty" }, "No organisations."));
+        }
+        orgs.forEach((o) => {
+          const isActiveOrg = o.id === org?.id;
+          const orgRow = h("div", { class: "scope-org" + (isActiveOrg ? " active" : "") });
+          // Org rows are disclosure-only (like "Size ›" in a cascading menu):
+          // hovering — or clicking, which focuses the button — reveals the client
+          // submenu via CSS :hover / :focus-within. Nothing is committed until a
+          // client is chosen. stopPropagation keeps the panel from closing.
+          const orgBtn = h(
+            "button",
+            {
+              type: "button",
+              class: "scope-org-btn",
+              "aria-haspopup": "true",
+              onclick: (/** @type {Event} */ e) => e.stopPropagation(),
+            },
+            [
+              h("span", { class: "scope-org-label" }, o.name),
+              h("span", { class: "scope-chevron", "aria-hidden": "true" }, "›"),
+            ],
+          );
+          orgRow.appendChild(orgBtn);
+
+          const flyout = h("div", { class: "scope-flyout" });
+          const orgAccounts = accountsForOrg(o.id);
+          if (!orgAccounts.length) {
+            flyout.appendChild(h("div", { class: "scope-empty" }, "No clients"));
+          } else {
+            orgAccounts.forEach((a) => {
+              const isActiveAcct = isActiveOrg && a.id === (currentAcct ? currentAcct.id : null);
+              flyout.appendChild(
+                h(
+                  "button",
+                  {
+                    type: "button",
+                    class: "scope-acct" + (isActiveAcct ? " active" : ""),
+                    onclick: () => {
+                      state.orgId = o.id;
+                      state.accountId = a.id;
+                      state.viewRoundId = null;
+                      state.route = "dashboard";
+                      state.scopeOpen = false;
+                      render();
+                    },
+                  },
+                  [
+                    h("span", { class: "scope-acct-label" }, a.name || a.email || a.id),
+                    h(
+                      "span",
+                      { class: "scope-check", "aria-hidden": "true" },
+                      isActiveAcct ? "✓" : "",
+                    ),
+                  ],
+                ),
+              );
+            });
+          }
+          orgRow.appendChild(flyout);
+          panel.appendChild(orgRow);
+        });
+        scopePicker.appendChild(panel);
+
+        // Click-outside closes (mirrors the user-menu pattern below).
+        setTimeout(() => {
+          const handler = () => {
+            state.scopeOpen = false;
+            render();
+          };
+          document.addEventListener("click", handler, { once: true });
+        }, 10);
       }
-      acctSelect.id = "acctSelect";
-      acctSelect.addEventListener("change", (e) => {
-        state.accountId = /** @type {HTMLSelectElement} */ (e.target).value;
-        state.viewRoundId = null;
-        state.route = "dashboard";
-        render();
-      });
-      topright.appendChild(acctSelect);
+      topright.appendChild(scopePicker);
     }
 
-    // User chip
+    // User chip. Navbar tidy (2026-07): the internal identity collapses to just
+    // the avatar circle — the staff strip no longer carries a name/role block
+    // (still one click away in the menu, and surfaced on the avatar's tooltip).
+    // Clients keep the name/role line: their bar has room and it's friendlier.
     const avatar = h(
       "span",
       {
@@ -313,21 +383,27 @@ export function createChrome(deps) {
       },
       initials(user.name || user.email),
     );
-    const who = h("div", { class: "who" }, [
-      h("div", { class: "name" }, user.name || user.email),
-      h("div", { class: "role" }, isClient ? (org ? org.name : "Client") : "BeDeveloped team"),
-    ]);
+    const chipChildren = [avatar];
+    if (isClient) {
+      chipChildren.push(
+        h("div", { class: "who" }, [
+          h("div", { class: "name" }, user.name || user.email),
+          h("div", { class: "role" }, org ? org.name : "Client"),
+        ]),
+      );
+    }
     const chip = h(
       "button",
       {
-        class: "user-chip",
+        class: "user-chip" + (isClient ? "" : " avatar-only"),
+        title: user.name || user.email,
         onclick: (/** @type {Event} */ e) => {
           e.stopPropagation();
           state.userMenuOpen = !state.userMenuOpen;
           render();
         },
       },
-      [avatar, who],
+      chipChildren,
     );
 
     if (state.userMenuOpen) {

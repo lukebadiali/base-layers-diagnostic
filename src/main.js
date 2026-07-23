@@ -925,7 +925,9 @@ import {
   /**
    * The account whose diagnostic is being viewed/edited. Clients are always
    * themselves; internal users pick via state.accountId (validated against the
-   * org, else the first account). Returns null only when there is no account.
+   * org, else the first account). An org with no client accounts yet (freshly
+   * created) resolves to the internal user's own id — the same key
+   * setResponse writes under, so reads and writes can never diverge.
    * @param {*} user @param {*} org
    */
   function viewedAccountId(user, org) {
@@ -934,7 +936,7 @@ import {
     if (state.accountId && accountsForOrg(org.id).some((a) => a.id === state.accountId)) {
       return state.accountId;
     }
-    return firstAccountId(org);
+    return firstAccountId(org) || user.id;
   }
   /** The round currently in view (state.viewRoundId if valid for org, else current). */
   function activeRoundId(org) {

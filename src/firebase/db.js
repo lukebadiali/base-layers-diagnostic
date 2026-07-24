@@ -26,6 +26,7 @@ import {
   orderBy,
   onSnapshot,
   serverTimestamp,
+  deleteField,
   limit,
   runTransaction,
 } from "firebase/firestore";
@@ -82,6 +83,7 @@ if (typeof window !== "undefined") {
     orderBy,
     onSnapshot,
     serverTimestamp,
+    deleteField,
     limit,
   };
 }

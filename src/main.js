@@ -1037,11 +1037,12 @@ import {
     app.appendChild(main);
 
     const org = activeOrgForUser(user);
-    // Subscribe to the /orgs/{orgId}/responses subcollection for the active
-    // org so diagnostic answers sync cross-device (Phase 5 DATA-01 read path).
-    // No-op when fbReady() is false (tests + pre-auth) or when already
-    // subscribed to the same orgId.
+    // Subscribe to the /orgs/{orgId}/responses + /actions subcollections for
+    // the active org so diagnostic answers and action toggles sync
+    // cross-device. No-op when fbReady() is false (tests + pre-auth) or when
+    // already subscribed to the same orgId.
     ensureResponsesSubscription(org ? org.id : null);
+    ensureActionsSubscription(org ? org.id : null);
 
     if (!org) {
       // Internal with no orgs yet → show setup prompt
@@ -2242,7 +2243,7 @@ import {
     if (!orgMeta) return;
     const o = loadOrg(orgMeta.id);
     o.actions = o.actions || [];
-    o.actions.unshift({
+    const action = {
       id: uid("act_"),
       pillarId,
       title,
@@ -2252,22 +2253,35 @@ import {
       internal,
       createdAt: iso(),
       createdBy,
-    });
-    saveOrg(o);
+    };
+    o.actions.unshift(action);
+    jset(K.org(o.id), o);
+    cloudPushAction(o.id, action);
   }
+  // 2026-07: actions live in the orgs/{orgId}/actions subcollection (the
+  // Phase 5 substrate, finally wired) so clients can legitimately toggle
+  // completion — rules let in-org clients change ONLY done/completedAt/
+  // completedBy on non-internal actions, while staff keep full edit. The
+  // local org.actions array stays as the render mirror (localStorage), so
+  // writes update it directly (jset, NOT saveOrg — the org doc no longer
+  // carries actions) and push the per-action doc.
   function updateAction(id, patch) {
     const user = currentUser();
     const orgMeta = activeOrgForUser(user);
     const o = loadOrg(orgMeta.id);
     o.actions = (o.actions || []).map((a) => (a.id === id ? Object.assign({}, a, patch) : a));
-    saveOrg(o);
+    jset(K.org(o.id), o);
+    cloudPushActionPatch(o.id, id, patch);
   }
   function deleteAction(id) {
     const user = currentUser();
     const orgMeta = activeOrgForUser(user);
     const o = loadOrg(orgMeta.id);
     o.actions = (o.actions || []).filter((a) => a.id !== id);
-    saveOrg(o);
+    jset(K.org(o.id), o);
+    // Soft delete — rules deny hard deletes; the deletedAt tombstone drops it
+    // from every listener query (they filter deletedAt == null).
+    cloudPushActionPatch(o.id, id, { deletedAt: iso() });
   }
 
   function renderActions(user, org) {
@@ -2283,10 +2297,18 @@ import {
     );
 
     const all = (org.actions || []).filter((a) => !isClient || !a.internal);
-    const toolbar = h("div", { class: "stage-section-banner" }, [
-      h("div", {}, `${all.length} total · ${all.filter((a) => a.done).length} complete`),
-      h("button", { class: "btn", onclick: () => openActionModal(user) }, "+ New action"),
-    ]);
+    const toolbar = h(
+      "div",
+      { class: "stage-section-banner" },
+      [
+        h("div", {}, `${all.length} total · ${all.filter((a) => a.done).length} complete`),
+        // Creating actions stays staff-only (rules deny client creates);
+        // clients still complete/uncomplete via each row's checkbox.
+        isClient
+          ? null
+          : h("button", { class: "btn", onclick: () => openActionModal(user) }, "+ New action"),
+      ].filter(Boolean),
+    );
     frag.appendChild(toolbar);
 
     if (!all.length) {
@@ -2318,7 +2340,7 @@ import {
     if (openActions.length === 0) {
       openTable.appendChild(h("div", { class: "empty-card" }, "No open actions."));
     } else {
-      openActions.forEach((a) => openTable.appendChild(renderActionRow(a)));
+      openActions.forEach((a) => openTable.appendChild(renderActionRow(a, isClient)));
     }
     frag.appendChild(openTable);
 
@@ -2329,14 +2351,14 @@ import {
       );
       const doneTable = h("div", { class: "actions-table" });
       doneTable.appendChild(headerRow());
-      completedActions.forEach((a) => doneTable.appendChild(renderActionRow(a)));
+      completedActions.forEach((a) => doneTable.appendChild(renderActionRow(a, isClient)));
       frag.appendChild(doneTable);
     }
 
     return frag;
   }
 
-  function renderActionRow(a) {
+  function renderActionRow(a, isClient) {
     const p = DATA.pillars.find((x) => x.id === a.pillarId);
     const todayIso = new Date().toISOString().slice(0, 10);
     const isOverdue = !a.done && !!a.due && a.due < todayIso;
@@ -2344,16 +2366,28 @@ import {
       class: `action-row ${a.done ? "done" : ""} ${isOverdue ? "overdue" : ""}`,
     });
 
+    // Completion toggles for BOTH roles (2026-07): the checkbox patch carries
+    // exactly the fields firestore.rules lets a client change (done +
+    // completion audit fields) — everything else on the row is staff-only.
     const chk = h("input", { type: "checkbox" });
     chk.checked = !!a.done;
     chk.addEventListener("change", () => {
-      updateAction(a.id, { done: chk.checked });
+      const u = currentUser();
+      updateAction(a.id, {
+        done: chk.checked,
+        completedAt: chk.checked ? iso() : null,
+        completedBy: chk.checked && u ? u.id : null,
+      });
       render();
     });
     row.appendChild(chk);
 
     const title = h("input", { type: "text", class: "a-title", value: a.title });
-    title.addEventListener("blur", () => updateAction(a.id, { title: title.value }));
+    if (isClient) {
+      title.disabled = true;
+    } else {
+      title.addEventListener("blur", () => updateAction(a.id, { title: title.value }));
+    }
     row.appendChild(title);
 
     row.appendChild(
@@ -2378,12 +2412,20 @@ import {
       placeholder: "Owner",
       value: a.owner || "",
     });
-    owner.addEventListener("blur", () => updateAction(a.id, { owner: owner.value }));
+    if (isClient) {
+      owner.disabled = true;
+    } else {
+      owner.addEventListener("blur", () => updateAction(a.id, { owner: owner.value }));
+    }
     row.appendChild(owner);
 
     const dueWrap = h("div", { class: "due-wrap" });
     const due = h("input", { type: "date", class: "a-due", value: a.due || "" });
-    due.addEventListener("change", () => updateAction(a.id, { due: due.value }));
+    if (isClient) {
+      due.disabled = true;
+    } else {
+      due.addEventListener("change", () => updateAction(a.id, { due: due.value }));
+    }
     dueWrap.appendChild(due);
     if (isOverdue)
       dueWrap.appendChild(
@@ -2391,24 +2433,28 @@ import {
       );
     row.appendChild(dueWrap);
 
-    const del = h(
-      "button",
-      {
-        class: "btn ghost sm btn-line-soft",
-        onclick: () =>
-          confirmDialog(
-            "Delete action?",
-            "This cannot be undone.",
-            () => {
-              deleteAction(a.id);
-              render();
-            },
-            "Delete",
-          ),
-      },
-      "×",
-    );
-    row.appendChild(del);
+    if (isClient) {
+      row.appendChild(h("div", {}));
+    } else {
+      const del = h(
+        "button",
+        {
+          class: "btn ghost sm btn-line-soft",
+          onclick: () =>
+            confirmDialog(
+              "Delete action?",
+              "This cannot be undone.",
+              () => {
+                deleteAction(a.id);
+                render();
+              },
+              "Delete",
+            ),
+        },
+        "×",
+      );
+      row.appendChild(del);
+    }
     return row;
   }
 
@@ -3172,7 +3218,12 @@ import {
     cloudSaveTimers["org:" + org.id] = setTimeout(async () => {
       try {
         const { db, firestore } = window.FB;
-        await firestore.setDoc(firestore.doc(db, "orgs", org.id), org);
+        // 2026-07: `actions` moved to the orgs/{orgId}/actions subcollection —
+        // never write the local mirror array back onto the parent doc (it
+        // would re-trigger the one-shot migration and shadow the listener).
+        const orgDoc = Object.assign({}, org);
+        delete orgDoc.actions;
+        await firestore.setDoc(firestore.doc(db, "orgs", org.id), orgDoc);
       } catch (e) {
         console.error("Cloud push org failed:", e);
       }
@@ -3233,6 +3284,120 @@ import {
         console.error("Cloud push response failed:", e);
       }
     }, 400);
+  }
+
+  // ---------- Actions subcollection (2026-07: client completion) ----------
+  // One doc per action at /orgs/{orgId}/actions/{actionId}. Creates and full
+  // edits are staff-only; clients may flip done/completedAt/completedBy on
+  // non-internal actions (see firestore.rules actions block). Soft-delete
+  // via deletedAt tombstone — every listener query filters deletedAt == null.
+  function cloudPushAction(orgId, action) {
+    if (!fbReady() || !orgId || !action || !action.id) return;
+    const { db, firestore } = window.FB;
+    firestore
+      .setDoc(
+        firestore.doc(db, "orgs", orgId, "actions", action.id),
+        Object.assign({}, action, {
+          orgId,
+          internal: !!action.internal,
+          deletedAt: null,
+          legacyAppUserId: action.createdBy || null, // D-03 invariant
+          updatedAt: firestore.serverTimestamp(),
+        }),
+        { merge: true },
+      )
+      .catch((e) => console.error("Cloud push action failed:", e));
+  }
+
+  function cloudPushActionPatch(orgId, actionId, patch) {
+    if (!fbReady() || !orgId || !actionId) return;
+    const { db, firestore } = window.FB;
+    firestore
+      .setDoc(
+        firestore.doc(db, "orgs", orgId, "actions", actionId),
+        Object.assign({}, patch, { updatedAt: firestore.serverTimestamp() }),
+        { merge: true },
+      )
+      .catch((e) => console.error("Cloud push action patch failed:", e));
+  }
+
+  // One-shot migration: orgs created before 2026-07 carry an `actions` array
+  // on the parent doc. First internal session to hydrate such an org pushes
+  // each entry as a subcollection doc (setDoc by stable action id — re-runs
+  // are idempotent) and then removes the array, which is itself the guard.
+  async function migrateOrgActionsToSubcollection(orgDoc) {
+    if (!fbReady() || !orgDoc || !Array.isArray(orgDoc.actions)) return;
+    try {
+      const { db, firestore } = window.FB;
+      for (const a of orgDoc.actions) {
+        if (!a || !a.id) continue;
+        await firestore.setDoc(
+          firestore.doc(db, "orgs", orgDoc.id, "actions", a.id),
+          Object.assign({}, a, {
+            orgId: orgDoc.id,
+            internal: !!a.internal,
+            deletedAt: null,
+            legacyAppUserId: a.createdBy || null, // D-03 invariant
+            updatedAt: firestore.serverTimestamp(),
+          }),
+          { merge: true },
+        );
+      }
+      await firestore.setDoc(
+        firestore.doc(db, "orgs", orgDoc.id),
+        { actions: firestore.deleteField() },
+        { merge: true },
+      );
+    } catch (e) {
+      console.error("Actions migration failed:", e);
+    }
+  }
+
+  // Live subscription to /orgs/{orgId}/actions for the active org, mirroring
+  // the responses listener below. Clients query only non-internal actions
+  // (rules require the constraint); both roles filter the soft-deleted.
+  let _actionsUnsubscribe = null;
+  let _actionsSubscribedFor = null;
+  function ensureActionsSubscription(orgId) {
+    if (_actionsSubscribedFor === orgId) return;
+    if (typeof _actionsUnsubscribe === "function") {
+      try {
+        _actionsUnsubscribe();
+      } catch (_e) {
+        // ignore: unsubscribe never throws in practice but defend anyway
+      }
+    }
+    _actionsUnsubscribe = null;
+    _actionsSubscribedFor = orgId;
+    if (!orgId || !fbReady()) return;
+    const { db, firestore } = window.FB;
+    const user = currentUser();
+    const col = firestore.collection(db, "orgs", orgId, "actions");
+    const q =
+      user && user.role === "client"
+        ? firestore.query(
+            col,
+            firestore.where("deletedAt", "==", null),
+            firestore.where("internal", "==", false),
+          )
+        : firestore.query(col, firestore.where("deletedAt", "==", null));
+    _actionsUnsubscribe = firestore.onSnapshot(
+      q,
+      (snap) => {
+        const cached = loadOrg(orgId);
+        if (!cached) return;
+        /** @type {Array<*>} */
+        const actions = [];
+        snap.forEach((/** @type {*} */ d) => actions.push(Object.assign({}, d.data(), { id: d.id })));
+        // Newest first — preserves the unshift ordering of the array era.
+        actions.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+        if (JSON.stringify(cached.actions || []) !== JSON.stringify(actions)) {
+          jset(K.org(orgId), Object.assign({}, cached, { actions }));
+          render();
+        }
+      },
+      (err) => console.error("subscribeActions failed:", err),
+    );
   }
 
   // Live subscription to /orgs/{orgId}/responses for the active org. Folds
@@ -4257,10 +4422,16 @@ import {
             let changed = JSON.stringify(jget(K.orgs, [])) !== JSON.stringify(newMeta);
             jset(K.orgs, newMeta);
             const prev = jget(K.org(org.id), null);
-            // Preserve locally-cached responses across parent-doc hydrations —
-            // ensureResponsesSubscription() owns that field (mirrors internal path).
-            const merged =
-              prev && prev.responses ? Object.assign({}, org, { responses: prev.responses }) : org;
+            // Preserve locally-cached responses + actions across parent-doc
+            // hydrations — the ensureResponsesSubscription() and
+            // ensureActionsSubscription() listeners own those fields
+            // (mirrors internal path).
+            const merged = Object.assign(
+              {},
+              org,
+              prev && prev.responses ? { responses: prev.responses } : null,
+              prev && prev.actions ? { actions: prev.actions } : null,
+            );
             if (JSON.stringify(prev) !== JSON.stringify(merged)) changed = true;
             jset(K.org(org.id), merged);
             if (changed) render();
@@ -4283,17 +4454,24 @@ import {
           jset(K.orgs, newMeta);
           for (const org of live) {
             const prev = jget(K.org(org.id), null);
-            // Phase 5 (DATA-01) moved responses to the
-            // /orgs/{orgId}/responses subcollection; the parent doc's
-            // `responses` field is stale (or absent) and the
-            // ensureResponsesSubscription() listener below owns the truth.
-            // Preserve the locally-cached responses across parent-doc
-            // hydrations so a snapshot doesn't wipe the diagnostic clicks
-            // setResponse() just wrote to the subcollection.
-            const merged =
-              prev && prev.responses ? Object.assign({}, org, { responses: prev.responses }) : org;
+            // Phase 5 (DATA-01) moved responses — and 2026-07 moved actions —
+            // to their /orgs/{orgId}/* subcollections; the parent doc's
+            // copies are stale (or absent) and the subscription listeners own
+            // the truth. Preserve the locally-cached fields across parent-doc
+            // hydrations so a snapshot doesn't wipe writes the listeners
+            // haven't echoed yet.
+            const merged = Object.assign(
+              {},
+              org,
+              prev && prev.responses ? { responses: prev.responses } : null,
+              prev && prev.actions ? { actions: prev.actions } : null,
+            );
             if (!changed && JSON.stringify(prev) !== JSON.stringify(merged)) changed = true;
             jset(K.org(org.id), merged);
+            // 2026-07 one-shot: a parent doc still carrying an `actions`
+            // array is pre-subcollection — migrate it (internal-only path;
+            // clients never reach this branch).
+            if (Array.isArray(org.actions)) migrateOrgActionsToSubcollection(org);
           }
           if (!_orgsHydratedOnce) {
             _orgsHydratedOnce = true;

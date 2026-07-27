@@ -69,18 +69,18 @@ service cloud.firestore {
       // ── responses subcollection ─────────────────────────────────────
       // Writes are staff-only (2026-07, client view-only diagnostic):
       // clients read prior scoring but can no longer submit or edit it.
+      // 2026-07 org-level re-shift: ONE shared sheet per org per round —
+      // docs are keyed roundId__pillarId with no userId subject field.
+      // Legacy per-account docs (roundId__userId__pillarId) are orphaned:
+      // the app never reads or writes them (purge script is follow-up
+      // housekeeping), and these rules keep them read-only in the meantime.
       match /responses/{respId} {
         allow read:   if inOrg(orgId);
-        // 2026-07 view-as: internal users may capture/edit answers on behalf of
-        // any account IN THIS ORG (userId is the diagnostic subject, not the
-        // caller). Tenant scope enforced via the path orgId + the orgId field.
-        // Clients stay fully blocked (isInternal() is false for them).
         allow create: if isInternal()
                       && request.resource.data.orgId == orgId;
         allow update: if isInternal()
-                      && immutable("userId")
                       && immutable("orgId")
-                      && mutableOnly(["values", "updatedAt", "legacyAppUserId"]);
+                      && mutableOnly(["values", "updatedAt"]);
         allow delete: if false;
       }
 
@@ -97,13 +97,28 @@ service cloud.firestore {
       }
 
       // ── actions subcollection ───────────────────────────────────────
+      // 2026-07 client completion: staff create and fully edit actions;
+      // in-org clients may flip ONLY the completion fields, and only on
+      // non-internal actions. Internal-flagged actions are invisible to
+      // clients (their list queries must constrain internal == false).
+      // Soft-delete via deletedAt tombstone — hard deletes stay denied.
       match /actions/{actId} {
-        allow read:   if inOrg(orgId) && notDeleted(resource.data);
-        allow create: if inOrg(orgId);
-        allow update: if inOrg(orgId)
-                      && immutable("orgId")
-                      && immutable("createdAt")
-                      && mutableOnly(["status", "ownerId", "title", "description", "dueAt", "updatedAt"]);
+        // Map.get(field, false) — not bracket access — so docs that predate
+        // the `internal` flag read as non-internal instead of erroring the
+        // whole clause (same CEL pitfall as immutable(), see above).
+        allow read:   if inOrg(orgId)
+                      && notDeleted(resource.data)
+                      && (isInternal() || resource.data.get("internal", false) == false);
+        allow create: if isInternal()
+                      && request.resource.data.orgId == orgId;
+        allow update: if (isInternal()
+                          && immutable("orgId")
+                          && immutable("createdAt")
+                          && immutable("createdBy"))
+                      || (inOrg(orgId)
+                          && resource.data.get("internal", false) == false
+                          && notDeleted(resource.data)
+                          && mutableOnly(["done", "completedAt", "completedBy", "updatedAt"]));
         allow delete: if false;
       }
 

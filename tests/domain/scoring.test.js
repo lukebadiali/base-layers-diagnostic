@@ -1,18 +1,12 @@
 // tests/domain/scoring.test.js
 // @ts-check
 // Phase 2 (TEST-02): coverage of src/domain/scoring.js. DATA + questionMeta are
-// passed explicitly per the DI signature (D-05 byte-identical, plus Pattern D
-// dependency injection). Test uses a minimal hand-built DATA fixture so that
-// drift in data/pillars.js content doesn't break this test (per RESEARCH.md
-// "tests/domain/scoring.test.js" subsection).
+// passed explicitly per the DI signature (Pattern D dependency injection).
+// 2026-07 org-level re-shift: responses are one shared sheet per org per round
+// (`responses[roundId][pillarId][idx]`) — the per-account dimension, and with
+// it respondentsForRound / answeredCount / per-user scoping, was removed.
 import { describe, it, expect } from "vitest";
-import {
-  pillarScoreForRound,
-  pillarScore,
-  respondentsForRound,
-  answeredCount,
-  isScoredInScale,
-} from "../../src/domain/scoring.js";
+import { pillarScoreForRound, pillarScore, isScoredInScale } from "../../src/domain/scoring.js";
 
 // Minimal DATA fixture matching app.js's questionMeta shape.
 const DATA = {
@@ -22,9 +16,9 @@ const DATA = {
   ],
 };
 
-// questionMeta mirrors app.js:195-211 — extracts the diagnostic entry's scale.
+// questionMeta mirrors app.js — extracts the diagnostic entry's scale.
 // In production it does more (it/role/etc.); this minimal stub is sufficient
-// because byte-identical scoring only reads .scale.
+// because scoring only reads .scale.
 /** @param {*} entry */
 const questionMeta = (entry) => entry || null;
 
@@ -37,7 +31,7 @@ describe("pillarScoreForRound", () => {
   it("returns null for an unknown pillarId (find returns undefined)", () => {
     const org = {
       currentRoundId: "r1",
-      responses: { r1: { u1: { 1: { 0: { score: 5 } } } } },
+      responses: { r1: { 1: { 0: { score: 5 } } } },
     };
     expect(pillarScoreForRound(org, "r1", 999, DATA, questionMeta)).toBeNull();
   });
@@ -46,63 +40,37 @@ describe("pillarScoreForRound", () => {
     // pillar 1 question 0 has scale 10. score=5 normalizes to (5/10)*100 = 50.
     const org = {
       currentRoundId: "r1",
-      responses: { r1: { u1: { 1: { 0: { score: 5 } } } } },
+      responses: { r1: { 1: { 0: { score: 5 } } } },
     };
     expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBe(50);
   });
 
-  it("averages multiple respondents and rounds the result", () => {
-    // u1 score=5 -> 50; u2 score=10 -> 100. Mean = 75.
+  it("averages the pillar's answered questions and rounds the result", () => {
+    // q0 score=5/10 -> 50; q1 score=5/5 -> 100. Mean = 75.
     const org = {
       currentRoundId: "r1",
-      responses: {
-        r1: {
-          u1: { 1: { 0: { score: 5 } } },
-          u2: { 1: { 0: { score: 10 } } },
-        },
-      },
+      responses: { r1: { 1: { 0: { score: 5 }, 1: { score: 5 } } } },
     };
     expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBe(75);
   });
 
-  it("scopes to a single user when userId is given (individual, not team)", () => {
-    // u1 -> 50, u2 -> 100. Team mean is 75, but per-user must be each own.
+  it("reads only the requested round — rounds are fully independent", () => {
     const org = {
-      currentRoundId: "r1",
+      currentRoundId: "r2",
       responses: {
-        r1: {
-          u1: { 1: { 0: { score: 5 } } },
-          u2: { 1: { 0: { score: 10 } } },
-        },
+        r1: { 1: { 0: { score: 10 } } },
+        r2: { 1: { 0: { score: 5 } } },
       },
     };
-    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta, "u1")).toBe(50);
-    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta, "u2")).toBe(100);
-  });
-
-  it("returns null for a user with no answers in the round", () => {
-    const org = { currentRoundId: "r1", responses: { r1: { u1: { 1: { 0: { score: 5 } } } } } };
-    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta, "ghost")).toBeNull();
-  });
-
-  it("still averages across users when userId is omitted (back-compat)", () => {
-    const org = {
-      currentRoundId: "r1",
-      responses: {
-        r1: { u1: { 1: { 0: { score: 5 } } }, u2: { 1: { 0: { score: 10 } } } },
-      },
-    };
-    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBe(75);
+    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBe(100);
+    expect(pillarScoreForRound(org, "r2", 1, DATA, questionMeta)).toBe(50);
+    expect(pillarScoreForRound(org, "r3", 1, DATA, questionMeta)).toBeNull();
   });
 
   it("skips entries with non-finite scores", () => {
     const org = {
       currentRoundId: "r1",
-      responses: {
-        r1: {
-          u1: { 1: { 0: { score: 5 }, 1: { score: NaN } } },
-        },
-      },
+      responses: { r1: { 1: { 0: { score: 5 }, 1: { score: NaN } } } },
     };
     // Only the finite score (5/10 = 50) counts; NaN at idx 1 (scale 5) is skipped.
     expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBe(50);
@@ -114,11 +82,7 @@ describe("pillarScoreForRound", () => {
     // hides it as unselected (renderQuestion clamps), so the number must too.
     const org = {
       currentRoundId: "r1",
-      responses: {
-        r1: {
-          u1: { 1: { 0: { score: 5 }, 1: { score: 8 } } },
-        },
-      },
+      responses: { r1: { 1: { 0: { score: 5 }, 1: { score: 8 } } } },
     };
     // Only idx 0 counts: (5/10)*100 = 50. The out-of-range 8 at idx 1 (scale 5)
     // is skipped, so the average is 50 — NOT (50 + 160)/2 = 105.
@@ -128,7 +92,7 @@ describe("pillarScoreForRound", () => {
   it("excludes a score below 1", () => {
     const org = {
       currentRoundId: "r1",
-      responses: { r1: { u1: { 1: { 0: { score: 0 } } } } },
+      responses: { r1: { 1: { 0: { score: 0 } } } },
     };
     expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBeNull();
   });
@@ -137,7 +101,7 @@ describe("pillarScoreForRound", () => {
     const badQuestionMeta = () => null;
     const org = {
       currentRoundId: "r1",
-      responses: { r1: { u1: { 1: { 0: { score: 5 } } } } },
+      responses: { r1: { 1: { 0: { score: 5 } } } },
     };
     expect(pillarScoreForRound(org, "r1", 1, DATA, badQuestionMeta)).toBeNull();
   });
@@ -146,7 +110,7 @@ describe("pillarScoreForRound", () => {
     const noScaleQuestionMeta = () => ({ scale: 0 });
     const org = {
       currentRoundId: "r1",
-      responses: { r1: { u1: { 1: { 0: { score: 5 } } } } },
+      responses: { r1: { 1: { 0: { score: 5 } } } },
     };
     expect(pillarScoreForRound(org, "r1", 1, DATA, noScaleQuestionMeta)).toBeNull();
   });
@@ -156,19 +120,12 @@ describe("pillarScoreForRound", () => {
     expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBeNull();
   });
 
-  // Plan 02-06 (Wave 5) coverage back-fill: drive the `perPillar || {}` defensive
-  // short-circuit on line 30 so the 100% src/domain/** threshold (D-15) holds.
-  it("skips a user whose response object is falsy (defensive `perPillar || {}` branch)", () => {
+  it("handles a round present with no entry for the pillar (defensive `|| {}` branch)", () => {
     const org = {
       currentRoundId: "r1",
-      responses: {
-        r1: {
-          u1: null, // falsy perPillar — drives the `|| {}` fallback on line 30
-          u2: { 1: { 0: { score: 5 } } }, // counted as 50 → average just 50
-        },
-      },
+      responses: { r1: { 2: { 0: { score: 5 } } } },
     };
-    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBe(50);
+    expect(pillarScoreForRound(org, "r1", 1, DATA, questionMeta)).toBeNull();
   });
 });
 
@@ -201,7 +158,7 @@ describe("pillarScore", () => {
   it("delegates to pillarScoreForRound with org.currentRoundId", () => {
     const org = {
       currentRoundId: "r1",
-      responses: { r1: { u1: { 1: { 0: { score: 5 } } } } },
+      responses: { r1: { 1: { 0: { score: 5 } } } },
     };
     expect(pillarScore(org, 1, DATA, questionMeta)).toBe(50);
   });
@@ -210,66 +167,8 @@ describe("pillarScore", () => {
     // Only r2 has data, but currentRoundId is r1 -> null (no responses for r1).
     const org = {
       currentRoundId: "r1",
-      responses: { r2: { u1: { 1: { 0: { score: 5 } } } } },
+      responses: { r2: { 1: { 0: { score: 5 } } } },
     };
     expect(pillarScore(org, 1, DATA, questionMeta)).toBeNull();
-  });
-});
-
-describe("respondentsForRound", () => {
-  it("returns the user-id keys of the responses for the given round", () => {
-    const org = { responses: { r1: { u1: {}, u2: {}, u3: {} } } };
-    expect(respondentsForRound(org, "r1").sort()).toEqual(["u1", "u2", "u3"]);
-  });
-
-  it("returns [] when the round is missing", () => {
-    expect(respondentsForRound({ responses: {} }, "r1")).toEqual([]);
-  });
-
-  it("returns [] when responses is undefined", () => {
-    expect(respondentsForRound({}, "r1")).toEqual([]);
-  });
-});
-
-describe("answeredCount", () => {
-  it("returns {done: N, total: M} where total is pillars[i].diagnostics.length", () => {
-    const org = {
-      responses: {
-        r1: { u1: { 1: { 0: { score: 5 } } } }, // 1 of 2 done in pillar 1
-      },
-    };
-    expect(answeredCount(org, "r1", "u1", 1, DATA)).toEqual({ done: 1, total: 2 });
-  });
-
-  it("returns {done: 0, total: M} when the user has no responses for that pillar", () => {
-    const org = { responses: { r1: { u1: {} } } };
-    expect(answeredCount(org, "r1", "u1", 1, DATA)).toEqual({ done: 0, total: 2 });
-  });
-
-  it("ignores responses where score is not finite", () => {
-    const org = {
-      responses: { r1: { u1: { 1: { 0: { score: NaN }, 1: { score: 3 } } } } },
-    };
-    expect(answeredCount(org, "r1", "u1", 1, DATA)).toEqual({ done: 1, total: 2 });
-  });
-
-  it("handles missing responses tree (defensive null-guard branch)", () => {
-    const org = {};
-    expect(answeredCount(org, "r1", "u1", 1, DATA)).toEqual({ done: 0, total: 2 });
-  });
-
-  it("answeredCount isolates a single user's in-scale answers", () => {
-    const org = {
-      currentRoundId: "r1",
-      responses: {
-        r1: {
-          u1: { 1: { 0: { score: 5 }, 1: { score: 3 } } }, // 2 in-scale
-          u2: { 1: { 0: { score: 9 } } },
-        },
-      },
-    };
-    // pillar 1 has 2 questions (scale 10 then 5); u1 answered both in-scale.
-    expect(answeredCount(org, "r1", "u1", 1, DATA)).toEqual({ done: 2, total: 2 });
-    expect(answeredCount(org, "r1", "u2", 1, DATA)).toEqual({ done: 1, total: 2 });
   });
 });

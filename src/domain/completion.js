@@ -8,23 +8,6 @@ import { pillarStatus } from "./banding.js";
 
 /**
  * @param {*} org
- * @param {string} roundId
- * @param {string} userId
- * @param {{ pillars: Array<{ id:number, diagnostics:Array<unknown> }> }} DATA
- */
-export function userCompletionPct(org, roundId, userId, DATA) {
-  const totalQ = DATA.pillars.reduce((s, p) => s + p.diagnostics.length, 0);
-  const resp = ((org.responses || {})[roundId] || {})[userId] || {};
-  let done = 0;
-  DATA.pillars.forEach((p) => {
-    const pq = resp[p.id] || {};
-    done += Object.values(pq).filter((r) => Number.isFinite(r.score)).length;
-  });
-  return Math.round((done / totalQ) * 100);
-}
-
-/**
- * @param {*} org
  * @param {{ pillars: Array<{ id:number }> }} DATA
  * @param {(org: *, pillarId: number) => number|null} pillarScore
  */

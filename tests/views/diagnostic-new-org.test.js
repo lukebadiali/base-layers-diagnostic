@@ -89,7 +89,7 @@ describe("new organisation with no client accounts", () => {
     expect(sel?.querySelector(".n")?.textContent).toBe(clickedN);
   }, 20000);
 
-  it("saved score is read back from the same account key it was written under", async () => {
+  it("saved score is stored under the org-level round/pillar key", async () => {
     await bootInternalOnFreshOrg();
     openFirstPillar();
 
@@ -105,8 +105,9 @@ describe("new organisation with no client accounts", () => {
     );
     const roundResponses = org.responses[FRESH_ORG.currentRoundId] || {};
     const keys = Object.keys(roundResponses);
+    // 2026-07 org-level re-shift: the key is the pillar id — no account layer.
     expect(keys).toHaveLength(1);
-    expect(keys[0]).not.toBe("null");
+    expect(keys[0]).toBe("1");
     // The rendered selection must come from that same bucket
     expect(document.querySelector(".likert button.sel")).not.toBeNull();
   }, 20000);

@@ -129,8 +129,6 @@ import { toggleScorePatch } from "./domain/diagnostic-select.js";
 import {
   pillarScoreForRound as _pillarScoreForRound,
   pillarScore as _pillarScore,
-  respondentsForRound,
-  answeredCount as _answeredCount,
   isScoredInScale,
 } from "./domain/scoring.js";
 import { roundRadarDatasets } from "./domain/radar.js";
@@ -455,24 +453,13 @@ import {
     return { low: "Not " + adj, high: "Extremely " + adj };
   }
 
-  // ---------- Scoring (aggregated across users in a round) ----------
-  // Phase 2 (D-05): pillarScoreForRound, pillarScore, respondentsForRound, answeredCount
-  // extracted to src/domain/scoring.js — wrappers below bind DATA + questionMeta (Pattern E).
+  // ---------- Scoring (one org-level sheet per round) ----------
+  // Phase 2 (D-05): pillarScoreForRound, pillarScore extracted to
+  // src/domain/scoring.js — wrappers below bind DATA + questionMeta (Pattern E).
   // pillarStatus extracted to src/domain/banding.js (D-02 routes it to banding) — re-imported at module top.
   const pillarScoreForRound = (org, roundId, pillarId) =>
-    _pillarScoreForRound(
-      org,
-      roundId,
-      pillarId,
-      DATA,
-      questionMeta,
-      viewedAccountId(currentUser(), org),
-    );
-  const pillarScore = (org, pillarId) =>
-    _pillarScore(org, pillarId, DATA, questionMeta, viewedAccountId(currentUser(), org));
-  // eslint-disable-next-line no-unused-vars -- Phase 4: remove dead code or wire up call site. See runbooks/phase-4-cleanup-ledger.md
-  const answeredCount = (org, roundId, userId, pillarId) =>
-    _answeredCount(org, roundId, userId, pillarId, DATA);
+    _pillarScoreForRound(org, roundId, pillarId, DATA, questionMeta);
+  const pillarScore = (org, pillarId) => _pillarScore(org, pillarId, DATA, questionMeta);
 
   // Phase 2 Wave 3 (D-05): wrappers for completion + unread (Pattern E).
   // Bodies extracted to src/domain/completion.js + src/domain/unread.js.
@@ -912,31 +899,15 @@ import {
     return r === "client" || r === "client-preview";
   }
 
-  // ---------- View-as (account + round) ----------
-  /** Client accounts belonging to an org (internal-only account selector source). */
+  // ---------- Scope (account picker + round) ----------
+  // 2026-07 org-level re-shift: the diagnostic is ONE shared sheet per org per
+  // round — viewedAccountId/firstAccountId were deleted with the per-account
+  // response keying. accountsForOrg stays: the navbar scope picker still lists
+  // an org's client accounts, and state.accountId records the picker selection
+  // (context only; it no longer affects which answers are shown).
+  /** Client accounts belonging to an org (scope-picker source). */
   function accountsForOrg(orgId) {
     return loadUsers().filter((u) => u.role === "client" && u.orgId === orgId);
-  }
-  /** @param {*} org */
-  function firstAccountId(org) {
-    const list = org ? accountsForOrg(org.id) : [];
-    return list.length ? list[0].id : null;
-  }
-  /**
-   * The account whose diagnostic is being viewed/edited. Clients are always
-   * themselves; internal users pick via state.accountId (validated against the
-   * org, else the first account). An org with no client accounts yet (freshly
-   * created) resolves to the internal user's own id — the same key
-   * setResponse writes under, so reads and writes can never diverge.
-   * @param {*} user @param {*} org
-   */
-  function viewedAccountId(user, org) {
-    if (!user || !org) return null;
-    if (user.role === "client") return user.id;
-    if (state.accountId && accountsForOrg(org.id).some((a) => a.id === state.accountId)) {
-      return state.accountId;
-    }
-    return firstAccountId(org) || user.id;
   }
   /** The round currently in view (state.viewRoundId if valid for org, else current). */
   function activeRoundId(org) {
@@ -1066,11 +1037,12 @@ import {
     app.appendChild(main);
 
     const org = activeOrgForUser(user);
-    // Subscribe to the /orgs/{orgId}/responses subcollection for the active
-    // org so diagnostic answers sync cross-device (Phase 5 DATA-01 read path).
-    // No-op when fbReady() is false (tests + pre-auth) or when already
-    // subscribed to the same orgId.
+    // Subscribe to the /orgs/{orgId}/responses + /actions subcollections for
+    // the active org so diagnostic answers and action toggles sync
+    // cross-device. No-op when fbReady() is false (tests + pre-auth) or when
+    // already subscribed to the same orgId.
     ensureResponsesSubscription(org ? org.id : null);
+    ensureActionsSubscription(org ? org.id : null);
 
     if (!org) {
       // Internal with no orgs yet → show setup prompt
@@ -1463,8 +1435,6 @@ import {
     const prevRoundId = previousRoundId(org);
     const prevRound = prevRoundId ? roundById(org, prevRoundId) : null;
 
-    const respondents = respondentsForRound(org, org.currentRoundId);
-    const respUsers = respondents.map((id) => findUser(id)).filter(Boolean);
 
     // Staff-only (admin OR internal): alert banner for unread client chat messages across all orgs
     if (isStaff(user)) {
@@ -1512,7 +1482,7 @@ import {
     );
 
     // Round bar
-    frag.appendChild(renderRoundBar(user, org, currentRound, prevRound, respUsers));
+    frag.appendChild(renderRoundBar(user, org, currentRound, prevRound));
 
     // Top row
     const dashTop = h("div", { class: "dash-top" });
@@ -1589,7 +1559,7 @@ import {
       const s = pillarScore(org, p.id);
       const prevS = prevRoundId ? pillarScoreForRound(org, prevRoundId, p.id) : null;
       const status = pillarStatus(s);
-      const { done, total } = answerSummaryForPillar(org, p.id, viewedAccountId(user, org));
+      const { done, total } = answerSummaryForPillar(org, p.id);
       const isOpen = state.expandedPillars.has(p.id);
 
       const tile = h("div", {
@@ -1755,21 +1725,16 @@ import {
     return tile;
   }
 
-  function answerSummaryForPillar(org, pillarId, userId) {
-    const byUser = (org.responses || {})[activeRoundId(org)] || {};
+  function answerSummaryForPillar(org, pillarId) {
     const pillar = DATA.pillars.find((p) => p.id === pillarId);
-    const perUsers = userId != null ? [byUser[userId]] : Object.values(byUser);
-    let done = 0,
-      total = 0;
-    perUsers.forEach((perPillar) => {
-      const qs = (perPillar || {})[pillarId] || {};
-      total += pillar.diagnostics.length;
-      Object.entries(qs).forEach(([idx, r]) => {
-        const meta = questionMeta(pillar.diagnostics[Number(idx)]);
-        // Count only in-scale answers so the "N/M" tally matches the pillar
-        // number, which excludes stale out-of-range scores (2026-07 fix).
-        if (meta && meta.scale && isScoredInScale(r.score, meta.scale)) done += 1;
-      });
+    const qs = ((org.responses || {})[activeRoundId(org)] || {})[pillarId] || {};
+    const total = pillar.diagnostics.length;
+    let done = 0;
+    Object.entries(qs).forEach(([idx, r]) => {
+      const meta = questionMeta(pillar.diagnostics[Number(idx)]);
+      // Count only in-scale answers so the "N/M" tally matches the pillar
+      // number, which excludes stale out-of-range scores (2026-07 fix).
+      if (meta && meta.scale && isScoredInScale(r.score, meta.scale)) done += 1;
     });
     return { done, total };
   }
@@ -1796,7 +1761,7 @@ import {
     );
   }
 
-  function renderRoundBar(user, org, currentRound, prevRound, respUsers) {
+  function renderRoundBar(user, org, currentRound, prevRound) {
     const bar = h("div", { class: "round-bar" });
     const label = h("div", { class: "round-label" });
 
@@ -1806,27 +1771,6 @@ import {
     label.appendChild(
       h("span", { class: "round-meta" }, `started ${formatDate(currentRound?.createdAt)}`),
     );
-
-    if (respUsers.length) {
-      const stack = h("span", {
-        class: "respondent-stack round-meta-inline",
-      });
-      respUsers.slice(0, 5).forEach((u) => {
-        stack.appendChild(
-          h("span", { class: "avatar", title: u.name || u.email }, initials(u.name || u.email)),
-        );
-      });
-      label.appendChild(stack);
-      label.appendChild(
-        h(
-          "span",
-          { class: "respondents-chip" },
-          `${respUsers.length} respondent${respUsers.length === 1 ? "" : "s"}`,
-        ),
-      );
-    } else {
-      label.appendChild(h("span", { class: "respondents-chip" }, "No respondents yet"));
-    }
 
     if (prevRound) {
       label.appendChild(
@@ -1887,8 +1831,7 @@ import {
     if (!canvas) return;
 
     const labels = DATA.pillars.map((p) => p.shortName || p.name);
-    // One dataset per round that has data for the entered account (account
-    // scoping is inside the pillarScoreForRound wrapper via viewedAccountId).
+    // One dataset per round that has data on the org's shared sheet.
     const built = roundRadarDatasets(org.rounds || [], DATA.pillars, (roundId, pillarId) =>
       pillarScoreForRound(org, roundId, pillarId),
     );
@@ -2000,14 +1943,10 @@ import {
       const status = pillarStatus(s);
       const unread = unreadCountForPillar(org, p.id, user);
 
-      // For the current user's answered state
-      // eslint-disable-next-line no-useless-assignment -- Phase 4: tighten loop control flow (initial value never read before reassignment). See runbooks/phase-4-cleanup-ledger.md
-      let userDone = 0;
-      const userResp =
-        (((org.responses || {})[activeRoundId(org)] || {})[viewedAccountId(user, org)] || {})[
-          p.id
-        ] || {};
-      userDone = Object.values(userResp).filter((r) => Number.isFinite(r.score)).length;
+      // Answered state for the org's shared sheet in the round on view
+      const pillarResp =
+        (((org.responses || {})[activeRoundId(org)] || {})[p.id]) || {};
+      const userDone = Object.values(pillarResp).filter((r) => Number.isFinite(r.score)).length;
       const total = p.diagnostics.length;
 
       const tile = h("div", {
@@ -2118,10 +2057,6 @@ import {
       );
     }
 
-    // Team average (if more than self-has-answered)
-    const teamPanel = renderTeamResponses(user, org, p);
-    if (teamPanel) left.appendChild(teamPanel);
-
     grid.appendChild(left);
 
     // Right: side panels
@@ -2192,9 +2127,7 @@ import {
 
   function renderQuestion(user, org, p, idx, qEntry) {
     const meta = questionMeta(qEntry);
-    const acct = viewedAccountId(user, org);
-    const resp =
-      ((((org.responses || {})[activeRoundId(org)] || {})[acct] || {})[p.id] || {})[idx] || {};
+    const resp = (((org.responses || {})[activeRoundId(org)] || {})[p.id] || {})[idx] || {};
     const card = h("div", { class: "q-card" });
     card.appendChild(h("div", { class: "q-text" }, `${idx + 1}. ${meta.text}`));
 
@@ -2226,7 +2159,7 @@ import {
         attrs.onclick = () => {
           // Re-clicking the already-selected figure clears it (deselect →
           // unanswered); any other figure switches the selection.
-          setResponse(user, org, p.id, idx, toggleScorePatch(selectedScore, n));
+          setResponse(org, p.id, idx, toggleScorePatch(selectedScore, n));
           render();
         };
       }
@@ -2244,51 +2177,10 @@ import {
     return card;
   }
 
-  function renderTeamResponses(user, org, p) {
-    const byUser = (org.responses || {})[org.currentRoundId] || {};
-    const users = Object.keys(byUser);
-    if (users.length <= 1) return null;
-
-    const panel = h("div", { class: "card team-responses-card" });
-    panel.appendChild(
-      h("h3", { class: "section-h3-tight" }, `Team responses (${users.length} respondents)`),
-    );
-
-    p.diagnostics.forEach((q, idx) => {
-      const meta = questionMeta(q);
-      const row = h("div", { class: "team-row" });
-      row.appendChild(h("div", { class: "team-row-name" }, `Q${idx + 1}. ${meta.text}`));
-      const scores = h("div", { class: "team-row-scores" });
-      users.forEach((uid) => {
-        const u = findUser(uid);
-        const r = ((byUser[uid] || {})[p.id] || {})[idx];
-        const score = r?.score;
-        const pill = h(
-          "span",
-          {
-            title:
-              (u?.name || u?.email || "respondent") +
-              (score ? ` - ${score}/${meta.scale}` : " - no answer"),
-            class: "score-pill",
-          },
-          [
-            h("span", { class: "avatar team-tiny-pip" }, initials(u?.name || u?.email || "")),
-            score ? `${score}/${meta.scale}` : "—",
-          ],
-        );
-        scores.appendChild(pill);
-      });
-      row.appendChild(scores);
-      panel.appendChild(row);
-    });
-    return panel;
-  }
-
   function renderScoreBlock(org, p) {
     const s = pillarScoreForRound(org, activeRoundId(org), p.id);
     const status = pillarStatus(s);
-    const acct = viewedAccountId(currentUser(), org);
-    const { done, total } = answerSummaryForPillar(org, p.id, acct);
+    const { done, total } = answerSummaryForPillar(org, p.id);
     const block = h("div", { class: "side-panel score-block" }, [
       h("div", {}, [
         h("span", { class: "big" }, s !== null ? String(s) : "—"),
@@ -2325,23 +2217,21 @@ import {
     ]);
   }
 
-  function setResponse(user, org, pillarId, idx, patch) {
+  function setResponse(org, pillarId, idx, patch) {
     const o = loadOrg(org.id);
     const roundId = activeRoundId(o);
-    const acctId = viewedAccountId(user, o) || user.id;
     o.responses = o.responses || {};
     o.responses[roundId] = o.responses[roundId] || {};
-    o.responses[roundId][acctId] = o.responses[roundId][acctId] || {};
-    o.responses[roundId][acctId][pillarId] = o.responses[roundId][acctId][pillarId] || {};
-    const cur = o.responses[roundId][acctId][pillarId][idx] || {};
+    o.responses[roundId][pillarId] = o.responses[roundId][pillarId] || {};
+    const cur = o.responses[roundId][pillarId][idx] || {};
     const merged = Object.assign({}, cur, patch);
-    o.responses[roundId][acctId][pillarId][idx] = merged;
+    o.responses[roundId][pillarId][idx] = merged;
     // Local-only write — the in-memory model needs the new score for the inline
-    // render() that follows. Cloud push mirrors it to the responses subcollection
-    // under the ENTERED account's uid (rules relaxed to allow internal writers;
-    // see firestore.rules responses block).
+    // render() that follows. Cloud push mirrors it to the org-level responses
+    // subcollection doc for this (round, pillar); staff-only per
+    // firestore.rules responses block.
     jset(K.org(o.id), o);
-    cloudPushResponse(o.id, roundId, acctId, pillarId, idx, merged);
+    cloudPushResponse(o.id, roundId, pillarId, idx, merged);
   }
 
   // ================================================================
@@ -2353,7 +2243,7 @@ import {
     if (!orgMeta) return;
     const o = loadOrg(orgMeta.id);
     o.actions = o.actions || [];
-    o.actions.unshift({
+    const action = {
       id: uid("act_"),
       pillarId,
       title,
@@ -2363,22 +2253,35 @@ import {
       internal,
       createdAt: iso(),
       createdBy,
-    });
-    saveOrg(o);
+    };
+    o.actions.unshift(action);
+    jset(K.org(o.id), o);
+    cloudPushAction(o.id, action);
   }
+  // 2026-07: actions live in the orgs/{orgId}/actions subcollection (the
+  // Phase 5 substrate, finally wired) so clients can legitimately toggle
+  // completion — rules let in-org clients change ONLY done/completedAt/
+  // completedBy on non-internal actions, while staff keep full edit. The
+  // local org.actions array stays as the render mirror (localStorage), so
+  // writes update it directly (jset, NOT saveOrg — the org doc no longer
+  // carries actions) and push the per-action doc.
   function updateAction(id, patch) {
     const user = currentUser();
     const orgMeta = activeOrgForUser(user);
     const o = loadOrg(orgMeta.id);
     o.actions = (o.actions || []).map((a) => (a.id === id ? Object.assign({}, a, patch) : a));
-    saveOrg(o);
+    jset(K.org(o.id), o);
+    cloudPushActionPatch(o.id, id, patch);
   }
   function deleteAction(id) {
     const user = currentUser();
     const orgMeta = activeOrgForUser(user);
     const o = loadOrg(orgMeta.id);
     o.actions = (o.actions || []).filter((a) => a.id !== id);
-    saveOrg(o);
+    jset(K.org(o.id), o);
+    // Soft delete — rules deny hard deletes; the deletedAt tombstone drops it
+    // from every listener query (they filter deletedAt == null).
+    cloudPushActionPatch(o.id, id, { deletedAt: iso() });
   }
 
   function renderActions(user, org) {
@@ -2394,10 +2297,18 @@ import {
     );
 
     const all = (org.actions || []).filter((a) => !isClient || !a.internal);
-    const toolbar = h("div", { class: "stage-section-banner" }, [
-      h("div", {}, `${all.length} total · ${all.filter((a) => a.done).length} complete`),
-      h("button", { class: "btn", onclick: () => openActionModal(user) }, "+ New action"),
-    ]);
+    const toolbar = h(
+      "div",
+      { class: "stage-section-banner" },
+      [
+        h("div", {}, `${all.length} total · ${all.filter((a) => a.done).length} complete`),
+        // Creating actions stays staff-only (rules deny client creates);
+        // clients still complete/uncomplete via each row's checkbox.
+        isClient
+          ? null
+          : h("button", { class: "btn", onclick: () => openActionModal(user) }, "+ New action"),
+      ].filter(Boolean),
+    );
     frag.appendChild(toolbar);
 
     if (!all.length) {
@@ -2429,7 +2340,7 @@ import {
     if (openActions.length === 0) {
       openTable.appendChild(h("div", { class: "empty-card" }, "No open actions."));
     } else {
-      openActions.forEach((a) => openTable.appendChild(renderActionRow(a)));
+      openActions.forEach((a) => openTable.appendChild(renderActionRow(a, isClient)));
     }
     frag.appendChild(openTable);
 
@@ -2440,14 +2351,14 @@ import {
       );
       const doneTable = h("div", { class: "actions-table" });
       doneTable.appendChild(headerRow());
-      completedActions.forEach((a) => doneTable.appendChild(renderActionRow(a)));
+      completedActions.forEach((a) => doneTable.appendChild(renderActionRow(a, isClient)));
       frag.appendChild(doneTable);
     }
 
     return frag;
   }
 
-  function renderActionRow(a) {
+  function renderActionRow(a, isClient) {
     const p = DATA.pillars.find((x) => x.id === a.pillarId);
     const todayIso = new Date().toISOString().slice(0, 10);
     const isOverdue = !a.done && !!a.due && a.due < todayIso;
@@ -2455,16 +2366,28 @@ import {
       class: `action-row ${a.done ? "done" : ""} ${isOverdue ? "overdue" : ""}`,
     });
 
+    // Completion toggles for BOTH roles (2026-07): the checkbox patch carries
+    // exactly the fields firestore.rules lets a client change (done +
+    // completion audit fields) — everything else on the row is staff-only.
     const chk = h("input", { type: "checkbox" });
     chk.checked = !!a.done;
     chk.addEventListener("change", () => {
-      updateAction(a.id, { done: chk.checked });
+      const u = currentUser();
+      updateAction(a.id, {
+        done: chk.checked,
+        completedAt: chk.checked ? iso() : null,
+        completedBy: chk.checked && u ? u.id : null,
+      });
       render();
     });
     row.appendChild(chk);
 
     const title = h("input", { type: "text", class: "a-title", value: a.title });
-    title.addEventListener("blur", () => updateAction(a.id, { title: title.value }));
+    if (isClient) {
+      title.disabled = true;
+    } else {
+      title.addEventListener("blur", () => updateAction(a.id, { title: title.value }));
+    }
     row.appendChild(title);
 
     row.appendChild(
@@ -2489,12 +2412,20 @@ import {
       placeholder: "Owner",
       value: a.owner || "",
     });
-    owner.addEventListener("blur", () => updateAction(a.id, { owner: owner.value }));
+    if (isClient) {
+      owner.disabled = true;
+    } else {
+      owner.addEventListener("blur", () => updateAction(a.id, { owner: owner.value }));
+    }
     row.appendChild(owner);
 
     const dueWrap = h("div", { class: "due-wrap" });
     const due = h("input", { type: "date", class: "a-due", value: a.due || "" });
-    due.addEventListener("change", () => updateAction(a.id, { due: due.value }));
+    if (isClient) {
+      due.disabled = true;
+    } else {
+      due.addEventListener("change", () => updateAction(a.id, { due: due.value }));
+    }
     dueWrap.appendChild(due);
     if (isOverdue)
       dueWrap.appendChild(
@@ -2502,24 +2433,28 @@ import {
       );
     row.appendChild(dueWrap);
 
-    const del = h(
-      "button",
-      {
-        class: "btn ghost sm btn-line-soft",
-        onclick: () =>
-          confirmDialog(
-            "Delete action?",
-            "This cannot be undone.",
-            () => {
-              deleteAction(a.id);
-              render();
-            },
-            "Delete",
-          ),
-      },
-      "×",
-    );
-    row.appendChild(del);
+    if (isClient) {
+      row.appendChild(h("div", {}));
+    } else {
+      const del = h(
+        "button",
+        {
+          class: "btn ghost sm btn-line-soft",
+          onclick: () =>
+            confirmDialog(
+              "Delete action?",
+              "This cannot be undone.",
+              () => {
+                deleteAction(a.id);
+                render();
+              },
+              "Delete",
+            ),
+        },
+        "×",
+      );
+      row.appendChild(del);
+    }
     return row;
   }
 
@@ -2718,7 +2653,7 @@ import {
         "Status mix",
         `${summary.green} green · ${summary.amber} amber · ${summary.red} red · ${summary.gray} not scored`,
       ],
-      ["Respondents", String(respondentsForRound(org, org.currentRoundId).length)],
+      ["Rounds", String((org.rounds || []).length)],
     ].forEach(([label, val]) => metricsCard.appendChild(reportRow(label, val)));
     if (constraints.length) {
       metricsCard.appendChild(
@@ -2747,7 +2682,7 @@ import {
       const s = pillarScore(org, p.id);
       const prevS = prevRoundId ? pillarScoreForRound(org, prevRoundId, p.id) : null;
       const status = pillarStatus(s);
-      const { done, total } = answerSummaryForPillar(org, p.id, viewedAccountId(user, org));
+      const { done, total } = answerSummaryForPillar(org, p.id);
       const band = bandLabel(s);
 
       const block = h("div", { class: "r-pillar" });
@@ -2936,7 +2871,7 @@ import {
             h(
               "div",
               { class: "member-meta-tiny" },
-              `${o?.rounds?.length || 0} round(s) · ${respondentsForRound(o, o.currentRoundId).length} respondents`,
+              `${o?.rounds?.length || 0} round(s)`,
             ),
           ]),
         );
@@ -3283,7 +3218,12 @@ import {
     cloudSaveTimers["org:" + org.id] = setTimeout(async () => {
       try {
         const { db, firestore } = window.FB;
-        await firestore.setDoc(firestore.doc(db, "orgs", org.id), org);
+        // 2026-07: `actions` moved to the orgs/{orgId}/actions subcollection —
+        // never write the local mirror array back onto the parent doc (it
+        // would re-trigger the one-shot migration and shadow the listener).
+        const orgDoc = Object.assign({}, org);
+        delete orgDoc.actions;
+        await firestore.setDoc(firestore.doc(db, "orgs", org.id), orgDoc);
       } catch (e) {
         console.error("Cloud push org failed:", e);
       }
@@ -3303,20 +3243,20 @@ import {
     }, 400);
   }
 
-  // Per-response subcollection writer (Phase 5 DATA-01 path). One Firestore
-  // doc per (round, user, pillar) tuple at /orgs/{orgId}/responses/{respId}
-  // where respId = `${roundId}__${userId}__${pillarId}` — matches the shape
-  // the migration script (scripts/migrate-subcollections/builders.js) and
-  // the data/responses.js wrapper produce. Keyed-debounce per cell so rapid
-  // clicks on the same question collapse into a single setDoc.
-  function cloudPushResponse(orgId, roundId, userId, pillarId, idx, value) {
-    if (!fbReady() || !orgId || !roundId || !userId) return;
-    const key = `resp:${orgId}/${roundId}/${userId}/${pillarId}/${idx}`;
+  // Per-response subcollection writer. 2026-07 org-level re-shift: one
+  // Firestore doc per (round, pillar) tuple at /orgs/{orgId}/responses/{respId}
+  // where respId = `${roundId}__${pillarId}` — the org's single shared sheet.
+  // Legacy 3-part docs (`roundId__userId__pillarId`) are never written or read
+  // again (clean wipe; purge script is follow-up housekeeping). Keyed-debounce
+  // per cell so rapid clicks on the same question collapse into a single setDoc.
+  function cloudPushResponse(orgId, roundId, pillarId, idx, value) {
+    if (!fbReady() || !orgId || !roundId) return;
+    const key = `resp:${orgId}/${roundId}/${pillarId}/${idx}`;
     clearTimeout(cloudSaveTimers[key]);
     cloudSaveTimers[key] = setTimeout(async () => {
       try {
         const { db, firestore } = window.FB;
-        const respId = `${roundId}__${userId}__${pillarId}`;
+        const respId = `${roundId}__${pillarId}`;
         const ref = firestore.doc(db, "orgs", orgId, "responses", respId);
         const snap = await firestore.getDoc(ref);
         const existing = snap.exists() ? snap.data() : null;
@@ -3324,18 +3264,17 @@ import {
         const values = existing && Array.isArray(existing.values) ? existing.values.slice() : [];
         values[idx] = value;
         if (snap.exists()) {
-          // Update — rules require mutableOnly(["values", "updatedAt", "legacyAppUserId"]).
+          // Update — rules require mutableOnly(["values", "updatedAt"]).
           await firestore.setDoc(
             ref,
             { values, updatedAt: firestore.serverTimestamp() },
             { merge: true },
           );
         } else {
-          // Create — rules require userId == request.auth.uid; set all immutable fields.
+          // Create — internal-only per rules; set all immutable fields.
           await firestore.setDoc(ref, {
             orgId,
             roundId,
-            userId,
             pillarId: String(pillarId),
             values,
             updatedAt: firestore.serverTimestamp(),
@@ -3347,12 +3286,126 @@ import {
     }, 400);
   }
 
+  // ---------- Actions subcollection (2026-07: client completion) ----------
+  // One doc per action at /orgs/{orgId}/actions/{actionId}. Creates and full
+  // edits are staff-only; clients may flip done/completedAt/completedBy on
+  // non-internal actions (see firestore.rules actions block). Soft-delete
+  // via deletedAt tombstone — every listener query filters deletedAt == null.
+  function cloudPushAction(orgId, action) {
+    if (!fbReady() || !orgId || !action || !action.id) return;
+    const { db, firestore } = window.FB;
+    firestore
+      .setDoc(
+        firestore.doc(db, "orgs", orgId, "actions", action.id),
+        Object.assign({}, action, {
+          orgId,
+          internal: !!action.internal,
+          deletedAt: null,
+          legacyAppUserId: action.createdBy || null, // D-03 invariant
+          updatedAt: firestore.serverTimestamp(),
+        }),
+        { merge: true },
+      )
+      .catch((e) => console.error("Cloud push action failed:", e));
+  }
+
+  function cloudPushActionPatch(orgId, actionId, patch) {
+    if (!fbReady() || !orgId || !actionId) return;
+    const { db, firestore } = window.FB;
+    firestore
+      .setDoc(
+        firestore.doc(db, "orgs", orgId, "actions", actionId),
+        Object.assign({}, patch, { updatedAt: firestore.serverTimestamp() }),
+        { merge: true },
+      )
+      .catch((e) => console.error("Cloud push action patch failed:", e));
+  }
+
+  // One-shot migration: orgs created before 2026-07 carry an `actions` array
+  // on the parent doc. First internal session to hydrate such an org pushes
+  // each entry as a subcollection doc (setDoc by stable action id — re-runs
+  // are idempotent) and then removes the array, which is itself the guard.
+  async function migrateOrgActionsToSubcollection(orgDoc) {
+    if (!fbReady() || !orgDoc || !Array.isArray(orgDoc.actions)) return;
+    try {
+      const { db, firestore } = window.FB;
+      for (const a of orgDoc.actions) {
+        if (!a || !a.id) continue;
+        await firestore.setDoc(
+          firestore.doc(db, "orgs", orgDoc.id, "actions", a.id),
+          Object.assign({}, a, {
+            orgId: orgDoc.id,
+            internal: !!a.internal,
+            deletedAt: null,
+            legacyAppUserId: a.createdBy || null, // D-03 invariant
+            updatedAt: firestore.serverTimestamp(),
+          }),
+          { merge: true },
+        );
+      }
+      await firestore.setDoc(
+        firestore.doc(db, "orgs", orgDoc.id),
+        { actions: firestore.deleteField() },
+        { merge: true },
+      );
+    } catch (e) {
+      console.error("Actions migration failed:", e);
+    }
+  }
+
+  // Live subscription to /orgs/{orgId}/actions for the active org, mirroring
+  // the responses listener below. Clients query only non-internal actions
+  // (rules require the constraint); both roles filter the soft-deleted.
+  let _actionsUnsubscribe = null;
+  let _actionsSubscribedFor = null;
+  function ensureActionsSubscription(orgId) {
+    if (_actionsSubscribedFor === orgId) return;
+    if (typeof _actionsUnsubscribe === "function") {
+      try {
+        _actionsUnsubscribe();
+      } catch (_e) {
+        // ignore: unsubscribe never throws in practice but defend anyway
+      }
+    }
+    _actionsUnsubscribe = null;
+    _actionsSubscribedFor = orgId;
+    if (!orgId || !fbReady()) return;
+    const { db, firestore } = window.FB;
+    const user = currentUser();
+    const col = firestore.collection(db, "orgs", orgId, "actions");
+    const q =
+      user && user.role === "client"
+        ? firestore.query(
+            col,
+            firestore.where("deletedAt", "==", null),
+            firestore.where("internal", "==", false),
+          )
+        : firestore.query(col, firestore.where("deletedAt", "==", null));
+    _actionsUnsubscribe = firestore.onSnapshot(
+      q,
+      (snap) => {
+        const cached = loadOrg(orgId);
+        if (!cached) return;
+        /** @type {Array<*>} */
+        const actions = [];
+        snap.forEach((/** @type {*} */ d) => actions.push(Object.assign({}, d.data(), { id: d.id })));
+        // Newest first — preserves the unshift ordering of the array era.
+        actions.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+        if (JSON.stringify(cached.actions || []) !== JSON.stringify(actions)) {
+          jset(K.org(orgId), Object.assign({}, cached, { actions }));
+          render();
+        }
+      },
+      (err) => console.error("subscribeActions failed:", err),
+    );
+  }
+
   // Live subscription to /orgs/{orgId}/responses for the active org. Folds
   // each subcollection doc back into the in-memory `org.responses` map
-  // (legacy shape: responses[roundId][userId][pillarId][idx]) and renders
-  // when something changed. Track which org we're subscribed to so org
-  // switches (internal user picking a different client) tear the old
-  // listener down before opening the new one.
+  // (org-level shape: responses[roundId][pillarId][idx]) and renders when
+  // something changed. Legacy per-account docs (3-part id / userId field)
+  // are skipped — that skip IS the agreed clean wipe. Track which org we're
+  // subscribed to so org switches tear the old listener down first.
   let _responsesUnsubscribe = null;
   let _responsesSubscribedFor = null;
   function ensureResponsesSubscription(orgId) {
@@ -3378,16 +3431,16 @@ import {
         snap.forEach((/** @type {*} */ d) => {
           const data = d.data() || {};
           // Doc id encodes the tuple — fall back to id parts if the field
-          // copies are missing (defensive against partially-migrated docs).
+          // copies are missing. Legacy per-account docs carry a userId field
+          // and a 3-part id; skip them (clean wipe, 2026-07 org-level shift).
           const parts = String(d.id).split("__");
+          if (data.userId || parts.length === 3) return;
           const roundId = data.roundId || parts[0];
-          const userId = data.userId || parts[1];
-          const pillarId = data.pillarId != null ? String(data.pillarId) : parts[2];
-          if (!roundId || !userId || !pillarId) return;
+          const pillarId = data.pillarId != null ? String(data.pillarId) : parts[1];
+          if (!roundId || !pillarId) return;
           const values = Array.isArray(data.values) ? data.values : [];
           responses[roundId] = responses[roundId] || {};
-          responses[roundId][userId] = responses[roundId][userId] || {};
-          const slot = (responses[roundId][userId][pillarId] = {});
+          const slot = (responses[roundId][pillarId] = {});
           values.forEach((v, idx) => {
             if (v !== null && v !== undefined) slot[idx] = v;
           });
@@ -4369,10 +4422,16 @@ import {
             let changed = JSON.stringify(jget(K.orgs, [])) !== JSON.stringify(newMeta);
             jset(K.orgs, newMeta);
             const prev = jget(K.org(org.id), null);
-            // Preserve locally-cached responses across parent-doc hydrations —
-            // ensureResponsesSubscription() owns that field (mirrors internal path).
-            const merged =
-              prev && prev.responses ? Object.assign({}, org, { responses: prev.responses }) : org;
+            // Preserve locally-cached responses + actions across parent-doc
+            // hydrations — the ensureResponsesSubscription() and
+            // ensureActionsSubscription() listeners own those fields
+            // (mirrors internal path).
+            const merged = Object.assign(
+              {},
+              org,
+              prev && prev.responses ? { responses: prev.responses } : null,
+              prev && prev.actions ? { actions: prev.actions } : null,
+            );
             if (JSON.stringify(prev) !== JSON.stringify(merged)) changed = true;
             jset(K.org(org.id), merged);
             if (changed) render();
@@ -4395,17 +4454,24 @@ import {
           jset(K.orgs, newMeta);
           for (const org of live) {
             const prev = jget(K.org(org.id), null);
-            // Phase 5 (DATA-01) moved responses to the
-            // /orgs/{orgId}/responses subcollection; the parent doc's
-            // `responses` field is stale (or absent) and the
-            // ensureResponsesSubscription() listener below owns the truth.
-            // Preserve the locally-cached responses across parent-doc
-            // hydrations so a snapshot doesn't wipe the diagnostic clicks
-            // setResponse() just wrote to the subcollection.
-            const merged =
-              prev && prev.responses ? Object.assign({}, org, { responses: prev.responses }) : org;
+            // Phase 5 (DATA-01) moved responses — and 2026-07 moved actions —
+            // to their /orgs/{orgId}/* subcollections; the parent doc's
+            // copies are stale (or absent) and the subscription listeners own
+            // the truth. Preserve the locally-cached fields across parent-doc
+            // hydrations so a snapshot doesn't wipe writes the listeners
+            // haven't echoed yet.
+            const merged = Object.assign(
+              {},
+              org,
+              prev && prev.responses ? { responses: prev.responses } : null,
+              prev && prev.actions ? { actions: prev.actions } : null,
+            );
             if (!changed && JSON.stringify(prev) !== JSON.stringify(merged)) changed = true;
             jset(K.org(org.id), merged);
+            // 2026-07 one-shot: a parent doc still carrying an `actions`
+            // array is pre-subcollection — migrate it (internal-only path;
+            // clients never reach this branch).
+            if (Array.isArray(org.actions)) migrateOrgActionsToSubcollection(org);
           }
           if (!_orgsHydratedOnce) {
             _orgsHydratedOnce = true;

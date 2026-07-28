@@ -503,18 +503,28 @@ const CELLS = [
   },
 
   // orgs/orgA/actions/{actId}
+  // 2026-07 client completion: creates and general edits are staff-only;
+  // clients may change ONLY done/completedAt/completedBy (covered in depth
+  // by tests/rules/actions.test.js). The generic update payload here flips
+  // `status` — an ordinary field edit — so the client expectation is deny.
   {
     role: "client_orgA",
     path: "orgs/orgA/actions/a2",
     op: "create",
-    expected: "allow",
+    expected: "deny",
   },
   {
     role: "client_orgA",
     path: "orgs/orgA/actions/a1",
     op: "update",
+    expected: "deny",
+  }, // status flip is a staff-only edit
+  {
+    role: "internal",
+    path: "orgs/orgA/actions/a1",
+    op: "update",
     expected: "allow",
-  }, // status flip
+  }, // staff keep full edit
   {
     role: "client_orgB",
     path: "orgs/orgA/actions/a1",

@@ -169,9 +169,10 @@ describe("renderTopbar() — scope picker (navbar tidy 2026-07)", () => {
     expect(orgRows[1].querySelector(".scope-empty")?.textContent).toBe("No clients");
   });
 
-  it("selecting a client enters that account and closes the picker", () => {
+  it("selecting a client enters that account, closes the picker, lands on dashboard", () => {
     let rendered = 0;
     const deps = scopeDeps();
+    deps.state.route = "diagnostic";
     deps.render = () => {
       rendered++;
     };
@@ -185,6 +186,33 @@ describe("renderTopbar() — scope picker (navbar tidy 2026-07)", () => {
     janeBtn.click();
     expect(deps.state.orgId).toBe("org1");
     expect(deps.state.accountId).toBe("acc1");
+    expect(deps.state.route).toBe("dashboard");
+    expect(deps.state.scopeOpen).toBe(false);
+    expect(rendered).toBeGreaterThan(0);
+  });
+
+  // 2026-07 org-level re-shift: clicking an org row commits the org itself —
+  // no account choice needed, since the diagnostic is one shared sheet per
+  // org — and lands on that org's dashboard.
+  it("clicking an org row selects the org, clears the account, lands on dashboard", () => {
+    let rendered = 0;
+    const deps = scopeDeps();
+    deps.state.route = "diagnostic";
+    deps.render = () => {
+      rendered++;
+    };
+    const { renderTopbar } = createChrome(deps);
+    const el = renderTopbar({ role: "internal", name: "L", email: "l@x.com" });
+    const globexBtn = /** @type {HTMLButtonElement} */ (
+      Array.from(el.querySelectorAll(".scope-org-btn")).find((b) =>
+        b.textContent?.includes("Globex"),
+      )
+    );
+    globexBtn.click();
+    expect(deps.state.orgId).toBe("org2");
+    expect(deps.state.accountId).toBeNull();
+    expect(deps.state.viewRoundId).toBeNull();
+    expect(deps.state.route).toBe("dashboard");
     expect(deps.state.scopeOpen).toBe(false);
     expect(rendered).toBeGreaterThan(0);
   });

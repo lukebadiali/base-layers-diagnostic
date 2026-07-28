@@ -62,178 +62,174 @@
       ],
       "responses": {
         "r_round-1": {
-          "u_client-a": {
+          "1": {
+            "0": {
+              "score": 1,
+              "note": ""
+            },
             "1": {
-              "0": {
-                "score": 1,
-                "note": ""
-              },
-              "1": {
-                "score": 1,
-                "note": ""
-              },
-              "2": {
-                "score": 2,
-                "note": ""
-              },
-              "3": {
-                "score": 2,
-                "note": ""
-              },
-              "4": {
-                "score": 2,
-                "note": ""
-              },
-              "5": {
-                "score": 3,
-                "note": ""
-              },
-              "6": {
-                "score": 2,
-                "note": ""
-              },
-              "7": {
-                "score": 2,
-                "note": ""
-              },
-              "8": {
-                "score": 3,
-                "note": ""
-              },
-              "9": {
-                "score": 3,
-                "note": ""
-              }
+              "score": 1,
+              "note": ""
+            },
+            "2": {
+              "score": 2,
+              "note": ""
+            },
+            "3": {
+              "score": 2,
+              "note": ""
+            },
+            "4": {
+              "score": 2,
+              "note": ""
+            },
+            "5": {
+              "score": 3,
+              "note": ""
+            },
+            "6": {
+              "score": 2,
+              "note": ""
+            },
+            "7": {
+              "score": 2,
+              "note": ""
+            },
+            "8": {
+              "score": 3,
+              "note": ""
+            },
+            "9": {
+              "score": 3,
+              "note": ""
             }
           }
         },
         "r_round-2": {
-          "u_client-a": {
+          "1": {
+            "0": {
+              "score": 1,
+              "note": ""
+            },
             "1": {
-              "0": {
-                "score": 1,
-                "note": ""
-              },
-              "1": {
-                "score": 2,
-                "note": ""
-              },
-              "2": {
-                "score": 3,
-                "note": ""
-              },
-              "3": {
-                "score": 2,
-                "note": ""
-              },
-              "4": {
-                "score": 3,
-                "note": ""
-              },
-              "5": {
-                "score": 4,
-                "note": ""
-              },
-              "6": {
-                "score": 3,
-                "note": ""
-              },
-              "7": {
-                "score": 4,
-                "note": ""
-              },
-              "8": {
-                "score": 5,
-                "note": ""
-              },
-              "9": {
-                "score": 4,
-                "note": ""
-              }
+              "score": 2,
+              "note": ""
             },
             "2": {
-              "0": {
-                "score": 6,
-                "note": ""
-              },
-              "1": {
-                "score": 7,
-                "note": ""
-              },
-              "2": {
-                "score": 7,
-                "note": ""
-              },
-              "3": {
-                "score": 6,
-                "note": ""
-              },
-              "4": {
-                "score": 7,
-                "note": ""
-              },
-              "5": {
-                "score": 7,
-                "note": ""
-              },
-              "6": {
-                "score": 6,
-                "note": ""
-              },
-              "7": {
-                "score": 7,
-                "note": ""
-              },
-              "8": {
-                "score": 7,
-                "note": ""
-              },
-              "9": {
-                "score": 6,
-                "note": ""
-              }
+              "score": 3,
+              "note": ""
             },
             "3": {
-              "0": {
-                "score": 8,
-                "note": ""
-              },
-              "1": {
-                "score": 9,
-                "note": ""
-              },
-              "2": {
-                "score": 8,
-                "note": ""
-              },
-              "3": {
-                "score": 9,
-                "note": ""
-              },
-              "4": {
-                "score": 8,
-                "note": ""
-              },
-              "5": {
-                "score": 9,
-                "note": ""
-              },
-              "6": {
-                "score": 9,
-                "note": ""
-              },
-              "7": {
-                "score": 8,
-                "note": ""
-              },
-              "8": {
-                "score": 9,
-                "note": ""
-              },
-              "9": {
-                "score": 8,
-                "note": ""
-              }
+              "score": 2,
+              "note": ""
+            },
+            "4": {
+              "score": 3,
+              "note": ""
+            },
+            "5": {
+              "score": 4,
+              "note": ""
+            },
+            "6": {
+              "score": 3,
+              "note": ""
+            },
+            "7": {
+              "score": 4,
+              "note": ""
+            },
+            "8": {
+              "score": 5,
+              "note": ""
+            },
+            "9": {
+              "score": 4,
+              "note": ""
+            }
+          },
+          "2": {
+            "0": {
+              "score": 6,
+              "note": ""
+            },
+            "1": {
+              "score": 7,
+              "note": ""
+            },
+            "2": {
+              "score": 7,
+              "note": ""
+            },
+            "3": {
+              "score": 6,
+              "note": ""
+            },
+            "4": {
+              "score": 7,
+              "note": ""
+            },
+            "5": {
+              "score": 7,
+              "note": ""
+            },
+            "6": {
+              "score": 6,
+              "note": ""
+            },
+            "7": {
+              "score": 7,
+              "note": ""
+            },
+            "8": {
+              "score": 7,
+              "note": ""
+            },
+            "9": {
+              "score": 6,
+              "note": ""
+            }
+          },
+          "3": {
+            "0": {
+              "score": 8,
+              "note": ""
+            },
+            "1": {
+              "score": 9,
+              "note": ""
+            },
+            "2": {
+              "score": 8,
+              "note": ""
+            },
+            "3": {
+              "score": 9,
+              "note": ""
+            },
+            "4": {
+              "score": 8,
+              "note": ""
+            },
+            "5": {
+              "score": 9,
+              "note": ""
+            },
+            "6": {
+              "score": 9,
+              "note": ""
+            },
+            "7": {
+              "score": 8,
+              "note": ""
+            },
+            "8": {
+              "score": 9,
+              "note": ""
+            },
+            "9": {
+              "score": 8,
+              "note": ""
             }
           }
         }

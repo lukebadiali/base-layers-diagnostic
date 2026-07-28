@@ -30,34 +30,28 @@ export function isScoredInScale(score, scale) {
 
 /**
  * @param {*} org JSDoc-was-`any` (D-06): the org tree shape is byte-identical
- *   to the IIFE's loose-object reads of `org.responses[roundId][userId][pillarId][idx]`.
- *   Tightening to a concrete type would force a behavioural change we are not
- *   making in Phase 2. Phase 4 (CODE-01) tightens once domain/org-shape lands.
+ *   to the IIFE's loose-object reads of `org.responses[roundId][pillarId][idx]`
+ *   (2026-07 org-level re-shift: one shared answer sheet per org per round —
+ *   the per-account dimension was removed).
  * @param {string} roundId
  * @param {number} pillarId
  * @param {{ pillars: Array<{ id:number, diagnostics:Array<unknown> }> }} DATA
  * @param {(entry: unknown) => { scale:number }|null} questionMeta
- * @param {string} [userId]
  * @returns {number|null}
  */
-export function pillarScoreForRound(org, roundId, pillarId, DATA, questionMeta, userId) {
+export function pillarScoreForRound(org, roundId, pillarId, DATA, questionMeta) {
   const p = DATA.pillars.find((pp) => pp.id === pillarId);
   if (!p) return null;
-  const byUser = (org.responses || {})[roundId] || {};
+  const perQ = ((org.responses || {})[roundId] || {})[pillarId] || {};
   /** @type {number[]} */
   const normalized = [];
-  // userId != null -> score only that individual's answers; else aggregate the round.
-  const perUsers = userId != null ? [byUser[userId]] : Object.values(byUser);
-  perUsers.forEach((perPillar) => {
-    const perQ = (perPillar || {})[pillarId] || {};
-    Object.entries(perQ).forEach(([idx, r]) => {
-      const meta = questionMeta(p.diagnostics[Number(idx)]);
-      if (!meta || !meta.scale) return;
-      // Only in-scale scores count — excludes stale out-of-range answers that
-      // the UI already hides (parity with renderQuestion's display clamp).
-      if (!isScoredInScale(r.score, meta.scale)) return;
-      normalized.push((r.score / meta.scale) * 100);
-    });
+  Object.entries(perQ).forEach(([idx, r]) => {
+    const meta = questionMeta(p.diagnostics[Number(idx)]);
+    if (!meta || !meta.scale) return;
+    // Only in-scale scores count — excludes stale out-of-range answers that
+    // the UI already hides (parity with renderQuestion's display clamp).
+    if (!isScoredInScale(r.score, meta.scale)) return;
+    normalized.push((r.score / meta.scale) * 100);
   });
   if (!normalized.length) return null;
   return Math.round(normalized.reduce((a, b) => a + b, 0) / normalized.length);
@@ -68,47 +62,8 @@ export function pillarScoreForRound(org, roundId, pillarId, DATA, questionMeta, 
  * @param {number} pillarId
  * @param {{ pillars: Array<{ id:number, diagnostics:Array<unknown> }> }} DATA
  * @param {(entry: unknown) => { scale:number }|null} questionMeta
- * @param {string} [userId]
  * @returns {number|null}
  */
-export function pillarScore(org, pillarId, DATA, questionMeta, userId) {
-  return pillarScoreForRound(org, org.currentRoundId, pillarId, DATA, questionMeta, userId);
-}
-
-/**
- * @param {*} org JSDoc-was-`any` (D-06): same rationale as pillarScoreForRound.
- * @param {string} roundId
- * @returns {string[]}
- */
-export function respondentsForRound(org, roundId) {
-  const byUser = (org.responses || {})[roundId] || {};
-  return Object.keys(byUser);
-}
-
-/**
- * @param {*} org JSDoc-was-`any` (D-06): same rationale as pillarScoreForRound.
- * @param {string} roundId
- * @param {string} userId
- * @param {number} pillarId
- * @param {{ pillars: Array<{ id:number, diagnostics:Array<unknown> }> }} DATA
- * @returns {{done:number, total:number}}
- */
-// Phase 2 (D-05) carry-over note: the original directive
-//   `// eslint-disable-next-line no-unused-vars`
-// at app.js:265 covered the in-IIFE answeredCount declaration. On export the
-// rule no longer fires (the export "uses" the binding), so the active directive
-// moves to the in-IIFE wrapper closure (app.js: `const answeredCount = ...`)
-// where it still applies. The literal is preserved in this comment for plan
-// acceptance traceability. Phase 4: remove dead code or wire up call site.
-// See runbooks/phase-4-cleanup-ledger.md (Phase 2 — extracted leaf modules).
-export function answeredCount(org, roundId, userId, pillarId, DATA) {
-  const resp = (((org.responses || {})[roundId] || {})[userId] || {})[pillarId] || {};
-  // Byte-identical (D-05) with app.js:268 — original throws on unknown pillarId.
-  // JSDoc cast asserts the find result is non-null; behaviour is unchanged.
-  const pillar = /** @type {{ diagnostics: Array<unknown> }} */ (
-    DATA.pillars.find((p) => p.id === pillarId)
-  );
-  const total = pillar.diagnostics.length;
-  const done = Object.values(resp).filter((r) => Number.isFinite(r.score)).length;
-  return { done, total };
+export function pillarScore(org, pillarId, DATA, questionMeta) {
+  return pillarScoreForRound(org, org.currentRoundId, pillarId, DATA, questionMeta);
 }

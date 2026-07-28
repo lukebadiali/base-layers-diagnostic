@@ -255,11 +255,11 @@ export function createChrome(deps) {
       topright.appendChild(modeToggle);
 
       // Scope picker (2026-07 navbar tidy) — one cascading control replaces the
-      // separate org + account <select>s. Pick an org, then "go across" into its
-      // client accounts. Mirrors the view-as-per-account model: selecting an org
-      // auto-enters its first account (accountId=null → viewedAccountId resolves
-      // to the first), and picking a client enters that individual. Closed state
-      // shows the current org (primary) over the entered client (secondary).
+      // separate org + account <select>s. Clicking an org commits it directly
+      // (org-level diagnostic: one shared sheet per org); "going across" into
+      // its client flyout enters a specific account as context. Either way the
+      // selection lands on the org's dashboard. Closed state shows the current
+      // org (primary) over the entered client, if any (secondary).
       const orgs = loadOrgMetas();
       const accounts = org ? accountsForOrg(org.id) : [];
       const currentAcct = accounts.find((a) => a.id === state.accountId) || accounts[0] || null;
@@ -302,17 +302,26 @@ export function createChrome(deps) {
         orgs.forEach((o) => {
           const isActiveOrg = o.id === org?.id;
           const orgRow = h("div", { class: "scope-org" + (isActiveOrg ? " active" : "") });
-          // Org rows are disclosure-only (like "Size ›" in a cascading menu):
-          // hovering — or clicking, which focuses the button — reveals the client
-          // submenu via CSS :hover / :focus-within. Nothing is committed until a
-          // client is chosen. stopPropagation keeps the panel from closing.
+          // Org rows commit on click (2026-07 org-level re-shift): the
+          // diagnostic is one shared sheet per org, so choosing the org itself
+          // is a complete selection — it clears any account context and lands
+          // on that org's dashboard. The client submenu still reveals on
+          // hover / :focus-within (CSS) for entering a specific account.
           const orgBtn = h(
             "button",
             {
               type: "button",
               class: "scope-org-btn",
               "aria-haspopup": "true",
-              onclick: (/** @type {Event} */ e) => e.stopPropagation(),
+              onclick: (/** @type {Event} */ e) => {
+                e.stopPropagation();
+                state.orgId = o.id;
+                state.accountId = null;
+                state.viewRoundId = null;
+                state.route = "dashboard";
+                state.scopeOpen = false;
+                render();
+              },
             },
             [
               h("span", { class: "scope-org-label" }, o.name),

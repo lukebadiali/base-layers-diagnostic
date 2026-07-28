@@ -1,11 +1,11 @@
 // tests/domain/completion.test.js
 // @ts-check
-// Phase 2 (TEST-03): coverage of src/domain/completion.js. DATA + pillarScore
+// Phase 2 (TEST-03): coverage of src/domain/completion.js (orgSummary). DATA + pillarScore
 // passed explicitly per the DI signatures (D-05 byte-identical, plus Pattern D
 // dependency injection). Tests use a minimal hand-built DATA fixture so that
 // drift in data/pillars.js content doesn't break this test.
 import { describe, it, expect } from "vitest";
-import { userCompletionPct, orgSummary } from "../../src/domain/completion.js";
+import { orgSummary } from "../../src/domain/completion.js";
 
 const DATA = {
   pillars: [
@@ -14,60 +14,6 @@ const DATA = {
     { id: 3, diagnostics: [{ scale: 10 }] }, // 1 question — total 4
   ],
 };
-
-describe("userCompletionPct", () => {
-  it("returns 0 for an empty org", () => {
-    const org = { responses: {} };
-    expect(userCompletionPct(org, "r1", "u1", DATA)).toBe(0);
-  });
-
-  it("returns 100 when every question has a finite score", () => {
-    const org = {
-      responses: {
-        r1: {
-          u1: {
-            1: { 0: { score: 5 }, 1: { score: 3 } }, // 2 of 2
-            2: { 0: { score: 7 } }, // 1 of 1
-            3: { 0: { score: 8 } }, // 1 of 1 — total 4 of 4 = 100%
-          },
-        },
-      },
-    };
-    expect(userCompletionPct(org, "r1", "u1", DATA)).toBe(100);
-  });
-
-  it("returns the rounded percentage for a partial answering", () => {
-    const org = {
-      responses: { r1: { u1: { 1: { 0: { score: 5 }, 1: { score: 3 } } } } }, // 2 of 4 = 50%
-    };
-    expect(userCompletionPct(org, "r1", "u1", DATA)).toBe(50);
-  });
-
-  it("ignores non-finite scores (NaN, undefined)", () => {
-    const org = {
-      responses: {
-        r1: {
-          u1: {
-            1: { 0: { score: 5 }, 1: { score: NaN } },
-            2: { 0: { score: undefined } },
-          },
-        },
-      },
-    };
-    expect(userCompletionPct(org, "r1", "u1", DATA)).toBe(25); // 1 of 4
-  });
-
-  it("returns 0 when the round or user is missing entirely", () => {
-    expect(userCompletionPct({ responses: {} }, "r1", "u1", DATA)).toBe(0);
-    expect(userCompletionPct({ responses: { r1: {} } }, "r1", "u1", DATA)).toBe(0);
-  });
-
-  // Plan 02-06 (Wave 5) coverage back-fill: drive each defensive `|| {}` branch
-  // on line 17 so the 100% src/domain/** threshold (D-15) holds.
-  it("handles a missing responses key on the org (defensive `|| {}` branch)", () => {
-    expect(userCompletionPct({}, "r1", "u1", DATA)).toBe(0);
-  });
-});
 
 describe("orgSummary", () => {
   it("returns all-gray + null avg + 0 scoredCount when no pillar is scored", () => {

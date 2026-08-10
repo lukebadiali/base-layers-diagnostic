@@ -2306,7 +2306,18 @@ import {
         // clients still complete/uncomplete via each row's checkbox.
         isClient
           ? null
-          : h("button", { class: "btn", onclick: () => openActionModal(user) }, "+ New action"),
+          : h("div", { class: "row" }, [
+              h(
+                "button",
+                {
+                  class: "btn secondary",
+                  title: "Paste a list — one action per line",
+                  onclick: () => openBulkActionModal(user),
+                },
+                "Paste multiple",
+              ),
+              h("button", { class: "btn", onclick: () => openActionModal(user) }, "+ New action"),
+            ]),
       ].filter(Boolean),
     );
     frag.appendChild(toolbar);
@@ -2391,19 +2402,25 @@ import {
     row.appendChild(title);
 
     row.appendChild(
-      h("div", {}, [
-        h(
-          "a",
-          {
-            href: "#",
-            onclick: (e) => {
-              e.preventDefault();
-              setRoute("pillar:" + a.pillarId);
-            },
-          },
-          p ? p.name : "—",
-        ),
-      ]),
+      h(
+        "div",
+        {},
+        p
+          ? [
+              h(
+                "a",
+                {
+                  href: "#",
+                  onclick: (e) => {
+                    e.preventDefault();
+                    setRoute("pillar:" + a.pillarId);
+                  },
+                },
+                p.name,
+              ),
+            ]
+          : [h("span", { class: "muted" }, "Other")],
+      ),
     );
 
     const owner = h("input", {
@@ -2458,8 +2475,7 @@ import {
     return row;
   }
 
-  function openActionModal(user) {
-    const title = h("input", { type: "text", placeholder: "Action description" });
+  function buildPillarSelect() {
     const select = h("select", { class: "settings-textarea-comment" });
     DATA.pillars.forEach((p) => {
       const o = document.createElement("option");
@@ -2467,6 +2483,16 @@ import {
       o.textContent = `${p.id}. ${p.name}`;
       select.appendChild(o);
     });
+    const other = document.createElement("option");
+    other.value = "0";
+    other.textContent = "Other";
+    select.appendChild(other);
+    return select;
+  }
+
+  function openActionModal(user) {
+    const title = h("input", { type: "text", placeholder: "Action description" });
+    const select = buildPillarSelect();
     const internalWrap = !isClientView(user)
       ? h("label", { class: "field-row" }, [
           h("input", { type: "checkbox", id: "actInternal" }),
@@ -2500,6 +2526,68 @@ import {
       ]),
     ]);
     setTimeout(() => title.focus(), 10);
+  }
+
+  function openBulkActionModal(user) {
+    const select = buildPillarSelect();
+    const internalWrap = !isClientView(user)
+      ? h("label", { class: "field-row" }, [
+          h("input", { type: "checkbox" }),
+          "Internal only (hidden from client view)",
+        ])
+      : null;
+    const ta = h("textarea", {
+      placeholder:
+        "Paste actions, one per line. Lines starting with -, •, *, or a number are cleaned up.\n\nExample:\n- Build ICP one-pager\n- Refresh pricing table\n- Draft outbound sequence v2",
+      class: "outcomes-textarea",
+    });
+    const countLbl = h("div", { class: "outcomes-count" }, "0 actions");
+    ta.addEventListener("input", () => {
+      const n = ta.value
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean).length;
+      countLbl.textContent = `${n} action${n === 1 ? "" : "s"}`;
+    });
+    const m = modal([
+      h("h3", {}, "Paste multiple actions"),
+      h(
+        "p",
+        { class: "section-explainer" },
+        "One action per line. Bullet markers and numbering are stripped automatically. All lines are added under the chosen pillar.",
+      ),
+      select,
+      internalWrap,
+      ta,
+      countLbl,
+      h("div", { class: "row" }, [
+        h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
+        h(
+          "button",
+          {
+            class: "btn",
+            onclick: () => {
+              const clean = ta.value
+                .split(/\r?\n/)
+                // eslint-disable-next-line no-useless-escape
+                .map((s) => s.replace(/^\s*[-•*\d.\)]+\s*/, "").trim())
+                .filter(Boolean);
+              if (!clean.length) {
+                m.close();
+                return;
+              }
+              const pillarId = Number(select.value);
+              const internal = internalWrap ? internalWrap.querySelector("input").checked : false;
+              clean.forEach((t) => addAction(user.id, pillarId, t, { internal }));
+              m.close();
+              render();
+            },
+          },
+          "Add all",
+        ),
+      ]),
+    ]);
+    setTimeout(() => ta.focus(), 10);
   }
 
   // ================================================================

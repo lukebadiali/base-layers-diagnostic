@@ -1459,6 +1459,12 @@ a:hover {
   text-decoration: line-through;
   color: var(--ink-4);
 }
+/* 2026-08: pillar cell for an action with no pillar — plain muted text where a
+   pillar link would otherwise sit, so the column still reads as filled in. */
+.action-pillar-none {
+  color: var(--ink-3);
+  font-size: 13px;
+}
 
 .action-row.overdue {
   background: var(--red-bg);
@@ -3809,6 +3815,13 @@ a:hover {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+}
+/* 2026-08: button group for a section banner that carries more than one
+   action, so space-between keeps them together at the right-hand end. */
+.banner-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 /* --- Compound: org-members and clients tables --- */

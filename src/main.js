@@ -139,6 +139,9 @@ import {
   unreadChatTotal as _unreadChatTotal,
 } from "./domain/unread.js";
 import { activitySummary as _activitySummary } from "./domain/activity.js";
+// 2026-08 scope change: delimiter rule for the Actions tab "Paste multiple"
+// dialogue. See src/domain/bulk-parse.js for the rule and its priority order.
+import { parseBulkList, MAX_BULK_ITEMS } from "./domain/bulk-parse.js";
 import { setPillarRead } from "./data/read-states.js";
 import {
   migrateV1IfNeeded as _migrateV1IfNeeded,
@@ -1435,7 +1438,6 @@ import {
     const prevRoundId = previousRoundId(org);
     const prevRound = prevRoundId ? roundById(org, prevRoundId) : null;
 
-
     // Staff-only (admin OR internal): alert banner for unread client chat messages across all orgs
     if (isStaff(user)) {
       const unreadChat = unreadChatTotalAllOrgs(user);
@@ -1944,8 +1946,7 @@ import {
       const unread = unreadCountForPillar(org, p.id, user);
 
       // Answered state for the org's shared sheet in the round on view
-      const pillarResp =
-        (((org.responses || {})[activeRoundId(org)] || {})[p.id]) || {};
+      const pillarResp = ((org.responses || {})[activeRoundId(org)] || {})[p.id] || {};
       const userDone = Object.values(pillarResp).filter((r) => Number.isFinite(r.score)).length;
       const total = p.diagnostics.length;
 
@@ -2258,6 +2259,33 @@ import {
     jset(K.org(o.id), o);
     cloudPushAction(o.id, action);
   }
+  // 2026-08 scope change (bulk paste on the Actions tab): one localStorage
+  // write for the whole batch, then a per-action cloud push (the subcollection
+  // has no batch helper and 10-ish setDocs is well inside budget). Prepends as
+  // a block rather than unshifting per item, which would reverse the pasted
+  // order. pillarId may be null — see openBulkActionModal.
+  function addManyActions(createdBy, pillarId, titles, { internal = false } = {}) {
+    const user = currentUser();
+    const orgMeta = activeOrgForUser(user);
+    if (!orgMeta || !titles.length) return 0;
+    const o = loadOrg(orgMeta.id);
+    o.actions = o.actions || [];
+    const created = titles.map((title) => ({
+      id: uid("act_"),
+      pillarId,
+      title,
+      owner: "",
+      due: "",
+      done: false,
+      internal,
+      createdAt: iso(),
+      createdBy,
+    }));
+    o.actions = created.concat(o.actions);
+    jset(K.org(o.id), o);
+    created.forEach((a) => cloudPushAction(o.id, a));
+    return created.length;
+  }
   // 2026-07: actions live in the orgs/{orgId}/actions subcollection (the
   // Phase 5 substrate, finally wired) so clients can legitimately toggle
   // completion — rules let in-org clients change ONLY done/completedAt/
@@ -2303,10 +2331,12 @@ import {
       [
         h("div", {}, `${all.length} total · ${all.filter((a) => a.done).length} complete`),
         // Creating actions stays staff-only (rules deny client creates);
-        // clients still complete/uncomplete via each row's checkbox.
+        // clients still complete/uncomplete via each row's checkbox. Both
+        // buttons sit in one group so the banner's space-between keeps them
+        // together on the right instead of stranding one mid-row.
         isClient
           ? null
-          : h("div", { class: "row" }, [
+          : h("div", { class: "banner-actions" }, [
               h(
                 "button",
                 {
@@ -2401,26 +2431,29 @@ import {
     }
     row.appendChild(title);
 
+    // 2026-08 scope change: actions may carry no pillar (or a pillarId that no
+    // longer resolves). Render those as plain "Unassigned" text — the old
+    // unconditional link navigated to pillar:null and dead-ended.
     row.appendChild(
-      h(
-        "div",
-        {},
-        p
-          ? [
-              h(
-                "a",
-                {
-                  href: "#",
-                  onclick: (e) => {
-                    e.preventDefault();
-                    setRoute("pillar:" + a.pillarId);
-                  },
+      p
+        ? h("div", {}, [
+            h(
+              "a",
+              {
+                href: "#",
+                onclick: (e) => {
+                  e.preventDefault();
+                  setRoute("pillar:" + a.pillarId);
                 },
-                p.name,
-              ),
-            ]
-          : [h("span", { class: "muted" }, "Other")],
-      ),
+              },
+              p.name,
+            ),
+          ])
+        : h(
+            "div",
+            { class: "action-pillar-none", title: "Not assigned to one of the 10 pillars" },
+            "Unassigned",
+          ),
     );
 
     const owner = h("input", {
@@ -2475,24 +2508,33 @@ import {
     return row;
   }
 
-  function buildPillarSelect() {
+  // 2026-08 scope change: the pillar dropdown leads with a blank option, for
+  // actions that are not relevant to any of the 10 pillars. Blank is the
+  // default — it beats silently tagging everything as pillar 1, which is what
+  // the previous first-option default did whenever the user left it alone.
+  // Callers read the value through pillarIdFromSelect (below), never Number()
+  // directly: Number("") is 0, which would look like a real pillar id.
+  function pillarSelectEl() {
     const select = h("select", { class: "settings-textarea-comment" });
+    const blank = document.createElement("option");
+    blank.value = "";
+    blank.textContent = "No pillar (unassigned)";
+    select.appendChild(blank);
     DATA.pillars.forEach((p) => {
       const o = document.createElement("option");
       o.value = p.id;
       o.textContent = `${p.id}. ${p.name}`;
       select.appendChild(o);
     });
-    const other = document.createElement("option");
-    other.value = "0";
-    other.textContent = "Other";
-    select.appendChild(other);
     return select;
+  }
+  function pillarIdFromSelect(select) {
+    return select.value === "" ? null : Number(select.value);
   }
 
   function openActionModal(user) {
     const title = h("input", { type: "text", placeholder: "Action description" });
-    const select = buildPillarSelect();
+    const select = pillarSelectEl();
     const internalWrap = !isClientView(user)
       ? h("label", { class: "field-row" }, [
           h("input", { type: "checkbox", id: "actInternal" }),
@@ -2516,7 +2558,7 @@ import {
               const t = title.value.trim();
               if (!t) return;
               const internal = internalWrap ? internalWrap.querySelector("input").checked : false;
-              addAction(user.id, Number(select.value), t, { internal });
+              addAction(user.id, pillarIdFromSelect(select), t, { internal });
               m.close();
               render();
             },
@@ -2528,65 +2570,109 @@ import {
     setTimeout(() => title.focus(), 10);
   }
 
+  // 2026-08 scope change (Luke, 10-11 Aug): bulk entry on the Actions tab,
+  // mirroring the Plan tab's openBulkOutcomeModal. Every item in the batch
+  // takes the one pillar chosen here (blank by default) and the one internal
+  // flag — per-row pillars on paste are explicitly out of scope. Staff only:
+  // firestore.rules denies client action creates outright, and the button that
+  // opens this is behind the same isClient gate as "+ New action".
   function openBulkActionModal(user) {
-    const select = buildPillarSelect();
-    const internalWrap = !isClientView(user)
-      ? h("label", { class: "field-row" }, [
-          h("input", { type: "checkbox" }),
-          "Internal only (hidden from client view)",
-        ])
-      : null;
+    const select = pillarSelectEl();
     const ta = h("textarea", {
       placeholder:
-        "Paste actions, one per line. Lines starting with -, •, *, or a number are cleaned up.\n\nExample:\n- Build ICP one-pager\n- Refresh pricing table\n- Draft outbound sequence v2",
+        "Paste your list — one action per line.\n\nExample:\nDocument ICP, including firmographics and triggers\nBuild top 50 hit list\nImprove the properties on HubSpot",
       class: "outcomes-textarea",
     });
     const countLbl = h("div", { class: "outcomes-count" }, "0 actions");
-    ta.addEventListener("input", () => {
-      const n = ta.value
-        .split(/\r?\n/)
-        .map((s) => s.trim())
-        .filter(Boolean).length;
-      countLbl.textContent = `${n} action${n === 1 ? "" : "s"}`;
-    });
-    const m = modal([
-      h("h3", {}, "Paste multiple actions"),
-      h(
-        "p",
-        { class: "section-explainer" },
-        "One action per line. Bullet markers and numbering are stripped automatically. All lines are added under the chosen pillar.",
-      ),
-      select,
-      internalWrap,
-      ta,
-      countLbl,
-      h("div", { class: "row" }, [
-        h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
+    const internalWrap = !isClientView(user)
+      ? h("label", { class: "field-row" }, [
+          h("input", { type: "checkbox", id: "actBulkInternal" }),
+          "Internal only (hidden from client view)",
+        ])
+      : null;
+
+    const recount = () => {
+      const n = parseBulkList(ta.value).length;
+      countLbl.textContent =
+        n > MAX_BULK_ITEMS
+          ? `${n} items — too many. Add up to ${MAX_BULK_ITEMS} at a time.`
+          : `${n} action${n === 1 ? "" : "s"}`;
+    };
+    ta.addEventListener("input", recount);
+
+    // Convenience only — Cmd/Ctrl+V into the textarea does the same thing.
+    // navigator.clipboard.readText needs a secure context and (on Chrome) a
+    // permission grant, and is absent in jsdom, so every failure path lands on
+    // the same toast rather than an unexplained no-op.
+    const clipBtn = h(
+      "button",
+      {
+        class: "btn secondary sm",
+        onclick: async () => {
+          try {
+            const text = await navigator.clipboard.readText();
+            if (!text || !text.trim()) {
+              notify("info", "Clipboard is empty.");
+              return;
+            }
+            ta.value = ta.value.trim() ? `${ta.value.replace(/\s+$/, "")}\n${text}` : text;
+            recount();
+            ta.focus();
+          } catch (_e) {
+            notify("error", "Could not read the clipboard — paste into the box with Cmd+V.");
+          }
+        },
+      },
+      "Paste from clipboard",
+    );
+
+    const m = modal(
+      [
+        h("h3", {}, "Paste multiple actions"),
         h(
-          "button",
-          {
-            class: "btn",
-            onclick: () => {
-              const clean = ta.value
-                .split(/\r?\n/)
-                // eslint-disable-next-line no-useless-escape
-                .map((s) => s.replace(/^\s*[-•*\d.\)]+\s*/, "").trim())
-                .filter(Boolean);
-              if (!clean.length) {
-                m.close();
-                return;
-              }
-              const pillarId = Number(select.value);
-              const internal = internalWrap ? internalWrap.querySelector("input").checked : false;
-              clean.forEach((t) => addAction(user.id, pillarId, t, { internal }));
-              m.close();
-              render();
-            },
-          },
-          "Add all",
+          "p",
+          { class: "section-explainer" },
+          "One action per line. Bullet markers and numbering are stripped automatically, and commas inside a line are kept. A single line with no line breaks is split on its commas.",
         ),
-      ]),
-    ]);
+        h("div", { class: "outcomes-add-row" }, [clipBtn]),
+        ta,
+        countLbl,
+        h("div", { class: "progress-spacer" }),
+        select,
+        internalWrap,
+        h("div", { class: "row" }, [
+          h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
+          h(
+            "button",
+            {
+              class: "btn",
+              onclick: () => {
+                const titles = parseBulkList(ta.value);
+                if (!titles.length) {
+                  notify("info", "Nothing to add — paste a list first.");
+                  return;
+                }
+                if (titles.length > MAX_BULK_ITEMS) {
+                  notify(
+                    "error",
+                    `That is ${titles.length} items. Add up to ${MAX_BULK_ITEMS} at a time.`,
+                  );
+                  return;
+                }
+                const internal = internalWrap ? internalWrap.querySelector("input").checked : false;
+                const n = addManyActions(user.id, pillarIdFromSelect(select), titles, {
+                  internal,
+                });
+                m.close();
+                render();
+                notify("info", `${n} action${n === 1 ? "" : "s"} added.`);
+              },
+            },
+            "Add all",
+          ),
+        ]),
+      ].filter(Boolean),
+    );
     setTimeout(() => ta.focus(), 10);
   }
 
@@ -2834,6 +2920,43 @@ import {
       }
       rp.appendChild(block);
     });
+
+    // 2026-08 scope change: actions with no pillar (or a pillarId that no
+    // longer resolves) match none of the 10 blocks above, so without this they
+    // would silently vanish from the client-facing report — the "lost actions"
+    // failure mode. Own block at the end of Pillar detail; omitted entirely
+    // when there are none, so an org that never uses blank pillars sees no
+    // change. Same internal filter as every other action surface.
+    const unassignedActions = (org.actions || []).filter(
+      (a) => !DATA.pillars.some((p) => p.id === a.pillarId) && (!isClient || !a.internal),
+    );
+    if (unassignedActions.length) {
+      const block = h("div", { class: "r-pillar" });
+      block.appendChild(
+        h("header", {}, [
+          h("span", { class: "name" }, "Unassigned"),
+          h(
+            "span",
+            { class: "meta" },
+            `${unassignedActions.length} action${unassignedActions.length === 1 ? "" : "s"}`,
+          ),
+        ]),
+      );
+      block.appendChild(h("p", { class: "r-def" }, "Actions not tied to one of the 10 pillars."));
+      const ul = h("ul", { class: "report-pillar-ul" });
+      unassignedActions.forEach((a) =>
+        ul.appendChild(
+          h("li", { class: a.done ? "actions-completed-strike" : "" }, [
+            a.title,
+            a.owner ? ` · ${a.owner}` : "",
+            a.due ? ` · due ${a.due}` : "",
+          ]),
+        ),
+      );
+      block.appendChild(ul);
+      rp.appendChild(block);
+    }
+
     r.appendChild(rp);
     frag.appendChild(r);
     return frag;
@@ -2956,11 +3079,7 @@ import {
                 currentTier === "performance" ? "Performance" : "Transformation",
               ),
             ]),
-            h(
-              "div",
-              { class: "member-meta-tiny" },
-              `${o?.rounds?.length || 0} round(s)`,
-            ),
+            h("div", { class: "member-meta-tiny" }, `${o?.rounds?.length || 0} round(s)`),
           ]),
         );
         const hasPass = !!(o && o.clientPassphraseHash);
@@ -3476,7 +3595,9 @@ import {
         if (!cached) return;
         /** @type {Array<*>} */
         const actions = [];
-        snap.forEach((/** @type {*} */ d) => actions.push(Object.assign({}, d.data(), { id: d.id })));
+        snap.forEach((/** @type {*} */ d) =>
+          actions.push(Object.assign({}, d.data(), { id: d.id })),
+        );
         // Newest first — preserves the unshift ordering of the array era.
         actions.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
         if (JSON.stringify(cached.actions || []) !== JSON.stringify(actions)) {

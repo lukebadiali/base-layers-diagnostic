@@ -119,6 +119,15 @@ jobs:
       # ignores package-lock.json via firebase.json (Cloud Build falls back to `npm install`). Mirroring that here
       # so the audit job uses the same fresh-resolution path as deploy. Follow-up: regenerate lockfile in WSL/Linux
       # to restore strict pinning at both audit AND deploy time.
+      # 2026-08-18: this step, and therefore main, went red from 891b905 onward with
+      # `npm error Cannot read properties of null (reading 'edgesOut')` — an arborist
+      # crash during the fresh resolve, not an advisory. Bisected to vitest 4.1.5 /
+      # @vitest/coverage-v8 4.1.5 in functions/devDependencies (reproduces with every
+      # `overrides` entry removed, and with vitest as the sole dependency; 4.1.6 and
+      # 4.1.8 still crash, 4.1.10 resolves). Fixed by pinning functions/ to 4.1.10.
+      # NOTE the version skew this creates: root package.json stays on vitest 4.1.5,
+      # which is unaffected because the root job audits the committed lockfile via
+      # `npm ci` and never re-resolves. Realign when root next moves.
       # 2026-07-23: resolve the lockfile only, don't reify node_modules. Auditing a tree installed with
       # --omit=dev makes npm fall back to the legacy quick-audit endpoint, which is mid-retirement and
       # 400s intermittently ("This endpoint is being retired") — it blocked #92 twice in one day.

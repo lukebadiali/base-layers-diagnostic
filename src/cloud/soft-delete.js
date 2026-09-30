@@ -11,9 +11,10 @@
 // Phase 6 D-13 unified-error wrapper surface).
 //
 // Phase 9 Wave 4 (AUDIT-05): POST-emit `data.<type>.<op>.requested` for
-// softDelete/restore/permanentlyDelete. Per-type literals (5 types × 3 ops = 15
-// literals in auditEventSchema enum). Server callables (Plan 03a) emit the bare
-// flavour; AUDIT-05 mirror-trigger Pitfall 7 dedup is satisfied by the bare row.
+// softDelete/restore/permanentlyDelete. Per-type literals (6 types × 3 ops = 18
+// literals in auditEventSchema enum — folder joined in Milestone v6 / DOC-06).
+// Server callables (Plan 03a) emit the bare flavour; AUDIT-05 mirror-trigger
+// Pitfall 7 dedup is satisfied by the bare row.
 // Empty payload — actor identity server-overlaid from request.auth.token (Pitfall 17).
 
 import { functions, httpsCallable } from "../firebase/functions.js";
@@ -25,7 +26,7 @@ const permanentlyDeleteCallable = httpsCallable(functions, "permanentlyDeleteSof
 
 /**
  * Soft-delete a record. Admin only (server-enforced).
- * @param {{ type: "action"|"comment"|"document"|"message"|"funnelComment", orgId: string, id: string }} input
+ * @param {{ type: "action"|"comment"|"document"|"message"|"funnelComment"|"folder", orgId: string, id: string }} input
  * @returns {Promise<{ ok: true }>}
  */
 export async function softDelete(input) {
@@ -47,7 +48,7 @@ export async function softDelete(input) {
 
 /**
  * Restore a soft-deleted record. Admin only (server-enforced).
- * @param {{ type: "action"|"comment"|"document"|"message"|"funnelComment", orgId: string, id: string }} input
+ * @param {{ type: "action"|"comment"|"document"|"message"|"funnelComment"|"folder", orgId: string, id: string }} input
  * @returns {Promise<{ ok: true }>}
  */
 export async function restoreSoftDeleted(input) {
@@ -68,7 +69,7 @@ export async function restoreSoftDeleted(input) {
 
 /**
  * Permanently delete (hard-delete) ONE soft-deleted record. Admin only.
- * @param {{ type: "action"|"comment"|"document"|"message"|"funnelComment", id: string }} input
+ * @param {{ type: "action"|"comment"|"document"|"message"|"funnelComment"|"folder", id: string }} input
  * @returns {Promise<{ ok: true }>}
  */
 export async function permanentlyDeleteSoftDeleted(input) {

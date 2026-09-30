@@ -93,7 +93,8 @@ export const restoreSoftDeleted = onCall(
             | "data.comment.restore"
             | "data.document.restore"
             | "data.message.restore"
-            | "data.funnelComment.restore",
+            | "data.funnelComment.restore"
+            | "data.folder.restore",
           target: { type: data.type, id: data.id, orgId: data.orgId },
           clientReqId: data.clientReqId,
           payload: {},

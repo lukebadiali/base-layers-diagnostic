@@ -89,7 +89,8 @@ export const permanentlyDeleteSoftDeleted = onCall(
             | "data.comment.permanentlyDelete"
             | "data.document.permanentlyDelete"
             | "data.message.permanentlyDelete"
-            | "data.funnelComment.permanentlyDelete",
+            | "data.funnelComment.permanentlyDelete"
+            | "data.folder.permanentlyDelete",
           target: { type: data.type, id: data.id, orgId: null },
           clientReqId: data.clientReqId,
           payload: {},

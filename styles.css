@@ -81,6 +81,11 @@
   --amber-bg: #fbf2dc;
   --green-bg: #e4f3ea;
 
+  /* Text weight of amber, for the rare case where a warning is written in
+     words on an --amber-bg panel. --amber itself is a 2.6:1 contrast against
+     that background at small sizes, which fails WCAG AA; this passes. */
+  --amber-ink: #7a5600;
+
   --radius: 14px;
   --radius-sm: 8px;
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.04);
@@ -1425,18 +1430,88 @@ a:hover {
 /* ------------------- Actions ------------------- */
 .action-row {
   display: grid;
-  grid-template-columns: auto 1.5fr 1fr 1fr 1fr auto;
+  /* Milestone v6: a seventh column for the expand chevron. The sixth is kept
+     as an empty cell rather than removed, so the header and the rows stay in
+     step for both roles — Delete moved into the expanded panel. */
+  grid-template-columns: auto 1.5fr 1fr 1fr 1fr auto auto;
   gap: 10px;
   align-items: center;
   padding: 12px 14px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
+/* v6 (ACT-04): the whole row is a toggle. Styled as one so the affordance is
+   visible before the user discovers it by accident. */
+.action-item > .action-row {
+  cursor: pointer;
+}
+.action-item > .action-row:hover {
+  background: var(--surface-muted);
+}
+.action-row-head,
 .action-row:first-child {
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-3);
+  background: var(--surface-muted);
+}
+/* The header is not a toggle; it must not take the hover or the pointer. */
+.action-row-head:hover {
+  background: var(--surface-muted);
+}
+button.action-chevron {
+  color: var(--ink-3);
+  font-size: 11px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  text-align: center;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+}
+button.action-chevron:hover {
+  background: var(--line);
+  color: var(--ink-2);
+}
+button.action-chevron:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+/* Collapsed cells are read-only text. One line, ellipsed — the full text is
+   what the panel is for, so truncating here costs nothing. */
+.action-row .a-title,
+.action-row .a-pillar,
+.action-row .a-owner-text,
+.action-row .a-due-text {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.action-row .a-title {
+  font-weight: 500;
+}
+.action-row-head .a-title {
+  font-weight: inherit;
+}
+.action-row .a-owner-text,
+.action-row .a-due-text {
+  color: var(--ink-2);
+}
+.action-item {
+  border-bottom: 1px solid var(--line);
+}
+.action-item:last-child {
+  border-bottom: 0;
+}
+.action-item > .action-row {
+  border-bottom: 0;
+}
+.action-item.expanded > .action-row {
   background: var(--surface-muted);
 }
 .action-row input[type="text"],
@@ -1459,6 +1534,11 @@ a:hover {
   text-decoration: line-through;
   color: var(--ink-4);
 }
+.action-row.done .a-pillar,
+.action-row.done .a-owner-text,
+.action-row.done .a-due-text {
+  color: var(--ink-4);
+}
 /* 2026-08: pillar cell for an action with no pillar — plain muted text where a
    pillar link would otherwise sit, so the column still reads as filled in. */
 .action-pillar-none {
@@ -1469,10 +1549,12 @@ a:hover {
 .action-row.overdue {
   background: var(--red-bg);
 }
-.action-row.overdue .a-due {
+.action-row.overdue:hover {
+  background: var(--red-bg);
+}
+.action-row.overdue .a-due-text {
   color: var(--red);
-  border-color: var(--red);
-  background: #fff;
+  font-weight: 600;
 }
 .overdue-tag {
   display: inline-flex;
@@ -1494,6 +1576,152 @@ a:hover {
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
+}
+
+/* ---- v6: filter bar (ACT-03) ---- */
+.action-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 14px 0 6px;
+}
+.action-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.action-filter-label {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.action-filter-select {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  min-width: 150px;
+}
+.action-filter-clear {
+  margin-bottom: 1px;
+}
+
+/* ---- v6: groups (ACT-01) ---- */
+.action-group {
+  margin-top: 22px;
+}
+.action-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+/* The dot is the only colour carried by a group header. Overdue earns red;
+   the other two stay neutral, so red on this page always means late. */
+.action-group-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line-2);
+  flex: none;
+}
+.action-group-dot-overdue {
+  background: var(--red);
+}
+.action-group-dot-current {
+  background: var(--brand);
+}
+.action-group-count {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  color: var(--ink-3);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+/* ---- v6: expanded panel (ACT-04..ACT-07) ---- */
+.action-panel {
+  padding: 4px 14px 16px 42px;
+  background: var(--surface-muted);
+  border-top: 1px solid var(--line);
+}
+.action-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 16px;
+}
+/* The action's own wording gets the full width — showing it in full is the
+   thing the panel exists for, so it must not sit in a 220px box. */
+.action-panel-field:nth-child(1) {
+  grid-column: 1 / -1;
+}
+.action-panel-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.action-panel-label {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.action-panel-input {
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  width: 100%;
+  resize: vertical;
+}
+.action-panel-input:disabled {
+  background: var(--surface-muted);
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+.action-panel-title {
+  font-weight: 500;
+}
+.action-panel-hint {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.action-panel-pillar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.action-panel-pillar .action-panel-input,
+.action-panel-pillar select {
+  flex: 1;
+}
+.action-panel-pillar-link {
+  white-space: nowrap;
+}
+.action-panel-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.action-panel-meta {
+  font-size: 11.5px;
+  color: var(--ink-3);
 }
 
 .empty {
@@ -2192,6 +2420,21 @@ a:hover {
      18px rhythm. Only renders for internal users, so client view is unmoved. */
   margin: 0 0 18px;
 }
+/* v6 (DIA-02): the picker turns amber the moment it is pinned to a round that
+   is no longer current. The colour is the glance; the sentence next to it is
+   what actually stops someone entering this quarter's scores into last
+   quarter's sheet, so the tint never carries the meaning on its own. */
+.round-select-wrap.round-historic {
+  padding: 8px 12px;
+  border: 1px solid var(--amber);
+  border-radius: 8px;
+  background: var(--amber-bg);
+}
+.round-historic-tag {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--amber-ink);
+}
 .round-select,
 .round-new-btn {
   height: 36px;
@@ -2558,11 +2801,22 @@ a:hover {
     grid-template-columns: repeat(2, 1fr);
   }
   .action-row {
-    grid-template-columns: auto 1fr 1fr auto;
+    grid-template-columns: auto 1fr 1fr auto auto;
   }
-  .action-row .a-owner,
-  .action-row .a-due {
-    grid-column: span 1;
+  /* Pillar and owner fold away first: at this width the question is what is
+     due and whether it is done, and both survive. */
+  .action-row .a-pillar,
+  .action-row .action-pillar-none,
+  .action-row .a-owner-text,
+  .action-row-head > div:nth-of-type(2),
+  .action-row-head > div:nth-of-type(3) {
+    display: none;
+  }
+  .action-filter-select {
+    min-width: 130px;
+  }
+  .action-panel {
+    padding-left: 14px;
   }
 
   .auth-wrap {
@@ -2669,38 +2923,64 @@ a:hover {
   .actions-table {
     border-radius: 12px;
   }
+  /* On a phone the row becomes a two-line card: title with the checkbox and
+     chevron, then a meta line. Everything else is in the panel one tap away,
+     which is where it has to be anyway at this width. */
   .action-row {
     grid-template-columns: auto 1fr auto;
     grid-template-areas:
-      "chk title del"
-      "pil pil pil"
-      "own own own"
-      "due due due";
-    gap: 6px 10px;
+      "chk title chev"
+      "chk meta  chev";
+    gap: 2px 10px;
     padding: 12px;
     align-items: center;
   }
+  .action-row-head,
   .action-row:first-child {
     display: none;
   }
   .action-row > input[type="checkbox"] {
     grid-area: chk;
+    align-self: start;
+    margin-top: 2px;
   }
   .action-row .a-title {
     grid-area: title;
+    white-space: normal;
   }
-  .action-row > div:nth-of-type(1) {
-    grid-area: pil;
-    font-size: 12.5px;
+  .action-chevron {
+    grid-area: chev;
   }
-  .action-row .a-owner {
-    grid-area: own;
+  /* The pillar cell leads the meta line; owner and due tuck in beside it. */
+  .action-row .a-pillar,
+  .action-row .action-pillar-none,
+  .action-row .a-owner-text,
+  .action-row .due-wrap {
+    grid-area: meta;
+    font-size: 12px;
+    color: var(--ink-3);
   }
-  .action-row > div:nth-of-type(2) {
-    grid-area: due;
+  .action-row .a-owner-text,
+  .action-row .a-pillar,
+  .action-row .action-pillar-none {
+    display: none;
   }
-  .action-row > button {
-    grid-area: del;
+  .action-row > div:empty {
+    display: none;
+  }
+  .action-filter-bar {
+    gap: 8px;
+  }
+  .action-filter,
+  .action-filter-select {
+    width: 100%;
+  }
+  .action-panel-grid {
+    grid-template-columns: 1fr;
+  }
+  .action-panel-foot {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   /* Report */
@@ -3790,6 +4070,77 @@ a:hover {
   text-align: center;
   color: var(--ink-3);
 }
+
+/* --- v6: the two-step paste dialogue (ACT-09 / ACT-10) --- */
+.bulk-apply-all-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+.bulk-apply-all {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  flex: 1;
+}
+/* The list scrolls inside the dialogue rather than growing it, so the Add all
+   button stays reachable without a page scroll at the two-hundred-item cap. */
+.bulk-review-list {
+  max-height: 46vh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.bulk-review-row {
+  display: grid;
+  grid-template-columns: 1fr 190px auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.bulk-review-row:last-child {
+  border-bottom: 0;
+}
+.bulk-review-text,
+.bulk-review-pillar {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  width: 100%;
+}
+.bulk-review-remove {
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  .bulk-review-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "text remove"
+      "pillar pillar";
+  }
+  .bulk-review-text {
+    grid-area: text;
+  }
+  .bulk-review-pillar {
+    grid-area: pillar;
+  }
+  .bulk-review-remove {
+    grid-area: remove;
+  }
+  .bulk-review-list {
+    max-height: 40vh;
+  }
+}
 .notes-mb-6 { margin-bottom: 6px; }
 
 /* --- Compound: stage progress (pillar detail) --- */
@@ -3874,6 +4225,125 @@ a:hover {
   padding: 10px 0;
   border-top: 1px solid var(--line);
   font-size: 13.5px;
+}
+
+/* --- v6: folder tree (DOC-01..DOC-05) --- */
+.docs-toolbar-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.docs-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.docs-toolbar-spacer {
+  flex: 1;
+}
+.docs-sort-select {
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.docs-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.docs-crumb {
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.docs-crumb-link {
+  background: none;
+  border: 0;
+  font: inherit;
+  color: var(--brand);
+  cursor: pointer;
+}
+.docs-crumb-link:hover {
+  text-decoration: underline;
+}
+.docs-crumb-current {
+  font-weight: 600;
+  color: var(--ink-1, inherit);
+}
+.docs-crumb-sep {
+  color: var(--ink-3);
+}
+.docs-folder-row {
+  background: var(--surface-muted);
+}
+.docs-folder-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.docs-folder-icon {
+  color: var(--ink-3);
+  font-size: 11px;
+}
+.docs-folder-open {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.docs-folder-open:hover {
+  color: var(--brand);
+}
+.docs-move-select {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  width: 100%;
+}
+/* A destination the tree will not accept is shown greyed WITH its reason
+   rather than omitted. A target that vanished would leave the user hunting for
+   a folder they can see on the screen behind the dialogue. */
+.docs-move-select option:disabled {
+  color: var(--ink-3);
+}
+
+@media (max-width: 640px) {
+  .docs-table-row {
+    grid-template-columns: 1fr auto;
+    gap: 4px 10px;
+  }
+  /* Uploader and date fold away; the filename and its actions are what a
+     phone-sized document list is actually for. */
+  .docs-file-row > div:nth-child(2),
+  .docs-file-row > div:nth-child(3) {
+    display: none;
+  }
+  .docs-row-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .docs-toolbar-spacer {
+    display: none;
+  }
+  .docs-sort-select {
+    width: 100%;
+  }
 }
 
 /* --- Compound: pillar score badge & insight box (template-literal kept inline) --- */

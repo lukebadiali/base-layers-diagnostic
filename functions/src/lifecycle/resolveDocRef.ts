@@ -3,9 +3,19 @@
 // softDelete + restoreSoftDeleted + scheduledPurge + permanentlyDeleteSoftDeleted
 // so the path-map is single-source-of-truth.
 
-export type SoftDeletableType = "action" | "comment" | "document" | "message" | "funnelComment";
+// Milestone v6 (FILE-06): folders join the soft-delete window. Adding a member
+// here fails the build at every exhaustive switch over the union until each is
+// updated, which is the point — a lifecycle path that silently skipped folders
+// would leave tombstoned folders un-purgeable and un-restorable.
+export type SoftDeletableType =
+  | "action"
+  | "comment"
+  | "document"
+  | "message"
+  | "funnelComment"
+  | "folder";
 export const SOFT_DELETABLE_TYPES: readonly SoftDeletableType[] = [
-  "action", "comment", "document", "message", "funnelComment",
+  "action", "comment", "document", "message", "funnelComment", "folder",
 ] as const;
 
 /**
@@ -19,6 +29,7 @@ export function resolveDocPath(input: { type: SoftDeletableType; orgId: string; 
     case "document":     return `orgs/${input.orgId}/documents/${input.id}`;
     case "message":      return `orgs/${input.orgId}/messages/${input.id}`;
     case "funnelComment": return `funnelComments/${input.id}`;
+    case "folder":       return `orgs/${input.orgId}/folders/${input.id}`;
     default: {
       const _exhaustive: never = input.type;
       throw new RangeError(`Unknown type: ${_exhaustive}`);

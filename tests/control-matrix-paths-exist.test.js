@@ -9,6 +9,11 @@
 //
 // Mirrors the regex-over-file-body pattern used by tests/ir-runbook-shape.test.js.
 // Pitfall 4: citations are paths only — line-number suffixes (`:NN`) are forbidden.
+//
+// Milestone v6 added the ACT / FILE / DIA / PLAT prefixes. FILE, not DOC: the
+// hardening milestone already owns DOC-01..DOC-10 for documentation controls,
+// and a reader hitting "DOC-04" in this matrix would have had no way to tell
+// "Control matrix populated" from "Deleting a non-empty folder is refused".
 
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
@@ -22,7 +27,7 @@ describe("docs/CONTROL_MATRIX.md — DOC-04 path-existence sweep (Phase 11 Wave 
   // Row entries start with `| TOOL-` / `| TEST-` / `| HOST-` / etc.
   it("contains at least 30 REQ-row entries (every REQ-ID gets a row)", () => {
     const rowRegex =
-      /^\| (TOOL|TEST|HOST|CODE|DATA|RULES|AUTH|FN|AUDIT|LIFE|GDPR|BACKUP|OBS|DOC|WALK)-\d/gm;
+      /^\| (TOOL|TEST|HOST|CODE|DATA|RULES|AUTH|FN|AUDIT|LIFE|GDPR|BACKUP|OBS|DOC|WALK|ACT|FILE|DIA|PLAT)-\d/gm;
     const rows = src.match(rowRegex) || [];
     expect(rows.length, `expected >= 30 REQ-rows; found ${rows.length}`).toBeGreaterThanOrEqual(30);
   });

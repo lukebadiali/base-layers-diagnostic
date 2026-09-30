@@ -108,7 +108,8 @@ export const softDelete = onCall(
             | "data.comment.softDelete"
             | "data.document.softDelete"
             | "data.message.softDelete"
-            | "data.funnelComment.softDelete",
+            | "data.funnelComment.softDelete"
+            | "data.folder.softDelete",
           target: { type: data.type, id: data.id, orgId: data.orgId },
           clientReqId: data.clientReqId,
           payload: {},

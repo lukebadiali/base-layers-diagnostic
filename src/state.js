@@ -23,6 +23,9 @@
  *   authTab: string,
  *   authError: string,
  *   expandedPillars: Set<number>,
+ *   actionFilters: { pillar: string|number, owner: string, due: string },
+ *   expandedActions: Set<string>,
+ *   docFolderId: string|null,
  *   activity: { messages: Record<string, Array<*>>, documents: Record<string, Array<*>> },
  *   bellOpen: boolean,
  *   fbUser: *,
@@ -70,6 +73,23 @@ export const state = {
   authTab: "client",
   authError: "",
   expandedPillars: new Set(), // dashboard-tile accordion state
+  // Milestone v6 (ACT-03 / ACT-04): the Actions tab's filter selections and
+  // which rows are expanded. Both live here rather than in the DOM because
+  // every mutation on that tab calls render(), which rebuilds the subtree from
+  // scratch — a filter held in a <select>'s value, or an expansion held in a
+  // class, would reset itself the moment the user ticked a checkbox.
+  //
+  // Deliberately NOT persisted. A filter that survived a reload would hide
+  // actions from a consultant who has forgotten they set it, and "the action I
+  // just added isn't there" is a far worse failure than re-picking a filter.
+  actionFilters: { pillar: "all", owner: "all", due: "all" },
+  expandedActions: new Set(),
+  // Milestone v6 (FILE-02): the folder the Documents tab is currently showing;
+  // null is the root. Held here rather than in the route so that navigating
+  // away to Chat and back returns the user to where they were, which is what a
+  // file browser is expected to do. Not persisted: a folder that survived a
+  // reload would be a confusing place to land on a cold open.
+  docFolderId: null,
   // Scope item 7 (2026-07): per-org live activity feeds for the bell +
   // unread badges. Keyed by orgId; populated by ensureActivitySubscriptions
   // in main.js (one messages + one documents listener per org, limit 30).

@@ -98,10 +98,40 @@ service cloud.firestore {
 
       // ── actions subcollection ───────────────────────────────────────
       // 2026-07 client completion: staff create and fully edit actions;
-      // in-org clients may flip ONLY the completion fields, and only on
-      // non-internal actions. Internal-flagged actions are invisible to
-      // clients (their list queries must constrain internal == false).
-      // Soft-delete via deletedAt tombstone — hard deletes stay denied.
+      // in-org clients may flip the completion fields on non-internal actions.
+      // Internal-flagged actions are invisible to clients (their list queries
+      // must constrain internal == false). Soft-delete via deletedAt tombstone
+      // — hard deletes stay denied.
+      //
+      // Milestone v6 (ACT-07) WIDENS the client branch from completion-only to
+      // completion plus three fields the action already had: title, owner and
+      // pillarId. No field is added to the record by this milestone. What stays
+      // staff-only, and why:
+      //
+      //   due          BeDeveloped owns the schedule. A client who could move
+      //                a due date could clear their own overdue list, and the
+      //                Overdue group is the thing the consultant runs the
+      //                engagement from.
+      //   internal     Controls whether an action is visible to the client at
+      //                all. A client who could clear it would surface the
+      //                internal actions about their own account; a client who
+      //                could set it would hide work from the consultant.
+      //   createdBy    Provenance. Immutable for everyone, staff included.
+      //   createdAt    Same.
+      //   orgId        Tenancy. Same.
+      //   deletedAt    Soft-delete is the Cloud Function's job, not a field a
+      //                client can set to make an action disappear.
+      //
+      // Whitelisting via mutableOnly is what denies all six — a field absent
+      // from the list cannot be written at all, so no separate immutable()
+      // conjunct is needed and none is added for show.
+      //
+      // Known gap, pre-dating this change and deliberately left alone here:
+      // `completedBy` is not checked against the writer's uid, so a client can
+      // mis-attribute a completion. Closing it means changing a field a shipped
+      // client already writes, which belongs in its own change with its own
+      // deploy, not folded into a widening. Recorded in THREAT_MODEL.md
+      // § Residual risks R2.
       match /actions/{actId} {
         // Map.get(field, false) — not bracket access — so docs that predate
         // the `internal` flag read as non-internal instead of erroring the
@@ -118,15 +148,73 @@ service cloud.firestore {
                       || (inOrg(orgId)
                           && resource.data.get("internal", false) == false
                           && notDeleted(resource.data)
-                          && mutableOnly(["done", "completedAt", "completedBy", "updatedAt"]));
+                          && mutableOnly([
+                               "done", "completedAt", "completedBy",
+                               "title", "owner", "pillarId",
+                               "updatedAt"
+                             ]));
         allow delete: if false;
       }
 
+      // ── folders subcollection (Milestone v6 / FILE-01..FILE-04) ───────
+      // A nested tree over an org's documents. Folders hold no content — a
+      // document's `folderId` is what files it — so nothing here touches
+      // Cloud Storage and moving a file is a one-field Firestore write rather
+      // than an object copy.
+      //
+      // WHAT THESE RULES DO NOT ENFORCE, stated plainly because a reader will
+      // otherwise assume they do: a rule sees one document and the request
+      // touching it. It cannot walk a parentId chain, so it cannot tell that a
+      // folder is being moved inside its own descendant, and it cannot count
+      // the resulting depth. Cycle and depth prevention live in
+      // src/domain/folder-tree.js and at the write site. They are correctness
+      // and UX guards, NOT a security boundary — see THREAT_MODEL.md.
+      //
+      // The consequence of a cycle is orphaning rather than exposure: a folder
+      // that is its own ancestor is reachable from no root, so it and its
+      // contents vanish from the UI while still costing storage. Tenancy,
+      // which is the actual security question, is enforced here as everywhere
+      // else by inOrg + an immutable orgId.
+      //
+      // Creating and renaming stay internal-only: "created as needed by
+      // internal users" is the requirement, and a client who could rename a
+      // folder could rename it to something the consultant would not say to
+      // their board.
+      match /folders/{folderId} {
+        allow read:   if inOrg(orgId) && notDeleted(resource.data);
+        allow create: if isInternal()
+                      && request.resource.data.orgId == orgId;
+        // Whitelisted to the two fields a folder actually has that can
+        // change. In particular `deletedAt` is NOT writable from a client:
+        // soft-delete goes through the callable, which writes the tombstone
+        // AND the restore snapshot in one batch. A folder tombstoned by a
+        // direct client write would have no snapshot behind it — invisible in
+        // the UI, and un-restorable within the 30-day window that
+        // docs/RETENTION.md promises. The Admin SDK in the callable bypasses
+        // rules, so the legitimate path is unaffected.
+        allow update: if isInternal()
+                      && immutable("orgId")
+                      && immutable("createdAt")
+                      && immutable("createdBy")
+                      && mutableOnly(["name", "parentId", "updatedAt"]);
+        allow delete: if false;  // soft-delete via Cloud Function only
+      }
+
       // ── documents subcollection ─────────────────────────────────────
+      // Milestone v6 (FILE-03): `allow update` opens from `false` to exactly
+      // one field. Filing a document is a change of `folderId` and nothing
+      // else — the filename, the size, the content type, the uploader and
+      // above all `storagePath` stay immutable, because a writable
+      // storagePath would let a client repoint a metadata row at another
+      // org's object and then fetch a signed URL for it.
+      //
+      // Internal-only. A client can upload into a folder (create carries the
+      // folderId) but cannot refile what is already there.
       match /documents/{docId} {
         allow read:   if inOrg(orgId) && notDeleted(resource.data);
         allow create: if inOrg(orgId);
-        allow update: if false;
+        allow update: if isInternal()
+                      && mutableOnly(["folderId", "updatedAt"]);
         allow delete: if false;
       }
 

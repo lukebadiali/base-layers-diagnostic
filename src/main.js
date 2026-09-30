@@ -71,6 +71,9 @@ import {
   verifyMfaCode as fbVerifyMfaCode,
 } from "./firebase/auth.js";
 import { createAuthView } from "./views/auth.js";
+// Milestone v6 Phase A: Actions tab bodies re-homed out of this IIFE.
+import { createActionsView } from "./views/actions.js";
+import { createDocumentsView } from "./views/documents.js";
 
 // Phase 9 Wave 1 (OBS-01 + Pitfall 3): @sentry/browser boot. initSentryBrowser
 // is called inside the fbOnAuthStateChanged callback below — AFTER claims
@@ -139,9 +142,9 @@ import {
   unreadChatTotal as _unreadChatTotal,
 } from "./domain/unread.js";
 import { activitySummary as _activitySummary } from "./domain/activity.js";
-// 2026-08 scope change: delimiter rule for the Actions tab "Paste multiple"
-// dialogue. See src/domain/bulk-parse.js for the rule and its priority order.
-import { parseBulkList, MAX_BULK_ITEMS } from "./domain/bulk-parse.js";
+// 2026-08 scope change: the delimiter rule for the Actions tab "Paste multiple"
+// dialogue. Milestone v6 Phase A moved its only consumer into
+// src/views/actions.js, which now imports src/domain/bulk-parse.js directly.
 import { setPillarRead } from "./data/read-states.js";
 import {
   migrateV1IfNeeded as _migrateV1IfNeeded,
@@ -1892,6 +1895,94 @@ import {
   // ================================================================
   // DIAGNOSTIC INDEX
   // ================================================================
+  // ---------- Round context (Milestone v6 Phase G / DIA-01..DIA-03) ----------
+  //
+  // Internal users have always been able to edit a historic round: the picker
+  // below sets state.viewRoundId, activeRoundId() honours it, the likert
+  // buttons are disabled for clients only, and setResponse writes to whichever
+  // round is in view. The responses rules permit an internal update on any
+  // round. So the capability was never missing.
+  //
+  // What was missing was the signal. The picker lived only on the diagnostic
+  // index, so the moment a user clicked into a pillar, nothing on the page said
+  // which round they were scoring — a historic edit looked exactly like a
+  // current one, and the only way to tell was to go back. That is the whole of
+  // this phase: make the round visible everywhere it is editable, and make a
+  // historic round announce itself.
+  //
+  // Returns null for clients (view-only diagnostic) and for an org with no
+  // rounds.
+  function renderRoundPicker(user, org) {
+    if (isClientView(user) || !(org.rounds || []).length) return null;
+
+    const activeRid = activeRoundId(org);
+    const isHistoric = activeRid !== org.currentRoundId;
+
+    const roundSel = /** @type {HTMLSelectElement} */ (
+      h("select", { "aria-label": "Select round", class: "round-select" })
+    );
+    org.rounds.forEach((r) => {
+      const opt = document.createElement("option");
+      opt.value = r.id;
+      opt.textContent = `${r.label} (${formatDate(r.createdAt)})`;
+      roundSel.appendChild(opt);
+    });
+    // Selection is applied via the select's value setter after the options
+    // exist: jsdom does not honor `option.selected = true` set while the
+    // option is detached, so the per-option flag pattern silently selects
+    // the wrong round under test while passing in real browsers.
+    roundSel.value = activeRid;
+    roundSel.addEventListener("change", (e) => {
+      state.viewRoundId = /** @type {HTMLSelectElement} */ (e.target).value;
+      render();
+    });
+
+    const newRoundBtn = h(
+      "button",
+      {
+        class: "round-new-btn",
+        title: "Start new round",
+        onclick: () => confirmStartNewRound(org, roundById(org, org.currentRoundId)),
+      },
+      "+ New",
+    );
+
+    // Said in words, not only in colour. "Editing a historic round" is the
+    // sentence that stops someone entering this quarter's scores into last
+    // quarter's sheet, and a tinted background alone does not say it.
+    //
+    // The children array is assembled rather than appended one by one so the
+    // unpinned case renders byte-identically to the pre-v6 markup — "Round: "
+    // stays a bare text node, and the class carries no trailing space. The
+    // committed diagnostic snapshot is the fence.
+    const historicBits = isHistoric
+      ? [
+          h(
+            "span",
+            { class: "round-historic-tag" },
+            "Editing a historic round — changes do not affect the current round",
+          ),
+          h(
+            "button",
+            {
+              class: "btn ghost sm",
+              onclick: () => {
+                state.viewRoundId = null;
+                render();
+              },
+            },
+            "Back to current",
+          ),
+        ]
+      : [];
+
+    return h(
+      "div",
+      { class: isHistoric ? "round-select-wrap round-historic" : "round-select-wrap" },
+      ["Round: ", roundSel, newRoundBtn, ...historicBits],
+    );
+  }
+
   function renderDiagnosticIndex(user, org) {
     const frag = h("div");
     frag.appendChild(h("h1", { class: "view-title" }, "Diagnostic"));
@@ -1905,39 +1996,8 @@ import {
       ),
     );
 
-    if (!isClientView(user) && (org.rounds || []).length) {
-      const roundSel = /** @type {HTMLSelectElement} */ (
-        h("select", { "aria-label": "Select round", class: "round-select" })
-      );
-      const activeRid = activeRoundId(org);
-      org.rounds.forEach((r) => {
-        const opt = document.createElement("option");
-        opt.value = r.id;
-        opt.textContent = `${r.label} (${formatDate(r.createdAt)})`;
-        roundSel.appendChild(opt);
-      });
-      // Selection is applied via the select's value setter after the options
-      // exist: jsdom does not honor `option.selected = true` set while the
-      // option is detached, so the per-option flag pattern silently selects
-      // the wrong round under test while passing in real browsers.
-      roundSel.value = activeRid;
-      roundSel.addEventListener("change", (e) => {
-        state.viewRoundId = /** @type {HTMLSelectElement} */ (e.target).value;
-        render();
-      });
-      const newRoundBtn = h(
-        "button",
-        {
-          class: "round-new-btn",
-          title: "Start new round",
-          onclick: () => confirmStartNewRound(org, roundById(org, org.currentRoundId)),
-        },
-        "+ New",
-      );
-      frag.appendChild(
-        h("div", { class: "round-select-wrap" }, ["Round: ", roundSel, newRoundBtn]),
-      );
-    }
+    const roundPicker = renderRoundPicker(user, org);
+    if (roundPicker) frag.appendChild(roundPicker);
 
     const tiles = h("div", { class: "tiles" });
     DATA.pillars.forEach((p) => {
@@ -2026,6 +2086,13 @@ import {
         h("span", { class: `badge ${status}` }, s !== null ? `${s}/100` : "Not scored"),
       ]),
     );
+
+    // DIA-02: the round is named on the pillar page, not only on the index.
+    // Clicking into a pillar used to drop every trace of which round was being
+    // scored, which is what made a historic edit indistinguishable from a
+    // current one.
+    const roundPicker = renderRoundPicker(user, org);
+    if (roundPicker) frag.appendChild(roundPicker);
 
     // Overview card
     frag.appendChild(h("div", { class: "card pillar-overview-card" }, [h("p", {}, p.overview)]));
@@ -2126,6 +2193,37 @@ import {
     return frag;
   }
 
+  // DIA-02: rounds whose historic edit has been acknowledged this session.
+  // Per session and per round, not per click — a consultant deliberately
+  // correcting last quarter's sheet should be asked once, not forty times. The
+  // set is deliberately in-memory: a reload is a new sitting, and the whole
+  // point is to catch someone who does not realise where they are.
+  const acknowledgedHistoricRounds = new Set();
+
+  /**
+   * Run `apply` now, or after the user confirms they mean to change a round
+   * that is no longer the current one.
+   * @param {*} org
+   * @param {() => void} apply
+   */
+  function withHistoricRoundGuard(org, apply) {
+    const rid = activeRoundId(org);
+    if (rid === org.currentRoundId || acknowledgedHistoricRounds.has(rid)) {
+      apply();
+      return;
+    }
+    const round = roundById(org, rid);
+    confirmDialog(
+      "Change a historic round?",
+      `You are scoring "${round?.label || "a previous round"}", not the current round. The change will be saved against that round and will not move the current dashboard.`,
+      () => {
+        acknowledgedHistoricRounds.add(rid);
+        apply();
+      },
+      "Yes, edit it",
+    );
+  }
+
   function renderQuestion(user, org, p, idx, qEntry) {
     const meta = questionMeta(qEntry);
     const resp = (((org.responses || {})[activeRoundId(org)] || {})[p.id] || {})[idx] || {};
@@ -2160,8 +2258,10 @@ import {
         attrs.onclick = () => {
           // Re-clicking the already-selected figure clears it (deselect →
           // unanswered); any other figure switches the selection.
-          setResponse(org, p.id, idx, toggleScorePatch(selectedScore, n));
-          render();
+          withHistoricRoundGuard(org, () => {
+            setResponse(org, p.id, idx, toggleScorePatch(selectedScore, n));
+            render();
+          });
         };
       }
       const btn = h(
@@ -2263,14 +2363,20 @@ import {
   // write for the whole batch, then a per-action cloud push (the subcollection
   // has no batch helper and 10-ish setDocs is well inside budget). Prepends as
   // a block rather than unshifting per item, which would reverse the pasted
-  // order. pillarId may be null — see openBulkActionModal.
-  function addManyActions(createdBy, pillarId, titles, { internal = false } = {}) {
+  // order.
+  //
+  // Milestone v6 (ACT-09): takes `items` — [{ title, pillarId }] — rather than
+  // a titles array and one shared pillar. The per-row pillar is collected in
+  // the review step, so expressing "one pillar for the whole batch" is now the
+  // caller's job (the review step's apply-to-all control), not a shape this
+  // function imposes on every caller. pillarId may be null.
+  function addManyActions(createdBy, items, { internal = false } = {}) {
     const user = currentUser();
     const orgMeta = activeOrgForUser(user);
-    if (!orgMeta || !titles.length) return 0;
+    if (!orgMeta || !items.length) return 0;
     const o = loadOrg(orgMeta.id);
     o.actions = o.actions || [];
-    const created = titles.map((title) => ({
+    const created = items.map(({ title, pillarId }) => ({
       id: uid("act_"),
       pillarId,
       title,
@@ -2312,369 +2418,43 @@ import {
     cloudPushActionPatch(o.id, id, { deletedAt: iso() });
   }
 
-  function renderActions(user, org) {
-    const isClient = isClientView(user);
-    const frag = h("div");
-    frag.appendChild(h("h1", { class: "view-title" }, "Action plan"));
-    frag.appendChild(
-      h(
-        "p",
-        { class: "view-sub" },
-        "Cross-pillar action tracker. Assign owners, set due dates, mark complete.",
-      ),
-    );
-
-    const all = (org.actions || []).filter((a) => !isClient || !a.internal);
-    const toolbar = h(
-      "div",
-      { class: "stage-section-banner" },
-      [
-        h("div", {}, `${all.length} total · ${all.filter((a) => a.done).length} complete`),
-        // Creating actions stays staff-only (rules deny client creates);
-        // clients still complete/uncomplete via each row's checkbox. Both
-        // buttons sit in one group so the banner's space-between keeps them
-        // together on the right instead of stranding one mid-row.
-        isClient
-          ? null
-          : h("div", { class: "banner-actions" }, [
-              h(
-                "button",
-                {
-                  class: "btn secondary",
-                  title: "Paste a list — one action per line",
-                  onclick: () => openBulkActionModal(user),
-                },
-                "Paste multiple",
-              ),
-              h("button", { class: "btn", onclick: () => openActionModal(user) }, "+ New action"),
-            ]),
-      ].filter(Boolean),
-    );
-    frag.appendChild(toolbar);
-
-    if (!all.length) {
-      frag.appendChild(
-        h(
-          "div",
-          { class: "empty" },
-          "No actions yet. Add one from here or from any pillar detail page.",
-        ),
-      );
-      return frag;
-    }
-
-    const openActions = all.filter((a) => !a.done);
-    const completedActions = all.filter((a) => a.done);
-    const headerRow = () =>
-      h("div", { class: "action-row" }, [
-        h("div", {}, "✓"),
-        h("div", {}, "Action"),
-        h("div", {}, "Pillar"),
-        h("div", {}, "Owner"),
-        h("div", {}, "Due"),
-        h("div", {}, ""),
-      ]);
-
-    // Open actions
-    const openTable = h("div", { class: "actions-table" });
-    openTable.appendChild(headerRow());
-    if (openActions.length === 0) {
-      openTable.appendChild(h("div", { class: "empty-card" }, "No open actions."));
-    } else {
-      openActions.forEach((a) => openTable.appendChild(renderActionRow(a, isClient)));
-    }
-    frag.appendChild(openTable);
-
-    // Completed actions, in their own section
-    if (completedActions.length) {
-      frag.appendChild(
-        h("h2", { class: "section-banner-spread" }, `Completed (${completedActions.length})`),
-      );
-      const doneTable = h("div", { class: "actions-table" });
-      doneTable.appendChild(headerRow());
-      completedActions.forEach((a) => doneTable.appendChild(renderActionRow(a, isClient)));
-      frag.appendChild(doneTable);
-    }
-
-    return frag;
-  }
-
-  function renderActionRow(a, isClient) {
-    const p = DATA.pillars.find((x) => x.id === a.pillarId);
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const isOverdue = !a.done && !!a.due && a.due < todayIso;
-    const row = h("div", {
-      class: `action-row ${a.done ? "done" : ""} ${isOverdue ? "overdue" : ""}`,
-    });
-
-    // Completion toggles for BOTH roles (2026-07): the checkbox patch carries
-    // exactly the fields firestore.rules lets a client change (done +
-    // completion audit fields) — everything else on the row is staff-only.
-    const chk = h("input", { type: "checkbox" });
-    chk.checked = !!a.done;
-    chk.addEventListener("change", () => {
-      const u = currentUser();
-      updateAction(a.id, {
-        done: chk.checked,
-        completedAt: chk.checked ? iso() : null,
-        completedBy: chk.checked && u ? u.id : null,
-      });
-      render();
-    });
-    row.appendChild(chk);
-
-    const title = h("input", { type: "text", class: "a-title", value: a.title });
-    if (isClient) {
-      title.disabled = true;
-    } else {
-      title.addEventListener("blur", () => updateAction(a.id, { title: title.value }));
-    }
-    row.appendChild(title);
-
-    // 2026-08 scope change: actions may carry no pillar (or a pillarId that no
-    // longer resolves). Render those as plain "Unassigned" text — the old
-    // unconditional link navigated to pillar:null and dead-ended.
-    row.appendChild(
-      p
-        ? h("div", {}, [
-            h(
-              "a",
-              {
-                href: "#",
-                onclick: (e) => {
-                  e.preventDefault();
-                  setRoute("pillar:" + a.pillarId);
-                },
-              },
-              p.name,
-            ),
-          ])
-        : h(
-            "div",
-            { class: "action-pillar-none", title: "Not assigned to one of the 10 pillars" },
-            "Unassigned",
-          ),
-    );
-
-    const owner = h("input", {
-      type: "text",
-      class: "a-owner",
-      placeholder: "Owner",
-      value: a.owner || "",
-    });
-    if (isClient) {
-      owner.disabled = true;
-    } else {
-      owner.addEventListener("blur", () => updateAction(a.id, { owner: owner.value }));
-    }
-    row.appendChild(owner);
-
-    const dueWrap = h("div", { class: "due-wrap" });
-    const due = h("input", { type: "date", class: "a-due", value: a.due || "" });
-    if (isClient) {
-      due.disabled = true;
-    } else {
-      due.addEventListener("change", () => updateAction(a.id, { due: due.value }));
-    }
-    dueWrap.appendChild(due);
-    if (isOverdue)
-      dueWrap.appendChild(
-        h("span", { class: "overdue-tag", title: "Due date has passed" }, "Overdue"),
-      );
-    row.appendChild(dueWrap);
-
-    if (isClient) {
-      row.appendChild(h("div", {}));
-    } else {
-      const del = h(
-        "button",
-        {
-          class: "btn ghost sm btn-line-soft",
-          onclick: () =>
-            confirmDialog(
-              "Delete action?",
-              "This cannot be undone.",
-              () => {
-                deleteAction(a.id);
-                render();
-              },
-              "Delete",
-            ),
-        },
-        "×",
-      );
-      row.appendChild(del);
-    }
-    return row;
-  }
-
-  // 2026-08 scope change: the pillar dropdown leads with a blank option, for
-  // actions that are not relevant to any of the 10 pillars. Blank is the
-  // default — it beats silently tagging everything as pillar 1, which is what
-  // the previous first-option default did whenever the user left it alone.
-  // Callers read the value through pillarIdFromSelect (below), never Number()
-  // directly: Number("") is 0, which would look like a real pillar id.
-  function pillarSelectEl() {
-    const select = h("select", { class: "settings-textarea-comment" });
-    const blank = document.createElement("option");
-    blank.value = "";
-    blank.textContent = "No pillar (unassigned)";
-    select.appendChild(blank);
-    DATA.pillars.forEach((p) => {
-      const o = document.createElement("option");
-      o.value = p.id;
-      o.textContent = `${p.id}. ${p.name}`;
-      select.appendChild(o);
-    });
-    return select;
-  }
-  function pillarIdFromSelect(select) {
-    return select.value === "" ? null : Number(select.value);
-  }
-
-  function openActionModal(user) {
-    const title = h("input", { type: "text", placeholder: "Action description" });
-    const select = pillarSelectEl();
-    const internalWrap = !isClientView(user)
-      ? h("label", { class: "field-row" }, [
-          h("input", { type: "checkbox", id: "actInternal" }),
-          "Internal only (hidden from client view)",
-        ])
-      : null;
-
-    const m = modal([
-      h("h3", {}, "New action"),
-      title,
-      h("div", { class: "progress-spacer" }),
-      select,
-      internalWrap,
-      h("div", { class: "row" }, [
-        h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-        h(
-          "button",
-          {
-            class: "btn",
-            onclick: () => {
-              const t = title.value.trim();
-              if (!t) return;
-              const internal = internalWrap ? internalWrap.querySelector("input").checked : false;
-              addAction(user.id, pillarIdFromSelect(select), t, { internal });
-              m.close();
-              render();
-            },
-          },
-          "Add",
-        ),
-      ]),
-    ]);
-    setTimeout(() => title.focus(), 10);
-  }
-
-  // 2026-08 scope change (Luke, 10-11 Aug): bulk entry on the Actions tab,
-  // mirroring the Plan tab's openBulkOutcomeModal. Every item in the batch
-  // takes the one pillar chosen here (blank by default) and the one internal
-  // flag — per-row pillars on paste are explicitly out of scope. Staff only:
-  // firestore.rules denies client action creates outright, and the button that
-  // opens this is behind the same isClient gate as "+ New action".
-  function openBulkActionModal(user) {
-    const select = pillarSelectEl();
-    const ta = h("textarea", {
-      placeholder:
-        "Paste your list — one action per line.\n\nExample:\nDocument ICP, including firmographics and triggers\nBuild top 50 hit list\nImprove the properties on HubSpot",
-      class: "outcomes-textarea",
-    });
-    const countLbl = h("div", { class: "outcomes-count" }, "0 actions");
-    const internalWrap = !isClientView(user)
-      ? h("label", { class: "field-row" }, [
-          h("input", { type: "checkbox", id: "actBulkInternal" }),
-          "Internal only (hidden from client view)",
-        ])
-      : null;
-
-    const recount = () => {
-      const n = parseBulkList(ta.value).length;
-      countLbl.textContent =
-        n > MAX_BULK_ITEMS
-          ? `${n} items — too many. Add up to ${MAX_BULK_ITEMS} at a time.`
-          : `${n} action${n === 1 ? "" : "s"}`;
-    };
-    ta.addEventListener("input", recount);
-
-    // Convenience only — Cmd/Ctrl+V into the textarea does the same thing.
-    // navigator.clipboard.readText needs a secure context and (on Chrome) a
-    // permission grant, and is absent in jsdom, so every failure path lands on
-    // the same toast rather than an unexplained no-op.
-    const clipBtn = h(
-      "button",
-      {
-        class: "btn secondary sm",
-        onclick: async () => {
-          try {
-            const text = await navigator.clipboard.readText();
-            if (!text || !text.trim()) {
-              notify("info", "Clipboard is empty.");
-              return;
-            }
-            ta.value = ta.value.trim() ? `${ta.value.replace(/\s+$/, "")}\n${text}` : text;
-            recount();
-            ta.focus();
-          } catch (_e) {
-            notify("error", "Could not read the clipboard — paste into the box with Cmd+V.");
-          }
-        },
-      },
-      "Paste from clipboard",
-    );
-
-    const m = modal(
-      [
-        h("h3", {}, "Paste multiple actions"),
-        h(
-          "p",
-          { class: "section-explainer" },
-          "One action per line. Bullet markers and numbering are stripped automatically, and commas inside a line are kept. A single line with no line breaks is split on its commas.",
-        ),
-        h("div", { class: "outcomes-add-row" }, [clipBtn]),
-        ta,
-        countLbl,
-        h("div", { class: "progress-spacer" }),
-        select,
-        internalWrap,
-        h("div", { class: "row" }, [
-          h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-          h(
-            "button",
-            {
-              class: "btn",
-              onclick: () => {
-                const titles = parseBulkList(ta.value);
-                if (!titles.length) {
-                  notify("info", "Nothing to add — paste a list first.");
-                  return;
-                }
-                if (titles.length > MAX_BULK_ITEMS) {
-                  notify(
-                    "error",
-                    `That is ${titles.length} items. Add up to ${MAX_BULK_ITEMS} at a time.`,
-                  );
-                  return;
-                }
-                const internal = internalWrap ? internalWrap.querySelector("input").checked : false;
-                const n = addManyActions(user.id, pillarIdFromSelect(select), titles, {
-                  internal,
-                });
-                m.close();
-                render();
-                notify("info", `${n} action${n === 1 ? "" : "s"} added.`);
-              },
-            },
-            "Add all",
-          ),
-        ]),
-      ].filter(Boolean),
-    );
-    setTimeout(() => ta.focus(), 10);
-  }
+  // ---------- Actions view (Milestone v6 Phase A) ----------
+  // The six Actions-tab bodies — renderActions, renderActionRow,
+  // pillarSelectEl, pillarIdFromSelect, openActionModal, openBulkActionModal —
+  // moved verbatim to src/views/actions.js, completing the Phase 4 D-02
+  // re-homing that Wave 5 never ran. Pattern D DI (as src/ui/chrome.js does for
+  // the topbar) binds the IIFE closure locals once here and hands back the same
+  // function names with the same signatures, so renderRoute's dispatch entry is
+  // unchanged. Only renderActions is destructured — the other five were always
+  // internal to the view and had no caller outside it.
+  //
+  // addAction / addManyActions / updateAction / deleteAction stay here: they
+  // write the localStorage mirror and push to the actions subcollection, which
+  // is data-tier work the view has no business owning. They flow in as deps.
+  const { renderActions } = createActionsView({
+    state,
+    h,
+    DATA,
+    isClientView,
+    setRoute,
+    render,
+    currentUser,
+    addAction,
+    addManyActions,
+    updateAction,
+    deleteAction,
+    modal,
+    confirmDialog,
+    notify,
+    // Milestone v6 Phase C: the expanded row shows provenance, so the view
+    // needs a uid -> name lookup and the app's en-GB date formatter.
+    userLabel: (id) => {
+      if (!id) return "";
+      const u = findUser(id);
+      return (u && (u.name || u.email)) || id;
+    },
+    formatDate,
+  });
 
   // ================================================================
   // ENGAGEMENT
@@ -3697,219 +3477,26 @@ import {
   // DOCUMENTS (Firebase Storage + Firestore)
   // ================================================================
 
-  function formatBytes(b) {
-    if (b == null) return "";
-    if (b < 1024) return b + " B";
-    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
-    if (b < 1024 * 1024 * 1024) return (b / (1024 * 1024)).toFixed(1) + " MB";
-    return (b / (1024 * 1024 * 1024)).toFixed(2) + " GB";
-  }
-
-  function renderDocuments(user, org) {
-    const frag = h("div");
-    frag.appendChild(h("h1", { class: "view-title" }, "Documents"));
-    frag.appendChild(
-      h(
-        "p",
-        { class: "view-sub" },
-        org
-          ? `Shared with ${org.name}. Everyone in this organisation can see these documents.`
-          : "Select an organisation to see its documents.",
-      ),
-    );
-
-    if (!org) return frag;
-
-    // Mark everything up to now as seen for this user/org combination.
-    markDocsSeenFor(user.id, org.id);
-
-    if (!fbReady()) {
-      frag.appendChild(
-        h("div", { class: "card docs-empty-card" }, "Connecting to shared storage…"),
-      );
-      return frag;
-    }
-
-    const { db, storage, firestore, storageOps } = window.FB;
-
-    // Upload card
-    const uploadCard = h("div", { class: "card" });
-    const fileInput = h("input", { type: "file", class: "u-display-none" });
-    const progressBar = h("div", { class: "docs-progress-meta" });
-
-    const upload = async (file) => {
-      // CODE-09 / D-15 / D-20: validateUpload BEFORE saveDocument trust
-      // boundary. Client-side validation (size cap + MIME allowlist + magic-
-      // byte sniff + filename sanitisation) for UX feedback + audit-narrative
-      // claim. Server-side enforcement is Phase 5 storage.rules + Phase 7
-      // callable validation.
-      const validation = await validateUpload(file);
-      if (!validation.ok) {
-        notify("error", validation.reason);
-        progressBar.textContent = "";
-        return;
-      }
-      progressBar.textContent = "Uploading " + file.name + "…";
-      try {
-        const docId = uid("doc_");
-        const path = `orgs/${org.id}/documents/${docId}/${validation.sanitisedName}`;
-        const r = storageOps.ref(storage, path);
-        const task = storageOps.uploadBytesResumable(r, file, { contentType: file.type });
-        task.on("state_changed", (snap) => {
-          const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-          progressBar.textContent = `Uploading ${file.name}… ${pct}%`;
-        });
-        await task;
-        // Phase 8 Wave 2 (BACKUP-05 sweep): getDownloadURL removed — clients
-        // fetch signed URLs on demand via getDocumentSignedUrl callable.
-        await firestore.setDoc(firestore.doc(db, "orgs", org.id, "documents", docId), {
-          orgId: org.id,
-          uploaderId: user.id,
-          uploaderName: user.name || user.email,
-          uploaderEmail: user.email,
-          filename: validation.sanitisedName,
-          size: file.size,
-          contentType: file.type,
-          storagePath: path,
-          createdAt: firestore.serverTimestamp(),
-        });
-        progressBar.textContent = `✓ Uploaded ${file.name}`;
-      } catch (e) {
-        progressBar.textContent = "Upload failed: " + (e.message || e);
-      }
-    };
-
-    fileInput.addEventListener("change", (e) => {
-      const f = e.target.files && e.target.files[0];
-      if (f) upload(f);
-      e.target.value = "";
-    });
-
-    uploadCard.appendChild(
-      h("div", { class: "docs-toolbar-row" }, [
-        h("button", { class: "btn", onclick: () => fileInput.click() }, "+ Upload file"),
-        fileInput,
-      ]),
-    );
-    uploadCard.appendChild(progressBar);
-    frag.appendChild(uploadCard);
-
-    // List
-    const listCard = h("div", { class: "card docs-list-card" });
-    listCard.appendChild(h("h3", { class: "docs-list-h3" }, "Files"));
-    const listBody = h("div", {});
-    listBody.appendChild(h("p", { class: "docs-list-loading" }, "Loading…"));
-    listCard.appendChild(listBody);
-    frag.appendChild(listCard);
-
-    const q = firestore.collection(db, "orgs", org.id, "documents");
-    firestore.onSnapshot(
-      q,
-      (snap) => {
-        const docs = [];
-        snap.forEach((d) => docs.push({ id: d.id, ...d.data() }));
-        docs.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
-
-        const isInternal = isStaff(user);
-
-        // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
-        listBody.replaceChildren();
-        if (!docs.length) {
-          listBody.appendChild(h("p", { class: "docs-list-empty" }, "No files yet."));
-          return;
-        }
-        docs.forEach((d) => {
-          const row = h("div", { class: "docs-table-row" });
-          row.appendChild(
-            h("div", {}, [
-              h("div", { class: "docs-row-filename" }, d.filename),
-              h("div", { class: "docs-row-meta" }, formatBytes(d.size)),
-            ]),
-          );
-          row.appendChild(h("div", {}, d.uploaderName || d.uploaderEmail || "—"));
-          row.appendChild(h("div", {}, d.createdAt?.toDate?.().toLocaleString?.("en-GB") || ""));
-          const canDelete = isInternal || d.uploaderId === user.id;
-          const actions = h(
-            "div",
-            { class: "docs-row-actions" },
-            [
-              h(
-                "button",
-                {
-                  class: "btn secondary sm",
-                  // Phase 8 Wave 2 (BACKUP-05 sweep): fetch signed URL on
-                  // demand via getDocumentSignedUrl callable — no cached
-                  // downloadURL in Firestore. URL is valid for 1 hour; caller
-                  // MUST NOT cache it (server enforces TTL).
-                  onclick: async () => {
-                    try {
-                      const { getDocumentSignedUrl } = await import("./cloud/signed-url.js");
-                      const { url } = await getDocumentSignedUrl(org.id, d.id, d.filename);
-                      window.open(url, "_blank", "noopener,noreferrer");
-                    } catch (e) {
-                      notify("error", "Couldn't fetch download link: " + (e.message || e));
-                    }
-                  },
-                },
-                "Download",
-              ),
-              canDelete
-                ? h(
-                    "button",
-                    {
-                      class: "btn ghost sm danger",
-                      // PLATFORM-UAT T15 fix (2026-05-25): swap direct
-                      // firestore.deleteDoc + storageOps.deleteObject for
-                      // the softDelete Cloud Function callable. Direct
-                      // deletes were blocked by firestore.rules:104
-                      // (allow delete: if false — soft-delete-via-CF only).
-                      // The callable marks the Firestore doc deleted=true;
-                      // firestore.rules:101 notDeleted predicate hides it
-                      // from the live snapshot so the list re-renders
-                      // without the row automatically. Storage object
-                      // cleanup is handled by the scheduled purge via
-                      // permanentlyDeleteSoftDeleted — no client-side
-                      // storage call needed (it would also be blocked by
-                      // storage.rules anyway).
-                      onclick: () =>
-                        confirmDialog(
-                          "Delete file?",
-                          `Remove "${d.filename}" for everyone in ${org.name}? This can be restored within 30 days.`,
-                          async () => {
-                            try {
-                              const { softDelete } = await import("./cloud/soft-delete.js");
-                              await softDelete({
-                                type: "document",
-                                orgId: org.id,
-                                id: d.id,
-                              });
-                            } catch (e) {
-                              notify("error", "Couldn't delete file: " + (e.message || e));
-                            }
-                          },
-                          "Delete",
-                        ),
-                    },
-                    "Delete",
-                  )
-                : null,
-            ].filter(Boolean),
-          );
-          row.appendChild(actions);
-          listBody.appendChild(row);
-        });
-      },
-      (err) => {
-        // CODE-05 (D-20): replaceChildren() instead of innerHTML="".
-        listBody.replaceChildren();
-        listBody.appendChild(
-          h("p", { class: "docs-error-paragraph" }, "Couldn't load documents: " + err.message),
-        );
-      },
-    );
-
-    return frag;
-  }
+  // ---------- Documents view (Milestone v6 Phase A) ----------
+  // renderDocuments + formatBytes moved verbatim to src/views/documents.js,
+  // completing the Phase 4 D-02 re-homing. Same Pattern D DI as the Actions
+  // view above. The Firebase handle now arrives as a getter rather than being
+  // read off `window` inside the view, so the view is drivable from a test
+  // double; main.js is the only place that still knows about window.FB.
+  const { renderDocuments } = createDocumentsView({
+    state,
+    h,
+    isStaff,
+    fbReady,
+    getFB: () => window.FB,
+    markDocsSeenFor,
+    validateUpload,
+    uid,
+    confirmDialog,
+    modal,
+    promptText,
+    notify,
+  });
 
   // ================================================================
   // CHAT (Firestore real-time)

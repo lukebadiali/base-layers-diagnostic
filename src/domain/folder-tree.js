@@ -1,6 +1,6 @@
 // src/domain/folder-tree.js
 // @ts-check
-// Milestone v6 (DOC-01..DOC-04): the nested folder tree for an org's
+// Milestone v6 (FILE-01..FILE-04): the nested folder tree for an org's
 // documents. Kept pure — no DOM, no Firebase — because this module holds the
 // two guards that Firestore rules structurally cannot express.
 //

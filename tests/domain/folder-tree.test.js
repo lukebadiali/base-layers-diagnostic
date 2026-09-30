@@ -1,6 +1,6 @@
 // tests/domain/folder-tree.test.js
 // @ts-check
-// Milestone v6 (DOC-01..DOC-04). This module holds the two guards Firestore
+// Milestone v6 (FILE-01..FILE-04). This module holds the two guards Firestore
 // rules structurally cannot express — cycle prevention and the depth cap — so
 // these tests are the only place either is enforced-and-proven. The cyclic and
 // orphaned fixtures matter: rules cannot stop a cycle being written, so the

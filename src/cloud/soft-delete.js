@@ -12,7 +12,7 @@
 //
 // Phase 9 Wave 4 (AUDIT-05): POST-emit `data.<type>.<op>.requested` for
 // softDelete/restore/permanentlyDelete. Per-type literals (6 types × 3 ops = 18
-// literals in auditEventSchema enum — folder joined in Milestone v6 / DOC-06).
+// literals in auditEventSchema enum — folder joined in Milestone v6 / FILE-06).
 // Server callables (Plan 03a) emit the bare flavour; AUDIT-05 mirror-trigger
 // Pitfall 7 dedup is satisfied by the bare row.
 // Empty payload — actor identity server-overlaid from request.auth.token (Pitfall 17).

@@ -429,7 +429,7 @@ export function createDocumentsView(deps) {
 
     /** @param {*} folder */
     const deleteFolder = (folder) => {
-      // DOC-04: refuse rather than cascade. Cascading is recoverable — it all
+      // FILE-04: refuse rather than cascade. Cascading is recoverable — it all
       // goes through the 30-day window — but it is far easier to do by
       // accident, and what is being accidentally deleted is a client's
       // document set. The refusal names what is in the way so the user knows

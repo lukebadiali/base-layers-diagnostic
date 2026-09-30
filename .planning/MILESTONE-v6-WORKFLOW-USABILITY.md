@@ -17,6 +17,7 @@
 | D2 | Document folders | **Nested tree.** Folders are metadata only — Storage object paths never change. |
 | D3 | Process | New GSD milestone with phases, REQ-IDs and success criteria. |
 | D4 | Refactor | Complete the pending Phase 4 D-02 re-homing for `renderActions` + `renderDocuments` **first**, then build features in the new modules. |
+| D5 | REQ-ID prefix | The Documents requirements use **`FILE-`**, not `DOC-`. Renamed mid-execution: the hardening milestone already owns `DOC-01`..`DOC-10` for *documentation* controls, and both sets are indexed by the same `docs/CONTROL_MATRIX.md`. A reader hitting `DOC-04` in that matrix would have had no way to tell "Control matrix populated" from "Deleting a non-empty folder is refused". Commits before this decision still say `DOC-0N` for the Documents items. |
 
 ---
 
@@ -35,14 +36,14 @@
 - **ACT-09**: Paste Multiple has a review step listing each parsed item with its own pillar selector before anything is written.
 - **ACT-10**: In the review step an item can be re-worded, removed, or have a pillar applied to every row at once.
 
-### Documents (DOC)
+### Documents (FILE)
 
-- **DOC-01**: Internal users can create folders inside an org's document area, nested to a bounded depth.
-- **DOC-02**: Documents belong to a folder or to the root; the flat list is replaced by folder-scoped navigation with a breadcrumb.
-- **DOC-03**: A document can be moved between folders without the Storage object being rewritten.
-- **DOC-04**: Folders can be renamed and deleted; deleting a folder that still holds anything is refused with a message saying so.
-- **DOC-05**: The document list sorts by date added (default, newest first), by name, or by uploader; the choice persists for the user.
-- **DOC-06**: Folders are soft-deleted with the same 30-day restore window as documents.
+- **FILE-01**: Internal users can create folders inside an org's document area, nested to a bounded depth.
+- **FILE-02**: Documents belong to a folder or to the root; the flat list is replaced by folder-scoped navigation with a breadcrumb.
+- **FILE-03**: A document can be moved between folders without the Storage object being rewritten.
+- **FILE-04**: Folders can be renamed and deleted; deleting a folder that still holds anything is refused with a message saying so.
+- **FILE-05**: The document list sorts by date added (default, newest first), by name, or by uploader; the choice persists for the user.
+- **FILE-06**: Folders are soft-deleted with the same 30-day restore window as documents.
 
 ### Diagnostic (DIA)
 
@@ -55,7 +56,7 @@
 - **PLAT-01**: `renderActions`, `renderActionRow`, `openActionModal`, `openBulkActionModal` and `renderDocuments` live in `src/views/*`, not in `src/main.js`.
 - **PLAT-02**: Grouping, filtering, sorting and folder-tree logic are pure functions in `src/domain/*` with no DOM and no Firebase import (lint-enforced).
 - **PLAT-03**: The widened client write surface is reflected in `SECURITY.md`, `docs/CONTROL_MATRIX.md` and the rules-emulator matrix.
-- **PLAT-04**: GDPR export and erase cover the new `folders` collection and the new action fields.
+- **PLAT-04**: GDPR export and erase cover the new `folders` collection and the new action fields. **PARTIAL** — action fields are covered by construction; folders are not. See Phase H outcome.
 
 ---
 
@@ -310,6 +311,39 @@ finding above held — no capability was added, only signalling. Three decisions
 1. Every new or widened rule has a matching CONTROL_MATRIX row and a passing test cited from it.
 2. `gdprExportUser` output includes folders; `gdprEraseUser` tombstones them.
 3. The docs shape tests (`tests/*-shape.test.js`, `tests/*-paths-exist.test.js`) pass against the updated documents.
+
+**Outcome (executed 2026-09-30).** SC#1 and SC#3 met. **SC#2 is NOT done** — see
+below.
+
+Landed:
+
+- `SECURITY.md` § Milestone v6, opening with an explicit instruction to read it
+  before any earlier statement about what a client may write, because several
+  earlier sections describe the pre-v6 build and are now wrong about it.
+- Six `docs/CONTROL_MATRIX.md` rows (ACT-07, ACT-08, FILE-01, FILE-03, FILE-06,
+  PLAT-02), each with a code path and a passing test. Rows for purely
+  presentational work were deliberately left out: a matrix that lists everything
+  stops being an index of controls.
+- `THREAT_MODEL.md` § Residual risks, a section the document did not previously
+  have. R1 is the folder cycle and depth gap; R2 is `completedBy` not being
+  checked against the writer's uid. Both are accepted, not mitigated, and say so.
+- `docs/RETENTION.md` § Document folders.
+- `tests/control-matrix-paths-exist.test.js` regex extended for the ACT / FILE /
+  DIA / PLAT prefixes, so the new rows are actually swept rather than ignored.
+
+**Not done: PLAT-04, GDPR coverage for the `folders` collection.** The new action
+fields ARE covered — `gdprExportUser` exports whole action documents, so
+`description` and `lastEditedBy` come along by construction. Folders do not.
+Adding them means changing `QueryResults`, `UserBundle`, `assembleUserBundle`,
+`gdprExportUser` and `eraseCascade`, and bumping `BUNDLE_SCHEMA_VERSION` — which
+changes the shape of an export format that has its own unit tests.
+
+It is not done because it cannot be verified here. The `functions` workspace will
+not install on this machine (npm fails resolving its lockfile on the local Node,
+which is below the engine floor), so not one functions test can be run. Shipping
+an unverified export-schema change into a compliance artefact is worse than
+shipping the gap with the gap written down. It wants its own change, with CI
+green, and is the first follow-up after this branch merges.
 
 **Depends on:** B, C, E, F.
 

@@ -54,14 +54,59 @@
 
 ## Defence in depth summary
 
-| Layer | Control |
-|-------|---------|
-| Network | HTTPS-only (Firebase Hosting managed certs); HSTS preload submission filed (subdomain-only); COOP / COEP / CORP headers per `SECURITY.md` § HTTP Security Headers |
-| Application | CSP enforced (per-directive matrix at `SECURITY.md` § Content Security Policy (enforced)); App Check + reCAPTCHA Enterprise; custom claims set server-side via `beforeUserCreated` |
-| Data | Firestore Rules orgId-scoped + Storage Rules orgId-scoped; soft-delete + 30-day restore window; Cloud Storage object versioning 90 days; PITR 7-day rolling window |
-| Operational | Audit log (Firestore + BigQuery 7y archive); 4-rule anomaly alerting to Slack `#ops`; GCP budget alerts 50/80/100%; Sentry 70% quota alert; uptime checks USA + EUROPE + ASIA_PACIFIC |
-| Supply chain | Pinned dependencies; `npm ci` integrity; Dependabot + Socket.dev + OSV-Scanner; gitleaks pre-commit + CI; OIDC-federated GitHub Actions (no long-lived JSON); third-party Actions pinned to commit SHA |
-| Compliance | Per-phase `SECURITY.md` increment; this threat model (DOC-03); `docs/CONTROL_MATRIX.md` (DOC-04); `PRIVACY.md` (DOC-02); `docs/DATA_FLOW.md` (DOC-07); `docs/RETENTION.md`; `.well-known/security.txt` (RFC 9116) |
+| Layer        | Control                                                                                                                                                                                                           |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Network      | HTTPS-only (Firebase Hosting managed certs); HSTS preload submission filed (subdomain-only); COOP / COEP / CORP headers per `SECURITY.md` § HTTP Security Headers                                                 |
+| Application  | CSP enforced (per-directive matrix at `SECURITY.md` § Content Security Policy (enforced)); App Check + reCAPTCHA Enterprise; custom claims set server-side via `beforeUserCreated`                                |
+| Data         | Firestore Rules orgId-scoped + Storage Rules orgId-scoped; soft-delete + 30-day restore window; Cloud Storage object versioning 90 days; PITR 7-day rolling window                                                |
+| Operational  | Audit log (Firestore + BigQuery 7y archive); 4-rule anomaly alerting to Slack `#ops`; GCP budget alerts 50/80/100%; Sentry 70% quota alert; uptime checks USA + EUROPE + ASIA_PACIFIC                             |
+| Supply chain | Pinned dependencies; `npm ci` integrity; Dependabot + Socket.dev + OSV-Scanner; gitleaks pre-commit + CI; OIDC-federated GitHub Actions (no long-lived JSON); third-party Actions pinned to commit SHA            |
+| Compliance   | Per-phase `SECURITY.md` increment; this threat model (DOC-03); `docs/CONTROL_MATRIX.md` (DOC-04); `PRIVACY.md` (DOC-02); `docs/DATA_FLOW.md` (DOC-07); `docs/RETENTION.md`; `.well-known/security.txt` (RFC 9116) |
+
+## Residual risks
+
+Risks that are **accepted and not mitigated to zero**. They are listed because a
+threat model that only lists wins is a marketing document.
+
+### R1. Folder cycles and nesting depth are not enforced server-side
+
+- **Risk:** An internal user writing directly through the Firebase SDK, bypassing
+  the app, can set a folder's `parentId` to one of its own descendants, or nest
+  folders past the five-level cap.
+- **Why it is not closed:** A Firestore Security Rule sees exactly one document
+  and the request touching it. It cannot walk a `parentId` chain to discover an
+  ancestry relationship, and it cannot count the depth of the resulting tree.
+  The guard is therefore in `src/domain/folder-tree.js` (`canMoveFolder`,
+  `canCreateFolder`) and at the write site, which makes it a correctness and
+  usability guard, **not a security boundary**.
+- **Impact if exercised:** Orphaning, not exposure. A folder that is its own
+  ancestor is reachable from no root, so it and everything under it disappear
+  from the UI while still counting against the org's storage. Tenancy — the
+  actual security question — is unaffected: `inOrg` plus an immutable `orgId`
+  still confine every folder to its own org, and that IS rules-enforced.
+- **Who can exercise it:** Internal staff only. `folders` create and update are
+  denied to clients outright.
+- **Detection:** A folder present in Firestore but absent from every rendered
+  tree. `src/domain/folder-tree.js` traversals terminate on cyclic input rather
+  than hanging, so the symptom is a missing folder, not a frozen tab.
+- **Evidence:** `src/domain/folder-tree.js`; `tests/domain/folder-tree.test.js`
+  (cycle-termination cases); `firestore.rules` (folders block comment states the
+  gap in-line); `docs/CONTROL_MATRIX.md` row PLAT-02.
+
+### R2. `completedBy` is not checked against the writer's identity
+
+- **Risk:** A client completing an action can set `completedBy` to another user's
+  uid, mis-attributing the completion.
+- **Why it is not closed:** The field is written by a client build already in
+  production. Milestone v6 added `editorIsSelf()` for the new `lastEditedBy`
+  field, where there was no deployed writer to break; applying the same check to
+  `completedBy` changes the contract of a field that is already being written,
+  so it wants its own change and its own deploy rather than being folded into a
+  widening.
+- **Impact if exercised:** A wrong name against a completed action. No access is
+  gained and no data is destroyed.
+- **Evidence:** `firestore.rules` (actions block comment records the gap);
+  `tests/rules/actions.test.js`.
 
 ---
 

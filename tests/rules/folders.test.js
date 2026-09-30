@@ -1,6 +1,6 @@
 // tests/rules/folders.test.js
 // @ts-check
-// Milestone v6 (DOC-01..DOC-04, DOC-06): the nested folder tree over an org's
+// Milestone v6 (FILE-01..FILE-04, FILE-06): the nested folder tree over an org's
 // documents, and the one-field widening of the documents update rule.
 //
 // Two things this file is deliberately explicit about:
@@ -208,7 +208,7 @@ describe("folders — deletion is soft-only", () => {
   });
 });
 
-describe("documents — the folderId widening (DOC-03)", () => {
+describe("documents — the folderId widening (FILE-03)", () => {
   it("internal refiles a document by changing folderId -> allow", async () => {
     await seed(docPath, baseDocument);
     await seed(folderPath, baseFolder);

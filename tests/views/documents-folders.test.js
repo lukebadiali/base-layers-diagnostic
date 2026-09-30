@@ -1,6 +1,6 @@
 // tests/views/documents-folders.test.js
 // @ts-check
-// Milestone v6 (DOC-01 to DOC-05): folder navigation, moving, deletion
+// Milestone v6 (FILE-01 to FILE-05): folder navigation, moving, deletion
 // refusal, and the three sort keys on the Documents tab.
 //
 // This is the first behavioural coverage the Documents tab has ever had. Every
@@ -218,7 +218,7 @@ beforeEach(() => {
   localStorage.removeItem("baselayers:docSort");
 });
 
-describe("documents — folder navigation (DOC-01 / DOC-02)", () => {
+describe("documents — folder navigation (FILE-01 / FILE-02)", () => {
   it("shows only the root's own folders and files", async () => {
     await bootAs("u_internal-luke", TREE_SEED);
     expect(folderNames()).toEqual(["Admin", "Board pack"]);
@@ -319,7 +319,7 @@ describe("documents — creating and renaming folders", () => {
   });
 });
 
-describe("documents — moving (DOC-03)", () => {
+describe("documents — moving (FILE-03)", () => {
   it("moving a file changes folderId and nothing else — storagePath is untouched", async () => {
     await bootAs("u_internal-luke", TREE_SEED);
     const before = { ...fb.read(`orgs/${ORG_ID}/documents/d_root`) };
@@ -375,7 +375,7 @@ describe("documents — moving (DOC-03)", () => {
   });
 });
 
-describe("documents — deleting a folder (DOC-04)", () => {
+describe("documents — deleting a folder (FILE-04)", () => {
   it("refuses a folder holding files, and names what is in the way", async () => {
     await bootAs("u_internal-luke", TREE_SEED);
     openFolder("Board pack");
@@ -399,7 +399,7 @@ describe("documents — deleting a folder (DOC-04)", () => {
   });
 });
 
-describe("documents — sorting (DOC-05)", () => {
+describe("documents — sorting (FILE-05)", () => {
   const SORT_SEED = {
     [`orgs/${ORG_ID}/documents/d_a`]: fileDoc({
       filename: "Banana.pdf",

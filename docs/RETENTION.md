@@ -54,14 +54,14 @@ radius).
 
 **Implementation cross-reference**:
 
-| Surface | File | Path |
-|---------|------|------|
-| Soft-delete callable | `functions/src/lifecycle/softDelete.ts` | `softDelete` |
-| Scheduled Day-30 sweep | `functions/src/lifecycle/permanentlyDeleteSoftDeleted.ts` | `permanentlyDeleteSoftDeleted` |
-| GDPR erasure callable | `functions/src/gdpr/eraseUser.ts` + `src/cloud/gdpr.js` | `gdprEraseUser` |
-| Client wrapper | `src/cloud/gdpr.js` + `src/cloud/lifecycle.js` | `gdprEraseUser` / `softDelete` |
-| Rules tombstone read-block | `firestore.rules` | `isTombstoned()` predicate |
-| Tests | `tests/functions/lifecycle/*.test.js` + `functions/test/gdpr/eraseUser.unit.test.ts` | per-callable + cascade-transaction cells |
+| Surface                    | File                                                                                 | Path                                     |
+| -------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------- |
+| Soft-delete callable       | `functions/src/lifecycle/softDelete.ts`                                              | `softDelete`                             |
+| Scheduled Day-30 sweep     | `functions/src/lifecycle/permanentlyDeleteSoftDeleted.ts`                            | `permanentlyDeleteSoftDeleted`           |
+| GDPR erasure callable      | `functions/src/gdpr/eraseUser.ts` + `src/cloud/gdpr.js`                              | `gdprEraseUser`                          |
+| Client wrapper             | `src/cloud/gdpr.js` + `src/cloud/lifecycle.js`                                       | `gdprEraseUser` / `softDelete`           |
+| Rules tombstone read-block | `firestore.rules`                                                                    | `isTombstoned()` predicate               |
+| Tests                      | `tests/functions/lifecycle/*.test.js` + `functions/test/gdpr/eraseUser.unit.test.ts` | per-callable + cascade-transaction cells |
 
 ## Audit log (Phase 7) — AUDIT-01..06
 
@@ -90,13 +90,13 @@ and Logging) + STRIDE Repudiation mitigation.
 
 **Implementation cross-reference**:
 
-| Surface | File | Path |
-|---------|------|------|
-| Audit-event writer (server-side) | `functions/src/audit/writeAuditEvent.ts` | `writeAuditEvent` |
-| TTL sweep | `functions/src/audit/auditLogTtlSweep.ts` | `auditLogTtlSweep` |
-| BigQuery sink | `functions/src/audit/auditLogBigQuerySink.ts` + `scripts/setup-bigquery-sink/run.js` | `auditLogBigQuerySink` |
-| Redaction registry | `functions/src/audit/redaction.ts` + `redactionList` collection | `applyRedaction` |
-| Tests | `functions/test/audit/*.test.ts` + `tests/rules/audit-log.test.js` | TTL + sink + redaction cells |
+| Surface                          | File                                                                                 | Path                         |
+| -------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------- |
+| Audit-event writer (server-side) | `functions/src/audit/writeAuditEvent.ts`                                             | `writeAuditEvent`            |
+| TTL sweep                        | `functions/src/audit/auditLogTtlSweep.ts`                                            | `auditLogTtlSweep`           |
+| BigQuery sink                    | `functions/src/audit/auditLogBigQuerySink.ts` + `scripts/setup-bigquery-sink/run.js` | `auditLogBigQuerySink`       |
+| Redaction registry               | `functions/src/audit/redaction.ts` + `redactionList` collection                      | `applyRedaction`             |
+| Tests                            | `functions/test/audit/*.test.ts` + `tests/rules/audit-log.test.js`                   | TTL + sink + redaction cells |
 
 ## Firestore export backups (Phase 8) — BACKUP-01
 
@@ -107,9 +107,10 @@ operator-defined retention cap (currently no cap; Phase 11 forward-tracking
 row queued for v2 audit-cycle review).
 
 **Basis**: **compliance** (ISO/IEC 27001:2022 Annex A.8.13 information backup
-+ A.5.30 continuity) + **operational** (disaster-recovery RPO ≤ 24 hours via
-daily Firestore export; **PITR** provides seconds-level RPO for the trailing
-7-day window separately).
+
+- A.5.30 continuity) + **operational** (disaster-recovery RPO ≤ 24 hours via
+  daily Firestore export; **PITR** provides seconds-level RPO for the trailing
+  7-day window separately).
 
 **Deletion mechanism**: lifecycle transition (Standard → Nearline → Archive)
 managed by Cloud Storage object-lifecycle rules on
@@ -123,12 +124,12 @@ recovery path).
 
 **Implementation cross-reference**:
 
-| Surface | File | Path |
-|---------|------|------|
-| Daily Firestore export job | Cloud Scheduler → `scheduledFirestoreExport` | `firebase-schedule-scheduledFirestoreExport-europe-west2` |
-| Lifecycle rules | `runbooks/phase-8-backup-setup.md` | gcloud `lifecycle.json` body |
-| Restore drill cadence | `runbooks/phase-8-restore-drill-cadence.md` + `runbooks/restore-drill-2026-05-13.md` | quarterly + ad-hoc |
-| Tests | `functions/test/backup/scheduledFirestoreExport.unit.test.ts` | export-job invariants |
+| Surface                    | File                                                                                 | Path                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| Daily Firestore export job | Cloud Scheduler → `scheduledFirestoreExport`                                         | `firebase-schedule-scheduledFirestoreExport-europe-west2` |
+| Lifecycle rules            | `runbooks/phase-8-backup-setup.md`                                                   | gcloud `lifecycle.json` body                              |
+| Restore drill cadence      | `runbooks/phase-8-restore-drill-cadence.md` + `runbooks/restore-drill-2026-05-13.md` | quarterly + ad-hoc                                        |
+| Tests                      | `functions/test/backup/scheduledFirestoreExport.unit.test.ts`                        | export-job invariants                                     |
 
 ## Cloud Storage object versions (Phase 8) — BACKUP-02
 
@@ -151,11 +152,11 @@ v5.0 V8.3 (sensitive data lifecycle) + STRIDE Tampering mitigation
 
 **Implementation cross-reference**:
 
-| Surface | File | Path |
-|---------|------|------|
-| Storage versioning enablement | `runbooks/phase-8-backup-setup.md` | gcloud `versioning` block |
-| Lifecycle rule | `runbooks/phase-8-backup-setup.md` | `noncurrentTimeBefore: 90` lifecycle action |
-| Tests | `tests/rules/storage.test.js` | storage-rules + versioning interplay cells |
+| Surface                       | File                               | Path                                        |
+| ----------------------------- | ---------------------------------- | ------------------------------------------- |
+| Storage versioning enablement | `runbooks/phase-8-backup-setup.md` | gcloud `versioning` block                   |
+| Lifecycle rule                | `runbooks/phase-8-backup-setup.md` | `noncurrentTimeBefore: 90` lifecycle action |
+| Tests                         | `tests/rules/storage.test.js`      | storage-rules + versioning interplay cells  |
 
 ## Chat messages + comments (Phase 8) — LIFE-04
 
@@ -180,21 +181,22 @@ Disclosure mitigation.
 
 **Implementation cross-reference**:
 
-| Surface | File | Path |
-|---------|------|------|
-| Message data wrapper | `src/data/messages.js` | `addMessage` |
-| Comment data wrapper | `src/data/comments.js` | `addComment` |
-| PII scrub (pre-write) | shared `PII_KEYS` per Phase 9 + Sentry beforeSend | `scrubPii` |
-| Cascade callable | `functions/src/lifecycle/permanentlyDeleteSoftDeleted.ts` | `permanentlyDeleteSoftDeleted` |
-| Tests | `tests/data/messages.test.js` + `tests/data/comments.test.js` + `tests/rules/messages.test.js` | per-collection cells |
+| Surface               | File                                                                                           | Path                           |
+| --------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------ |
+| Message data wrapper  | `src/data/messages.js`                                                                         | `addMessage`                   |
+| Comment data wrapper  | `src/data/comments.js`                                                                         | `addComment`                   |
+| PII scrub (pre-write) | shared `PII_KEYS` per Phase 9 + Sentry beforeSend                                              | `scrubPii`                     |
+| Cascade callable      | `functions/src/lifecycle/permanentlyDeleteSoftDeleted.ts`                                      | `permanentlyDeleteSoftDeleted` |
+| Tests                 | `tests/data/messages.test.js` + `tests/data/comments.test.js` + `tests/rules/messages.test.js` | per-collection cells           |
 
 ## Documents (Phase 8) — LIFE-05
 
 **Retention period**: lifecycle is **bound to the parent org** (same as Chat
-+ Comments above) — documents in `gs://bedeveloped-base-layers.firebasestorage.app/orgs/{orgId}/...`
-persist while the parent `orgs/{orgId}` Firestore doc persists. Storage
-object versioning preserves prior versions for 90 days post-deletion (see
-Cloud Storage object versions row above).
+
+- Comments above) — documents in `gs://bedeveloped-base-layers.firebasestorage.app/orgs/{orgId}/...`
+  persist while the parent `orgs/{orgId}` Firestore doc persists. Storage
+  object versioning preserves prior versions for 90 days post-deletion (see
+  Cloud Storage object versions row above).
 
 **Basis**: **operational** (engagement-life document lifecycle is the
 parent-document lifecycle).
@@ -209,12 +211,50 @@ Disclosure mitigation.
 
 **Implementation cross-reference**:
 
-| Surface | File | Path |
-|---------|------|------|
-| Document upload wrapper | `src/data/documents.js` | `uploadDocument` |
-| Storage rules (scoping) | `storage.rules` | `match /orgs/{orgId}/documents/{path=**}` block |
-| Cascade callable | `functions/src/lifecycle/permanentlyDeleteSoftDeleted.ts` | Storage-side cascade in the sweep |
-| Tests | `tests/data/documents.test.js` + `tests/rules/storage.test.js` | per-surface cells |
+| Surface                 | File                                                           | Path                                            |
+| ----------------------- | -------------------------------------------------------------- | ----------------------------------------------- |
+| Document upload wrapper | `src/data/documents.js`                                        | `uploadDocument`                                |
+| Storage rules (scoping) | `storage.rules`                                                | `match /orgs/{orgId}/documents/{path=**}` block |
+| Cascade callable        | `functions/src/lifecycle/permanentlyDeleteSoftDeleted.ts`      | Storage-side cascade in the sweep               |
+| Tests                   | `tests/data/documents.test.js` + `tests/rules/storage.test.js` | per-surface cells                               |
+
+## Document folders (Milestone v6) — FILE-06
+
+**Data class:** Folder metadata under `orgs/{orgId}/folders/{folderId}` — name,
+parent folder, creator uid, creation timestamp. Folders hold no file content;
+a document's `folderId` is what files it, so deleting a folder never touches a
+Cloud Storage object.
+
+**Retention period:** Indefinite while live. Once soft-deleted, 30 days, then
+permanent removal — the same window as documents, chat messages and comments.
+
+**Basis:** Business record retention for the duration of the engagement. A
+folder name is client business content, not personal data, beyond the
+`createdBy` uid that links it to a member of staff.
+
+**Deletion mechanism:** The `softDelete` callable writes the `deletedAt`
+tombstone and the restore snapshot at `softDeleted/folder/items/{id}` in one
+batch. `restoreSoftDeleted` reverses it inside the window;
+`permanentlyDeleteSoftDeleted` and the scheduled purge remove it after.
+
+**Why `deletedAt` is not client-writable:** A folder tombstoned by a direct
+client write would have no restore snapshot behind it — invisible in the UI and
+un-restorable inside the 30-day window this document promises. The folders
+update rule is whitelisted to `name`, `parentId` and `updatedAt` for that
+reason; the callable uses the Admin SDK and bypasses rules, so the legitimate
+path is unaffected.
+
+**A folder is refused deletion while it still holds anything.** The cascade was
+considered and rejected: it would be recoverable, since everything inside is
+covered by the same window, but it is far easier to trigger by accident and what
+is being accidentally deleted is a client's document set.
+
+**Evidence:** `firestore.rules` (folders block);
+`functions/src/lifecycle/resolveDocRef.ts`; `src/domain/folder-tree.js`
+(`canDeleteFolder`); `tests/rules/folders.test.js`;
+`tests/views/documents-folders.test.js`.
+
+---
 
 ## Authentication failure counters (Phase 9) — OBS-05
 
@@ -241,11 +281,11 @@ detection feeds `authAnomalyAlert` Rule 1) + OWASP ASVS L2 v5.0 V11.1
 
 **Implementation cross-reference**:
 
-| Surface | File | Path |
-|---------|------|------|
-| Counter writer | `functions/src/observability/authAnomalyAlert.ts` | `incrementCounter` |
-| Anomaly rule evaluator | `functions/src/observability/authAnomalyAlert.ts` | `authAnomalyAlert` (Rule 1 / 2 / 3) |
-| Tests | `functions/test/observability/authAnomalyAlert.unit.test.ts` | per-rule + window-tick cells |
+| Surface                | File                                                         | Path                                |
+| ---------------------- | ------------------------------------------------------------ | ----------------------------------- |
+| Counter writer         | `functions/src/observability/authAnomalyAlert.ts`            | `incrementCounter`                  |
+| Anomaly rule evaluator | `functions/src/observability/authAnomalyAlert.ts`            | `authAnomalyAlert` (Rule 1 / 2 / 3) |
+| Tests                  | `functions/test/observability/authAnomalyAlert.unit.test.ts` | per-rule + window-tick cells        |
 
 ## redactionList entries (Phase 7) — AUDIT-06
 
@@ -268,11 +308,11 @@ Information Disclosure mitigation.
 
 **Implementation cross-reference**:
 
-| Surface | File | Path |
-|---------|------|------|
-| Redaction registry callable | `functions/src/audit/redaction.ts` | `applyRedaction` |
-| Rules read-block | `firestore.rules` | `match /redactionList/{tokenId}` block (operator-only writes) |
-| Tests | `functions/test/audit/redaction.unit.test.ts` + `tests/rules/redaction-list.test.js` | per-surface cells |
+| Surface                     | File                                                                                 | Path                                                          |
+| --------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| Redaction registry callable | `functions/src/audit/redaction.ts`                                                   | `applyRedaction`                                              |
+| Rules read-block            | `firestore.rules`                                                                    | `match /redactionList/{tokenId}` block (operator-only writes) |
+| Tests                       | `functions/test/audit/redaction.unit.test.ts` + `tests/rules/redaction-list.test.js` | per-surface cells                                             |
 
 ## Rate Limiting (FN-09) — Phase 7 Wave 4
 
@@ -320,12 +360,12 @@ across messages+comments).
 
 **Implementation cross-reference**:
 
-| Surface | File | Path |
-|---------|------|------|
-| Rules predicate (primary) | `firestore.rules` | `rateLimitOk(uid)` + `rateLimits/{uid}/buckets/{windowStart}` block |
-| Client transactional helper | `src/data/rate-limit.js` | `incrementBucketAndWrite` |
-| Wired callers | `src/data/messages.js`, `src/data/comments.js` | `addMessage` / `addComment` |
-| Fallback callable (seam) | `functions/src/ratelimit/checkRateLimit.ts` | `checkRateLimit` (deployed, not wired) |
-| Rules-unit-test | `tests/rules/rate-limit.test.js` | 15 cells |
-| Helper unit-test | `tests/data/rate-limit.test.js` | 6 cells |
-| Callable unit-test | `functions/test/ratelimit/checkRateLimit.unit.test.ts` | 10 cells |
+| Surface                     | File                                                   | Path                                                                |
+| --------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------- |
+| Rules predicate (primary)   | `firestore.rules`                                      | `rateLimitOk(uid)` + `rateLimits/{uid}/buckets/{windowStart}` block |
+| Client transactional helper | `src/data/rate-limit.js`                               | `incrementBucketAndWrite`                                           |
+| Wired callers               | `src/data/messages.js`, `src/data/comments.js`         | `addMessage` / `addComment`                                         |
+| Fallback callable (seam)    | `functions/src/ratelimit/checkRateLimit.ts`            | `checkRateLimit` (deployed, not wired)                              |
+| Rules-unit-test             | `tests/rules/rate-limit.test.js`                       | 15 cells                                                            |
+| Helper unit-test            | `tests/data/rate-limit.test.js`                        | 6 cells                                                             |
+| Callable unit-test          | `functions/test/ratelimit/checkRateLimit.unit.test.ts` | 10 cells                                                            |

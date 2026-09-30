@@ -47,6 +47,7 @@
 - [§ Phase 10 Audit Index](#-phase-10-audit-index)
 - [§ Phase 11 Audit Index](#-phase-11-audit-index)
 - [§ Phase 12 Audit Index](#-phase-12-audit-index)
+- [§ Milestone v6 — Client Write Surface + Document Folders](#-milestone-v6--client-write-surface--document-folders)
 
 ---
 
@@ -1497,6 +1498,111 @@ Auditor walk-through pointer for Phase 12 (Audit Walkthrough + Final Report). Ea
 **Phase 12 close gate:** All WALK-01..04 rows above flipped to `[x]` in `.planning/REQUIREMENTS.md` (with `Closed Phase 12 — Plan 12-XX` annotation per row). DOC-10 row appended with Phase 12 final-increment annotation. `runbooks/phase-12-cleanup-ledger.md` zero-out gate `phase_12_active_rows: 0`.
 
 **Index self-check:** if any row above cites a path that does not exist on disk OR a `:NN` line-number suffix, `tests/security-md-paths-exist.test.js` fails. The CI gate keeps this index honest.
+
+---
+
+## § Milestone v6 — Client Write Surface + Document Folders
+
+**Read this before any earlier statement about what a client may write.**
+Milestone v6 deliberately widened the client write surface on actions. Any
+sentence elsewhere in this document describing a client as able to change only
+completion fields is describing the pre-v6 build.
+
+### What changed, and what did not
+
+| Field on `orgs/{orgId}/actions/{actId}` | Pre-v6 client | Post-v6 client |
+|---|---|---|
+| `done` / `completedAt` / `completedBy` | writable | writable |
+| `title` / `description` / `owner` / `pillarId` | denied | **writable** |
+| `lastEditedBy` / `lastEditedAt` | (did not exist) | writable, but only with the writer's own uid |
+| `due` | denied | denied |
+| `internal` | denied | denied |
+| `createdBy` / `createdAt` / `orgId` / `deletedAt` | denied | denied |
+| create / hard delete | denied | denied |
+
+The whitelist is `mutableOnly` in the client branch of the actions `allow update`
+rule. Everything in the denied rows is denied by omission from that list rather
+than by a separate `immutable()` conjunct, so there is exactly one place to read
+to know what a client can do.
+
+### Why `due` stays with BeDeveloped
+
+The Actions tab groups into Overdue / Current / Completed, and Overdue is the
+list a consultant runs the engagement from. A client who could move a due date
+could clear their own overdue list. The UI renders the due input `disabled` with
+the reason, so a client reads a sentence rather than hitting a permission error;
+the rule is what enforces it.
+
+### Attribution cannot be forged
+
+Every edit stamps `lastEditedBy` and `lastEditedAt`. The `editorIsSelf()`
+predicate denies any write that sets `lastEditedBy` to a uid other than
+`request.auth.uid`. Without the server-side check the field would be decorative:
+a client widened to edit wording could otherwise stamp a consultant's uid onto
+their own change, and this is precisely the field BeDeveloped would point a
+prospect at as evidence of who changed what.
+
+A write that does not touch `lastEditedBy` is unaffected, so a client on an older
+build still completes actions normally.
+
+**Known gap, recorded rather than hidden:** `completedBy` is not checked the same
+way. It is written by a build already in production, so tightening it changes a
+deployed contract and belongs in its own change. See `THREAT_MODEL.md`
+§ Residual risks R2.
+
+### Document folders
+
+`orgs/{orgId}/folders/{folderId}` holds a nested tree over an org's documents.
+Folders carry no file content — a document's `folderId` is what files it — so
+moving a file is a one-field Firestore write and no Cloud Storage object is ever
+rewritten.
+
+- **Creation and renaming are internal-only.** A client who could rename a folder
+  could rename it to something the consultant would not say to their board.
+- **`documents` update opened from `false` to exactly `folderId` + `updatedAt`,
+  internal-only.** `storagePath` stays immutable for every role. A writable
+  `storagePath` would let a metadata row be repointed at another org's Storage
+  object, after which a signed URL for it is one callable away.
+- **Folders join the 30-day soft-delete window** (`docs/RETENTION.md` § Document
+  folders). `deletedAt` is not client-writable: a folder tombstoned by a direct
+  write would carry no restore snapshot, making it invisible and un-restorable
+  inside the window this documentation promises.
+- **Deleting a non-empty folder is refused**, naming what is in the way. The
+  cascade was considered and rejected — recoverable, but far easier to trigger by
+  accident, and what is accidentally deleted is a client's document set.
+
+**Cycle and depth prevention are NOT rules-enforced.** A Firestore rule cannot
+walk a `parentId` chain. The guards live in `src/domain/folder-tree.js` and are a
+correctness concern, not a security boundary; the consequence of a cycle is
+orphaning rather than exposure, and tenancy remains rules-enforced throughout.
+Recorded as `THREAT_MODEL.md` § Residual risks R1.
+
+### A query correction shipped with this milestone
+
+The documents listener previously queried the whole collection unconstrained
+while the read rule tested `notDeleted(resource.data)`. Firestore does not filter
+a `list` against a rule that reads `resource.data` — it refuses the query unless
+the query itself guarantees every match passes. Both listeners are now
+constrained to `deletedAt == null`, and uploads write `deletedAt: null`
+explicitly, because an equality filter on `null` does not match a document that
+lacks the field. `scripts/backfill-document-folder-fields` closes the same gap
+for rows written before v6 and must run before this client is deployed.
+
+### Evidence
+
+| Claim | Code | Test |
+|---|---|---|
+| Client field whitelist | `firestore.rules` (actions block) | `tests/rules/actions.test.js` |
+| Attribution cannot be forged | `firestore.rules` (`editorIsSelf`); `src/main.js` | `tests/rules/actions.test.js` |
+| Folder tenancy + internal-only writes | `firestore.rules` (folders block) | `tests/rules/folders.test.js` |
+| `storagePath` immutable across a move | `firestore.rules` (documents block) | `tests/rules/folders.test.js`; `tests/views/documents-folders.test.js` |
+| Cycle + depth guards (client-side) | `src/domain/folder-tree.js` | `tests/domain/folder-tree.test.js` |
+| Constrained list queries | `src/views/documents.js` | `tests/rules/folders.test.js` |
+
+Framework mapping: OWASP ASVS L2 v5.0 V4.1 + V4.2 + V11.1 + V12.3;
+ISO/IEC 27001:2022 Annex A.5.15 + A.8.3 + A.8.10 + A.8.15; SOC 2 CC6.1 + CC6.5 +
+CC7.2; GDPR Art. 17(1) + Art. 32(1)(d). Canonical rows in
+`docs/CONTROL_MATRIX.md` § Milestone v6.
 
 ---
 

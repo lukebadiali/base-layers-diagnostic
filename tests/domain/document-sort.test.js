@@ -1,6 +1,6 @@
 // tests/domain/document-sort.test.js
 // @ts-check
-// Milestone v6 (DOC-05). The createdAt shape matrix is the point: the live
+// Milestone v6 (FILE-05). The createdAt shape matrix is the point: the live
 // listener hands over Firestore Timestamps, the localStorage mirror and the
 // fixtures hand over ISO strings, and a comparator that reads one of those as
 // zero silently sinks those files to the bottom of a date-ordered list.

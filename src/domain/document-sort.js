@@ -1,6 +1,6 @@
 // src/domain/document-sort.js
 // @ts-check
-// Milestone v6 (DOC-05): the document list sorts by date added (default),
+// Milestone v6 (FILE-05): the document list sorts by date added (default),
 // name, or uploader. Kept pure — no DOM, no Firebase — even though the
 // timestamps it reads arrive as Firestore Timestamp objects, because the
 // alternative is a sort comparator that can only be exercised by booting the

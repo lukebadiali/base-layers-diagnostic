@@ -1,6 +1,6 @@
 # scripts/backfill-document-folder-fields
 
-Milestone v6 (DOC-02 / DOC-05). Adds `folderId: null` and `deletedAt: null` to
+Milestone v6 (FILE-02 / FILE-05). Adds `folderId: null` and `deletedAt: null` to
 document metadata rows under `orgs/{orgId}/documents/{docId}` that predate the
 folder tree.
 

@@ -84,7 +84,7 @@ export const state = {
   // just added isn't there" is a far worse failure than re-picking a filter.
   actionFilters: { pillar: "all", owner: "all", due: "all" },
   expandedActions: new Set(),
-  // Milestone v6 (DOC-02): the folder the Documents tab is currently showing;
+  // Milestone v6 (FILE-02): the folder the Documents tab is currently showing;
   // null is the root. Held here rather than in the route so that navigating
   // away to Chat and back returns the user to where they were, which is what a
   // file browser is expected to do. Not persisted: a folder that survived a

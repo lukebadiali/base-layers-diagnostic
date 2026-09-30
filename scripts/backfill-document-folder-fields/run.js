@@ -2,7 +2,7 @@
 // scripts/backfill-document-folder-fields/run.js
 // @ts-check
 //
-// Milestone v6 (DOC-02 / DOC-05): one-shot Admin-SDK script that adds
+// Milestone v6 (FILE-02 / FILE-05): one-shot Admin-SDK script that adds
 // `folderId: null` and `deletedAt: null` to existing document metadata rows
 // that predate the folder tree.
 //

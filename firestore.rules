@@ -169,7 +169,7 @@ service cloud.firestore {
         allow delete: if false;
       }
 
-      // ── folders subcollection (Milestone v6 / DOC-01..DOC-04) ───────
+      // ── folders subcollection (Milestone v6 / FILE-01..FILE-04) ───────
       // A nested tree over an org's documents. Folders hold no content — a
       // document's `folderId` is what files it — so nothing here touches
       // Cloud Storage and moving a file is a one-field Firestore write rather
@@ -214,7 +214,7 @@ service cloud.firestore {
       }
 
       // ── documents subcollection ─────────────────────────────────────
-      // Milestone v6 (DOC-03): `allow update` opens from `false` to exactly
+      // Milestone v6 (FILE-03): `allow update` opens from `false` to exactly
       // one field. Filing a document is a change of `folderId` and nothing
       // else — the filename, the size, the content type, the uploader and
       // above all `storagePath` stay immutable, because a writable

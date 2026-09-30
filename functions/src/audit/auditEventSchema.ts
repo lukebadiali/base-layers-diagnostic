@@ -73,7 +73,7 @@ export const auditEventType = z.enum([
   "data.funnelComment.softDelete",
   "data.funnelComment.restore",
   "data.funnelComment.permanentlyDelete",
-  // Milestone v6 (DOC-06): folders are soft-deletable, so they need the same
+  // Milestone v6 (FILE-06): folders are soft-deletable, so they need the same
   // three flavours. 6 types x 3 ops = 18.
   "data.folder.softDelete",
   "data.folder.restore",
@@ -103,7 +103,7 @@ export const auditEventType = z.enum([
   "data.funnelComment.softDelete.requested",
   "data.funnelComment.restore.requested",
   "data.funnelComment.permanentlyDelete.requested",
-  // Milestone v6 (DOC-06): folder companions. 1 iam + 2 compliance + 18 data = 21.
+  // Milestone v6 (FILE-06): folder companions. 1 iam + 2 compliance + 18 data = 21.
   "data.folder.softDelete.requested",
   "data.folder.restore.requested",
   "data.folder.permanentlyDelete.requested",

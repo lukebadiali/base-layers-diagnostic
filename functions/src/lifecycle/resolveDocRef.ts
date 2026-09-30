@@ -3,7 +3,7 @@
 // softDelete + restoreSoftDeleted + scheduledPurge + permanentlyDeleteSoftDeleted
 // so the path-map is single-source-of-truth.
 
-// Milestone v6 (DOC-06): folders join the soft-delete window. Adding a member
+// Milestone v6 (FILE-06): folders join the soft-delete window. Adding a member
 // here fails the build at every exhaustive switch over the union until each is
 // updated, which is the point — a lifecycle path that silently skipped folders
 // would leave tombstoned folders un-purgeable and un-restorable.

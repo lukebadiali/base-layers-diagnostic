@@ -153,10 +153,13 @@ export function createDocumentsView(deps) {
    * rather than the app-level render(), so moving between folders never tears
    * down and re-subscribes the listeners.
    *
-   * Both queries MUST be constrained. Firestore does not filter a list against
-   * a rule that reads resource.data — it refuses the whole query unless the
-   * query guarantees every match passes. One tombstoned file was breaking the
-   * entire document list before v6. See tests/rules/folders.test.js.
+   * Both queries are constrained to `deletedAt == null` so that tombstoned
+   * rows are excluded by the query itself rather than by per-document rule
+   * evaluation. That also means a document MISSING the field is excluded — an
+   * equality filter on null does not match an absent field — which is why
+   * uploads write `deletedAt: null` explicitly and why
+   * scripts/backfill-document-folder-fields exists for rows written before v6.
+   * See tests/rules/folders.test.js.
    *
    * @param {*} user
    * @param {*} org

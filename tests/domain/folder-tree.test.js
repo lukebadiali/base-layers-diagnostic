@@ -244,3 +244,63 @@ describe("buildTree and flattenTree", () => {
     expect(flattenTree(/** @type {*} */ (undefined))).toEqual([]);
   });
 });
+
+describe("folder-tree — defensive and boundary paths", () => {
+  it("descendantIds tolerates a non-array folder set", () => {
+    expect(descendantIds(/** @type {*} */ (null), "a").size).toBe(0);
+  });
+
+  it("canDeleteFolder pluralises sub-folders correctly", () => {
+    const many = [f("p", null), f("c1", "p"), f("c2", "p")];
+    const v = canDeleteFolder(many, [], "p");
+    expect(v.ok).toBe(false);
+    expect(v.ok === false && v.reason).toContain("2 sub-folders");
+    expect(v.ok === false && v.reason).not.toContain("file");
+  });
+
+  it("canDeleteFolder says one file, singular", () => {
+    const v = canDeleteFolder(TREE, [file("only", "c")], "c");
+    expect(v.ok === false && v.reason).toContain("1 file");
+    expect(v.ok === false && v.reason).not.toContain("1 files");
+  });
+
+  it("buildTree stops descending at the depth cap", () => {
+    // A chain one level deeper than the cap allows. buildTree must not walk
+    // past MAX_FOLDER_DEPTH even though the data says it could — a tree
+    // written past the cap out-of-band (the R1 residual risk) must still
+    // render something finite.
+    const deep = [];
+    for (let i = 1; i <= MAX_FOLDER_DEPTH + 1; i++) {
+      deep.push(f(`L${i}`, i === 1 ? null : `L${i - 1}`));
+    }
+    const flat = flattenTree(deep);
+    expect(flat.length).toBe(MAX_FOLDER_DEPTH);
+    expect(flat[flat.length - 1].depth).toBe(MAX_FOLDER_DEPTH);
+    expect(flat.map((n) => n.folder.id)).not.toContain(`L${MAX_FOLDER_DEPTH + 1}`);
+  });
+
+  it("documentsIn tolerates a non-array document set", () => {
+    expect(documentsIn(/** @type {*} */ (null), ROOT, TREE)).toEqual([]);
+  });
+
+  it("childFolders tolerates a non-array folder set", () => {
+    expect(childFolders(/** @type {*} */ (undefined), ROOT)).toEqual([]);
+  });
+
+  it("indexFolders and pathTo tolerate a folder id given as a number", () => {
+    const numeric = [{ id: 7, parentId: null, name: "Seven" }];
+    expect(pathTo(numeric, /** @type {*} */ (7)).map((x) => x.name)).toEqual(["Seven"]);
+    expect(depthOf(numeric, /** @type {*} */ (7))).toBe(1);
+  });
+});
+
+describe("folder-tree — null entries inside otherwise valid sets", () => {
+  it("documentsIn skips a null document", () => {
+    expect(documentsIn([null, file("real", null)], ROOT, TREE).map((d) => d.id)).toEqual(["real"]);
+  });
+
+  it("descendantIds skips null and id-less folders while walking", () => {
+    const messy = [f("root", null), null, { parentId: "root", name: "no id" }, f("child", "root")];
+    expect(Array.from(descendantIds(messy, "root"))).toEqual(["child"]);
+  });
+});

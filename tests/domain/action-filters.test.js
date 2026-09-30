@@ -225,3 +225,48 @@ describe("isFiltered", () => {
     expect(isFiltered({ due: "overdue" })).toBe(true);
   });
 });
+
+describe("filterActions — an unrecognised due bucket", () => {
+  it("passes dated actions through rather than hiding everything", () => {
+    // A stale value from an older build, or a typo in a caller. Showing too
+    // much is recoverable; silently showing nothing looks like data loss.
+    const actions = [act({ id: "dated", due: "2026-10-01" }), act({ id: "undated", due: "" })];
+    expect(filterActions(actions, { due: "someOldKey" }, TODAY).map((a) => a.id)).toEqual([
+      "dated",
+    ]);
+  });
+});
+
+describe("filterActions — malformed field types", () => {
+  it("treats a non-string due and a non-string owner as blank", () => {
+    // Same reason as the grouping module's equivalent cases: the actions array
+    // is a localStorage mirror that has been through several schema changes,
+    // so a field can arrive as the wrong type. Blank is the safe reading —
+    // it surfaces the action under "Unassigned" rather than dropping it.
+    const actions = [
+      act({ id: "numDue", due: 20260101 }),
+      act({ id: "objOwner", owner: { name: "Jane" } }),
+    ];
+    // Both match "no due date": numDue's due is a number rather than a string,
+    // and objOwner's is the blank the fixture defaults to.
+    expect(filterActions(actions, { due: UNASSIGNED }, TODAY).map((a) => a.id)).toEqual([
+      "numDue",
+      "objOwner",
+    ]);
+    expect(filterActions(actions, { owner: UNASSIGNED }, TODAY).map((a) => a.id)).toEqual([
+      "numDue",
+      "objOwner",
+    ]);
+  });
+
+  it("hasUnassigned* tolerate null entries and non-string fields", () => {
+    expect(hasUnassignedOwner([null, act({ owner: "Sam" })])).toBe(false);
+    expect(hasUnassignedOwner([act({ owner: 42 })])).toBe(true);
+    expect(hasUnassignedPillar([null, act({ pillarId: 1 })])).toBe(false);
+    expect(hasUnassignedPillar([act({ pillarId: "" })])).toBe(true);
+  });
+
+  it("ownerOptions ignores a non-string owner", () => {
+    expect(ownerOptions([act({ owner: 42 }), act({ owner: "Sam" })])).toEqual(["Sam"]);
+  });
+});

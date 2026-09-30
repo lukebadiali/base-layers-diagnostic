@@ -1587,14 +1587,29 @@ Recorded as `THREAT_MODEL.md` § Residual risks R1.
 
 ### A query correction shipped with this milestone
 
-The documents listener previously queried the whole collection unconstrained
-while the read rule tested `notDeleted(resource.data)`. Firestore does not filter
-a `list` against a rule that reads `resource.data` — it refuses the query unless
-the query itself guarantees every match passes. Both listeners are now
-constrained to `deletedAt == null`, and uploads write `deletedAt: null`
-explicitly, because an equality filter on `null` does not match a document that
-lacks the field. `scripts/backfill-document-folder-fields` closes the same gap
-for rows written before v6 and must run before this client is deployed.
+Both document and folder listeners are now constrained to `deletedAt == null`,
+and uploads write `deletedAt: null` explicitly.
+
+**A claim made earlier in this milestone has been withdrawn.** The pre-v6
+listener queried the whole collection unconstrained while the read rule tested
+`notDeleted(resource.data)`, and the documented Firestore model — rules are not
+filters — implied that one soft-deleted file was refusing the whole query and
+therefore breaking the document list for that org. A rules test written to
+confirm it showed the opposite: against the emulator the unconstrained query
+succeeds. **There is no confirmed production bug here**, and the earlier
+statement that there was should not be carried forward.
+
+Two things remain true regardless:
+
+- The emulator is more permissive than production on `list` evaluation, so its
+  success is not proof of production's. A constrained query is correct under
+  either behaviour and costs nothing.
+- **The backfill is still required.** A Firestore equality filter on `null`
+  matches a field that IS null; it does not match a document missing the field,
+  which every pre-v6 upload is. Without
+  `scripts/backfill-document-folder-fields`, those files disappear from the list
+  once the constrained query ships. That reasoning never depended on the
+  withdrawn claim. See `tests/rules/folders.test.js`.
 
 ### Evidence
 

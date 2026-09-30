@@ -6,14 +6,9 @@ folder tree.
 
 ## Why this is not optional
 
-The v6 documents listener queries with `where("deletedAt", "==", null)`.
-
-It has to. Firestore does not filter a `list` against a rule that reads
-`resource.data` — it refuses the whole query unless the query itself guarantees
-every match passes the read rule. The documents read rule is
-`inOrg(orgId) && notDeleted(resource.data)`, so an unconstrained query over a
-collection holding a single tombstoned file was failing for the whole
-collection. `tests/rules/folders.test.js` asserts both halves of this.
+The v6 documents listener queries with `where("deletedAt", "==", null)`, so
+tombstoned files are excluded by the query itself rather than by per-document
+rule evaluation.
 
 A Firestore equality filter on `null` matches documents whose field **is**
 `null`. It does **not** match documents that lack the field. The pre-v6 upload

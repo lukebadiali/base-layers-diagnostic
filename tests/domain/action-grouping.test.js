@@ -182,3 +182,46 @@ describe("isoToday", () => {
     expect(isoToday(late)).toBe("2026-09-30");
   });
 });
+
+// Defensive paths. These exist because the actions array is a localStorage
+// mirror that has survived several schema migrations, so a field can be the
+// wrong type or unparseable. The coverage gate on src/domain/** is what makes
+// sure the fallbacks are exercised rather than merely written.
+describe("groupActions — malformed field values", () => {
+  it("treats a non-string due as no due date rather than throwing", () => {
+    const g = groupActions(
+      [
+        { id: "num", due: 20260101, done: false },
+        { id: "obj", due: { seconds: 1 }, done: false },
+        { id: "real", due: "2026-09-01", done: false },
+      ],
+      TODAY,
+    );
+    // The two malformed ones sort as undated, so they land in Current, last.
+    expect(g.overdue.map((a) => a.id)).toEqual(["real"]);
+    expect(g.current.map((a) => a.id)).toEqual(["num", "obj"]);
+  });
+
+  it("treats an unparseable createdAt as epoch zero in a tie-break", () => {
+    const g = groupActions(
+      [
+        { id: "junk", due: "", done: false, createdAt: "not a date" },
+        { id: "good", due: "", done: false, createdAt: "2026-05-01T00:00:00.000Z" },
+      ],
+      TODAY,
+    );
+    // Newest-first: the parseable one wins, the junk one sorts as oldest.
+    expect(g.current.map((a) => a.id)).toEqual(["good", "junk"]);
+  });
+
+  it("treats an unparseable completedAt as its createdAt", () => {
+    const g = groupActions(
+      [
+        { id: "a", done: true, completedAt: "nonsense", createdAt: "2026-01-01T00:00:00.000Z" },
+        { id: "b", done: true, completedAt: "nonsense", createdAt: "2026-08-01T00:00:00.000Z" },
+      ],
+      TODAY,
+    );
+    expect(g.completed.map((a) => a.id)).toEqual(["b", "a"]);
+  });
+});

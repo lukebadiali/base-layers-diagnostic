@@ -210,3 +210,75 @@ describe("normaliseSortKey", () => {
     );
   });
 });
+
+describe("sortDocuments / sortFolders — malformed rows", () => {
+  it("createdMillis survives a toDate that does not return a Date", () => {
+    expect(createdMillis({ createdAt: { toDate: () => "not a date" } })).toBe(0);
+  });
+
+  it("createdMillis survives a toMillis that returns nothing", () => {
+    expect(createdMillis({ createdAt: { toMillis: () => undefined } })).toBe(0);
+  });
+
+  it("a document with neither filename nor name sorts as an empty name", () => {
+    const out = sortDocuments(
+      [
+        doc({ id: "named", filename: "b.pdf" }),
+        doc({ id: "nameless", filename: undefined, name: undefined }),
+      ],
+      "name",
+    );
+    expect(out.map((d) => d.id)).toEqual(["nameless", "named"]);
+  });
+
+  it("two documents with no uploader at all keep a stable order", () => {
+    // Both sides blank means the !ua !== !ub guard does not fire, and the
+    // comparison falls through to filename then to newest-first.
+    const out = sortDocuments(
+      [
+        doc({ id: "b", uploaderName: undefined, uploaderEmail: undefined, filename: "b.pdf" }),
+        doc({ id: "a", uploaderName: undefined, uploaderEmail: undefined, filename: "a.pdf" }),
+      ],
+      "uploader",
+    );
+    expect(out.map((d) => d.id)).toEqual(["a", "b"]);
+  });
+
+  it("uploaderLabel and displayName tolerate a null row", () => {
+    expect(uploaderLabel(null)).toBe("");
+    expect(sortDocuments([null, doc({ id: "real" })], "name").length).toBe(2);
+  });
+
+  it("sortFolders tolerates a folder with no name", () => {
+    const out = sortFolders([{ id: "b", name: "Beta" }, { id: "nameless" }]);
+    expect(out.map((f) => f.id)).toEqual(["nameless", "b"]);
+  });
+});
+
+describe("sortDocuments — remaining uploader-sort branches", () => {
+  it("pushes a blank uploader down whichever side of the comparison it is on", () => {
+    // The named/unnamed guard has to work in both argument orders, or the
+    // result depends on the input order the snapshot happened to arrive in.
+    const blank = doc({ id: "blank", uploaderName: undefined, uploaderEmail: undefined });
+    const named = doc({ id: "named", uploaderName: "Zoe" });
+    expect(sortDocuments([blank, named], "uploader").map((d) => d.id)).toEqual(["named", "blank"]);
+    expect(sortDocuments([named, blank], "uploader").map((d) => d.id)).toEqual(["named", "blank"]);
+  });
+
+  it("falls through to newest-first when uploader AND filename both tie", () => {
+    const out = sortDocuments(
+      [
+        doc({ id: "old", uploaderName: "Jane", filename: "same.pdf", createdAt: stamp(1) }),
+        doc({ id: "new", uploaderName: "Jane", filename: "same.pdf", createdAt: stamp(2) }),
+      ],
+      "uploader",
+    );
+    expect(out.map((d) => d.id)).toEqual(["new", "old"]);
+  });
+
+  it("sortFolders tolerates a null entry", () => {
+    const out = sortFolders([null, { id: "a", name: "Alpha" }]);
+    expect(out.length).toBe(2);
+    expect(out[out.length - 1].id).toBe("a");
+  });
+});

@@ -13,7 +13,7 @@
 //      proved in tests/domain/folder-tree.test.js. The case at the bottom of
 //      this file asserts the gap rather than pretending it is closed, so
 //      nobody reads a green rules suite as covering it.
-import { describe, it, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import {
   setDoc,
   doc,
@@ -282,41 +282,77 @@ describe("documents — the folderId widening (FILE-03)", () => {
   });
 });
 
-describe("documents — list queries must be constrained (rules are not filters)", () => {
-  // The pre-v6 listener queried the whole documents collection with no
-  // constraint, while the read rule tests notDeleted(resource.data). Firestore
-  // does not filter a list against a rule that reads resource.data — it
-  // refuses the query unless the query itself guarantees every match passes.
+describe("documents — what the constrained list query actually guarantees", () => {
+  // WHAT THIS BLOCK ORIGINALLY ASSERTED, AND WHY IT WAS WRONG.
   //
-  // If that is right, one soft-deleted file was breaking the entire document
-  // list for that org. These two cases adjudicate it in CI, where the emulator
-  // actually runs. If the unconstrained case turns out to SUCCEED, this test
-  // fails loudly and the comment above is what needs correcting — which is the
-  // point of asserting it rather than assuming either way.
+  // The pre-v6 listener queried the whole documents collection with no
+  // constraint, while the read rule tests notDeleted(resource.data). The
+  // documented Firestore model is that rules are not filters: a `list` is
+  // refused unless the query itself guarantees every match passes. On that
+  // reading, one soft-deleted file was breaking the entire document list for
+  // an org — and this file originally asserted that refusal.
+  //
+  // It does not happen. Against the emulator the unconstrained query SUCCEEDS.
+  // So the "live production bug" that reading implied is unconfirmed, and any
+  // claim of one has been withdrawn.
+  //
+  // Two caveats worth keeping, because neither is settled by the above:
+  //   1. The emulator is known to be more permissive than production on list
+  //      evaluation. Emulator success is not proof of production success.
+  //   2. It changes nothing about what the app should do. A constrained query
+  //      is correct under either behaviour, and the `deletedAt == null` filter
+  //      is what keeps tombstoned files out of the list rather than relying on
+  //      per-document rule evaluation to do it.
+  //
+  // So the cases below assert the app's actual contract — what the constrained
+  // query returns — rather than a Firestore implementation detail.
   beforeEach(async () => {
     await seed("orgs/orgA/documents/live", baseDocument);
     await seed("orgs/orgA/documents/gone", { ...baseDocument, deletedAt: Timestamp.now() });
   });
 
-  it("a constrained query (deletedAt == null) succeeds", async () => {
+  it("a constrained query returns the live document and not the tombstone", async () => {
     const internal = asUser(testEnv, "internal", claimsByRole.internal);
-    await assertSucceeds(
+    const snap = await assertSucceeds(
       getDocs(query(collection(internal, "orgs/orgA/documents"), where("deletedAt", "==", null))),
     );
+    expect(snap.docs.map((/** @type {*} */ d) => d.id)).toEqual(["live"]);
   });
 
-  it("an unconstrained query over a collection holding a tombstone fails", async () => {
+  it("a document with NO deletedAt field is excluded — which is why the backfill exists", async () => {
+    // A Firestore equality filter on null matches a field that IS null. It does
+    // not match a document missing the field. Every file uploaded before v6
+    // lacks it, so without scripts/backfill-document-folder-fields those files
+    // vanish from the list: no error, no empty state, just a shorter list than
+    // the client remembers. This is the case for that script, and it holds
+    // regardless of how Firestore evaluates unconstrained lists.
+    const legacy = { ...baseDocument };
+    delete legacy.deletedAt;
+    await seed("orgs/orgA/documents/legacy", legacy);
+
     const internal = asUser(testEnv, "internal", claimsByRole.internal);
-    await assertFails(getDocs(collection(internal, "orgs/orgA/documents")));
+    const snap = await assertSucceeds(
+      getDocs(query(collection(internal, "orgs/orgA/documents"), where("deletedAt", "==", null))),
+    );
+    expect(snap.docs.map((/** @type {*} */ d) => d.id)).not.toContain("legacy");
+    expect(snap.docs.map((/** @type {*} */ d) => d.id)).toEqual(["live"]);
   });
 
-  it("the same holds for folders", async () => {
+  it("the same constrained query works for folders", async () => {
     await seed(folderPath, baseFolder);
     await seed(childPath, { ...baseFolder, id: "f_child", deletedAt: Timestamp.now() });
     const internal = asUser(testEnv, "internal", claimsByRole.internal);
-    await assertSucceeds(
+    const snap = await assertSucceeds(
       getDocs(query(collection(internal, "orgs/orgA/folders"), where("deletedAt", "==", null))),
     );
-    await assertFails(getDocs(collection(internal, "orgs/orgA/folders")));
+    expect(snap.docs.map((/** @type {*} */ d) => d.id)).toEqual(["f_root"]);
+  });
+
+  it("records that the emulator PERMITS an unconstrained list over a tombstone", async () => {
+    // Kept as a finding, not as a requirement. If this ever starts failing,
+    // the emulator has moved toward the documented production model and the
+    // caveat above is the thing to revisit — not this test.
+    const internal = asUser(testEnv, "internal", claimsByRole.internal);
+    await assertSucceeds(getDocs(collection(internal, "orgs/orgA/documents")));
   });
 });

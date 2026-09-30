@@ -165,12 +165,14 @@ are set, so a plain `fetch` script on Node 20 is enough and needs no dependency.
       unrun suite on the branch.** It covers: the per-field client allow/deny
       matrix on actions, that a client cannot add a field the record does not
       have, folder tenancy and internal-only writes, `storagePath` immutability,
-      and the two "rules are not filters" query cases.
-- [ ] Watch specifically for `tests/rules/folders.test.js` →
-      *"an unconstrained query over a collection holding a tombstone fails"*.
-      That test asserts a **suspected pre-existing production bug**: if it fails,
-      Firestore filters rather than refuses, and the premise behind the
-      `deletedAt` backfill needs revisiting. Either result is information.
+      and the constrained-list-query cases.
+- [x] **Already answered, 2026-09-30.** The suite ran in CI on PR #97: 325 of 327
+      passed, and the two failures were the pair asserting that an unconstrained
+      list over a collection holding a tombstone is refused. It is not —
+      the emulator permits it. The suspected pre-existing production bug is
+      therefore **unconfirmed** and the claim has been withdrawn from
+      `SECURITY.md` and the milestone plan. The tests now assert what the
+      constrained query actually returns, which is the app's real contract.
 
 ### 3.3 — Blocked by G2 (Node 22)
 

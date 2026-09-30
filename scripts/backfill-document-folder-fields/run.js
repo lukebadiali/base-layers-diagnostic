@@ -8,11 +8,9 @@
 //
 // WHY THIS IS NOT OPTIONAL.
 //
-// The v6 documents listener queries with `where("deletedAt", "==", null)`,
-// because Firestore does not filter a list operation against a rule that reads
-// resource.data — it refuses the whole query unless the query itself guarantees
-// every match passes the read rule. (See the "rules are not filters" block in
-// tests/rules/folders.test.js.)
+// The v6 documents listener queries with `where("deletedAt", "==", null)`, so
+// that tombstoned files are excluded by the query rather than relying on
+// per-document rule evaluation to hide them.
 //
 // A Firestore equality filter on null matches documents whose field IS null. It
 // does NOT match documents that lack the field entirely. The pre-v6 upload path

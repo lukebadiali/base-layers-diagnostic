@@ -208,7 +208,7 @@ leaves the first call's backdrop listener attached to `#modalRoot`.
 - Depth cap of 5 and cycle prevention enforced in `domain/folder-tree.js` and at the write site. Rules cannot express reachability, so this is a client-and-callable guard; record the residual risk explicitly in `THREAT_MODEL.md` rather than implying rules enforce it.
 - Soft-delete: add `"folder"` to `SOFT_DELETABLE_TYPES` and `resolveDocPath` in `functions/src/lifecycle/resolveDocRef.ts`; the exhaustive switch will fail the TypeScript build until every consumer is updated, which is the intended forcing function. Restore and scheduled purge follow.
 - Delete of a non-empty folder is refused — checked client-side for the message, and in the callable for the guarantee.
-- **Verify first:** the documents listener at `src/main.js:3805` queries the whole collection with no `where("deletedAt","==",null)`, while the read rule requires `notDeleted(resource.data)`. Firestore rules are not filters. Confirm against the emulator whether a soft-deleted document breaks the whole listener; if it does, that is a live bug in the current build and it is fixed here, with an index if the compound query needs one.
+- **Verified, and the suspicion was wrong.** The pre-v6 documents listener queried the whole collection with no `where("deletedAt","==",null)` while the read rule required `notDeleted(resource.data)`, which the documented Firestore model says should refuse the query — a live bug. A rules test written to confirm it showed the opposite in CI on 2026-09-30: the unconstrained query succeeds. The claim is withdrawn. The constrained query ships regardless (correct under either behaviour; the emulator is known to be more permissive than production on `list`), and the backfill is still required for the separate reason that an equality filter on `null` does not match a document missing the field.
 
 **Success criteria**
 1. Rules-emulator cells: internal can create/rename a folder; a client cannot; neither can hard-delete; a client in another org cannot read.
@@ -392,7 +392,14 @@ they can go out ahead of it in one window or three.
 
 3. **Nested folders have no server-side cycle guard.** Firestore rules cannot walk a parent chain. Depth and cycle prevention live in the client and in the delete callable. This is a correctness-and-UX guard, not a security boundary, and the threat model should say so rather than leave a reader to assume otherwise.
 
-4. **A possible live bug sits in the documents listener.** The query is unconstrained while the read rule tests `notDeleted`. If Firestore rejects the query rather than filtering it, one soft-deleted file currently breaks the whole document list for that org. Verify this in Phase E before building on top of it.
+4. **A suspected live bug in the documents listener turned out not to exist.**
+   The query was unconstrained while the read rule tested `notDeleted`, which the
+   documented Firestore model says should refuse the whole query. A rules test
+   written to confirm it showed the opposite: the emulator permits it. The claim
+   is withdrawn. The constrained query still ships — correct either way, and the
+   emulator is known to be more permissive than production on `list` evaluation —
+   and the backfill is still required, for the separate reason that an equality
+   filter on `null` does not match a document missing the field.
 
 5. **Per-row pillars on paste reverse an explicit out-of-scope line** in `base-layers-scope-change-paste-multiple.md` §4, which recorded "assigning different pillars per row on paste" as out of scope. That document also flagged that no price was named and that silence reads as free. Item 7 is new billable scope, not a defect fix.
 

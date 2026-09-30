@@ -81,6 +81,11 @@
   --amber-bg: #fbf2dc;
   --green-bg: #e4f3ea;
 
+  /* Text weight of amber, for the rare case where a warning is written in
+     words on an --amber-bg panel. --amber itself is a 2.6:1 contrast against
+     that background at small sizes, which fails WCAG AA; this passes. */
+  --amber-ink: #7a5600;
+
   --radius: 14px;
   --radius-sm: 8px;
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.04);
@@ -2415,6 +2420,21 @@ button.action-chevron:focus-visible {
   /* Breathing room above the pillar tiles — matches the dashboard round bar's
      18px rhythm. Only renders for internal users, so client view is unmoved. */
   margin: 0 0 18px;
+}
+/* v6 (DIA-02): the picker turns amber the moment it is pinned to a round that
+   is no longer current. The colour is the glance; the sentence next to it is
+   what actually stops someone entering this quarter's scores into last
+   quarter's sheet, so the tint never carries the meaning on its own. */
+.round-select-wrap.round-historic {
+  padding: 8px 12px;
+  border: 1px solid var(--amber);
+  border-radius: 8px;
+  background: var(--amber-bg);
+}
+.round-historic-tag {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--amber-ink);
 }
 .round-select,
 .round-new-btn {

@@ -1895,6 +1895,94 @@ import {
   // ================================================================
   // DIAGNOSTIC INDEX
   // ================================================================
+  // ---------- Round context (Milestone v6 Phase G / DIA-01..DIA-03) ----------
+  //
+  // Internal users have always been able to edit a historic round: the picker
+  // below sets state.viewRoundId, activeRoundId() honours it, the likert
+  // buttons are disabled for clients only, and setResponse writes to whichever
+  // round is in view. The responses rules permit an internal update on any
+  // round. So the capability was never missing.
+  //
+  // What was missing was the signal. The picker lived only on the diagnostic
+  // index, so the moment a user clicked into a pillar, nothing on the page said
+  // which round they were scoring — a historic edit looked exactly like a
+  // current one, and the only way to tell was to go back. That is the whole of
+  // this phase: make the round visible everywhere it is editable, and make a
+  // historic round announce itself.
+  //
+  // Returns null for clients (view-only diagnostic) and for an org with no
+  // rounds.
+  function renderRoundPicker(user, org) {
+    if (isClientView(user) || !(org.rounds || []).length) return null;
+
+    const activeRid = activeRoundId(org);
+    const isHistoric = activeRid !== org.currentRoundId;
+
+    const roundSel = /** @type {HTMLSelectElement} */ (
+      h("select", { "aria-label": "Select round", class: "round-select" })
+    );
+    org.rounds.forEach((r) => {
+      const opt = document.createElement("option");
+      opt.value = r.id;
+      opt.textContent = `${r.label} (${formatDate(r.createdAt)})`;
+      roundSel.appendChild(opt);
+    });
+    // Selection is applied via the select's value setter after the options
+    // exist: jsdom does not honor `option.selected = true` set while the
+    // option is detached, so the per-option flag pattern silently selects
+    // the wrong round under test while passing in real browsers.
+    roundSel.value = activeRid;
+    roundSel.addEventListener("change", (e) => {
+      state.viewRoundId = /** @type {HTMLSelectElement} */ (e.target).value;
+      render();
+    });
+
+    const newRoundBtn = h(
+      "button",
+      {
+        class: "round-new-btn",
+        title: "Start new round",
+        onclick: () => confirmStartNewRound(org, roundById(org, org.currentRoundId)),
+      },
+      "+ New",
+    );
+
+    // Said in words, not only in colour. "Editing a historic round" is the
+    // sentence that stops someone entering this quarter's scores into last
+    // quarter's sheet, and a tinted background alone does not say it.
+    //
+    // The children array is assembled rather than appended one by one so the
+    // unpinned case renders byte-identically to the pre-v6 markup — "Round: "
+    // stays a bare text node, and the class carries no trailing space. The
+    // committed diagnostic snapshot is the fence.
+    const historicBits = isHistoric
+      ? [
+          h(
+            "span",
+            { class: "round-historic-tag" },
+            "Editing a historic round — changes do not affect the current round",
+          ),
+          h(
+            "button",
+            {
+              class: "btn ghost sm",
+              onclick: () => {
+                state.viewRoundId = null;
+                render();
+              },
+            },
+            "Back to current",
+          ),
+        ]
+      : [];
+
+    return h(
+      "div",
+      { class: isHistoric ? "round-select-wrap round-historic" : "round-select-wrap" },
+      ["Round: ", roundSel, newRoundBtn, ...historicBits],
+    );
+  }
+
   function renderDiagnosticIndex(user, org) {
     const frag = h("div");
     frag.appendChild(h("h1", { class: "view-title" }, "Diagnostic"));
@@ -1908,39 +1996,8 @@ import {
       ),
     );
 
-    if (!isClientView(user) && (org.rounds || []).length) {
-      const roundSel = /** @type {HTMLSelectElement} */ (
-        h("select", { "aria-label": "Select round", class: "round-select" })
-      );
-      const activeRid = activeRoundId(org);
-      org.rounds.forEach((r) => {
-        const opt = document.createElement("option");
-        opt.value = r.id;
-        opt.textContent = `${r.label} (${formatDate(r.createdAt)})`;
-        roundSel.appendChild(opt);
-      });
-      // Selection is applied via the select's value setter after the options
-      // exist: jsdom does not honor `option.selected = true` set while the
-      // option is detached, so the per-option flag pattern silently selects
-      // the wrong round under test while passing in real browsers.
-      roundSel.value = activeRid;
-      roundSel.addEventListener("change", (e) => {
-        state.viewRoundId = /** @type {HTMLSelectElement} */ (e.target).value;
-        render();
-      });
-      const newRoundBtn = h(
-        "button",
-        {
-          class: "round-new-btn",
-          title: "Start new round",
-          onclick: () => confirmStartNewRound(org, roundById(org, org.currentRoundId)),
-        },
-        "+ New",
-      );
-      frag.appendChild(
-        h("div", { class: "round-select-wrap" }, ["Round: ", roundSel, newRoundBtn]),
-      );
-    }
+    const roundPicker = renderRoundPicker(user, org);
+    if (roundPicker) frag.appendChild(roundPicker);
 
     const tiles = h("div", { class: "tiles" });
     DATA.pillars.forEach((p) => {
@@ -2029,6 +2086,13 @@ import {
         h("span", { class: `badge ${status}` }, s !== null ? `${s}/100` : "Not scored"),
       ]),
     );
+
+    // DIA-02: the round is named on the pillar page, not only on the index.
+    // Clicking into a pillar used to drop every trace of which round was being
+    // scored, which is what made a historic edit indistinguishable from a
+    // current one.
+    const roundPicker = renderRoundPicker(user, org);
+    if (roundPicker) frag.appendChild(roundPicker);
 
     // Overview card
     frag.appendChild(h("div", { class: "card pillar-overview-card" }, [h("p", {}, p.overview)]));
@@ -2129,6 +2193,37 @@ import {
     return frag;
   }
 
+  // DIA-02: rounds whose historic edit has been acknowledged this session.
+  // Per session and per round, not per click — a consultant deliberately
+  // correcting last quarter's sheet should be asked once, not forty times. The
+  // set is deliberately in-memory: a reload is a new sitting, and the whole
+  // point is to catch someone who does not realise where they are.
+  const acknowledgedHistoricRounds = new Set();
+
+  /**
+   * Run `apply` now, or after the user confirms they mean to change a round
+   * that is no longer the current one.
+   * @param {*} org
+   * @param {() => void} apply
+   */
+  function withHistoricRoundGuard(org, apply) {
+    const rid = activeRoundId(org);
+    if (rid === org.currentRoundId || acknowledgedHistoricRounds.has(rid)) {
+      apply();
+      return;
+    }
+    const round = roundById(org, rid);
+    confirmDialog(
+      "Change a historic round?",
+      `You are scoring "${round?.label || "a previous round"}", not the current round. The change will be saved against that round and will not move the current dashboard.`,
+      () => {
+        acknowledgedHistoricRounds.add(rid);
+        apply();
+      },
+      "Yes, edit it",
+    );
+  }
+
   function renderQuestion(user, org, p, idx, qEntry) {
     const meta = questionMeta(qEntry);
     const resp = (((org.responses || {})[activeRoundId(org)] || {})[p.id] || {})[idx] || {};
@@ -2163,8 +2258,10 @@ import {
         attrs.onclick = () => {
           // Re-clicking the already-selected figure clears it (deselect →
           // unanswered); any other figure switches the selection.
-          setResponse(org, p.id, idx, toggleScorePatch(selectedScore, n));
-          render();
+          withHistoricRoundGuard(org, () => {
+            setResponse(org, p.id, idx, toggleScorePatch(selectedScore, n));
+            render();
+          });
         };
       }
       const btn = h(

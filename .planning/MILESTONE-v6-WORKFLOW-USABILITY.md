@@ -255,6 +255,18 @@ leaves the first call's backdrop listener attached to `#modalRoot`.
 3. The dashboard score is unchanged while a historic round is being edited.
 4. A client sees no round selector and no editable controls, as now.
 
+**Outcome (executed 2026-09-30).** All four met; 10 view tests added. The
+finding above held — no capability was added, only signalling. Three decisions:
+
+- The picker is now one shared `renderRoundPicker`, used by the diagnostic index
+  and the pillar page, so the two cannot drift.
+- The unpinned case renders byte-identically to the pre-v6 markup (bare text node,
+  no trailing space in the class), so the committed diagnostic snapshot is unmoved
+  and still fences the common path.
+- `+ New` stays available while viewing history rather than being swapped for
+  `Back to current`. Removing it would have been a quiet regression in what the
+  screen can do.
+
 **Depends on:** nothing. Runs in parallel with A–F.
 
 ---

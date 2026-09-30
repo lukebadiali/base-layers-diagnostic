@@ -232,6 +232,29 @@ leaves the first call's backdrop listener attached to `#modalRoot`.
 4. Deleting a folder holding a document is refused with a message naming what is inside.
 5. A client cannot see the create, rename, move or delete controls, and the rules deny them independently.
 
+**Outcome (executed 2026-09-30).** All five met; 24 view tests added — the first
+behavioural coverage the Documents tab has ever had. Every earlier view test
+booted with `FB.ready = false`, which short-circuits `renderDocuments` at its
+"Connecting to shared storage…" branch, so the entire body was untested. A
+`window.FB` double (`tests/mocks/window-fb.js`) unlocks it.
+
+Three things the double had to get right, each found the hard way:
+
+- **The first snapshot must be asynchronous.** `main.js` calls
+  `ensureActivitySubscriptions()` from inside `render()`, and that subscription's
+  callback calls `render()` again. A synchronous first emission re-enters `render()`
+  mid-build and the DOM ends up with two of everything — two `<main>`s, every
+  assertion quietly seeing doubles. Real Firestore emits asynchronously; so does
+  the double.
+- **The double must be installed after `import("../../src/main.js")`.** Both
+  `src/firebase/db.js` and `src/firebase/storage.js` overwrite
+  `window.FB.{db,firestore,storage,storageOps}` at module load, so a double set
+  beforehand is silently replaced and the view talks to a Firestore that never
+  answers.
+- **`window.FB.currentUser` has to survive the auth callback**, which assigns null
+  when Firebase reports no user — always, in a test. It is a property with a setter
+  that accepts a user and ignores a null.
+
 **Depends on:** Phase A, Phase E.
 
 ---

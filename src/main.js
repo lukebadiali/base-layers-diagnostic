@@ -3524,6 +3524,8 @@ import {
     validateUpload,
     uid,
     confirmDialog,
+    modal,
+    promptText,
     notify,
   });
 

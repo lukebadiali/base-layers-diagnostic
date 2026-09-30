@@ -4228,6 +4228,125 @@ button.action-chevron:focus-visible {
   font-size: 13.5px;
 }
 
+/* --- v6: folder tree (DOC-01..DOC-05) --- */
+.docs-toolbar-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.docs-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.docs-toolbar-spacer {
+  flex: 1;
+}
+.docs-sort-select {
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.docs-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.docs-crumb {
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.docs-crumb-link {
+  background: none;
+  border: 0;
+  font: inherit;
+  color: var(--brand);
+  cursor: pointer;
+}
+.docs-crumb-link:hover {
+  text-decoration: underline;
+}
+.docs-crumb-current {
+  font-weight: 600;
+  color: var(--ink-1, inherit);
+}
+.docs-crumb-sep {
+  color: var(--ink-3);
+}
+.docs-folder-row {
+  background: var(--surface-muted);
+}
+.docs-folder-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.docs-folder-icon {
+  color: var(--ink-3);
+  font-size: 11px;
+}
+.docs-folder-open {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.docs-folder-open:hover {
+  color: var(--brand);
+}
+.docs-move-select {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  width: 100%;
+}
+/* A destination the tree will not accept is shown greyed WITH its reason
+   rather than omitted. A target that vanished would leave the user hunting for
+   a folder they can see on the screen behind the dialogue. */
+.docs-move-select option:disabled {
+  color: var(--ink-3);
+}
+
+@media (max-width: 640px) {
+  .docs-table-row {
+    grid-template-columns: 1fr auto;
+    gap: 4px 10px;
+  }
+  /* Uploader and date fold away; the filename and its actions are what a
+     phone-sized document list is actually for. */
+  .docs-file-row > div:nth-child(2),
+  .docs-file-row > div:nth-child(3) {
+    display: none;
+  }
+  .docs-row-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .docs-toolbar-spacer {
+    display: none;
+  }
+  .docs-sort-select {
+    width: 100%;
+  }
+}
+
 /* --- Compound: pillar score badge & insight box (template-literal kept inline) --- */
 .score-pill {
   display: inline-flex;

@@ -141,6 +141,21 @@ emulator needs a Java runtime and there is none on this machine, so
 4. Booted as a client, the due input is disabled and the title, description, owner and pillar inputs are not.
 5. Editing the pillar on an existing action persists to `orgs/{orgId}/actions/{id}` and re-groups the row without a full reload.
 
+**Outcome (executed 2026-09-30).** All five met; 26 view tests added across
+`actions-groups-filters.test.js` (new) and `actions-client-toggle.test.js`
+(rewritten to the new row contract). Two decisions worth recording:
+
+- **The collapsed row is read-only.** It used to carry inline inputs for title,
+  owner and due. Once the row became a click target, an input inside it would
+  have to swallow the click the row wants, leaving a row that sometimes expands
+  and sometimes does not depending on which pixel is hit. All editing moved into
+  the panel; the collapsed row keeps only the completion checkbox.
+- **The disclosure is a real `<button>`, and the row is not one.** `role="button"`
+  on the row would have been invalid ARIA, because the row contains a checkbox and
+  interactive content inside a button is not reliably exposed. A screen-reader user
+  could have lost the ability to complete an action — the one thing every user of
+  this page can do. The row click is a convenience layered on top of the button.
+
 **Depends on:** Phase A, Phase B.
 
 ---

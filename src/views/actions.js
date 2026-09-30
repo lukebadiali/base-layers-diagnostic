@@ -21,6 +21,17 @@
 import { h as defaultH } from "../ui/dom.js";
 import { iso } from "../util/ids.js";
 import { parseBulkList, MAX_BULK_ITEMS } from "../domain/bulk-parse.js";
+import { groupActions, isOverdue, isoToday, orderedGroups } from "../domain/action-grouping.js";
+import {
+  ANY,
+  UNASSIGNED,
+  DUE_FILTERS,
+  filterActions,
+  hasUnassignedOwner,
+  hasUnassignedPillar,
+  isFiltered,
+  ownerOptions,
+} from "../domain/action-filters.js";
 
 /**
  * @typedef {{
@@ -38,6 +49,8 @@ import { parseBulkList, MAX_BULK_ITEMS } from "../domain/bulk-parse.js";
  *   modal?: (children: *) => *,
  *   confirmDialog?: (title: string, body: string, onYes: () => void, yesLabel?: string) => *,
  *   notify?: (level: string, msg: string) => void,
+ *   userLabel?: (id: string) => string,
+ *   formatDate?: (when: *) => string,
  * }} ActionsDeps
  */
 
@@ -84,6 +97,179 @@ export function createActionsView(deps) {
   const modal = deps.modal || (() => ({ close: () => {} }));
   const confirmDialog = deps.confirmDialog || (() => {});
   const notify = deps.notify || (() => {});
+  // The filter selections and expanded-row set live on the app state singleton
+  // so they survive the full re-render that every mutation on this tab causes.
+  const state = deps.state || {
+    actionFilters: { pillar: ANY, owner: ANY, due: ANY },
+    expandedActions: new Set(),
+  };
+  // uid -> display name, for the provenance footer. Falls back to the raw id,
+  // which is ugly but honest: a blank there would read as "nobody did this".
+  const userLabel = deps.userLabel || ((/** @type {string} */ id) => (id ? String(id) : ""));
+  const formatDate = deps.formatDate || ((/** @type {*} */ w) => (w ? String(w) : ""));
+
+  // ---------- Filter bar (ACT-03) ----------
+
+  /**
+   * One labelled select in the filter bar.
+   *
+   * @param {string} label
+   * @param {Array<{ value: string, text: string }>} options
+   * @param {string} current
+   * @param {(value: string) => void} onChange
+   * @returns {HTMLElement}
+   */
+  function filterSelect(label, options, current, onChange) {
+    const sel = /** @type {HTMLSelectElement} */ (
+      h("select", { class: "action-filter-select", "aria-label": label })
+    );
+    options.forEach((o) => {
+      const opt = document.createElement("option");
+      opt.value = o.value;
+      opt.textContent = o.text;
+      sel.appendChild(opt);
+    });
+    // Applied after the options exist: jsdom does not honour `option.selected`
+    // set while the option is detached, which silently selects the wrong entry
+    // under test while passing in a real browser. Same pattern as the round
+    // select on the diagnostic index.
+    sel.value = String(current);
+    sel.addEventListener("change", () => onChange(sel.value));
+    return h("label", { class: "action-filter" }, [
+      h("span", { class: "action-filter-label" }, label),
+      sel,
+    ]);
+  }
+
+  /**
+   * The pillar / owner / due filter bar.
+   *
+   * Option lists are built from the actions actually present, so an owner who
+   * has left, or a pillar nobody uses, never appears as a filter that returns
+   * nothing. "Unassigned" appears only when something is genuinely unassigned,
+   * for the same reason.
+   *
+   * @param {Array<*>} all every action visible to this user, pre-filter
+   * @returns {HTMLElement}
+   */
+  function renderFilterBar(all) {
+    const f = state.actionFilters;
+
+    /** @type {Array<{ value: string, text: string }>} */
+    const pillarOpts = [{ value: ANY, text: "All pillars" }];
+    DATA.pillars.forEach((/** @type {*} */ p) =>
+      pillarOpts.push({ value: String(p.id), text: `${p.id}. ${p.name}` }),
+    );
+    if (hasUnassignedPillar(all)) pillarOpts.push({ value: UNASSIGNED, text: "No pillar" });
+
+    /** @type {Array<{ value: string, text: string }>} */
+    const ownerOpts = [{ value: ANY, text: "All owners" }];
+    ownerOptions(all).forEach((o) => ownerOpts.push({ value: o, text: o }));
+    if (hasUnassignedOwner(all)) ownerOpts.push({ value: UNASSIGNED, text: "No owner" });
+
+    const dueOpts = DUE_FILTERS.map((d) => ({ value: d.key, text: d.label }));
+
+    const bar = h("div", { class: "action-filter-bar" }, [
+      filterSelect("Pillar", pillarOpts, String(f.pillar), (v) => {
+        state.actionFilters.pillar = v;
+        render();
+      }),
+      filterSelect("Owner", ownerOpts, f.owner, (v) => {
+        state.actionFilters.owner = v;
+        render();
+      }),
+      filterSelect("Due", dueOpts, f.due, (v) => {
+        state.actionFilters.due = v;
+        render();
+      }),
+    ]);
+
+    // The clear control appears only once something is narrowed. A permanently
+    // visible "Clear filters" reads as an available action when nothing is
+    // filtered, and its absence is the clearest signal that the list in front
+    // of the user is the whole list.
+    if (isFiltered(f)) {
+      bar.appendChild(
+        h(
+          "button",
+          {
+            class: "btn ghost sm action-filter-clear",
+            onclick: () => {
+              state.actionFilters = { pillar: ANY, owner: ANY, due: ANY };
+              render();
+            },
+          },
+          "Clear filters",
+        ),
+      );
+    }
+    return bar;
+  }
+
+  // ---------- Groups (ACT-01 / ACT-02) ----------
+
+  /**
+   * One of the three groups, header and table.
+   *
+   * Empty groups render with a one-line explanation rather than disappearing.
+   * A stable three-section shape is what makes the tab scannable: if Overdue
+   * vanished whenever it was empty, the section directly under the filter bar
+   * would keep changing meaning, and "nothing is overdue" — which is the good
+   * news a consultant wants — would be indistinguishable from "this view does
+   * not show overdue work".
+   *
+   * @param {{ key: string, label: string, items: Array<*> }} group
+   * @param {boolean} isClient
+   * @param {string} todayIso
+   * @param {boolean} filtered whether a filter is currently narrowing the list
+   * @returns {HTMLElement}
+   */
+  function renderActionGroup(group, isClient, todayIso, filtered) {
+    const section = h("section", { class: `action-group action-group-${group.key}` });
+    section.appendChild(
+      h("h2", { class: "action-group-head" }, [
+        h("span", { class: `action-group-dot action-group-dot-${group.key}` }, ""),
+        h("span", { class: "action-group-title" }, group.label),
+        h("span", { class: "action-group-count" }, String(group.items.length)),
+      ]),
+    );
+
+    const table = h("div", { class: "actions-table" });
+    table.appendChild(
+      h("div", { class: "action-row action-row-head" }, [
+        h("div", {}, "✓"),
+        h("div", {}, "Action"),
+        h("div", {}, "Pillar"),
+        h("div", {}, "Owner"),
+        h("div", {}, "Due"),
+        h("div", {}, ""),
+        h("div", {}, ""),
+      ]),
+    );
+
+    if (!group.items.length) {
+      /** @type {Record<string, string>} */
+      const empties = {
+        overdue: "Nothing overdue.",
+        current: "Nothing on the go.",
+        completed: "Nothing completed yet.",
+      };
+      table.appendChild(
+        h(
+          "div",
+          { class: "empty-card" },
+          filtered ? "Nothing here matches these filters." : empties[group.key] || "Nothing here.",
+        ),
+      );
+    } else {
+      group.items.forEach((/** @type {*} */ a) =>
+        table.appendChild(renderActionRow(a, isClient, todayIso)),
+      );
+    }
+
+    section.appendChild(table);
+    return section;
+  }
 
   /**
    * @param {*} user
@@ -92,6 +278,7 @@ export function createActionsView(deps) {
    */
   function renderActions(user, org) {
     const isClient = isClientView(user);
+    const todayIso = isoToday();
     const frag = h("div");
     frag.appendChild(h("h1", { class: "view-title" }, "Action plan"));
     frag.appendChild(
@@ -103,17 +290,21 @@ export function createActionsView(deps) {
     );
 
     const all = (org.actions || []).filter((/** @type {*} */ a) => !isClient || !a.internal);
+    const filtered = isFiltered(state.actionFilters);
+    const visible = filterActions(all, state.actionFilters, todayIso);
+
+    const countText = filtered
+      ? `showing ${visible.length} of ${all.length}`
+      : `${all.length} total · ${all.filter((/** @type {*} */ a) => a.done).length} complete`;
+
     const toolbar = h(
       "div",
       { class: "stage-section-banner" },
       [
-        h(
-          "div",
-          {},
-          `${all.length} total · ${all.filter((/** @type {*} */ a) => a.done).length} complete`,
-        ),
+        h("div", {}, countText),
         // Creating actions stays staff-only (rules deny client creates);
-        // clients still complete/uncomplete via each row's checkbox. Both
+        // clients still complete/uncomplete via each row's checkbox and, since
+        // v6, edit the wording, owner and pillar from the expanded row. Both
         // buttons sit in one group so the banner's space-between keeps them
         // together on the right instead of stranding one mid-row.
         isClient
@@ -145,63 +336,256 @@ export function createActionsView(deps) {
       return frag;
     }
 
-    const openActions = all.filter((/** @type {*} */ a) => !a.done);
-    const completedActions = all.filter((/** @type {*} */ a) => a.done);
-    const headerRow = () =>
-      h("div", { class: "action-row" }, [
-        h("div", {}, "✓"),
-        h("div", {}, "Action"),
-        h("div", {}, "Pillar"),
-        h("div", {}, "Owner"),
-        h("div", {}, "Due"),
-        h("div", {}, ""),
-      ]);
+    frag.appendChild(renderFilterBar(all));
 
-    // Open actions
-    const openTable = h("div", { class: "actions-table" });
-    openTable.appendChild(headerRow());
-    if (openActions.length === 0) {
-      openTable.appendChild(h("div", { class: "empty-card" }, "No open actions."));
-    } else {
-      openActions.forEach((/** @type {*} */ a) =>
-        openTable.appendChild(renderActionRow(a, isClient)),
-      );
-    }
-    frag.appendChild(openTable);
-
-    // Completed actions, in their own section
-    if (completedActions.length) {
-      frag.appendChild(
-        h("h2", { class: "section-banner-spread" }, `Completed (${completedActions.length})`),
-      );
-      const doneTable = h("div", { class: "actions-table" });
-      doneTable.appendChild(headerRow());
-      completedActions.forEach((/** @type {*} */ a) =>
-        doneTable.appendChild(renderActionRow(a, isClient)),
-      );
-      frag.appendChild(doneTable);
-    }
+    const grouped = groupActions(visible, todayIso);
+    orderedGroups(grouped).forEach((g) =>
+      frag.appendChild(renderActionGroup(g, isClient, todayIso, filtered)),
+    );
 
     return frag;
   }
 
+  // ---------- Row (ACT-04 / ACT-05 / ACT-06 / ACT-07) ----------
+
+  /** @param {*} a */
+  function pillarNameFor(a) {
+    const p = DATA.pillars.find((/** @type {*} */ x) => x.id === a.pillarId);
+    return p ? p.name : "";
+  }
+
   /**
+   * Stop a click inside an interactive control from also toggling the row.
+   *
+   * ACT-04 makes the whole row a toggle, which puts every control on the row
+   * inside the toggle's hit area. Without this, ticking the completion
+   * checkbox would also expand the row — the user would see the panel open
+   * and reasonably conclude the tick had not registered.
+   *
+   * @param {HTMLElement} el
+   * @returns {HTMLElement}
+   */
+  function swallowToggle(el) {
+    el.addEventListener("click", (e) => e.stopPropagation());
+    return el;
+  }
+
+  /**
+   * One labelled field in the expanded panel.
+   *
+   * @param {string} label
+   * @param {HTMLElement} control
+   * @param {string} [hint]
+   * @returns {HTMLElement}
+   */
+  function panelField(label, control, hint) {
+    return h(
+      "label",
+      { class: "action-panel-field" },
+      [
+        h("span", { class: "action-panel-label" }, label),
+        control,
+        hint ? h("span", { class: "action-panel-hint" }, hint) : null,
+      ].filter(Boolean),
+    );
+  }
+
+  /**
+   * The expanded detail panel: the full action text, plus every editable field
+   * and the provenance footer.
+   *
+   * Editing lives here rather than inline on the collapsed row. The row is now
+   * a click target, so an inline <input> sitting in it would have to swallow
+   * the click that the row wants — leaving the user with a row that sometimes
+   * expands and sometimes does not, depending on which pixel they hit. One
+   * place to edit is worth one extra click.
+   *
+   * Text fields save on blur without a re-render, so typing is never
+   * interrupted. Pillar and due date DO re-render, because both change which
+   * group or filter the action belongs to and a row that stayed put after its
+   * due date moved into the past would be lying.
+   *
    * @param {*} a
    * @param {boolean} isClient
    * @returns {HTMLElement}
    */
-  function renderActionRow(a, isClient) {
-    const p = DATA.pillars.find((/** @type {*} */ x) => x.id === a.pillarId);
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const isOverdue = !a.done && !!a.due && a.due < todayIso;
-    const row = h("div", {
-      class: `action-row ${a.done ? "done" : ""} ${isOverdue ? "overdue" : ""}`,
+  function renderActionPanel(a, isClient) {
+    const panel = h("div", { class: "action-panel" });
+
+    const titleTa = /** @type {HTMLTextAreaElement} */ (
+      h("textarea", { class: "action-panel-input action-panel-title", rows: "2" })
+    );
+    titleTa.value = a.title || "";
+    titleTa.addEventListener("blur", () => {
+      if (titleTa.value !== (a.title || "")) updateAction(a.id, { title: titleTa.value });
     });
 
-    // Completion toggles for BOTH roles (2026-07): the checkbox patch carries
-    // exactly the fields firestore.rules lets a client change (done +
-    // completion audit fields) — everything else on the row is staff-only.
-    const chk = /** @type {HTMLInputElement} */ (h("input", { type: "checkbox" }));
+    const descTa = /** @type {HTMLTextAreaElement} */ (
+      h("textarea", {
+        class: "action-panel-input",
+        rows: "3",
+        placeholder: "Anything the owner needs to know to do this well",
+      })
+    );
+    descTa.value = a.description || "";
+    descTa.addEventListener("blur", () => {
+      if (descTa.value !== (a.description || "")) updateAction(a.id, { description: descTa.value });
+    });
+
+    const pillarSel = pillarSelectEl();
+    pillarSel.value = a.pillarId === null || a.pillarId === undefined ? "" : String(a.pillarId);
+    pillarSel.addEventListener("change", () => {
+      updateAction(a.id, { pillarId: pillarIdFromSelect(pillarSel) });
+      render();
+    });
+
+    // Navigating to the pillar detail page used to be a link on the collapsed
+    // row. It moved here when the row became a click target: a link inside a
+    // button is a pixel-lottery, and the thing the user most often wants from
+    // the row is to open it, not to leave the page. The affordance survives —
+    // it is just one level in, next to the field it relates to.
+    const pillarSelWithLink = h("span", { class: "action-panel-pillar" }, [pillarSel]);
+    if (a.pillarId !== null && a.pillarId !== undefined && pillarNameFor(a)) {
+      pillarSelWithLink.appendChild(
+        h(
+          "button",
+          {
+            class: "btn ghost sm action-panel-pillar-link",
+            onclick: () => setRoute("pillar:" + a.pillarId),
+          },
+          "Open pillar",
+        ),
+      );
+    }
+
+    const ownerInput = /** @type {HTMLInputElement} */ (
+      h("input", { type: "text", class: "action-panel-input", placeholder: "Who owns this" })
+    );
+    ownerInput.value = a.owner || "";
+    ownerInput.addEventListener("blur", () => {
+      if (ownerInput.value !== (a.owner || "")) updateAction(a.id, { owner: ownerInput.value });
+    });
+
+    const dueInput = /** @type {HTMLInputElement} */ (
+      h("input", { type: "date", class: "action-panel-input" })
+    );
+    dueInput.value = a.due || "";
+    if (isClient) {
+      // ACT-07: the due date is the one content field that stays with
+      // BeDeveloped. firestore.rules denies the write outright; this is the
+      // explanation, so a client who tries reads a sentence rather than a
+      // permission error.
+      dueInput.disabled = true;
+    } else {
+      dueInput.addEventListener("change", () => {
+        updateAction(a.id, { due: dueInput.value });
+        render();
+      });
+    }
+
+    panel.appendChild(
+      h("div", { class: "action-panel-grid" }, [
+        panelField("Action", titleTa),
+        panelField("Notes", descTa),
+        panelField("Pillar", pillarSelWithLink),
+        panelField("Owner", ownerInput),
+        panelField("Due", dueInput, isClient ? "Due dates are set by BeDeveloped." : undefined),
+      ]),
+    );
+
+    // Provenance. Only the lines that have something to say are rendered —
+    // an action nobody has edited should not carry an empty "Edited by" row.
+    /** @type {Array<string>} */
+    const meta = [];
+    if (a.createdAt) {
+      const who = userLabel(a.createdBy);
+      meta.push(`Added ${formatDate(a.createdAt)}${who ? ` by ${who}` : ""}`);
+    }
+    if (a.lastEditedAt) {
+      const who = userLabel(a.lastEditedBy);
+      meta.push(`Last edited ${formatDate(a.lastEditedAt)}${who ? ` by ${who}` : ""}`);
+    }
+    if (a.done && a.completedAt) {
+      const who = userLabel(a.completedBy);
+      meta.push(`Completed ${formatDate(a.completedAt)}${who ? ` by ${who}` : ""}`);
+    }
+
+    const foot = h("div", { class: "action-panel-foot" }, [
+      h("div", { class: "action-panel-meta" }, meta.join(" · ")),
+    ]);
+    if (!isClient) {
+      foot.appendChild(
+        h(
+          "button",
+          {
+            class: "btn ghost sm danger",
+            onclick: () =>
+              confirmDialog(
+                "Delete action?",
+                "This cannot be undone.",
+                () => {
+                  state.expandedActions.delete(a.id);
+                  deleteAction(a.id);
+                  render();
+                },
+                "Delete",
+              ),
+          },
+          "Delete action",
+        ),
+      );
+    }
+    panel.appendChild(foot);
+
+    return panel;
+  }
+
+  /**
+   * One action: the collapsed summary row, plus its panel when expanded.
+   *
+   * The collapsed row is read-only apart from the completion checkbox. It used
+   * to carry inline inputs for title, owner and due; those moved into the
+   * panel when the row became a click target, because a row that is both a
+   * button and a form is a row where every click is a guess.
+   *
+   * @param {*} a
+   * @param {boolean} isClient
+   * @param {string} todayIso
+   * @returns {HTMLElement}
+   */
+  function renderActionRow(a, isClient, todayIso) {
+    const expanded = state.expandedActions.has(a.id);
+    const overdue = isOverdue(a, todayIso);
+    const wrap = h("div", { class: `action-item ${expanded ? "expanded" : ""}` });
+
+    // The row is a click target for convenience, but it is NOT the accessible
+    // control. role="button" here would be invalid: the row contains a
+    // checkbox, and interactive content inside a button is not reliably
+    // exposed — a screen-reader user could lose the ability to complete an
+    // action, which is the one thing every user of this page can do. The
+    // disclosure is a real <button> in the last column instead, and the row
+    // click is an extra on top of it.
+    const row = h("div", {
+      class: `action-row ${a.done ? "done" : ""} ${overdue ? "overdue" : ""}`,
+      // A stable handle on a specific action. Rows are now ordered by due date
+      // within their group, so "the first row" no longer means "the first
+      // action in the array" — anything addressing a particular action, tests
+      // included, needs to say which one it means.
+      "data-action-id": a.id,
+    });
+
+    const toggle = () => {
+      if (state.expandedActions.has(a.id)) state.expandedActions.delete(a.id);
+      else state.expandedActions.add(a.id);
+      render();
+    };
+    row.addEventListener("click", toggle);
+
+    // Completion toggles for BOTH roles: the checkbox patch carries exactly
+    // the fields firestore.rules lets a client change.
+    const chk = /** @type {HTMLInputElement} */ (
+      h("input", { type: "checkbox", "aria-label": "Mark complete" })
+    );
     chk.checked = !!a.done;
     chk.addEventListener("change", () => {
       const u = currentUser();
@@ -212,36 +596,15 @@ export function createActionsView(deps) {
       });
       render();
     });
-    row.appendChild(chk);
+    row.appendChild(swallowToggle(chk));
 
-    const title = /** @type {HTMLInputElement} */ (
-      h("input", { type: "text", class: "a-title", value: a.title })
-    );
-    if (isClient) {
-      title.disabled = true;
-    } else {
-      title.addEventListener("blur", () => updateAction(a.id, { title: title.value }));
-    }
-    row.appendChild(title);
+    row.appendChild(h("div", { class: "a-title", title: a.title || "" }, a.title || ""));
 
-    // 2026-08 scope change: actions may carry no pillar (or a pillarId that no
-    // longer resolves). Render those as plain "Unassigned" text — the old
-    // unconditional link navigated to pillar:null and dead-ended.
+    // An action may carry no pillar, or a pillarId that no longer resolves.
+    const pillarName = pillarNameFor(a);
     row.appendChild(
-      p
-        ? h("div", {}, [
-            h(
-              "a",
-              {
-                href: "#",
-                onclick: (/** @type {Event} */ e) => {
-                  e.preventDefault();
-                  setRoute("pillar:" + a.pillarId);
-                },
-              },
-              p.name,
-            ),
-          ])
+      pillarName
+        ? h("div", { class: "a-pillar" }, pillarName)
         : h(
             "div",
             { class: "action-pillar-none", title: "Not assigned to one of the 10 pillars" },
@@ -249,60 +612,41 @@ export function createActionsView(deps) {
           ),
     );
 
-    const owner = /** @type {HTMLInputElement} */ (
-      h("input", {
-        type: "text",
-        class: "a-owner",
-        placeholder: "Owner",
-        value: a.owner || "",
-      })
-    );
-    if (isClient) {
-      owner.disabled = true;
-    } else {
-      owner.addEventListener("blur", () => updateAction(a.id, { owner: owner.value }));
-    }
-    row.appendChild(owner);
+    row.appendChild(h("div", { class: "a-owner-text" }, a.owner || "—"));
 
-    const dueWrap = h("div", { class: "due-wrap" });
-    const due = /** @type {HTMLInputElement} */ (
-      h("input", { type: "date", class: "a-due", value: a.due || "" })
-    );
-    if (isClient) {
-      due.disabled = true;
-    } else {
-      due.addEventListener("change", () => updateAction(a.id, { due: due.value }));
-    }
-    dueWrap.appendChild(due);
-    if (isOverdue)
+    const dueWrap = h("div", { class: "due-wrap" }, [
+      h("span", { class: "a-due-text" }, a.due ? formatDate(a.due) : "—"),
+    ]);
+    if (overdue)
       dueWrap.appendChild(
         h("span", { class: "overdue-tag", title: "Due date has passed" }, "Overdue"),
       );
     row.appendChild(dueWrap);
 
-    if (isClient) {
-      row.appendChild(h("div", {}));
-    } else {
-      const del = h(
-        "button",
-        {
-          class: "btn ghost sm btn-line-soft",
-          onclick: () =>
-            confirmDialog(
-              "Delete action?",
-              "This cannot be undone.",
-              () => {
-                deleteAction(a.id);
-                render();
-              },
-              "Delete",
-            ),
-        },
-        "×",
-      );
-      row.appendChild(del);
-    }
-    return row;
+    // Sixth column: kept as an empty cell so the collapsed grid keeps the same
+    // seven-column shape as its header for both roles. Delete moved into the
+    // panel, where it sits next to the provenance it is destroying.
+    row.appendChild(h("div", {}));
+
+    // Keyboard and screen-reader users drive the disclosure from here. Native
+    // <button> semantics bring Enter/Space and focus handling for free, which
+    // is why this is a button and not a styled div with a keydown listener.
+    const chevron = h(
+      "button",
+      {
+        class: "action-chevron",
+        type: "button",
+        "aria-expanded": expanded ? "true" : "false",
+        "aria-label": expanded ? `Hide details for ${a.title}` : `Show details for ${a.title}`,
+        onclick: toggle,
+      },
+      expanded ? "▾" : "▸",
+    );
+    row.appendChild(swallowToggle(chevron));
+
+    wrap.appendChild(row);
+    if (expanded) wrap.appendChild(renderActionPanel(a, isClient));
+    return wrap;
   }
 
   // 2026-08 scope change: the pillar dropdown leads with a blank option, for
@@ -489,6 +833,8 @@ export function createActionsView(deps) {
   return {
     renderActions,
     renderActionRow,
+    renderFilterBar,
+    renderActionPanel,
     pillarSelectEl,
     pillarIdFromSelect,
     openActionModal,

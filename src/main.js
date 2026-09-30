@@ -2374,6 +2374,14 @@ import {
     modal,
     confirmDialog,
     notify,
+    // Milestone v6 Phase C: the expanded row shows provenance, so the view
+    // needs a uid -> name lookup and the app's en-GB date formatter.
+    userLabel: (id) => {
+      if (!id) return "";
+      const u = findUser(id);
+      return (u && (u.name || u.email)) || id;
+    },
+    formatDate,
   });
 
   // ================================================================

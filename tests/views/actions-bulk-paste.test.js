@@ -112,8 +112,10 @@ describe("action plan — paste multiple", () => {
     });
     // Modal closed and the table repainted with the new rows
     expect(document.querySelector("#modalRoot textarea")).toBeNull();
+    // v6 (ACT-04): the collapsed row shows the title as text, not as an input
+    // — editing moved into the expanded panel.
     const titles = Array.from(document.querySelectorAll(".a-title")).map(
-      (/** @type {*} */ i) => i.value,
+      (/** @type {*} */ el) => (el.textContent || "").trim(),
     );
     expect(titles).toContain("Build top 50 hit list");
   }, 20000);

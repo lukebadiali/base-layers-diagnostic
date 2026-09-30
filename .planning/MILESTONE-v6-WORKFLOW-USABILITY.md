@@ -102,13 +102,21 @@ per the house convention rather than inheriting main.js's `@ts-nocheck`.
   keeping `internal == false`, `notDeleted`, and adding `immutable("due")`, `immutable("internal")`, `immutable("createdBy")`, `immutable("createdAt")`, `immutable("orgId")` on the client branch.
 - Staff branch unchanged except the new fields are writable.
 - `updateAction` stamps `lastEditedBy` / `lastEditedAt` on every patch.
-- Audit event on client-originated action edits (`data.action.clientEdit`) so the evidence pack can show who changed client-facing records.
+- Audit event on client-originated action edits (`data.action.clientEdit`) **deferred to Phase H**: `AUDIT_EVENTS` in `src/observability/audit-events.js` mirrors a Zod enum in `functions/src/audit/auditEventSchema.ts`, so a new event name is a Cloud Functions change and a functions deploy, not a client one. It belongs with the CONTROL_MATRIX row it supports. The durable evidence — `lastEditedBy` / `lastEditedAt` on the document, enforced server-side — lands here.
 
 **Success criteria**
-1. Rules-emulator matrix covers client × each of the eleven mutable fields × allow, and client × `due` / `internal` / `createdBy` × deny.
+1. Rules-emulator matrix covers client × each writable field × allow, and client × `due` / `internal` / `createdBy` / `createdAt` / `orgId` / `deletedAt` × deny.
 2. A client attempting to set `due` is denied even when the rest of the patch is legal.
 3. A client attempting to edit an `internal: true` action is denied.
-4. `npm run test:rules` green.
+4. A client cannot stamp `lastEditedBy` with anyone's uid but their own.
+5. `npm run test:rules` green.
+
+**Outcome (executed 2026-09-30).** Rules widened, 23 emulator cases added
+(`tests/rules/actions.test.js` 181 -> 351 lines), model fields and the
+`updateAction` stamp landed. **SC#5 is verified in CI only** — the Firestore
+emulator needs a Java runtime and there is none on this machine, so
+`npm run test:rules` cannot run locally. CI installs Java 21 and runs it
+(`.github/workflows/ci.yml`), which is the gate before this branch merges.
 
 **Depends on:** nothing. **Deploy order: rules ship and are verified in production before the Phase C client build is released.** Widening is backward compatible, so this ordering carries no lockout risk — the reverse does.
 

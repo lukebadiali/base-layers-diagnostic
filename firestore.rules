@@ -35,6 +35,19 @@ service cloud.firestore {
     function mutableOnly(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
+    // Milestone v6 (ACT-08): an edit may only sign itself. A write that
+    // touches lastEditedBy must set it to the writer's own uid; a write that
+    // leaves the field alone is unaffected, so a stale client that patches
+    // completion without stamping an editor is not broken by this.
+    //
+    // Without it the audit trail is decorative: a client widened to edit an
+    // action's wording could stamp a consultant's uid onto their own change,
+    // and the field BeDeveloped would point a prospect at as evidence of who
+    // changed what would be attacker-controlled.
+    function editorIsSelf() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(["lastEditedBy"])
+        || request.resource.data.lastEditedBy == request.auth.uid;
+    }
 
     // ── Rate-limit predicates (FN-09 / Pitfall 9 / Phase 7 Wave 4) ────
     // 60-second buckets keyed off request.time (server-controlled timestamp).
@@ -98,10 +111,38 @@ service cloud.firestore {
 
       // ── actions subcollection ───────────────────────────────────────
       // 2026-07 client completion: staff create and fully edit actions;
-      // in-org clients may flip ONLY the completion fields, and only on
-      // non-internal actions. Internal-flagged actions are invisible to
-      // clients (their list queries must constrain internal == false).
-      // Soft-delete via deletedAt tombstone — hard deletes stay denied.
+      // in-org clients may flip the completion fields on non-internal actions.
+      // Internal-flagged actions are invisible to clients (their list queries
+      // must constrain internal == false). Soft-delete via deletedAt tombstone
+      // — hard deletes stay denied.
+      //
+      // Milestone v6 (ACT-07) WIDENS the client branch from completion-only to
+      // completion plus the four content fields: title, description, owner and
+      // pillarId. What stays staff-only, and why:
+      //
+      //   due          BeDeveloped owns the schedule. A client who could move
+      //                a due date could clear their own overdue list, and the
+      //                Overdue group is the thing the consultant runs the
+      //                engagement from.
+      //   internal     Controls whether an action is visible to the client at
+      //                all. A client who could clear it would surface the
+      //                internal actions about their own account; a client who
+      //                could set it would hide work from the consultant.
+      //   createdBy    Provenance. Immutable for everyone, staff included.
+      //   createdAt    Same.
+      //   orgId        Tenancy. Same.
+      //   deletedAt    Soft-delete is the Cloud Function's job, not a field a
+      //                client can set to make an action disappear.
+      //
+      // Whitelisting via mutableOnly is what denies all six — a field absent
+      // from the list cannot be written at all, so no separate immutable()
+      // conjunct is needed and none is added for show.
+      //
+      // Known gap, pre-dating this change and deliberately left alone here:
+      // `completedBy` is not checked against the writer's uid the way
+      // lastEditedBy now is. Closing it means changing a field a shipped
+      // client already writes, which belongs in its own change with its own
+      // deploy, not folded into a widening.
       match /actions/{actId} {
         // Map.get(field, false) — not bracket access — so docs that predate
         // the `internal` flag read as non-internal instead of erroring the
@@ -114,11 +155,17 @@ service cloud.firestore {
         allow update: if (isInternal()
                           && immutable("orgId")
                           && immutable("createdAt")
-                          && immutable("createdBy"))
+                          && immutable("createdBy")
+                          && editorIsSelf())
                       || (inOrg(orgId)
                           && resource.data.get("internal", false) == false
                           && notDeleted(resource.data)
-                          && mutableOnly(["done", "completedAt", "completedBy", "updatedAt"]));
+                          && editorIsSelf()
+                          && mutableOnly([
+                               "done", "completedAt", "completedBy",
+                               "title", "description", "owner", "pillarId",
+                               "lastEditedBy", "lastEditedAt", "updatedAt"
+                             ]));
         allow delete: if false;
       }
 

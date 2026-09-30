@@ -2241,7 +2241,18 @@ import {
   // ================================================================
   // ACTIONS
   // ================================================================
-  function addAction(createdBy, pillarId, title, { owner = "", due = "", internal = false } = {}) {
+  // Milestone v6 (ACT-07 / ACT-08): every action carries `description` (the
+  // longer note the expanded row shows) and the lastEditedBy/lastEditedAt
+  // stamp. Both are written explicitly at creation rather than left undefined,
+  // so an action's shape never depends on how old it is — a rules whitelist
+  // that has to cope with "field present on one side only" is the CEL pitfall
+  // documented against immutable() in firestore.rules.
+  function addAction(
+    createdBy,
+    pillarId,
+    title,
+    { owner = "", due = "", internal = false, description = "" } = {},
+  ) {
     const user = currentUser();
     const orgMeta = activeOrgForUser(user);
     if (!orgMeta) return;
@@ -2251,12 +2262,15 @@ import {
       id: uid("act_"),
       pillarId,
       title,
+      description,
       owner,
       due,
       done: false,
       internal,
       createdAt: iso(),
       createdBy,
+      lastEditedBy: null,
+      lastEditedAt: null,
     };
     o.actions.unshift(action);
     jset(K.org(o.id), o);
@@ -2277,12 +2291,15 @@ import {
       id: uid("act_"),
       pillarId,
       title,
+      description: "",
       owner: "",
       due: "",
       done: false,
       internal,
       createdAt: iso(),
       createdBy,
+      lastEditedBy: null,
+      lastEditedAt: null,
     }));
     o.actions = created.concat(o.actions);
     jset(K.org(o.id), o);
@@ -2296,13 +2313,27 @@ import {
   // local org.actions array stays as the render mirror (localStorage), so
   // writes update it directly (jset, NOT saveOrg — the org doc no longer
   // carries actions) and push the per-action doc.
+  // Milestone v6 (ACT-08): every edit signs itself. The stamp goes on here
+  // rather than at each of the (now many) call sites, so a field added to the
+  // expanded row later cannot forget it.
+  //
+  // firestore.rules enforces lastEditedBy == request.auth.uid, and the
+  // Firebase-hydrated user's `id` IS the uid (see the state.fbUser shim), so a
+  // patch that lands in Firestore always names the person who actually made
+  // it. Without the server-side check the field would be decorative: a client
+  // widened to edit wording could otherwise stamp a consultant's uid onto
+  // their own change.
   function updateAction(id, patch) {
     const user = currentUser();
     const orgMeta = activeOrgForUser(user);
     const o = loadOrg(orgMeta.id);
-    o.actions = (o.actions || []).map((a) => (a.id === id ? Object.assign({}, a, patch) : a));
+    const stamped = Object.assign({}, patch, {
+      lastEditedBy: user ? user.id : null,
+      lastEditedAt: iso(),
+    });
+    o.actions = (o.actions || []).map((a) => (a.id === id ? Object.assign({}, a, stamped) : a));
     jset(K.org(o.id), o);
-    cloudPushActionPatch(o.id, id, patch);
+    cloudPushActionPatch(o.id, id, stamped);
   }
   function deleteAction(id) {
     const user = currentUser();

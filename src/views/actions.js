@@ -43,7 +43,7 @@ import {
  *   render?: () => void,
  *   currentUser?: () => *,
  *   addAction?: (createdBy: string, pillarId: number|null, title: string, opts?: *) => void,
- *   addManyActions?: (createdBy: string, pillarId: number|null, titles: string[], opts?: *) => number,
+ *   addManyActions?: (createdBy: string, items: Array<{ title: string, pillarId: number|null }>, opts?: *) => number,
  *   updateAction?: (id: string, patch: *) => void,
  *   deleteAction?: (id: string) => void,
  *   modal?: (children: *) => *,
@@ -722,112 +722,262 @@ export function createActionsView(deps) {
   }
 
   // 2026-08 scope change (Luke, 10-11 Aug): bulk entry on the Actions tab,
-  // mirroring the Plan tab's openBulkOutcomeModal. Every item in the batch
-  // takes the one pillar chosen here (blank by default) and the one internal
-  // flag — per-row pillars on paste are explicitly out of scope. Staff only:
-  // firestore.rules denies client action creates outright, and the button that
-  // opens this is behind the same isClient gate as "+ New action".
+  // mirroring the Plan tab's openBulkOutcomeModal.
+  //
+  // Milestone v6 (ACT-09 / ACT-10) adds a review step, reversing the August
+  // scope note's explicit "assigning different pillars per row on paste" as
+  // out of scope. The reason it is worth the extra screen: bulk entry removes
+  // the friction that was rationing action creation, so the tool got faster at
+  // producing records with no pillar, no owner and no due date. A review step
+  // is the one moment in the flow where the user is looking at the whole batch
+  // at once, and therefore the cheapest possible place to ask for the pillar.
+  //
+  // Staff only: firestore.rules denies client action creates outright, and the
+  // button that opens this sits behind the same isClient gate as "+ New action".
   /** @param {*} user */
   function openBulkActionModal(user) {
-    const select = pillarSelectEl();
-    const ta = /** @type {HTMLTextAreaElement} */ (
-      h("textarea", {
-        placeholder:
-          "Paste your list — one action per line.\n\nExample:\nDocument ICP, including firmographics and triggers\nBuild top 50 hit list\nImprove the properties on HubSpot",
-        class: "outcomes-textarea",
-      })
-    );
-    const countLbl = h("div", { class: "outcomes-count" }, "0 actions");
-    const internalWrap = !isClientView(user)
-      ? h("label", { class: "field-row" }, [
-          h("input", { type: "checkbox", id: "actBulkInternal" }),
-          "Internal only (hidden from client view)",
-        ])
-      : null;
+    /** @type {Array<{ title: string, pillarId: number|null }>} */
+    let items = [];
+    // The text the current `items` were parsed from. Going Back and returning
+    // without touching the text must NOT re-parse: that would throw away the
+    // per-row pillars and wording fixes the review step exists to collect.
+    /** @type {string|null} */
+    let parsedFrom = null;
+    let rawText = "";
+    let internalFlag = false;
 
-    const recount = () => {
-      const n = parseBulkList(ta.value).length;
-      countLbl.textContent =
-        n > MAX_BULK_ITEMS
-          ? `${n} items — too many. Add up to ${MAX_BULK_ITEMS} at a time.`
-          : `${n} action${n === 1 ? "" : "s"}`;
+    // One modal, whose body is swapped between steps. Calling modal() a second
+    // time would leave the first call's backdrop listener attached to
+    // #modalRoot, so the step change happens inside a host element instead.
+    const host = h("div", { class: "bulk-host" });
+    const m = modal([host]);
+
+    /** @param {HTMLElement} el */
+    const show = (el) => {
+      host.replaceChildren();
+      host.appendChild(el);
     };
-    ta.addEventListener("input", recount);
 
-    // Convenience only — Cmd/Ctrl+V into the textarea does the same thing.
-    // navigator.clipboard.readText needs a secure context and (on Chrome) a
-    // permission grant, and is absent in jsdom, so every failure path lands on
-    // the same toast rather than an unexplained no-op.
-    const clipBtn = h(
-      "button",
-      {
-        class: "btn secondary sm",
-        onclick: async () => {
-          try {
-            const text = await navigator.clipboard.readText();
-            if (!text || !text.trim()) {
-              notify("info", "Clipboard is empty.");
-              return;
+    /**
+     * The "Internal only" control, shared by both steps so the flag survives
+     * a Back. Rebuilt per render, seeded from internalFlag.
+     */
+    const internalControl = () => {
+      if (isClientView(user)) return null;
+      const box = /** @type {HTMLInputElement} */ (
+        h("input", { type: "checkbox", id: "actBulkInternal" })
+      );
+      box.checked = internalFlag;
+      box.addEventListener("change", () => {
+        internalFlag = box.checked;
+      });
+      return h("label", { class: "field-row" }, [box, "Internal only (hidden from client view)"]);
+    };
+
+    // ---------------- Step 1: paste ----------------
+
+    const pasteStep = () => {
+      const wrap = h("div", { class: "bulk-step bulk-step-paste" });
+      const ta = /** @type {HTMLTextAreaElement} */ (
+        h("textarea", {
+          placeholder:
+            "Paste your list — one action per line.\n\nExample:\nDocument ICP, including firmographics and triggers\nBuild top 50 hit list\nImprove the properties on HubSpot",
+          class: "outcomes-textarea",
+        })
+      );
+      ta.value = rawText;
+      const countLbl = h("div", { class: "outcomes-count" }, "0 actions");
+
+      const recount = () => {
+        rawText = ta.value;
+        const n = parseBulkList(ta.value).length;
+        countLbl.textContent =
+          n > MAX_BULK_ITEMS
+            ? `${n} items — too many. Add up to ${MAX_BULK_ITEMS} at a time.`
+            : `${n} action${n === 1 ? "" : "s"}`;
+      };
+      ta.addEventListener("input", recount);
+
+      // Convenience only — Cmd/Ctrl+V into the textarea does the same thing.
+      // navigator.clipboard.readText needs a secure context and (on Chrome) a
+      // permission grant, and is absent in jsdom, so every failure path lands
+      // on the same toast rather than an unexplained no-op.
+      const clipBtn = h(
+        "button",
+        {
+          class: "btn secondary sm",
+          onclick: async () => {
+            try {
+              const text = await navigator.clipboard.readText();
+              if (!text || !text.trim()) {
+                notify("info", "Clipboard is empty.");
+                return;
+              }
+              ta.value = ta.value.trim() ? `${ta.value.replace(/\s+$/, "")}\n${text}` : text;
+              recount();
+              ta.focus();
+            } catch (_e) {
+              notify("error", "Could not read the clipboard — paste into the box with Cmd+V.");
             }
-            ta.value = ta.value.trim() ? `${ta.value.replace(/\s+$/, "")}\n${text}` : text;
-            recount();
-            ta.focus();
-          } catch (_e) {
-            notify("error", "Could not read the clipboard — paste into the box with Cmd+V.");
-          }
+          },
         },
-      },
-      "Paste from clipboard",
-    );
+        "Paste from clipboard",
+      );
 
-    const m = modal(
-      [
-        h("h3", {}, "Paste multiple actions"),
+      const toReview = () => {
+        const titles = parseBulkList(ta.value);
+        if (!titles.length) {
+          notify("info", "Nothing to add — paste a list first.");
+          return;
+        }
+        // The cap is enforced here rather than at the end, so nobody triages
+        // four hundred rows only to be told the batch was never going to land.
+        if (titles.length > MAX_BULK_ITEMS) {
+          notify("error", `That is ${titles.length} items. Add up to ${MAX_BULK_ITEMS} at a time.`);
+          return;
+        }
+        if (ta.value !== parsedFrom) {
+          items = titles.map((title) => ({ title, pillarId: null }));
+          parsedFrom = ta.value;
+        }
+        show(reviewStep());
+      };
+
+      wrap.appendChild(h("h3", {}, "Paste multiple actions"));
+      wrap.appendChild(
         h(
           "p",
           { class: "section-explainer" },
-          "One action per line. Bullet markers and numbering are stripped automatically, and commas inside a line are kept. A single line with no line breaks is split on its commas.",
+          "One action per line. Bullet markers and numbering are stripped automatically, and commas inside a line are kept. A single line with no line breaks is split on its commas. You will be able to set a pillar for each one on the next step.",
         ),
-        h("div", { class: "outcomes-add-row" }, [clipBtn]),
-        ta,
-        countLbl,
-        h("div", { class: "progress-spacer" }),
-        select,
-        internalWrap,
+      );
+      wrap.appendChild(h("div", { class: "outcomes-add-row" }, [clipBtn]));
+      wrap.appendChild(ta);
+      wrap.appendChild(countLbl);
+      wrap.appendChild(
         h("div", { class: "row" }, [
           h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
-          h(
+          h("button", { class: "btn", onclick: toReview }, "Review"),
+        ]),
+      );
+      recount();
+      setTimeout(() => ta.focus(), 10);
+      return wrap;
+    };
+
+    // ---------------- Step 2: review ----------------
+
+    const reviewStep = () => {
+      const wrap = h("div", { class: "bulk-step bulk-step-review" });
+      const list = h("div", { class: "bulk-review-list" });
+
+      const renderList = () => {
+        list.replaceChildren();
+        items.forEach((item, i) => {
+          const row = h("div", { class: "bulk-review-row" });
+
+          const text = /** @type {HTMLInputElement} */ (
+            h("input", { type: "text", class: "bulk-review-text" })
+          );
+          text.value = item.title;
+          text.addEventListener("input", () => {
+            items[i].title = text.value;
+          });
+
+          const sel = pillarSelectEl();
+          sel.classList.add("bulk-review-pillar");
+          sel.value = item.pillarId === null ? "" : String(item.pillarId);
+          sel.addEventListener("change", () => {
+            items[i].pillarId = pillarIdFromSelect(sel);
+          });
+
+          const remove = h(
             "button",
             {
-              class: "btn",
+              class: "btn ghost sm bulk-review-remove",
+              title: "Remove this line",
+              "aria-label": `Remove "${item.title}"`,
               onclick: () => {
-                const titles = parseBulkList(ta.value);
-                if (!titles.length) {
-                  notify("info", "Nothing to add — paste a list first.");
-                  return;
-                }
-                if (titles.length > MAX_BULK_ITEMS) {
-                  notify(
-                    "error",
-                    `That is ${titles.length} items. Add up to ${MAX_BULK_ITEMS} at a time.`,
-                  );
-                  return;
-                }
-                const internal = internalCheckboxChecked(internalWrap);
-                const n = addManyActions(user.id, pillarIdFromSelect(select), titles, {
-                  internal,
-                });
-                m.close();
-                render();
-                notify("info", `${n} action${n === 1 ? "" : "s"} added.`);
+                items.splice(i, 1);
+                // The whole list is rebuilt rather than the one row removed,
+                // because every remaining row's handler closes over its index.
+                renderList();
+                updateHeading();
               },
             },
-            "Add all",
-          ),
+            "×",
+          );
+
+          row.appendChild(text);
+          row.appendChild(sel);
+          row.appendChild(remove);
+          list.appendChild(row);
+        });
+        if (!items.length) {
+          list.appendChild(h("div", { class: "empty-card" }, "Every line was removed."));
+        }
+      };
+
+      const heading = h("h3", {}, "");
+      const updateHeading = () => {
+        heading.textContent = `Review ${items.length} action${items.length === 1 ? "" : "s"}`;
+      };
+
+      // Applying a pillar to every row is the common case — a pasted list is
+      // usually one workstream. Per-row selects then handle the exceptions,
+      // rather than every row being an exception.
+      const applyAll = pillarSelectEl();
+      applyAll.classList.add("bulk-apply-all");
+      const applyAllWrap = h("label", { class: "bulk-apply-all-wrap" }, [
+        h("span", { class: "action-panel-label" }, "Set every pillar to"),
+        applyAll,
+      ]);
+      applyAll.addEventListener("change", () => {
+        const pillarId = pillarIdFromSelect(applyAll);
+        items.forEach((it) => {
+          it.pillarId = pillarId;
+        });
+        renderList();
+      });
+
+      const addAll = () => {
+        const clean = items
+          .map((it) => ({ title: it.title.trim(), pillarId: it.pillarId }))
+          .filter((it) => it.title);
+        if (!clean.length) {
+          notify("info", "Nothing to add — every line is empty.");
+          return;
+        }
+        const n = addManyActions(user.id, clean, { internal: internalFlag });
+        m.close();
+        render();
+        notify("info", `${n} action${n === 1 ? "" : "s"} added.`);
+      };
+
+      updateHeading();
+      renderList();
+      wrap.appendChild(heading);
+      wrap.appendChild(
+        h(
+          "p",
+          { class: "section-explainer" },
+          "Give each one a pillar, fix any wording, and drop anything that should not be there. Leave a pillar blank if the action does not belong to one of the ten.",
+        ),
+      );
+      wrap.appendChild(applyAllWrap);
+      wrap.appendChild(list);
+      const internalWrap = internalControl();
+      if (internalWrap) wrap.appendChild(internalWrap);
+      wrap.appendChild(
+        h("div", { class: "row" }, [
+          h("button", { class: "btn secondary", onclick: () => show(pasteStep()) }, "Back"),
+          h("button", { class: "btn", onclick: addAll }, "Add all"),
         ]),
-      ].filter(Boolean),
-    );
-    setTimeout(() => ta.focus(), 10);
+      );
+      return wrap;
+    };
+
+    show(pasteStep());
   }
 
   return {

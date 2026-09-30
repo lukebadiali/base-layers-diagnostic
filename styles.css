@@ -4051,6 +4051,77 @@ button.action-chevron:focus-visible {
   text-align: center;
   color: var(--ink-3);
 }
+
+/* --- v6: the two-step paste dialogue (ACT-09 / ACT-10) --- */
+.bulk-apply-all-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+.bulk-apply-all {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  flex: 1;
+}
+/* The list scrolls inside the dialogue rather than growing it, so the Add all
+   button stays reachable without a page scroll at the two-hundred-item cap. */
+.bulk-review-list {
+  max-height: 46vh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.bulk-review-row {
+  display: grid;
+  grid-template-columns: 1fr 190px auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.bulk-review-row:last-child {
+  border-bottom: 0;
+}
+.bulk-review-text,
+.bulk-review-pillar {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  width: 100%;
+}
+.bulk-review-remove {
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  .bulk-review-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "text remove"
+      "pillar pillar";
+  }
+  .bulk-review-text {
+    grid-area: text;
+  }
+  .bulk-review-pillar {
+    grid-area: pillar;
+  }
+  .bulk-review-remove {
+    grid-area: remove;
+  }
+  .bulk-review-list {
+    max-height: 40vh;
+  }
+}
 .notes-mb-6 { margin-bottom: 6px; }
 
 /* --- Compound: stage progress (pillar detail) --- */

@@ -177,6 +177,12 @@ emulator needs a Java runtime and there is none on this machine, so
 4. Back → Review round-trips without losing edits made in review.
 5. `tests/domain/bulk-parse.test.js` is unchanged — the delimiter rule is not touched.
 
+**Outcome (executed 2026-09-30).** All five met; `actions-bulk-paste.test.js`
+rewritten to the two-step flow, 12 -> 22 cases. `tests/domain/bulk-parse.test.js`
+is untouched, as required. One design note: the step swap happens inside a host
+element rather than by calling `modal()` twice, because a second `modal()` call
+leaves the first call's backdrop listener attached to `#modalRoot`.
+
 **Depends on:** Phase A.
 
 ---

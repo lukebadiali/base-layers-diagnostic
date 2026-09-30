@@ -2280,14 +2280,20 @@ import {
   // write for the whole batch, then a per-action cloud push (the subcollection
   // has no batch helper and 10-ish setDocs is well inside budget). Prepends as
   // a block rather than unshifting per item, which would reverse the pasted
-  // order. pillarId may be null — see openBulkActionModal.
-  function addManyActions(createdBy, pillarId, titles, { internal = false } = {}) {
+  // order.
+  //
+  // Milestone v6 (ACT-09): takes `items` — [{ title, pillarId }] — rather than
+  // a titles array and one shared pillar. The per-row pillar is collected in
+  // the review step, so expressing "one pillar for the whole batch" is now the
+  // caller's job (the review step's apply-to-all control), not a shape this
+  // function imposes on every caller. pillarId may be null.
+  function addManyActions(createdBy, items, { internal = false } = {}) {
     const user = currentUser();
     const orgMeta = activeOrgForUser(user);
-    if (!orgMeta || !titles.length) return 0;
+    if (!orgMeta || !items.length) return 0;
     const o = loadOrg(orgMeta.id);
     o.actions = o.actions || [];
-    const created = titles.map((title) => ({
+    const created = items.map(({ title, pillarId }) => ({
       id: uid("act_"),
       pillarId,
       title,

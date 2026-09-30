@@ -1660,10 +1660,9 @@ button.action-chevron:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px 16px;
 }
-/* The two free-text fields get the full width — an action's wording is the
-   thing the panel exists to show in full, so it must not sit in a 220px box. */
-.action-panel-field:nth-child(1),
-.action-panel-field:nth-child(2) {
+/* The action's own wording gets the full width — showing it in full is the
+   thing the panel exists for, so it must not sit in a 220px box. */
+.action-panel-field:nth-child(1) {
   grid-column: 1 / -1;
 }
 .action-panel-field {

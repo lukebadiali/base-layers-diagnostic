@@ -17,10 +17,11 @@ phase outcomes and the deployment order below.
 
 | # | Decision | Chosen |
 |---|---|---|
-| D1 | Client edit rights on actions | Title, description, owner, pillar. **Due date stays staff-only.** No client create, no client delete, `internal` flag immutable to clients. |
+| D1 | Client edit rights on actions | Title, owner, pillar. **Due date stays staff-only.** No client create, no client delete, `internal` flag immutable to clients. |
 | D2 | Document folders | **Nested tree.** Folders are metadata only — Storage object paths never change. |
 | D3 | Process | New GSD milestone with phases, REQ-IDs and success criteria. |
 | D4 | Refactor | Complete the pending Phase 4 D-02 re-homing for `renderActions` + `renderDocuments` **first**, then build features in the new modules. |
+| D6 | No new fields | **No field is added to any record by this milestone.** Instructed after Phases A-H had landed, so `description`, `lastEditedBy` and `lastEditedAt` were built and then removed. The one structural exception is `documents.folderId`: it is the mechanism by which a document belongs to a folder, and the folder tree cannot exist without it. If that is also unwanted, the folder feature goes with it. |
 | D5 | REQ-ID prefix | The Documents requirements use **`FILE-`**, not `DOC-`. Renamed mid-execution: the hardening milestone already owns `DOC-01`..`DOC-10` for *documentation* controls, and both sets are indexed by the same `docs/CONTROL_MATRIX.md`. A reader hitting `DOC-04` in that matrix would have had no way to tell "Control matrix populated" from "Deleting a non-empty folder is refused". Commits before this decision still say `DOC-0N` for the Documents items. |
 
 ---
@@ -35,8 +36,8 @@ phase outcomes and the deployment order below.
 - **ACT-04**: Clicking an action row expands it to show the full action text and every field; clicking a control inside the row does not toggle the expansion.
 - **ACT-05**: The pillar of an existing action can be changed from the expanded row.
 - **ACT-06**: An internal user can edit every field of any action after entry.
-- **ACT-07**: A client user can edit title, description, owner and pillar on any non-internal action in their org, and cannot edit due date, cannot create, cannot delete, and cannot change the `internal` flag.
-- **ACT-08**: Every edit records `lastEditedBy` + `lastEditedAt`, shown in the expanded row.
+- **ACT-07**: A client user can edit title, owner and pillar on any non-internal action in their org, and cannot edit due date, cannot create, cannot delete, cannot change the `internal` flag, and cannot add a field the record does not have.
+- ~~**ACT-08**: Every edit records `lastEditedBy` + `lastEditedAt`.~~ **WITHDRAWN** under decision D6. Action content edits are therefore unattributed — recorded as `THREAT_MODEL.md` § Residual risks R2, not quietly dropped.
 - **ACT-09**: Paste Multiple has a review step listing each parsed item with its own pillar selector before anything is written.
 - **ACT-10**: In the review step an item can be re-worded, removed, or have a pillar applied to every row at once.
 
@@ -100,20 +101,22 @@ per the house convention rather than inheriting main.js's `@ts-nocheck`.
 **Goal:** The data model and security rules support per-field client editing before any UI offers it.
 
 **Work**
-- Action document gains `description` (optional string), `lastEditedBy`, `lastEditedAt`. `pillarId` stays nullable.
+- ~~Action document gains `description`, `lastEditedBy`, `lastEditedAt`.~~ Withdrawn under D6 — the record is unchanged. `pillarId` stays nullable, as before.
 - `firestore.rules`, actions block — client branch changes from
   `mutableOnly(["done","completedAt","completedBy","updatedAt"])` to
-  `mutableOnly(["done","completedAt","completedBy","title","description","owner","pillarId","lastEditedBy","lastEditedAt","updatedAt"])`,
-  keeping `internal == false`, `notDeleted`, and adding `immutable("due")`, `immutable("internal")`, `immutable("createdBy")`, `immutable("createdAt")`, `immutable("orgId")` on the client branch.
+  `mutableOnly(["done","completedAt","completedBy","title","owner","pillarId","updatedAt"])`,
+  keeping `internal == false` and `notDeleted`. Everything else — `due`, `internal`,
+  `createdBy`, `createdAt`, `orgId`, `deletedAt`, and any key the record does not
+  have — is denied by omission from that list.
 - Staff branch unchanged except the new fields are writable.
-- `updateAction` stamps `lastEditedBy` / `lastEditedAt` on every patch.
-- Audit event on client-originated action edits (`data.action.clientEdit`) **deferred to Phase H**: `AUDIT_EVENTS` in `src/observability/audit-events.js` mirrors a Zod enum in `functions/src/audit/auditEventSchema.ts`, so a new event name is a Cloud Functions change and a functions deploy, not a client one. It belongs with the CONTROL_MATRIX row it supports. The durable evidence — `lastEditedBy` / `lastEditedAt` on the document, enforced server-side — lands here.
+- ~~`updateAction` stamps `lastEditedBy` / `lastEditedAt`.~~ Withdrawn under D6.
+- ~~Audit event on client-originated action edits (`data.action.clientEdit`)~~ **not built.** It was deferred to Phase H, then the D6 no-new-fields decision removed the field-based alternative too, so content edits carry no attribution at all. Originally deferred because: `AUDIT_EVENTS` in `src/observability/audit-events.js` mirrors a Zod enum in `functions/src/audit/auditEventSchema.ts`, so a new event name is a Cloud Functions change and a functions deploy, not a client one. It belongs with the CONTROL_MATRIX row it supports. The durable evidence — `lastEditedBy` / `lastEditedAt` on the document, enforced server-side — lands here.
 
 **Success criteria**
 1. Rules-emulator matrix covers client × each writable field × allow, and client × `due` / `internal` / `createdBy` / `createdAt` / `orgId` / `deletedAt` × deny.
 2. A client attempting to set `due` is denied even when the rest of the patch is legal.
 3. A client attempting to edit an `internal: true` action is denied.
-4. A client cannot stamp `lastEditedBy` with anyone's uid but their own.
+4. A client cannot add a field the action record does not have.
 5. `npm run test:rules` green.
 
 **Outcome (executed 2026-09-30).** Rules widened, 23 emulator cases added
@@ -335,10 +338,9 @@ Landed:
 - `tests/control-matrix-paths-exist.test.js` regex extended for the ACT / FILE /
   DIA / PLAT prefixes, so the new rows are actually swept rather than ignored.
 
-**Not done: PLAT-04, GDPR coverage for the `folders` collection.** The new action
-fields ARE covered — `gdprExportUser` exports whole action documents, so
-`description` and `lastEditedBy` come along by construction. Folders do not.
-Adding them means changing `QueryResults`, `UserBundle`, `assembleUserBundle`,
+**Not done: PLAT-04, GDPR coverage for the `folders` collection.** There are no
+new action fields to cover — decision D6 withdrew them — so folders are the only
+gap. Adding them means changing `QueryResults`, `UserBundle`, `assembleUserBundle`,
 `gdprExportUser` and `eraseCascade`, and bumping `BUNDLE_SCHEMA_VERSION` — which
 changes the shape of an export format that has its own unit tests.
 
@@ -409,9 +411,9 @@ they can go out ahead of it in one window or three.
 
 ## Open questions
 
-1. **"Description" on an action** — item 9's answer named title *and description* as the wording tier, but actions carry only `title` today. This plan adds an optional `description` field surfaced in the expanded row. Confirm that is what was meant, rather than "description" being another word for the full title text shown on expand.
+1. ~~**"Description" on an action**~~ — **ANSWERED: no new fields.** The `description` field was built and then removed. "The full text" means the action's own title, shown in full in the expanded row.
 2. **Non-empty folder delete** — this plan refuses it. The alternative is cascading the soft-delete to everything inside, which is recoverable but much easier to do by accident. Confirm refusal is right.
-3. **Should client edits be visible as such?** `lastEditedBy` is stored either way. The question is whether the row should say "edited by [client name]" to internal users, so a consultant can see when a client has rewritten an action.
+3. ~~**Should client edits be visible as such?**~~ — **MOOT under D6, and worth re-reading.** Nothing is stored either way now. A consultant cannot see that a client rewrote an action, and cannot tell afterwards who changed it. That follows from the no-new-fields decision rather than from a judgement made on its own merits; recorded as `THREAT_MODEL.md` § Residual risks R2.
 4. **Due-date filter buckets** — Overdue / Next 7 days / This month / No due date is proposed. Confirm those are the cuts BeDeveloped actually works to.
 5. **Can clients create folders?** Assumed internal-only, per "created as needed by internal users".
 6. **Is this build chargeable?** The August document flagged that the question went unanswered and that precedent was being set. It is still unanswered, and this scope is several times the size of that one.

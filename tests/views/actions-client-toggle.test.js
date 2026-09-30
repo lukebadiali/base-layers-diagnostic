@@ -9,9 +9,10 @@
 //   1. The collapsed row is read-only text plus the completion checkbox. Every
 //      editable field moved into the panel that opens when the row is clicked,
 //      so a test that wants to edit has to expand first.
-//   2. A client may now edit title, description, owner and pillar. The due
-//      date is the one content field that stays with BeDeveloped, and it is
-//      denied in firestore.rules as well as disabled here.
+//   2. A client may now edit title, owner and pillar — all fields the action
+//      already had. The due date is the one content field that stays with
+//      BeDeveloped, and it is denied in firestore.rules as well as disabled
+//      here. No field is added to the action record by this milestone.
 //
 // Boot pattern mirrors tests/views/diagnostic-client-readonly.test.js.
 import { describe, it, expect, vi } from "vitest";
@@ -178,13 +179,6 @@ describe("action plan — client edit surface (v6 ACT-07)", () => {
     title.dispatchEvent(new Event("blur"));
     expect(findAction("act_1").title).toBe("Document the ICP properly");
 
-    const notes = fieldIn(panel, "Notes");
-    notes.value = "Firmographics, triggers and the two disqualifiers";
-    notes.dispatchEvent(new Event("blur"));
-    expect(findAction("act_1").description).toBe(
-      "Firmographics, triggers and the two disqualifiers",
-    );
-
     const owner = fieldIn(panel, "Owner");
     owner.value = "Priya";
     owner.dispatchEvent(new Event("blur"));
@@ -213,14 +207,21 @@ describe("action plan — client edit surface (v6 ACT-07)", () => {
     expect(labels).not.toContain("Delete action");
   }, 20000);
 
-  it("every edit stamps who made it (ACT-08)", async () => {
+  it("an edit adds no field the action did not already have", async () => {
     await bootAs("u_client-a");
+    const before = Object.keys(findAction("act_1")).sort();
     const title = fieldIn(expandRow("act_1"), "Action");
     title.value = "Reworded by the client";
     title.dispatchEvent(new Event("blur"));
-    const acted = findAction("act_1");
-    expect(acted.lastEditedBy).toBe("u_client-a");
-    expect(typeof acted.lastEditedAt).toBe("string");
+    expect(Object.keys(findAction("act_1")).sort()).toEqual(before);
+  }, 20000);
+
+  it("the panel offers no field the action does not have", async () => {
+    await bootAs("u_client-a");
+    const labels = Array.from(expandRow("act_1").querySelectorAll(".action-panel-label")).map((l) =>
+      (l.textContent || "").trim(),
+    );
+    expect(labels).toEqual(["Action", "Pillar", "Owner", "Due"]);
   }, 20000);
 });
 

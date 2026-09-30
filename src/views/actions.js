@@ -394,6 +394,9 @@ export function createActionsView(deps) {
    * The expanded detail panel: the full action text, plus every editable field
    * and the provenance footer.
    *
+   * Every field here already existed on an action before this milestone. The
+   * panel is a new place to edit them, not a new shape for the record.
+   *
    * Editing lives here rather than inline on the collapsed row. The row is now
    * a click target, so an inline <input> sitting in it would have to swallow
    * the click that the row wants — leaving the user with a row that sometimes
@@ -418,18 +421,6 @@ export function createActionsView(deps) {
     titleTa.value = a.title || "";
     titleTa.addEventListener("blur", () => {
       if (titleTa.value !== (a.title || "")) updateAction(a.id, { title: titleTa.value });
-    });
-
-    const descTa = /** @type {HTMLTextAreaElement} */ (
-      h("textarea", {
-        class: "action-panel-input",
-        rows: "3",
-        placeholder: "Anything the owner needs to know to do this well",
-      })
-    );
-    descTa.value = a.description || "";
-    descTa.addEventListener("blur", () => {
-      if (descTa.value !== (a.description || "")) updateAction(a.id, { description: descTa.value });
     });
 
     const pillarSel = pillarSelectEl();
@@ -486,7 +477,6 @@ export function createActionsView(deps) {
     panel.appendChild(
       h("div", { class: "action-panel-grid" }, [
         panelField("Action", titleTa),
-        panelField("Notes", descTa),
         panelField("Pillar", pillarSelWithLink),
         panelField("Owner", ownerInput),
         panelField("Due", dueInput, isClient ? "Due dates are set by BeDeveloped." : undefined),
@@ -500,10 +490,6 @@ export function createActionsView(deps) {
     if (a.createdAt) {
       const who = userLabel(a.createdBy);
       meta.push(`Added ${formatDate(a.createdAt)}${who ? ` by ${who}` : ""}`);
-    }
-    if (a.lastEditedAt) {
-      const who = userLabel(a.lastEditedBy);
-      meta.push(`Last edited ${formatDate(a.lastEditedAt)}${who ? ` by ${who}` : ""}`);
     }
     if (a.done && a.completedAt) {
       const who = userLabel(a.completedBy);

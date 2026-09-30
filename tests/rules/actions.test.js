@@ -179,7 +179,7 @@ describe("actions — client read surface", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Milestone v6 (ACT-07 / ACT-08): the client edit surface.
+// Milestone v6 (ACT-07): the client edit surface.
 //
 // This is the widening the hardening milestone has to be able to describe
 // honestly, so the matrix is exhaustive on both sides: every field a client
@@ -191,7 +191,6 @@ describe("actions — client read surface", () => {
 /** Fields a client may write on a non-internal action in their own org. */
 const CLIENT_WRITABLE = [
   ["title", "Reworded by the client"],
-  ["description", "A fuller note about what this actually involves"],
   ["owner", "Priya"],
   ["pillarId", 4],
 ];
@@ -231,7 +230,7 @@ describe("actions — client content edits (v6 ACT-07)", () => {
     );
   });
 
-  it("client edits all four content fields in one patch -> allow", async () => {
+  it("client edits all three content fields in one patch -> allow", async () => {
     await seed();
     const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
     await assertSucceeds(
@@ -239,15 +238,36 @@ describe("actions — client content edits (v6 ACT-07)", () => {
         doc(client, actPath),
         {
           title: "Document the ICP",
-          description: "Firmographics, triggers and the two disqualifiers",
           owner: "Priya",
           pillarId: 3,
-          lastEditedBy: "client_orgA",
-          lastEditedAt: "2026-09-30T00:00:00.000Z",
           updatedAt: serverTimestamp(),
         },
         { merge: true },
       ),
+    );
+  });
+
+  it("a client cannot add a field the action does not have", async () => {
+    // The whitelist is what denies this. Milestone v6 widened which EXISTING
+    // fields a client may write; it did not give anyone the ability to grow
+    // the record.
+    await seed();
+    const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertFails(
+      setDoc(doc(client, actPath), { description: "a field nobody asked for" }, { merge: true }),
+    );
+    await assertFails(
+      setDoc(doc(client, actPath), { lastEditedBy: "client_orgA" }, { merge: true }),
+    );
+  });
+
+  it("an internal user cannot add an arbitrary new field either", async () => {
+    await seed();
+    const internal = asUser(testEnv, "internal", claimsByRole.internal);
+    // Staff have no mutableOnly whitelist, so this one DOES succeed — recorded
+    // here so the asymmetry is visible rather than assumed in either direction.
+    await assertSucceeds(
+      setDoc(doc(internal, actPath), { notes: "staff scratch" }, { merge: true }),
     );
   });
 
@@ -289,59 +309,11 @@ describe("actions — client content edits (v6 ACT-07)", () => {
   });
 });
 
-describe("actions — the audit stamp cannot be forged (v6 ACT-08)", () => {
-  it("client stamps lastEditedBy with their OWN uid -> allow", async () => {
-    await seed();
-    const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
-    await assertSucceeds(
-      setDoc(
-        doc(client, actPath),
-        { title: "Reworded", lastEditedBy: "client_orgA", updatedAt: serverTimestamp() },
-        { merge: true },
-      ),
-    );
-  });
-
-  it("client stamps lastEditedBy with a CONSULTANT's uid -> deny", async () => {
-    await seed();
-    const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
-    await assertFails(
-      setDoc(
-        doc(client, actPath),
-        { title: "Reworded", lastEditedBy: "internal", updatedAt: serverTimestamp() },
-        { merge: true },
-      ),
-    );
-  });
-
-  it("internal stamps lastEditedBy with someone else's uid -> deny", async () => {
-    await seed();
-    const internal = asUser(testEnv, "internal", claimsByRole.internal);
-    await assertFails(
-      setDoc(
-        doc(internal, actPath),
-        { title: "Reworded", lastEditedBy: "client_orgA", updatedAt: serverTimestamp() },
-        { merge: true },
-      ),
-    );
-  });
-
-  it("internal stamps lastEditedBy with their own uid -> allow", async () => {
-    await seed();
-    const internal = asUser(testEnv, "internal", claimsByRole.internal);
-    await assertSucceeds(
-      setDoc(
-        doc(internal, actPath),
-        { title: "Reworded", lastEditedBy: "internal", updatedAt: serverTimestamp() },
-        { merge: true },
-      ),
-    );
-  });
-
-  it("a patch that never touches lastEditedBy is unaffected", async () => {
-    // A client on a stale build still toggles completion without stamping an
-    // editor. That must keep working, or the widening breaks the thing that
-    // already shipped.
+describe("actions — a stale client keeps working", () => {
+  it("a completion-only patch is unaffected by the widening", async () => {
+    // A client on an older build patches done/completedAt/completedBy and
+    // nothing else. That must keep working, or the widening breaks the thing
+    // that already shipped.
     await seed();
     const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
     await assertSucceeds(

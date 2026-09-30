@@ -93,20 +93,28 @@ threat model that only lists wins is a marketing document.
   (cycle-termination cases); `firestore.rules` (folders block comment states the
   gap in-line); `docs/CONTROL_MATRIX.md` row PLAT-02.
 
-### R2. `completedBy` is not checked against the writer's identity
+### R2. Action content edits are not attributed
 
-- **Risk:** A client completing an action can set `completedBy` to another user's
-  uid, mis-attributing the completion.
-- **Why it is not closed:** The field is written by a client build already in
-  production. Milestone v6 added `editorIsSelf()` for the new `lastEditedBy`
-  field, where there was no deployed writer to break; applying the same check to
-  `completedBy` changes the contract of a field that is already being written,
-  so it wants its own change and its own deploy rather than being folded into a
-  widening.
-- **Impact if exercised:** A wrong name against a completed action. No access is
-  gained and no data is destroyed.
+- **Risk:** After Milestone v6 widened the client write surface, a client can
+  change an action's `title`, `owner` and `pillarId`. Nothing records that they
+  did. An action edited by a client and one edited by a consultant are
+  indistinguishable from the stored document afterwards.
+- **Why it is not closed:** Attributing an edit needs either a field on the
+  record (`lastEditedBy` and the rule to stop it being forged) or an audit event
+  (`data.action.clientEdit`, which is a Cloud Functions change and a functions
+  deploy). Milestone v6 was explicitly scoped to add no new field, so neither
+  landed.
+- **Impact if exercised:** A disputed change with no way to settle it from the
+  data. Nothing is destroyed and no access is gained — the risk is evidentiary,
+  not confidentiality or integrity of access.
+- **Who can exercise it:** Any client in the org, on any non-internal action.
+- **Related:** `completedBy` is likewise not checked against the writer's uid, so
+  a client can mis-attribute a completion. That field is written by a build
+  already in production, so tightening it changes a deployed contract.
+- **If this matters, it is a follow-up, not a fix:** it needs a field or an audit
+  event, and a decision about which.
 - **Evidence:** `firestore.rules` (actions block comment records the gap);
-  `tests/rules/actions.test.js`.
+  `tests/rules/actions.test.js`; `SECURITY.md` § Milestone v6 → Attribution.
 
 ---
 

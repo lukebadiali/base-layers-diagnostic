@@ -1,6 +1,10 @@
 # Milestone v6 — Workflow & Usability Pass
 
 **Proposed:** 2026-09-30
+**Status:** Phases A-H executed 2026-09-30 on `feat/workflow-usability-v6`. One
+deliberate carve-out (PLAT-04, folder GDPR coverage) and two CI-gated
+verifications (`npm run test:rules`, `cd functions && npm test`) — see the
+phase outcomes and the deployment order below.
 **Source:** Nine-item change request (Actions, Documents, Diagnostic rounds)
 **Predecessor:** v5.0 Hardening Pass (Phase 12 of 13 in flight)
 **Mode:** yolo, parallelisation enabled (per `.planning/config.json`)
@@ -362,6 +366,21 @@ G (historic rounds) ── independent ─────────────�
 A and B and G start together. C waits on A and B. E waits on A. F waits on E. H closes the milestone.
 
 ---
+
+## Deployment order (non-negotiable)
+
+1. **`firestore.rules`** — widening is backward compatible, so rules go first.
+   The reverse gives clients a UI whose saves are rejected.
+2. **`scripts/backfill-document-folder-fields/run.js`** — before the client, or
+   every file uploaded before v6 disappears from the documents list. Dry-run
+   first; it is idempotent.
+3. **Cloud Functions** — `folder` in `SOFT_DELETABLE_TYPES` and the six new audit
+   event literals. Without this, deleting a folder fails at the callable and the
+   server rejects the folder audit events.
+4. **The client.**
+
+Steps 1-3 are all backward compatible with the currently deployed client, so
+they can go out ahead of it in one window or three.
 
 ## Risks and call-outs
 

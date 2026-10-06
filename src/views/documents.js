@@ -406,6 +406,24 @@ export function createDocumentsView(deps) {
       );
     };
 
+    /**
+     * The folder-move write. One function so the Move dialogue and a drag-drop
+     * land identically — a second copy of this is how the two paths drift.
+     * @param {string} folderId
+     * @param {string|null} targetId
+     */
+    const moveFolderTo = async (folderId, targetId) => {
+      try {
+        await firestore.setDoc(
+          firestore.doc(db, "orgs", org.id, "folders", folderId),
+          { parentId: targetId, updatedAt: firestore.serverTimestamp() },
+          { merge: true },
+        );
+      } catch (e) {
+        notify("error", "Couldn't move the folder: " + errText(e));
+      }
+    };
+
     /** @param {*} folder */
     const moveFolder = (folder) => {
       openMovePicker(
@@ -417,15 +435,7 @@ export function createDocumentsView(deps) {
             notify("error", verdict.reason);
             return;
           }
-          try {
-            await firestore.setDoc(
-              firestore.doc(db, "orgs", org.id, "folders", folder.id),
-              { parentId: targetId, updatedAt: firestore.serverTimestamp() },
-              { merge: true },
-            );
-          } catch (e) {
-            notify("error", "Couldn't move the folder: " + errText(e));
-          }
+          await moveFolderTo(String(folder.id), targetId);
         },
       );
     };
@@ -457,24 +467,32 @@ export function createDocumentsView(deps) {
       );
     };
 
+    /**
+     * The file-move write. A move is a folderId change and nothing else — the
+     * Storage object is never touched, which is why firestore.rules pins
+     * storagePath immutable.
+     * @param {*} d
+     * @param {string|null} targetId
+     */
+    const moveDocumentTo = async (d, targetId) => {
+      try {
+        await firestore.setDoc(
+          firestore.doc(db, "orgs", org.id, "documents", d.id),
+          { folderId: targetId, updatedAt: firestore.serverTimestamp() },
+          { merge: true },
+        );
+      } catch (e) {
+        notify("error", "Couldn't move the file: " + errText(e));
+      }
+    };
+
     /** @param {*} d */
     const moveDocument = (d) => {
       openMovePicker(
         `Move "${d.filename}"`,
         () => /** @type {Verdict} */ ({ ok: true }),
         async (targetId) => {
-          try {
-            // A move is a folderId change and nothing else. The Storage object
-            // is not touched — firestore.rules pins storagePath immutable for
-            // exactly this reason.
-            await firestore.setDoc(
-              firestore.doc(db, "orgs", org.id, "documents", d.id),
-              { folderId: targetId, updatedAt: firestore.serverTimestamp() },
-              { merge: true },
-            );
-          } catch (e) {
-            notify("error", "Couldn't move the file: " + errText(e));
-          }
+          await moveDocumentTo(d, targetId);
         },
       );
     };
@@ -516,27 +534,161 @@ export function createDocumentsView(deps) {
       }
     };
 
+    // ---- drag and drop ----
+    //
+    // Dragging is a shortcut, never the only way: every move is still reachable
+    // through the Move dialogue, which is what keyboard and screen-reader users
+    // get. The same canMoveFolder guard runs on drop as in the picker, so a
+    // drag cannot create a cycle or bust the depth cap just because the pointer
+    // went somewhere the select would have greyed out.
+    //
+    // dragenter/dragleave fire per descendant element, so a naive
+    // highlight-on-enter / clear-on-leave flickers as the pointer crosses a
+    // row's children. Counting enters and leaves per row is what keeps it
+    // steady.
+    /** @type {{ kind: "file"|"folder", id: string }|null} */
+    let dragging = null;
+    /** @type {WeakMap<HTMLElement, number>} */
+    const dragDepth = new WeakMap();
+
+    /** Can the thing currently being dragged land on this folder (or root)? */
+    const dropAllowed = (/** @type {string|null} */ targetId) => {
+      // Copied to a local so the narrowing survives the closures below.
+      const drag = dragging;
+      if (!drag) return false;
+      if (drag.kind === "file") {
+        const d = documents.find((x) => String(x.id) === drag.id);
+        // No-op drops are refused so the row does not light up for a move that
+        // would change nothing.
+        return !!d && (d.folderId || null) !== targetId;
+      }
+      if (drag.id === String(targetId)) return false;
+      const folder = folders.find((f) => String(f.id) === drag.id);
+      if (folder && (folder.parentId || null) === targetId) return false;
+      return canMoveFolder(folders, drag.id, targetId).ok;
+    };
+
+    /** Perform the drop. Mirrors the Move dialogue's write exactly. */
+    const performDrop = async (/** @type {string|null} */ targetId) => {
+      if (!dragging) return;
+      const { kind, id } = dragging;
+      dragging = null;
+      if (kind === "file") {
+        const d = documents.find((x) => String(x.id) === id);
+        if (d) await moveDocumentTo(d, targetId);
+        return;
+      }
+      const verdict = canMoveFolder(folders, id, targetId);
+      if (!verdict.ok) {
+        notify("error", verdict.reason);
+        return;
+      }
+      await moveFolderTo(id, targetId);
+    };
+
+    /**
+     * Make an element a drop target for the given folder id (null = root).
+     * @param {HTMLElement} el
+     * @param {string|null} targetId
+     */
+    const asDropTarget = (el, targetId) => {
+      el.addEventListener("dragover", (e) => {
+        if (!dropAllowed(targetId)) return;
+        // Preventing default is what tells the browser a drop is permitted;
+        // without it the drop event never fires.
+        e.preventDefault();
+        /** @type {*} */ (e).dataTransfer && /** @type {*} */ (e.dataTransfer.dropEffect = "move");
+      });
+      el.addEventListener("dragenter", (e) => {
+        if (!dropAllowed(targetId)) return;
+        e.preventDefault();
+        dragDepth.set(el, (dragDepth.get(el) || 0) + 1);
+        el.classList.add("drop-target");
+      });
+      el.addEventListener("dragleave", () => {
+        const next = (dragDepth.get(el) || 0) - 1;
+        dragDepth.set(el, Math.max(0, next));
+        if (next <= 0) el.classList.remove("drop-target");
+      });
+      el.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dragDepth.set(el, 0);
+        el.classList.remove("drop-target");
+        void performDrop(targetId);
+      });
+      return el;
+    };
+
+    /**
+     * Make an element draggable.
+     * @param {HTMLElement} el
+     * @param {"file"|"folder"} kind
+     * @param {string} id
+     */
+    const asDraggable = (el, kind, id) => {
+      el.draggable = true;
+      el.addEventListener("dragstart", (e) => {
+        dragging = { kind, id };
+        el.classList.add("dragging");
+        const dt = /** @type {*} */ (e).dataTransfer;
+        if (dt) {
+          dt.effectAllowed = "move";
+          // Some browsers refuse to start a drag with an empty payload.
+          dt.setData("text/plain", `${kind}:${id}`);
+        }
+      });
+      el.addEventListener("dragend", () => {
+        dragging = null;
+        el.classList.remove("dragging");
+        listBody.querySelectorAll(".drop-target").forEach((n) => n.classList.remove("drop-target"));
+        crumbs.querySelectorAll(".drop-target").forEach((n) => n.classList.remove("drop-target"));
+      });
+      return el;
+    };
+
     // ---- painting ----
 
     const paintCrumbs = () => {
       crumbs.replaceChildren();
       /** @type {Array<{ id: string|null, label: string }>} */
       const trail = [{ id: null, label: "Documents" }];
-      pathTo(folders, currentFolderId()).forEach((f) =>
-        trail.push({ id: String(f.id), label: f.name }),
-      );
+      const path = pathTo(folders, currentFolderId());
+      path.forEach((f) => trail.push({ id: String(f.id), label: f.name }));
+
+      // Up one level. The full trail is already clickable, but a single "Back"
+      // is the move people reach for most, and it is one target instead of
+      // hunting the right crumb. Doubles as a drop target, so dragging a file
+      // onto Back moves it up a level.
+      if (path.length) {
+        const parentId = path.length > 1 ? String(path[path.length - 2].id) : null;
+        const back = h(
+          "button",
+          {
+            class: "docs-crumb-back",
+            title: "Up one level",
+            "aria-label": "Up one level",
+            onclick: () => goTo(parentId),
+          },
+          "← Back",
+        );
+        crumbs.appendChild(asDropTarget(back, parentId));
+      }
+
       trail.forEach((step, i) => {
         const last = i === trail.length - 1;
         if (i > 0) crumbs.appendChild(h("span", { class: "docs-crumb-sep" }, "/"));
-        crumbs.appendChild(
-          last
-            ? h("span", { class: "docs-crumb docs-crumb-current" }, step.label)
-            : h(
-                "button",
-                { class: "docs-crumb docs-crumb-link", onclick: () => goTo(step.id) },
-                step.label,
-              ),
+        if (last) {
+          crumbs.appendChild(h("span", { class: "docs-crumb docs-crumb-current" }, step.label));
+          return;
+        }
+        // An ancestor crumb takes a drop too — the natural way to move
+        // something several levels up in one gesture.
+        const crumb = h(
+          "button",
+          { class: "docs-crumb docs-crumb-link", onclick: () => goTo(step.id) },
+          step.label,
         );
+        crumbs.appendChild(asDropTarget(crumb, step.id));
       });
     };
 
@@ -551,6 +703,14 @@ export function createDocumentsView(deps) {
       if (childCount) bits.push(`${childCount} folder${childCount === 1 ? "" : "s"}`);
 
       const row = h("div", { class: "docs-table-row docs-folder-row", "data-folder-id": id });
+
+      // The whole row opens the folder, not just the name. The name stays a
+      // real <button> so the keyboard still has a focusable target — the row
+      // click is an extra on top, which is why the row itself is not given
+      // role="button": it contains buttons, and interactive content inside a
+      // button is not reliably exposed. Same reasoning as the Actions rows.
+      row.addEventListener("click", () => goTo(id));
+
       row.appendChild(
         h("div", { class: "docs-folder-name" }, [
           h("span", { class: "docs-folder-icon", "aria-hidden": "true" }, "▸"),
@@ -580,12 +740,27 @@ export function createDocumentsView(deps) {
             : [],
         ),
       );
+
+      // Rename / Move / Delete must not also open the folder.
+      row.querySelectorAll("button").forEach((b) => {
+        if (b.classList.contains("docs-folder-open")) return;
+        b.addEventListener("click", (e) => e.stopPropagation());
+      });
+
+      // A folder is both a drop target and draggable (staff only — a client
+      // cannot move anything, so handing them a drag that always refuses would
+      // be worse than no drag at all).
+      asDropTarget(row, id);
+      if (isInternal) asDraggable(row, "folder", id);
       return row;
     };
 
     /** @param {*} d */
     const fileRow = (d) => {
       const row = h("div", { class: "docs-table-row docs-file-row", "data-doc-id": d.id });
+      // Staff only, for the same reason as folders: a client cannot move a file,
+      // so a drag that can only ever refuse is worse than no drag.
+      if (isInternal) asDraggable(row, "file", String(d.id));
       row.appendChild(
         h("div", {}, [
           h("div", { class: "docs-row-filename" }, d.filename),

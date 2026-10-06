@@ -288,6 +288,13 @@ import {
     settings: "baselayers:settings",
     orgs: "baselayers:orgs",
     mode: "baselayers:mode",
+    // 2026-10: the staff org selection, persisted across reloads. Before this
+    // existed, state.orgId was in-memory only and init() fell back to
+    // loadOrgMetas()[0], so every refresh silently moved a consultant into
+    // whichever org happened to be first. Harmless-looking until v6 shipped
+    // folders, at which point "my folders and the file I just filed have
+    // vanished" became the obvious reading — the org had changed underneath.
+    activeOrg: "baselayers:activeOrg",
     org: (id) => `baselayers:org:${id}`,
     // v1 compat
     v1Active: "baselayers:active",
@@ -877,20 +884,47 @@ import {
   // initial value reads from localStorage at module load (mirrors app.js's
   // jget(K.mode, "internal") shape verbatim — see src/state.js).
 
+  /**
+   * Remember the staff org selection so a reload returns to the same org.
+   * Called from activeOrgForUser rather than from each `state.orgId = …` site
+   * (there are six, one of them in src/ui/chrome.js), so no path can forget it.
+   * Writes only on change — this runs on every render.
+   */
+  let lastPersistedOrgId = null;
+  function persistActiveOrg(orgId) {
+    if (!orgId || orgId === lastPersistedOrgId) return;
+    lastPersistedOrgId = orgId;
+    try {
+      localStorage.setItem(K.activeOrg, JSON.stringify(orgId));
+    } catch {
+      // Private window / blocked site data. The selection just stops surviving
+      // reloads, which is where this started — never worth failing a render.
+    }
+  }
+
   function activeOrgForUser(user) {
     if (!user) return null;
     if (user.role === "client") {
       return user.orgId ? loadOrg(user.orgId) : null;
     }
-    // internal: pick state.orgId, else first org
+    // internal: pick state.orgId, else the persisted selection, else first org
     if (state.orgId) {
       const o = loadOrg(state.orgId);
-      if (o) return o;
+      if (o) {
+        persistActiveOrg(state.orgId);
+        return o;
+      }
     }
     const metas = loadOrgMetas();
     if (!metas.length) return null;
-    state.orgId = metas[0].id;
-    return loadOrg(state.orgId);
+    // Validate the remembered id against the orgs this browser can see: an org
+    // that has since been deleted, or belongs to a different signed-in user,
+    // must not strand the picker on something that cannot load.
+    const remembered = jget(K.activeOrg, null);
+    const chosen = metas.some((m) => m.id === remembered) ? remembered : metas[0].id;
+    state.orgId = chosen;
+    persistActiveOrg(chosen);
+    return loadOrg(chosen);
   }
 
   function effectiveRole(user) {
@@ -5585,10 +5619,16 @@ Any questions, just let me know.`;
     clearOldScaleResponsesIfNeeded();
     const user = currentUser();
     if (user) {
-      // set initial orgId for staff (admin OR internal)
+      // set initial orgId for staff (admin OR internal), preferring the org
+      // they were last in. Without the remembered value this line is what made
+      // every refresh land a consultant in whichever org sorted first — and
+      // once v6 shipped folders, that read as "my folders have vanished".
       if (isStaff(user)) {
         const metas = loadOrgMetas();
-        if (metas.length && !state.orgId) state.orgId = metas[0].id;
+        if (metas.length && !state.orgId) {
+          const remembered = jget(K.activeOrg, null);
+          state.orgId = metas.some((m) => m.id === remembered) ? remembered : metas[0].id;
+        }
       }
     }
     // Scope item 7 (2026-07): bell panel closes on any outside click (the

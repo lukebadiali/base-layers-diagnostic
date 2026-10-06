@@ -4278,6 +4278,49 @@ button.action-chevron:focus-visible {
 .docs-crumb-sep {
   color: var(--ink-3);
 }
+.docs-crumb-back {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 3px 9px;
+  margin-right: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.docs-crumb-back:hover {
+  background: var(--surface-muted);
+  color: var(--ink-1, inherit);
+}
+
+/* --- v6: drag and drop --- */
+.docs-folder-row {
+  cursor: pointer;
+}
+.docs-folder-row:hover {
+  background: var(--line);
+}
+/* The row being dragged fades, so the pointer's payload is obvious while the
+   drop targets light up underneath it. */
+.docs-table-row.dragging {
+  opacity: 0.4;
+}
+/* A valid drop target. dropAllowed() gates the class, so this only ever
+   appears where the drop will actually be accepted — the highlight is the
+   affordance, and lighting up somewhere that then refuses is worse than no
+   highlight at all. */
+.docs-table-row.drop-target,
+.docs-crumb.drop-target,
+.docs-crumb-back.drop-target {
+  outline: 2px dashed var(--brand);
+  outline-offset: -2px;
+  background: var(--brand-tint);
+}
+.docs-table-row[draggable="true"] .docs-row-filename,
+.docs-table-row[draggable="true"] .docs-folder-name {
+  cursor: grab;
+}
 .docs-folder-row {
   background: var(--surface-muted);
 }

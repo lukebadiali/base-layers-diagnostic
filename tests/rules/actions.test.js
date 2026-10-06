@@ -51,9 +51,7 @@ describe("actions — create/delete are staff-only", () => {
     const internal = asUser(testEnv, "internal", claimsByRole.internal);
     await assertSucceeds(setDoc(doc(internal, actPath), { ...baseAction }));
     const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
-    await assertFails(
-      setDoc(doc(client, "orgs/orgA/actions/act_client"), { ...baseAction }),
-    );
+    await assertFails(setDoc(doc(client, "orgs/orgA/actions/act_client"), { ...baseAction }));
   });
 
   it("internal create with mismatched orgId field -> deny", async () => {
@@ -100,18 +98,18 @@ describe("actions — client completion toggle", () => {
     );
   });
 
-  it("client edits the title -> deny", async () => {
+  // Milestone v6 (ACT-07) reverses this: a client may now edit the wording.
+  // The per-field matrix lives in its own describe block below.
+  it("client edits the title -> allow (was deny before v6)", async () => {
     await seed();
     const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
-    await assertFails(setDoc(doc(client, actPath), { title: "Renamed" }, { merge: true }));
+    await assertSucceeds(setDoc(doc(client, actPath), { title: "Renamed" }, { merge: true }));
   });
 
   it("client toggles an internal action -> deny", async () => {
     await seed(internalActPath, { internal: true });
     const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
-    await assertFails(
-      setDoc(doc(client, internalActPath), { done: true }, { merge: true }),
-    );
+    await assertFails(setDoc(doc(client, internalActPath), { done: true }, { merge: true }));
   });
 
   it("client of ANOTHER org toggles -> deny (tenant isolation)", async () => {
@@ -177,5 +175,149 @@ describe("actions — client read surface", () => {
     await seed(actPath, { deletedAt: "2026-07-20T00:00:00.000Z" });
     const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
     await assertFails(getDoc(doc(client, actPath)));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Milestone v6 (ACT-07): the client edit surface.
+//
+// This is the widening the hardening milestone has to be able to describe
+// honestly, so the matrix is exhaustive on both sides: every field a client
+// MAY write, and every field they may not. A field silently slipping from the
+// second list to the first is exactly the regression these cases exist to
+// catch.
+// ---------------------------------------------------------------------------
+
+/** Fields a client may write on a non-internal action in their own org. */
+const CLIENT_WRITABLE = [
+  ["title", "Reworded by the client"],
+  ["owner", "Priya"],
+  ["pillarId", 4],
+];
+
+/** Fields a client may not write, whatever else is in the same patch. */
+const CLIENT_DENIED = [
+  ["due", "2027-01-01"],
+  ["internal", true],
+  ["createdBy", "someoneElse"],
+  ["createdAt", "2020-01-01T00:00:00.000Z"],
+  ["orgId", "orgB"],
+  ["deletedAt", "2026-09-30T00:00:00.000Z"],
+];
+
+describe("actions — client content edits (v6 ACT-07)", () => {
+  it.each(CLIENT_WRITABLE)("client edits %s -> allow", async (field, value) => {
+    await seed();
+    const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertSucceeds(
+      setDoc(
+        doc(client, actPath),
+        { [field]: value, updatedAt: serverTimestamp() },
+        { merge: true },
+      ),
+    );
+  });
+
+  it.each(CLIENT_DENIED)("client edits %s -> deny", async (field, value) => {
+    await seed();
+    const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertFails(
+      setDoc(
+        doc(client, actPath),
+        { [field]: value, updatedAt: serverTimestamp() },
+        { merge: true },
+      ),
+    );
+  });
+
+  it("client edits all three content fields in one patch -> allow", async () => {
+    await seed();
+    const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertSucceeds(
+      setDoc(
+        doc(client, actPath),
+        {
+          title: "Document the ICP",
+          owner: "Priya",
+          pillarId: 3,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      ),
+    );
+  });
+
+  it("a client cannot add a field the action does not have", async () => {
+    // The whitelist is what denies this. Milestone v6 widened which EXISTING
+    // fields a client may write; it did not give anyone the ability to grow
+    // the record.
+    await seed();
+    const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertFails(
+      setDoc(doc(client, actPath), { description: "a field nobody asked for" }, { merge: true }),
+    );
+    await assertFails(
+      setDoc(doc(client, actPath), { lastEditedBy: "client_orgA" }, { merge: true }),
+    );
+  });
+
+  it("an internal user cannot add an arbitrary new field either", async () => {
+    await seed();
+    const internal = asUser(testEnv, "internal", claimsByRole.internal);
+    // Staff have no mutableOnly whitelist, so this one DOES succeed — recorded
+    // here so the asymmetry is visible rather than assumed in either direction.
+    await assertSucceeds(
+      setDoc(doc(internal, actPath), { notes: "staff scratch" }, { merge: true }),
+    );
+  });
+
+  it("a legal content edit bundled with a due-date change -> deny (the whole patch fails)", async () => {
+    await seed();
+    const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertFails(
+      setDoc(
+        doc(client, actPath),
+        { title: "Legal on its own", due: "2027-01-01", updatedAt: serverTimestamp() },
+        { merge: true },
+      ),
+    );
+  });
+
+  it("client edits the wording of an INTERNAL action -> deny", async () => {
+    await seed(internalActPath, { internal: true });
+    const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertFails(setDoc(doc(client, internalActPath), { title: "Renamed" }, { merge: true }));
+  });
+
+  it("client edits the wording of a soft-deleted action -> deny", async () => {
+    await seed(actPath, { deletedAt: "2026-09-01T00:00:00.000Z" });
+    const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertFails(setDoc(doc(client, actPath), { title: "Renamed" }, { merge: true }));
+  });
+
+  it("client of ANOTHER org edits the wording -> deny (tenant isolation)", async () => {
+    await seed();
+    const clientB = asUser(testEnv, "client_orgB", claimsByRole.client_orgB);
+    await assertFails(setDoc(doc(clientB, actPath), { title: "Renamed" }, { merge: true }));
+  });
+
+  it("client still cannot create an action", async () => {
+    const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertFails(
+      setDoc(doc(client, "orgs/orgA/actions/act_new"), { ...baseAction, id: "act_new" }),
+    );
+  });
+});
+
+describe("actions — a stale client keeps working", () => {
+  it("a completion-only patch is unaffected by the widening", async () => {
+    // A client on an older build patches done/completedAt/completedBy and
+    // nothing else. That must keep working, or the widening breaks the thing
+    // that already shipped.
+    await seed();
+    const client = asUser(testEnv, "client_orgA", claimsByRole.client_orgA);
+    await assertSucceeds(
+      setDoc(doc(client, actPath), { done: true, updatedAt: serverTimestamp() }, { merge: true }),
+    );
   });
 });

@@ -56,7 +56,8 @@ export const auditEventType = z.enum([
   // beforeUserSignedIn rejection branch (substrate; dormant until rejection
   // rules exist — see 09-03a-PLAN.md mfa_rationale + interfaces). Wave 4
   // anomaly rules read from THESE literals (`auth.signin.failure` already
-  // existed; the data-domain bare flavours are NEW). 5 types × 3 ops = 15.
+  // existed; the data-domain bare flavours are NEW). 5 types × 3 ops = 15,
+  // plus folder from Milestone v6 = 18.
   "data.action.softDelete",
   "data.action.restore",
   "data.action.permanentlyDelete",
@@ -72,6 +73,11 @@ export const auditEventType = z.enum([
   "data.funnelComment.softDelete",
   "data.funnelComment.restore",
   "data.funnelComment.permanentlyDelete",
+  // Milestone v6 (FILE-06): folders are soft-deletable, so they need the same
+  // three flavours. 6 types x 3 ops = 18.
+  "data.folder.softDelete",
+  "data.folder.restore",
+  "data.folder.permanentlyDelete",
   // Phase 9 Wave 3 (AUDIT-05): client-side .requested companion flavours.
   // Server emits the bare flavour (above + Phase 7 baseline auth.* / iam.* /
   // compliance.*); client emits the .requested suffix from the call-site
@@ -97,6 +103,10 @@ export const auditEventType = z.enum([
   "data.funnelComment.softDelete.requested",
   "data.funnelComment.restore.requested",
   "data.funnelComment.permanentlyDelete.requested",
+  // Milestone v6 (FILE-06): folder companions. 1 iam + 2 compliance + 18 data = 21.
+  "data.folder.softDelete.requested",
+  "data.folder.restore.requested",
+  "data.folder.permanentlyDelete.requested",
   // Phase 06.1 (D-11 / AUTH-16): client-invite outcomes. Server-only emissions
   // from inviteClient.ts callable; no client-side .requested companions because
   // the invite flow's "requesting actor" is the admin, whose admin-side actions

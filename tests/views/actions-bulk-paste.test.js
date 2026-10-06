@@ -1,8 +1,14 @@
 // tests/views/actions-bulk-paste.test.js
 // @ts-check
 // 2026-08 scope change (Luke, 10-11 Aug): "Paste multiple" on the Actions tab,
-// mirroring the Plan tab, plus a blank option in the pillar dropdown. Boot
-// pattern mirrors tests/views/actions-client-toggle.test.js.
+// mirroring the Plan tab, plus a blank option in the pillar dropdown.
+//
+// Milestone v6 (ACT-09 / ACT-10) puts a review step between the paste and the
+// write, so a pillar can be set per row. The flow is now
+// paste -> Review -> Add all, and the batch-level controls (apply-to-all
+// pillar, internal flag) live on the second step with the rows they affect.
+//
+// Boot pattern mirrors tests/views/actions-client-toggle.test.js.
 import { describe, it, expect, vi } from "vitest";
 import snapshotOrg from "../fixtures/snapshot-org.json";
 
@@ -58,24 +64,58 @@ function clickButton(label) {
   /** @type {HTMLButtonElement} */ (btn).click();
 }
 
-/** Opens the paste dialogue and returns its textarea + pillar select. */
+/** @param {string} label */
+function buttonExists(label) {
+  return Array.from(document.querySelectorAll("button")).some(
+    (b) => (b.textContent || "").trim() === label,
+  );
+}
+
+/** Opens the paste dialogue (step 1) and returns its textarea. */
 async function openPasteModal() {
   clickButton("Paste multiple");
   await Promise.resolve();
   const ta = /** @type {HTMLTextAreaElement|null} */ (
     document.querySelector("#modalRoot textarea")
   );
-  const select = /** @type {HTMLSelectElement|null} */ (
-    document.querySelector("#modalRoot select")
-  );
-  if (!ta || !select) throw new Error("paste modal did not open");
-  return { ta, select };
+  if (!ta) throw new Error("paste modal did not open");
+  return { ta };
+}
+
+/** Advance to the review step. */
+function goToReview() {
+  clickButton("Review");
+}
+
+/** The review step's rows, as {text, pillar, remove} handles. */
+function reviewRows() {
+  return Array.from(document.querySelectorAll("#modalRoot .bulk-review-row")).map((row) => ({
+    text: /** @type {HTMLInputElement} */ (row.querySelector(".bulk-review-text")),
+    pillar: /** @type {HTMLSelectElement} */ (row.querySelector(".bulk-review-pillar")),
+    remove: /** @type {HTMLButtonElement} */ (row.querySelector(".bulk-review-remove")),
+  }));
+}
+
+/** @param {HTMLElement} el @param {string} value @param {string} [evt] */
+function setValue(el, value, evt = "input") {
+  /** @type {*} */ (el).value = value;
+  el.dispatchEvent(new Event(evt));
 }
 
 /** @param {HTMLTextAreaElement} ta @param {string} text */
 function type(ta, text) {
   ta.value = text;
   ta.dispatchEvent(new Event("input"));
+}
+
+/** True while the paste step (step 1) is on screen. */
+function onPasteStep() {
+  return document.querySelector("#modalRoot .bulk-step-paste") !== null;
+}
+
+/** True while the review step (step 2) is on screen. */
+function onReviewStep() {
+  return document.querySelector("#modalRoot .bulk-step-review") !== null;
 }
 
 const THREE_ITEM_LIST = [
@@ -90,6 +130,7 @@ describe("action plan — paste multiple", () => {
     const before = storedOrg().actions.length;
     const { ta } = await openPasteModal();
     type(ta, THREE_ITEM_LIST);
+    goToReview();
     clickButton("Add all");
     await Promise.resolve();
 
@@ -112,8 +153,10 @@ describe("action plan — paste multiple", () => {
     });
     // Modal closed and the table repainted with the new rows
     expect(document.querySelector("#modalRoot textarea")).toBeNull();
-    const titles = Array.from(document.querySelectorAll(".a-title")).map(
-      (/** @type {*} */ i) => i.value,
+    // v6 (ACT-04): the collapsed row shows the title as text, not as an input
+    // — editing moved into the expanded panel.
+    const titles = Array.from(document.querySelectorAll(".a-title")).map((/** @type {*} */ el) =>
+      (el.textContent || "").trim(),
     );
     expect(titles).toContain("Build top 50 hit list");
   }, 20000);
@@ -133,54 +176,242 @@ describe("action plan — paste multiple", () => {
     expect(count()).toBe("3 actions");
   }, 20000);
 
-  it("applies the chosen pillar and the internal flag to the whole batch", async () => {
-    await bootAs("u_internal-luke");
-    const { ta, select } = await openPasteModal();
-    type(ta, "First\nSecond");
-    select.value = String(snapshotOrg.pillars[1].id);
-    /** @type {HTMLInputElement} */ (
-      document.querySelector("#modalRoot #actBulkInternal")
-    ).checked = true;
-    clickButton("Add all");
-    await Promise.resolve();
-
-    const created = storedOrg().actions.slice(0, 2);
-    created.forEach((/** @type {*} */ a) => {
-      expect(a.pillarId).toBe(snapshotOrg.pillars[1].id);
-      expect(a.internal).toBe(true);
-    });
-  }, 20000);
-
-  it("refuses an oversized batch instead of truncating it", async () => {
+  it("refuses an oversized batch before the user triages it", async () => {
     await bootAs("u_internal-luke");
     const before = storedOrg().actions.length;
     const { ta } = await openPasteModal();
     type(ta, Array.from({ length: 201 }, (_, i) => `Item ${i}`).join("\n"));
     expect(document.querySelector("#modalRoot .outcomes-count")?.textContent).toContain("too many");
-    clickButton("Add all");
+    goToReview();
     await Promise.resolve();
-    // Nothing written, modal stays open so the user can trim the list
+    // The cap bites at the step boundary, not at the end — nobody triages 201
+    // rows only to be told the batch was never going to land.
+    expect(onPasteStep()).toBe(true);
+    expect(onReviewStep()).toBe(false);
     expect(storedOrg().actions.length).toBe(before);
-    expect(document.querySelector("#modalRoot textarea")).not.toBeNull();
   }, 20000);
 
-  it("adds nothing when the box is empty", async () => {
+  it("will not advance to review with an empty box", async () => {
     await bootAs("u_internal-luke");
     const before = storedOrg().actions.length;
     await openPasteModal();
-    clickButton("Add all");
+    goToReview();
     await Promise.resolve();
+    expect(onPasteStep()).toBe(true);
     expect(storedOrg().actions.length).toBe(before);
-    expect(document.querySelector("#modalRoot textarea")).not.toBeNull();
   }, 20000);
 
   it("is staff-only — clients get neither paste nor create", async () => {
     await bootAs("u_client-a");
-    const labels = Array.from(document.querySelectorAll("button")).map((b) =>
-      (b.textContent || "").trim(),
+    expect(buttonExists("Paste multiple")).toBe(false);
+    expect(buttonExists("+ New action")).toBe(false);
+  }, 20000);
+});
+
+describe("action plan — the review step (v6 ACT-09 / ACT-10)", () => {
+  it("shows one row per parsed item, each with its own pillar select", async () => {
+    await bootAs("u_internal-luke");
+    const { ta } = await openPasteModal();
+    type(ta, THREE_ITEM_LIST);
+    goToReview();
+
+    expect(onReviewStep()).toBe(true);
+    const rows = reviewRows();
+    expect(rows.length).toBe(3);
+    expect(rows.map((r) => r.text.value)).toEqual([
+      "Document ICP, including firmographics and triggers",
+      "Build top 50 hit list",
+      "Improve the properties on HubSpot",
+    ]);
+    // Every row starts unassigned, and offers the same blank-first list
+    rows.forEach((r) => {
+      expect(r.pillar.value).toBe("");
+      expect(r.pillar.options[0].textContent).toBe("No pillar (unassigned)");
+      expect(r.pillar.options.length).toBe(snapshotOrg.pillars.length + 1);
+    });
+  }, 20000);
+
+  it("assigns a different pillar to each row", async () => {
+    await bootAs("u_internal-luke");
+    const { ta } = await openPasteModal();
+    type(ta, "First\nSecond\nThird");
+    goToReview();
+
+    const rows = reviewRows();
+    setValue(rows[0].pillar, String(snapshotOrg.pillars[0].id), "change");
+    setValue(rows[1].pillar, String(snapshotOrg.pillars[3].id), "change");
+    // rows[2] deliberately left blank
+    clickButton("Add all");
+    await Promise.resolve();
+
+    const created = storedOrg().actions.slice(0, 3);
+    expect(created.map((/** @type {*} */ a) => [a.title, a.pillarId])).toEqual([
+      ["First", snapshotOrg.pillars[0].id],
+      ["Second", snapshotOrg.pillars[3].id],
+      ["Third", null],
+    ]);
+  }, 20000);
+
+  it("re-words an item in review", async () => {
+    await bootAs("u_internal-luke");
+    const { ta } = await openPasteModal();
+    type(ta, "Typo hre\nFine as is");
+    goToReview();
+
+    setValue(reviewRows()[0].text, "Typo here");
+    clickButton("Add all");
+    await Promise.resolve();
+
+    expect(
+      storedOrg()
+        .actions.slice(0, 2)
+        .map((/** @type {*} */ a) => a.title),
+    ).toEqual(["Typo here", "Fine as is"]);
+  }, 20000);
+
+  it("removes a row, and that action is never created", async () => {
+    await bootAs("u_internal-luke");
+    const before = storedOrg().actions.length;
+    const { ta } = await openPasteModal();
+    type(ta, "Keep this\nDrop this\nKeep this too");
+    goToReview();
+
+    reviewRows()[1].remove.click();
+    expect(reviewRows().length).toBe(2);
+    clickButton("Add all");
+    await Promise.resolve();
+
+    const actions = storedOrg().actions;
+    expect(actions.length).toBe(before + 2);
+    expect(actions.slice(0, 2).map((/** @type {*} */ a) => a.title)).toEqual([
+      "Keep this",
+      "Keep this too",
+    ]);
+  }, 20000);
+
+  it("removing the middle row leaves the remaining rows editable", async () => {
+    // The remove handler closes over the row index, so the list is rebuilt on
+    // every removal. If it were not, editing a row after a removal would write
+    // to the wrong item.
+    await bootAs("u_internal-luke");
+    const { ta } = await openPasteModal();
+    type(ta, "One\nTwo\nThree");
+    goToReview();
+
+    reviewRows()[1].remove.click();
+    setValue(reviewRows()[1].text, "Three, edited");
+    clickButton("Add all");
+    await Promise.resolve();
+
+    expect(
+      storedOrg()
+        .actions.slice(0, 2)
+        .map((/** @type {*} */ a) => a.title),
+    ).toEqual(["One", "Three, edited"]);
+  }, 20000);
+
+  it("apply-to-all sets every pillar, and a row changed afterwards keeps its own", async () => {
+    await bootAs("u_internal-luke");
+    const { ta } = await openPasteModal();
+    type(ta, "First\nSecond\nThird");
+    goToReview();
+
+    const applyAll = /** @type {HTMLSelectElement} */ (
+      document.querySelector("#modalRoot .bulk-apply-all")
     );
-    expect(labels).not.toContain("Paste multiple");
-    expect(labels).not.toContain("+ New action");
+    setValue(applyAll, String(snapshotOrg.pillars[1].id), "change");
+    expect(reviewRows().map((r) => r.pillar.value)).toEqual([
+      String(snapshotOrg.pillars[1].id),
+      String(snapshotOrg.pillars[1].id),
+      String(snapshotOrg.pillars[1].id),
+    ]);
+
+    setValue(reviewRows()[2].pillar, String(snapshotOrg.pillars[5].id), "change");
+    clickButton("Add all");
+    await Promise.resolve();
+
+    expect(
+      storedOrg()
+        .actions.slice(0, 3)
+        .map((/** @type {*} */ a) => a.pillarId),
+    ).toEqual([snapshotOrg.pillars[1].id, snapshotOrg.pillars[1].id, snapshotOrg.pillars[5].id]);
+  }, 20000);
+
+  it("applies the internal flag to the whole batch", async () => {
+    await bootAs("u_internal-luke");
+    const { ta } = await openPasteModal();
+    type(ta, "First\nSecond");
+    goToReview();
+    /** @type {HTMLInputElement} */ (document.querySelector("#modalRoot #actBulkInternal")).click();
+    clickButton("Add all");
+    await Promise.resolve();
+
+    storedOrg()
+      .actions.slice(0, 2)
+      .forEach((/** @type {*} */ a) => expect(a.internal).toBe(true));
+  }, 20000);
+
+  it("Back then Review keeps the edits made in review", async () => {
+    await bootAs("u_internal-luke");
+    const { ta } = await openPasteModal();
+    type(ta, "First\nSecond");
+    goToReview();
+
+    setValue(reviewRows()[0].text, "First, reworded");
+    setValue(reviewRows()[1].pillar, String(snapshotOrg.pillars[2].id), "change");
+
+    clickButton("Back");
+    expect(onPasteStep()).toBe(true);
+    // The pasted text is still there to be corrected
+    const back = /** @type {HTMLTextAreaElement} */ (document.querySelector("#modalRoot textarea"));
+    expect(back.value).toBe("First\nSecond");
+
+    goToReview();
+    const rows = reviewRows();
+    expect(rows[0].text.value).toBe("First, reworded");
+    expect(rows[1].pillar.value).toBe(String(snapshotOrg.pillars[2].id));
+  }, 20000);
+
+  it("editing the pasted text after Back re-parses, discarding the old rows", async () => {
+    await bootAs("u_internal-luke");
+    const { ta } = await openPasteModal();
+    type(ta, "First\nSecond");
+    goToReview();
+    setValue(reviewRows()[0].text, "First, reworded");
+
+    clickButton("Back");
+    const back = /** @type {HTMLTextAreaElement} */ (document.querySelector("#modalRoot textarea"));
+    type(back, "Completely\nDifferent\nList");
+    goToReview();
+
+    expect(reviewRows().map((r) => r.text.value)).toEqual(["Completely", "Different", "List"]);
+  }, 20000);
+
+  it("the internal flag survives a Back", async () => {
+    await bootAs("u_internal-luke");
+    const { ta } = await openPasteModal();
+    type(ta, "First");
+    goToReview();
+    /** @type {HTMLInputElement} */ (document.querySelector("#modalRoot #actBulkInternal")).click();
+    clickButton("Back");
+    goToReview();
+    expect(
+      /** @type {HTMLInputElement} */ (document.querySelector("#modalRoot #actBulkInternal"))
+        .checked,
+    ).toBe(true);
+  }, 20000);
+
+  it("adds nothing when every row has been emptied", async () => {
+    await bootAs("u_internal-luke");
+    const before = storedOrg().actions.length;
+    const { ta } = await openPasteModal();
+    type(ta, "First\nSecond");
+    goToReview();
+    reviewRows().forEach((r) => setValue(r.text, "   "));
+    clickButton("Add all");
+    await Promise.resolve();
+    expect(storedOrg().actions.length).toBe(before);
+    expect(onReviewStep()).toBe(true);
   }, 20000);
 });
 
@@ -228,7 +459,7 @@ describe("action plan — paste from clipboard", () => {
     await Promise.resolve();
     expect(ta.value).toBe("");
     // Modal stays open with a toast pointing the user at Cmd+V
-    expect(document.querySelector("#modalRoot textarea")).not.toBeNull();
+    expect(onPasteStep()).toBe(true);
     expect(document.getElementById("toastRoot")?.textContent).toContain("Cmd+V");
   }, 20000);
 });
@@ -262,6 +493,7 @@ describe("action plan — blank pillar", () => {
     await bootAs("u_internal-luke");
     const { ta } = await openPasteModal();
     type(ta, "Action with no pillar");
+    goToReview();
     clickButton("Add all");
     await Promise.resolve();
 
@@ -275,6 +507,7 @@ describe("action plan — blank pillar", () => {
     await bootAs("u_internal-luke");
     const { ta } = await openPasteModal();
     type(ta, "Unassigned report item");
+    goToReview();
     clickButton("Add all");
     await Promise.resolve();
 

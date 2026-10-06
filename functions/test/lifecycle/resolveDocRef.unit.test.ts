@@ -31,12 +31,26 @@ describe("resolveDocPath", () => {
     ).toThrow(RangeError);
   });
 
-  it("SOFT_DELETABLE_TYPES enum is exactly the 5 expected types (regression pin)", async () => {
+  it("SOFT_DELETABLE_TYPES enum is exactly the 6 expected types (regression pin)", async () => {
+    // "folder" joined in Milestone v6 (FILE-06). The pin is deliberate: adding a
+    // soft-deletable type is a cross-cutting change — resolveDocPath, the three
+    // lifecycle callables' audit-literal unions, the server-side Zod enum and the
+    // client AUDIT_EVENTS mirror all have to move together — so the list is held
+    // here rather than derived, and a new member has to be added on purpose.
     const { SOFT_DELETABLE_TYPES } = await import("../../src/lifecycle/resolveDocRef.js");
     expect([...SOFT_DELETABLE_TYPES].sort()).toEqual(
-      ["action", "comment", "document", "funnelComment", "message"].sort(),
+      ["action", "comment", "document", "folder", "funnelComment", "message"].sort(),
     );
     expect(SOFT_DELETABLE_TYPES).not.toContain("org");
+  });
+
+  it("maps a folder to its org subcollection path (FILE-06)", () => {
+    expect(resolveDocPath({ type: "folder", orgId: "orgA", id: "fld_1" })).toBe(
+      "orgs/orgA/folders/fld_1",
+    );
+    expect(resolveSnapshotPath({ type: "folder", id: "fld_1" })).toBe(
+      "softDeleted/folder/items/fld_1",
+    );
   });
 });
 

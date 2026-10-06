@@ -84,7 +84,7 @@ describe("scheduledPurge", () => {
     await expect(wrapped({} as never)).resolves.not.toThrow();
   });
 
-  it("iterates all 5 SOFT_DELETABLE_TYPES: one stale doc per type, all deleted", async () => {
+  it("iterates every SOFT_DELETABLE_TYPE: one stale doc per type, all deleted", async () => {
     const m = await import("../_mocks/admin-sdk.js");
     for (const type of ["action", "comment", "document", "message", "funnelComment"]) {
       m.adminMockState._seedDoc(`softDeleted/${type}/items/item1`, {

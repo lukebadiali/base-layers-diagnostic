@@ -245,34 +245,62 @@ export function canMoveFolder(folders, folderId, targetParentId) {
 }
 
 /**
- * Can this folder be deleted?
+ * @typedef {{ ok: true, folderIds: string[] } | { ok: false, reason: string }} DeleteVerdict
+ */
+
+/**
+ * Can this folder be deleted, and if so what goes with it?
  *
- * Only when it is empty of both sub-folders and documents. Cascading the
- * delete would be recoverable — everything goes through the 30-day soft-delete
- * window — but it is far easier to do by accident, and the thing being
- * accidentally deleted is a client's document set. Refusing costs the user one
- * extra step and tells them exactly what is in the way.
+ * The rule is about files, not folders. A folder whose whole subtree holds no
+ * documents deletes along with every empty folder under it; a single document
+ * anywhere beneath it refuses the whole thing.
+ *
+ * This was originally "empty of sub-folders AND documents", on the reasoning
+ * that a cascade is easy to do by accident and what gets deleted is a client's
+ * document set. The second half of that still holds and is why a file anywhere
+ * below still refuses. The first half did not: an empty sub-folder holds no
+ * client data, so refusing bought no safety and made the user delete a tree
+ * leaf-by-leaf from the bottom up — reported as "stupid", correctly.
+ *
+ * `folderIds` is the cascade, ordered deepest-first and ending with the folder
+ * itself. The order is load-bearing: a surviving child whose parent has gone
+ * resolves to ROOT (see effectiveParentId) and would pop up at the top level
+ * mid-cascade, and after a part-failed cascade it would stay there.
  *
  * @param {Array<*>} folders
  * @param {Array<*>} documents
  * @param {string} folderId
- * @returns {Verdict}
+ * @returns {DeleteVerdict}
  */
 export function canDeleteFolder(folders, documents, folderId) {
   const id = String(folderId);
   if (!indexFolders(folders).has(id)) {
     return { ok: false, reason: "That folder no longer exists." };
   }
-  const subFolders = childFolders(folders, id).length;
-  const files = documentsIn(documents, id, folders).length;
-  if (!subFolders && !files) return { ok: true };
 
-  const parts = [];
-  if (files) parts.push(`${files} file${files === 1 ? "" : "s"}`);
-  if (subFolders) parts.push(`${subFolders} sub-folder${subFolders === 1 ? "" : "s"}`);
+  const nested = descendantIds(folders, id);
+  const ownFiles = documentsIn(documents, id, folders).length;
+  let nestedFiles = 0;
+  nested.forEach((childId) => {
+    nestedFiles += documentsIn(documents, childId, folders).length;
+  });
+
+  if (!ownFiles && !nestedFiles) {
+    const order = Array.from(nested).sort((a, b) => depthOf(folders, b) - depthOf(folders, a));
+    order.push(id);
+    return { ok: true, folderIds: order };
+  }
+
+  const total = ownFiles + nestedFiles;
+  const subject =
+    ownFiles && nestedFiles
+      ? "This folder and its sub-folders still hold"
+      : ownFiles
+        ? "This folder still holds"
+        : "This folder's sub-folders still hold";
   return {
     ok: false,
-    reason: `This folder still holds ${parts.join(" and ")}. Move or delete them first.`,
+    reason: `${subject} ${total} file${total === 1 ? "" : "s"}. Move or delete them first.`,
   };
 }
 

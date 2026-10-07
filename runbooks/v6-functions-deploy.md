@@ -9,6 +9,37 @@
 > `bedeveloped-base-layers`. See Step 0 — this is a _different_ credential
 > store from both ADC and the gcloud CLI, and it is the only one missing.
 
+## The short version
+
+```sh
+npx firebase-tools@15.16.0 login          # your own terminal: needs a browser
+bash scripts/v6-functions-deploy/run.sh   # everything else
+```
+
+`run.sh` snapshots the IAM policies and IdP config, **refuses to deploy unless
+the snapshot is healthy and readable**, builds, deploys the five functions,
+re-snapshots, and names anything that was lost. `--dry-run` stops before the
+deploy. It writes no IAM; if a binding is dropped it prints the command.
+
+The rest of this document is what `run.sh` does and why, for when it fails or
+when the next person needs to do it by hand.
+
+### Two traps already paid for
+
+- **ADC needs a quota project.** `identitytoolkit.googleapis.com` returns
+  `403 PERMISSION_DENIED — requires a quota project` for bare user ADC. Every
+  call in `run.sh` sends `x-goog-user-project`. Fix it globally with
+  `gcloud auth application-default set-quota-project bedeveloped-base-layers`.
+- **An unreadable snapshot is not an empty one.** That 403, rendered by a
+  reader that did not check for an error payload, printed
+  `blockingFunctions.triggers: 0 / mfa.state = None` — indistinguishable from a
+  project whose blocking handlers had been wiped, on a project that was fine.
+  `report.py` now treats unreadable, incomplete and empty as three outcomes.
+  `mfa.state = None` rather than `DISABLED` is the tell: a real config always
+  carries `mfa`.
+
+---
+
 ## Why this is not a routine deploy
 
 `firebase deploy --only functions` on this project tries to bind
@@ -118,7 +149,7 @@ python3 -c "import json,sys; d=json.load(open('$SNAP/idp-config.before.json')); 
 
 ````
 
-Expect four blocking-handler URLs and `mfa.state = ENABLED`. If
+Expect **two** blocking-handler triggers (`beforeCreate`, `beforeSignIn` — the only two handlers `functions/src/index.ts` exports, so two is complete) and `mfa.state = ENABLED`. The handover's "4 verified URLs" counts Cloud Run services with invoker bindings, not trigger slots; conflating them cost a round trip. If
 `blockingFunctions` is already `{}`, that is a pre-existing problem — fix it
 before deploying, not after.
 

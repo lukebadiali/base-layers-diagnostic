@@ -5,8 +5,9 @@
 > Objective: get `folder` into the deployed `SOFT_DELETABLE_TYPES` so folder
 > deletion works at all, and the six folder audit-event literals into the
 > deployed `auditWrite` schema so folder rows stop being dropped.
-> Operator: needs a **gcloud CLI identity with deploy rights on
-> `bedeveloped-base-layers`**. ADC alone is not enough (see Step 0).
+> Operator: needs a **`firebase login`** credential with deploy rights on
+> `bedeveloped-base-layers`. See Step 0 — this is a _different_ credential
+> store from both ADC and the gcloud CLI, and it is the only one missing.
 
 ## Why this is not a routine deploy
 
@@ -38,7 +39,7 @@ snapshot and re-check the bindings anyway.
 
 ---
 
-## Step 0 — environment
+## Step 0 — environment and the three credential stores
 
 A non-interactive shell does not source `~/.zshrc`, so `CLOUDSDK_PYTHON` must be
 set inline or gcloud loads macOS Python 3.9 and hands back an empty access
@@ -52,41 +53,70 @@ export PROJECT=bedeveloped-base-layers
 export REGION=europe-west2
 export SNAP="$HOME/Desktop/v6-deploy-snapshot"
 mkdir -p "$SNAP"
-
-# ADC was configured on 2026-10-06; a CLI identity was NOT. `gcloud run ...`
-# and the deploy both need the CLI identity, so this login is required even
-# though firebase-admin scripts already work.
-gcloud auth login
-gcloud config set project "$PROJECT"
-gcloud auth list
 ```
 
-If the deploy in Step 3 returns 403, this account lacks
+**Three separate credential stores are in play, and confusing them wastes a
+round trip.** Verified on this machine 2026-10-07:
+
+| Store                                                         | Command that reads it                                | State                                           | What needs it                                                                            |
+| ------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| ADC — `~/.config/gcloud/application_default_credentials.json` | `gcloud auth application-default print-access-token` | **present and live** (written 2026-10-06 10:55) | `firebase-admin` scripts; every `curl` in Steps 1 and 4 of this runbook                  |
+| gcloud CLI identity                                           | `gcloud auth list`                                   | **absent** (`No credentialed accounts`)         | `gcloud run ...`, `gcloud projects ...`. Optional — Steps 1 and 4 use ADC + curl instead |
+| firebase-tools                                                | `firebase login:list`                                | **absent** (configstore is `{}`)                | `firebase deploy`. **This is the one you need.**                                         |
+
+ADC is _not_ a substitute for the firebase-tools credential: firebase-tools
+accepts `GOOGLE_APPLICATION_CREDENTIALS` only when it points at a **service
+account key file**, not at a user ADC file. So the one required interactive
+step is:
+
+```sh
+npx firebase-tools@15.16.0 login
+npx firebase-tools@15.16.0 login:list      # expect your account
+```
+
+`gcloud auth login` is **not** required by this runbook. Run it only if you
+prefer `gcloud run services get-iam-policy` over the curl form in Steps 1 and 4.
+
+If the deploy in Step 3 returns 403, the account lacks
 `roles/cloudfunctions.admin` + `roles/iam.serviceAccountUser` on the project and
-the deploy has to go to Luke. Stop here rather than granting yourself roles.
+the deploy has to go to Luke. Stop there rather than granting yourself roles.
 
 ## Step 1 — snapshot what the deploy can break
 
+Both reads below run on **ADC**, so no `gcloud auth login` is needed.
+
 ```sh
+ADC() { gcloud auth application-default print-access-token; }
+
 for S in auditwrite softdelete restoresoftdeleted permanentlydeletesoftdeleted \
          getdocumentsignedurl beforeusercreatedhandler beforeusersignedinhandler; do
-  if gcloud run services get-iam-policy "$S" --region "$REGION" \
-       --format=json > "$SNAP/$S.before.json" 2>/dev/null; then
+  curl -s -H "Authorization: Bearer $(ADC)" \
+    "https://run.googleapis.com/v2/projects/$PROJECT/locations/$REGION/services/$S:getIamPolicy" \
+    > "$SNAP/$S.before.json"
+  if python3 -c "import json,sys; d=json.load(open('$SNAP/$S.before.json')); sys.exit(1 if 'error' in d else 0)"; then
     echo "snapshot  $S"
   else
     echo "MISSING   $S   <- note it, do not proceed blind"
   fi
 done
+```
+
+(The `gcloud run services get-iam-policy "$S" --region "$REGION"` form is
+equivalent and nicer to read, but needs the CLI identity ADC does not provide.)
 
 # The IdP config, because blockingFunctions.triggers is the thing whose loss
+
 # takes sign-in down. Keep this file until Step 5 passes.
+
 curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" \
   "https://identitytoolkit.googleapis.com/admin/v2/projects/$PROJECT/config" \
-  > "$SNAP/idp-config.before.json"
+
+> "$SNAP/idp-config.before.json"
 python3 -c "import json,sys; d=json.load(open('$SNAP/idp-config.before.json')); \
-print(json.dumps(d.get('blockingFunctions',{}), indent=2)); \
-print('mfa.state =', d.get('mfa',{}).get('state'))"
-```
+> print(json.dumps(d.get('blockingFunctions',{}), indent=2)); \
+> print('mfa.state =', d.get('mfa',{}).get('state'))"
+
+````
 
 Expect four blocking-handler URLs and `mfa.state = ENABLED`. If
 `blockingFunctions` is already `{}`, that is a pre-existing problem — fix it
@@ -111,7 +141,7 @@ npm run lint || true
 # `npm install` rewrites the lockfile. Drop that churn unless you mean to
 # commit it — regenerating it properly on Linux is a separate open item.
 cd .. && git checkout -- functions/package-lock.json
-```
+````
 
 ## Step 3 — the scoped deploy
 
@@ -133,8 +163,9 @@ expected; a _failure_ of the function upload is not.
 for S in auditwrite softdelete restoresoftdeleted permanentlydeletesoftdeleted \
          getdocumentsignedurl beforeusercreatedhandler beforeusersignedinhandler; do
   echo "== $S"
-  gcloud run services get-iam-policy "$S" --region "$REGION" --format=json \
-    | python3 -c "import json,sys; [print(' ', b['role'], b['members']) for b in json.load(sys.stdin).get('bindings',[])]"
+  curl -s -H "Authorization: Bearer $(ADC)" \
+    "https://run.googleapis.com/v2/projects/$PROJECT/locations/$REGION/services/$S:getIamPolicy" \
+    | python3 -c "import json,sys; [print(' ', b.get('role'), b.get('members')) for b in json.load(sys.stdin).get('bindings',[])]"
 done
 ```
 
@@ -143,6 +174,9 @@ Compare against `$SNAP/*.before.json`. Two bindings matter:
 - `allUsers -> roles/run.invoker` on `auditwrite`, `softdelete`,
   `getdocumentsignedurl`. Rebind:
   ```sh
+  # Needs the gcloud CLI identity. If you skipped `gcloud auth login`, run it
+  # now — a setIamPolicy by hand means resending the whole policy document,
+  # which is how bindings get lost.
   gcloud run services add-iam-policy-binding "$S" --region "$REGION" \
     --member=allUsers --role=roles/run.invoker
   ```

@@ -1,153 +1,160 @@
-# Handover — Diagnostic write-path debugging + UAT prep
+# Handover — Milestone v6 shipped; MFA and functions deploy still open
 
-**Date paused:** 2026-05-22
-**Paused mid-task:** §0 of `docs/UAT.md` complete; §1 not yet started. Test accounts designed but not yet created — operator needs to seed `internalAllowlist`, create the internal Auth user in Firebase Console, and invite the two client users via the admin UI before §1 begins.
-**Prior session handoff (now closed):** the earlier handover at this path was about getting `setClaims` callable working through Firebase Hosting rewrites; that work landed (PRs #34–#36). This document supersedes it. Old open follow-ups #1–#7 from that handover are repeated under "Open follow-ups" below where still relevant.
+**Date paused:** 2026-10-07
+**Supersedes:** the 2026-05-22 handover about diagnostic write-path debugging and UAT prep, preserved verbatim at `.planning/HANDOFF-2026-05-22-superseded.md`. Its still-open follow-ups are carried forward in §6 below — do not treat that file as live.
+**State:** Milestone v6 is merged and deployed. Nothing is mid-flight. Three things are genuinely open (§5).
 
 ---
 
-## TL;DR
+## 1. TL;DR
 
-User reported diagnostic clicks didn't save and Plan-view drag-drop didn't stick after the persistent-memory cross-device sync landed. Five PRs to triangulate:
+Milestone v6 ("Workflow & Usability") shipped across two PRs, both merged and live on production:
 
-| PR | What | Verdict |
+| PR | Merged | What |
 |---|---|---|
-| **#38** | Rules whitelist for `roadmaps.{months,quarters}` + `funnels.{years,kpis}` (real field names) + render-throttle in `_subscribeOrgs` / `onIdTokenChanged` to stop scroll-reset | Real fix for Plan/Funnel drag. Render-throttle was good. |
-| **#39** | `setResponse` migrated to `/orgs/{orgId}/responses/{respId}` subcollection writes + `ensureResponsesSubscription` listener for cross-device sync | Real fix for diagnostic clicks. |
-| **#40** | `cloudPushOrg` switched to `setDoc(..., { merge: true })` + strip `id`/`createdAt`/`orgId`. **Based on a wrong hypothesis** about Timestamp serialization drift. | Wrong fix; reverted by #42. |
-| **#41** | **Actual root cause:** `immutable(field)` helper in `firestore.rules` used CEL bracket access — `request.resource.data["orgId"]` throws "no such key" on a doc that doesn't have the field, short-circuiting `allow update` to deny. Changed to `Map.get(field, null)`. Added regression test seed for an `orgs/orgLegacy` doc with no `orgId` field. | **Real fix.** |
-| **#42** | Revert PR #40. With #41 in place the simpler full-`setDoc` form works correctly. | Cleanup. |
+| [#97](https://github.com/lukebadiali/base-layers-diagnostic/pull/97) | 2026-10-06 10:16Z | The nine-item change request: Actions grouping/filters/expand/edit, document folders, sorting, paste review, historic rounds |
+| [#98](https://github.com/lukebadiali/base-layers-diagnostic/pull/98) | 2026-10-06 13:01Z | Follow-ups from live testing: org-selection persistence bug, whole-row folder click, Back button, drag-and-drop |
 
-**Current prod state:** PRs #38–#41 deployed. PR #42 (revert of #40) is still open at time of writing — merging it is non-blocking; PR #40 + PR #41 together also work. Hugh confirmed diagnostic clicks + tier change both work post-#41 deploy.
+`main` is at `765c4be`. Verified live in the deployed bundle (`assets/main-CN7nWzO8.js`): `baselayers:activeOrg`, `docs-crumb-back`, `drop-target`, `dragstart` all present.
 
----
+Plan of record: `.planning/MILESTONE-v6-WORKFLOW-USABILITY.md` (phases, REQ-IDs, outcomes, decisions D1–D6).
+Manual test checklist: `.planning/MILESTONE-v6-UAT.md`.
 
-## Lesson learned (record so future-me doesn't repeat it)
-
-I spent three PRs (#38, #39, #40) theorizing about why parent-doc writes were failing — Timestamp drift, partial-update semantics, payload shape. **The bug was in the rule helper itself, not the client.** Two things I should have done first:
-
-1. **Read the deployed `firestore.rules`** (via Firebase Rules API). I assumed the file in the repo was deployed; it was, but I didn't verify that early, and I never read the helper closely with fresh eyes.
-2. **Run the user's actual scenario in the rules-test emulator** — the existing rules-tests always seeded `orgId: "orgA"` on every fixture doc, so they exercised one shape of the immutability check. A test with a doc *missing* `orgId` would have caught this in CI before any deploy.
-
-The diagnostic script that finally gave me ground truth was simple — `setDoc` of `{ name: existingValue }` with merge. That should have been my first move, not my fourth.
-
-For future debugging of rule denials: **always start with the live error code (`.code`), the actual server-side doc shape, and a minimal write attempt.** Don't theorize about payload composition until you've ruled out auth, doc-shape, and rule-helper behavior.
+**1001 tests, 117 files.** `npx vitest run` is clean on `main`.
 
 ---
 
-## Open follow-ups
+## 2. Environment — read this before running anything
 
-### Architectural — tracked, not blocking UAT
+This machine was set up from scratch on 2026-10-06. Three traps:
 
-1. **`addComment`, `addAction`/`updateAction`/`deleteAction`, `setEngagementStage`, `toggleStageCheck`, `setOrgClientPassphrase`, `setInternalNotes`** all still write the entire org back through `saveOrg → cloudPushOrg`. They WORK now (with PR #41's rule fix) but they're doing a full-org write per click — gratuitously expensive and a vestige of pre-Phase-5 architecture. Phase 5 already moved each to a dedicated subcollection (`/orgs/{orgId}/comments/{cmtId}` etc.). Worth migrating in a follow-up PR per the Phase 5 source-of-truth design.
+**gcloud needs an explicit Python.** macOS ships 3.9; gcloud needs 3.10+. A standalone CPython 3.12 lives at `~/.local/pythons/python/bin/python3` and `~/.zshrc` exports `CLOUDSDK_PYTHON` to it. **A non-interactive shell does not source `~/.zshrc`**, so anything shelling out to `gcloud` must set it inline:
 
-2. **Legacy object-shaped responses on the parent doc were never migrated to the subcollection** — `scripts/migrate-subcollections/builders.js#buildResponses` only handled array-shaped values. If any prod org has historical diagnostic data only on the parent doc, it won't surface through `ensureResponsesSubscription`. Operator may need a one-shot backfill — out of scope here.
+```sh
+export CLOUDSDK_PYTHON="$HOME/.local/pythons/python/bin/python3"
+export PATH="$HOME/google-cloud-sdk/bin:$PATH"
+```
 
-3. **App Check is in a 22h SDK backoff in prod** (`appCheck/throttled`). Independent of all the rule work — only affects callables (`setClaims`, `gdpr*`, soft-delete). Surfaces during admin role changes (UAT §2.B.3) and GDPR flows (§2.C). Needs the reCAPTCHA Enterprise key / origin config investigated separately. Clearing site data on the domain in DevTools resets the SDK backoff but won't fix the underlying 403 if it recurs.
+Omitting it yields `gcloud failed to load … Python 3.9`, an empty access token, and a confusing `401 CREDENTIALS_MISSING` from whatever API you were calling. That exact trap cost a round trip.
 
-4. **App Check Firestore enforcement is not on at the client SDK level** (verified: no `enforceAppCheck` reference in deployed bundle). Direct Firestore writes don't gate on App Check. If you later enable enforcement on Firestore in Firebase Console, the existing 22h throttle issue will block ALL Firestore operations, not just callables.
+**gcloud has ADC but no CLI account.** `gcloud auth application-default login` was run; `gcloud auth login` was **not**. So `firebase-admin` scripts work, but `gcloud projects …`, `gcloud functions …` and anything needing a CLI identity will fail with "no active account". Run `gcloud auth login` if you need those. (Carry-forward #8 below: Workspace reauth invalidates ADC periodically — re-run the ADC login on `invalid_rapt`.)
 
-### Inherited from prior session (PR #36 trail) — still open
+**Node 22 is required for the `functions` workspace.** `nvm use 22` (installed). On Node 20 the workspace will not install at all. Root install needs `npm ci --engine-strict=false` on Node 20.
 
-5. **Deploy the missing 8 callable functions** (`auditWrite`, `gdpr*`, soft-delete, etc.). All have hosting rewrites pre-wired in `firebase.json`. Build artifacts in `functions/lib/` are current.
+**npm 10 cannot resolve the functions workspace.** Use `npx -y npm@11 install` inside `functions/`. See §4.
 
-6. **Re-add `serviceAccount: "<name>-sa"` lines + run `scripts/provision-function-sas/run.js`** in a properly-configured operator environment. Phase 7 FN-04 hardening (per-function minimal-IAM SAs). Currently all functions run under the default Cloud Functions runtime SA — security regression tracked.
-
-7. **Fix `gcloud` on Hugh's Windows** — install Python 3 from python.org (NOT Microsoft Store), check "Add to PATH". Currently a productivity drag because we can't run `gcloud` commands locally for ad-hoc IAM / org-policy / project inspection.
-
-8. **ADC reauth tripwire:** Workspace's reauth policy invalidates the ADC token periodically. Re-run `gcloud auth application-default login` whenever you see `invalid_rapt` from the Admin SDK. Once gcloud is fixed (#7), this becomes cheap.
-
-9. **Roadmap state reconciliation:** `ROADMAP.md` shows Phase 6/7 plans as `[ ]` (autonomous: false). They're not formally done — substrate is on prod but the verification/cutover-runbook isn't followed. `STATE.md` narrative claims 99% milestone progress, which overstates reality. Worth reconciling before claiming the milestone done for the prospect demo.
+Admin scripts resolve `firebase-admin` from the **repo root** (it is a root devDependency), so run them from the repo root, not from `functions/`, despite what some script READMEs say.
 
 ---
 
-## UAT state — where we are in `docs/UAT.md`
+## 3. What v6 actually changed
 
-### §0 Pre-flight — `[x]` partially complete
+Read `.planning/MILESTONE-v6-WORKFLOW-USABILITY.md` for the full record. Shape of the code:
 
-| # | Status | Notes |
-|---|---|---|
-| 0.1 Browser profiles | ☐ | Need 3: Admin (Chrome default), Internal-consultant (Firefox or Chrome profile 2), Client (Incognito). Hugh has Admin profile only. |
-| 0.2 Test accounts | ☐ | Scheme defined below; not yet seeded. |
-| 0.3 UAT-Sandbox org | ☐ | Will be created during account setup. |
-| 0.4 Sample upload files | ☐ | Need `ok.pdf` (≤5 MB), `big.bin` (≥26 MB), `payload.exe`, `weird name<>.pdf`. |
-| 0.5 Headers `curl` | `[x]` | **PASS** — HSTS preload-eligible, CSP (report-only), all other hardened headers present. Captured 2026-05-22 09:00 UTC. |
+- `src/views/actions.js` and `src/views/documents.js` are now real (Phase A completed the long-pending Phase 4 D-02 re-homing as a pure move). `src/main.js` went 6,033 → ~5,500 lines.
+- Four pure modules under `src/domain/`: `action-grouping.js`, `action-filters.js`, `document-sort.js`, `folder-tree.js`. `src/domain/**` carries a **100% line / 99% branch coverage gate** — adding a defensive branch there without a test fails CI.
+- New Firestore subcollection `orgs/{orgId}/folders/{folderId}`. Documents gained `folderId`. **Storage paths are never rewritten by a move** — `firestore.rules` pins `storagePath` immutable for exactly that reason.
+- `tests/mocks/window-fb.js` is a `window.FB` test double that unlocked the first behavioural tests the Documents tab has ever had. Three non-obvious requirements are documented in its header; read them before extending it.
 
-§1–§6 — not started.
+### Decisions that will look odd without context
 
-### Test account scheme (already designed, not yet provisioned)
+- **No field was added to any record** (decision D6), except `documents.folderId`, which is structurally required for folders. `description`, `lastEditedBy` and `lastEditedAt` were built and then removed on instruction. Consequence: **action content edits are unattributed** — recorded as `THREAT_MODEL.md` § Residual risks R2, not quietly dropped.
+- **Documents requirements use the `FILE-` prefix, not `DOC-`.** The hardening milestone already owns `DOC-01`..`DOC-10` for documentation controls, and both sets are indexed by the same `docs/CONTROL_MATRIX.md`. Commits early in #97 still say `DOC-0N`.
+- **`due` is staff-only on actions.** Clients can edit title, owner and pillar. The Overdue group is what the engagement is run from, so a client who could move a due date could clear their own overdue list.
 
-Plus-aliases on `hugh@assume-ai.com` (Google Workspace) so all invites land in one inbox.
+### A claim that was made and then withdrawn
 
-| Role | Email | First-time password | Org |
-|---|---|---|---|
-| Internal consultant | `hugh+uat-internal@assume-ai.com` | Initial via Firebase Console: `UATInternal-2026-Set!Fresh` (forced password change on first sign-in) | n/a |
-| Client A | `hugh+uat-alpha@assume-ai.com` | Org passphrase `UATAlpha2026Passphrase`, then own password on first sign-in | `OrgAlpha` (Performance tier) |
-| Client B | `hugh+uat-bravo@assume-ai.com` | Org passphrase `UATBravo2026Passphrase`, then own password on first sign-in | `OrgBravo` (Transformation tier) |
-
-### Account-setup sequence (to execute before resuming UAT)
-
-Signed in as Admin on `baselayers.bedeveloped.com`:
-
-1. **Admin → Manage people → + New organisation** twice (OrgAlpha Performance, OrgBravo Transformation).
-2. **Each org's row → Set passphrase** — use the passphrases in the table above.
-3. **Seed `internalAllowlist`** via devtools console (admin can write per rules):
-   ```js
-   (async () => {
-     const { db, firestore } = window.FB;
-     await firestore.setDoc(
-       firestore.doc(db, "internalAllowlist", "hugh+uat-internal@assume-ai.com"),
-       { role: "internal", addedBy: "uat-setup-2026-05-22", addedAt: firestore.serverTimestamp() }
-     );
-     console.log("seeded");
-   })();
-   ```
-4. **Firebase Console → Authentication → Add user** for `hugh+uat-internal@assume-ai.com` with the temp password above. `beforeUserCreated` blocking handler reads the allowlist row and assigns `{role: "internal"}` to the user's first ID token (per `functions/src/auth/beforeUserCreated.ts`).
-5. **Admin panel → + Invite client** twice, one per org, using the emails + chosen org from the table.
-6. **Sign in once as each new account** to complete first-run (set real password, enrol MFA for the internal one).
-
-After step 6, §1–§6 of `docs/UAT.md` can run sequentially.
+The pre-v6 documents listener queried unconstrained against a `notDeleted` read rule, which the documented Firestore model says should refuse the query. That was written up as a live production bug. **A rules test written to confirm it disproved it** — the emulator permits the unconstrained form. The claim was withdrawn from `SECURITY.md`, `docs/CONTROL_MATRIX.md`, the milestone plan, the backfill README and the view's own comment. Do not reintroduce it. The constrained query still ships because it is correct either way, and the backfill was required for an unrelated reason (an equality filter on `null` does not match a document missing the field).
 
 ---
 
-## How to resume
+## 4. CI — three failures fixed, and why they will recur
 
-1. **Confirm PR #42 status** — if not merged yet, it's safe to merge (it's a cleanup revert). If you'd rather leave it, current main also works because PR #41's rule fix handles both the simpler full-`setDoc` and the merge-only approach.
+All three were pre-existing and unrelated to v6 scope. Fixed in #97.
 
-2. **Execute the account-setup sequence above** (six steps; ~15–20 minutes including the first-sign-in flows).
+**The `edgesOut` arborist crash.** `npm install --package-lock-only` in `functions/` crashed on npm 10 while resolving vitest's optional peer set. Bisected: `vitest@4.1.10` alone crashes, `4.1.11` resolves; **npm 11 resolves 4.1.10 fine**. It is an npm 10 bug and `node-version: 22` ships npm 10. Fixed by using `npx -y npm@11` in the audit, deploy and preview jobs. The August "fix" (pinning 4.1.10) only moved the trigger one patch release — **another version pin will not hold; keep the npm 11 route**.
 
-3. **Resume from §1 Anonymous** of `docs/UAT.md` (10 min, no account needed — just an incognito window).
+**Do NOT "simplify" the functions audit step to audit the committed lockfile.** Measured: the committed `functions/package-lock.json` audits to 20 production vulnerabilities, 5 high and 1 critical. It is materially stale. The delete-and-re-resolve is load-bearing. The long comment in `.github/workflows/ci.yml` records the measurement. The durable fix is regenerating that lockfile **on Linux** so `npm ci` works — still open.
 
-4. **Continue through §2 → §3 → §4 → §5 → §6** in order. Active testing target ~3h50; sections that are likely to need a deeper assist:
-   - **§2.B.3 (role change)** — exercises `setClaims` callable; App Check throttle may bite here.
-   - **§2.C (GDPR export/erasure)** — same App Check concern.
-   - **§2.D.3 (backup gs:// inspection)** — needs `gcloud` working OR Cloud Console access.
-   - **§2.E (rate-limit smoke)** — paste-script test; trivial once chat is reachable.
-   - **§3.E.2 (signed-URL TTL test)** — requires waiting 65 min real-time; structure that around other work.
+**`@grpc/grpc-js`** had two high advisories; root override moved to `^1.14.5`.
 
-5. **If any UAT test fails:** open an issue or PR using the same workflow we've established — branch, fix, PR, merge. Re-test the affected section after deploy.
+**There is no functions test or lint job in CI.** The only place functions code is compiled is the `tsc` build inside the deploy and preview jobs. `cd functions && npm test` and `npm run lint` must be run locally. Running them locally for the first time found a broken regression pin that tsc was happy with. `functions/npm run lint` currently reports **7 pre-existing errors** in files v6 did not touch. Adding a functions test+lint job is worth doing.
+
+**Post-squash-merge rebase trap.** PRs here are squash-merged. Branching from a merged feature branch leaves your branch carrying the unsquashed commits while `main` has one — GitHub then cannot build a merge ref, the PR shows `CONFLICTING`, and **CI never fires at all**. This happened on both #97 and #98. Fix: `git rebase --onto origin/main <old-tip> <your-branch>`. Better: always branch from `main`.
 
 ---
 
-## Things future-you should NOT relitigate
+## 5. Open — in priority order
 
-- The 12-phase roadmap shape (locked decision per CLAUDE.md).
-- Staying on Firebase + vanilla JS (locked decisions).
-- The `cloudPushOrg` write path — it now works with PR #41's rule fix. Don't rewire it again unless follow-up #1 (subcollection migration of comments/actions/etc.) is being executed deliberately.
-- The decision to route callables through Firebase Hosting (per prior handover — security + works without org-IAM elevation).
-- The CSP report-only state — Phase 10 deliberately deployed report-only first; tightening to enforced is its own phase.
+### 5.1 MFA is enabled, and the enrolment flow has never been tested end to end
+
+**Current state: `mfa.state: ENABLED`**, TOTP provider configured (`adjacentIntervals: 5`). It was `DISABLED` until 2026-10-06 ~11:30Z.
+
+This is the messiest thread in the project and it caused a real lockout yesterday. The history:
+
+- Phase 6 recovery deliberately disabled MFA in **two places to mirror each other**: the client gates (`false &&` short-circuits) and IdP `mfa.state`. `runbooks/phase-6-cleanup-ledger.md:47` tracks restoring both as a pair, conditional on row #1 (TOTP wiring) landing.
+- The client gates were restored months ago. `mfa.state` was not. That mismatch is a **lockout waiting for the next sign-in**: the gate fires, then enrolment or the challenge fails against a disabled provider.
+- Hugh hit it. His session had been alive since 18 August, so he had not exercised the sign-in path in seven weeks. Enabling `mfa.state` fixed it — his existing factor verified and he is back in.
+
+**What is still unverified: whether a fresh TOTP *enrolment* completes.** Nobody has done one since Phase 6. `accounts:query` shows `george+uat-internal@bedeveloped.com` and `david.wilson@fosway.com` with **zero factors** — they will hit enrolment on their next sign-in. If it does not work, they are locked out.
+
+**Do this:** enrol a test account end to end in a browser, then close the cleanup-ledger row. The escape hatch if someone is stuck is `scripts/admin-mfa-unenroll/run.js --uid <uid>` (clears the factor so they can enrol fresh) — safe only while `mfa.state` is ENABLED.
+
+**Do not** flip `mfa.state` back to DISABLED while the client gates are live. That is what created the trap.
+
+### 5.2 The functions deploy has never run for v6
+
+Folder soft-delete and six folder audit-event literals are **inert**. Deleting a folder errors at the callable; folder audit rows are silently skipped. Everything else in v6 works.
+
+This is **not a routine deploy**. `.github/workflows/ci.yml` and `runbooks/phase-6-cleanup-ledger.md` document that `firebase deploy --only functions` on this project tries to bind `roles/run.invoker` to `allUsers`, which org policy blocks — and the failure **wipes the `gcp-sa-identitytoolkit` invoker binding**, breaking the blocking auth handlers. Those handlers are live (`blockingFunctions.triggers` was re-wired 2026-10-06 09:50Z), so a bad run takes sign-in down platform-wide.
+
+Needs someone with project admin (Luke; Hugh has `pull, push, triage` on the repo and no gcloud CLI account). Invoker bindings were intact as of 2026-10-06 — `allUsers → roles/run.invoker` on `auditwrite`, `getdocumentsignedurl`, `softdelete`, `beforeusercreatedhandler`. **Check them again after any functions deploy.**
+
+```sh
+cd functions && npx -y npm@11 install && npm run build
+npx firebase-tools@15.16.0 deploy --only functions --project bedeveloped-base-layers
+```
+
+### 5.3 Manual UAT of v6 is unfinished
+
+`.planning/MILESTONE-v6-UAT.md` has 79 numbered checks. Hugh confirmed the **document folders work**, which is what produced the #98 follow-ups. The rest — Actions grouping/filters/expand, paste review, historic rounds, the regression sweep — has not been walked.
+
+Its §0 gates are now partly cleared: Java is still **not** installed (no local emulator, so `npm run test:rules` is CI-only), Node 22 is installed, and MFA is enabled.
+
+### 5.4 Lower priority
+
+- **`auditWrite` 401 noise.** Audit events emitted on unauthenticated paths (failed sign-in, password reset) can never succeed — the callable requires auth — and `src/cloud/audit.js` retries 4×, so one failure is four console errors. Harmless and swallowed; the code comments already call it expected. Cheap fix: skip emission when `auth.currentUser` is null. Failed sign-ins should be audited **server-side** from `beforeUserSignedIn` instead.
+- **~35 files fail `prettier --check` on `main`.** Pre-existing drift. **Do not run `prettier --write` over `src/` or `tests/`** — it reformats unrelated files, and in one case moved committed snapshots. Format only the files you touched. This caught me twice.
+- **`npm run format:check` and `npm run build` fail locally** for unrelated reasons (the build wants `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY`). Not regressions.
 
 ---
 
-## Useful files + commands
+## 6. Carried forward from the 2026-05-22 handover
 
-| File / command | Purpose |
-|---|---|
-| `docs/UAT.md` | The 5h UAT script we're walking through. |
-| `firestore.rules` | Has the `immutable()` safe-access fix as of PR #41. The two `mutableOnly` whitelists (roadmaps + funnels) were widened in PR #38. |
-| `tests/rules/firestore.test.js` | Now includes an `orgs/orgLegacy` seed with no `orgId` field — regression test for PR #41. |
-| `scripts/inspect-iam-tmp.mjs` | Dump IAM on Cloud Run services (needs ADC). |
-| `scripts/grant-invoker-tmp.mjs` | Grant `roles/run.invoker` on a service (needs ADC). |
-| `scripts/fetch-deployed-rules-tmp.mjs` | NEW — fetches the live deployed firestore.rules from the project's active release. Use this BEFORE assuming the repo file matches prod. (Needs ADC.) |
-| `gh pr list --state open` | See what's still open — PR #42 may still be there if not merged. |
-| `curl -I https://baselayers.bedeveloped.com \| grep -i last-modified` | Quickest way to confirm a deploy reached prod after a merge. |
+Still open, verbatim intent:
+
+1. **Full-org writes.** `addComment`, `addAction`/`updateAction`/`deleteAction`, `setEngagementStage`, `toggleStageCheck`, `setOrgClientPassphrase`, `setInternalNotes` still write the whole org doc per click, a pre-Phase-5 vestige. Subcollections already exist. (v6 did not change this — `updateAction` still goes through the localStorage mirror plus a per-action push.)
+2. **Legacy object-shaped responses** on the parent doc were never migrated; `scripts/migrate-subcollections/builders.js#buildResponses` only handled array shapes. May need a one-shot backfill.
+3. **App Check / reCAPTCHA Enterprise** origin config was never fully investigated. `enforceAppCheck` has been dropped from most callables (see the `PLATFORM-UAT post-T19` comments in `functions/src/`).
+4. **Per-function service accounts** (`provision-function-sas`) never applied; all functions run under the default runtime SA. Tracked security regression.
+5. **ADC reauth tripwire.** Workspace policy invalidates the ADC token; re-run `gcloud auth application-default login` on `invalid_rapt`.
+6. **Roadmap state reconciliation.** `ROADMAP.md` shows Phase 6/7 as `[ ]`; `STATE.md` claims ~99%. The two disagree and `STATE.md` overstates. Worth reconciling before any prospect demo — and v6 is not reflected in either.
+
+---
+
+## 7. Production facts worth knowing
+
+- **8 live orgs**, 19 documents, 155 Auth accounts (17 with email). `PROJECT.md`'s "between active engagements, no live users" is **out of date** — there is real client data.
+- Folders exist only in **BeDeveloped** (`org_b5d50284bbe`) — two, created during testing.
+- `scripts/backfill-document-folder-fields/run.js` was run on 2026-10-06: 19 documents patched with `deletedAt: null` / `folderId: null`. Idempotent; a re-run reports 0. **It was required** — 18 of those 19 would have vanished from the Documents tab once the constrained query shipped.
+- One document is genuinely soft-deleted (`org_8irmvbmobvz/.../doc_6c4b3ac3eba`, `deletedAt` 26 May) and correctly stays hidden.
+- `baselayers.bedeveloped.com` and `bedeveloped-base-layers.web.app` serve the **same** bundle.
+- Merging to `main` auto-deploys `hosting,firestore,storage`. **Functions are excluded** — always manual (§5.2).
+
+---
+
+## 8. Working notes for whoever picks this up
+
+- **Check the data before reasoning from the code.** Two wrong diagnoses yesterday came from reading source and inferring instead of querying Firestore or the Auth API. The user's "no reports of any issues" was better evidence than either.
+- **The classifier blocks production auth-config writes.** `PATCH identitytoolkit …/config` is refused in auto mode. Hand the operator the exact command rather than trying to route around it.
+- **A `git stash` / `stash pop` cycle around a `git checkout` will resurrect formatting changes** you previously reverted. Check `git status` after.

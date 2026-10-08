@@ -102,11 +102,24 @@ echo "  built; resolveDocRef.js carries \"folder\""
 if [ "$DRY" = 1 ]; then echo; echo "--dry-run: stopping before the deploy."; exit 0; fi
 
 hr; echo "STEP 3  deploy"; hr
-if npx firebase-tools@15.16.0 login:list 2>&1 | grep -qi "no authorized"; then
-  die "firebase-tools is not logged in.
-  It needs a browser, so run this in YOUR OWN terminal, then re-run this script:
-      npx firebase-tools@15.16.0 login"
+# Probe auth with a REAL authenticated call. `login:list` reports "Logged in
+# as ..." from the stored id_token without validating it, so it says yes to an
+# expired credential — which is how a stale token got all the way into a
+# half-started deploy and six lines of "credentials are no longer valid".
+WHO=$(npx firebase-tools@15.16.0 login:list 2>&1 | sed -n 's/^Logged in as //p' | head -1)
+PROBE=$(npx firebase-tools@15.16.0 projects:list 2>&1)
+if echo "$PROBE" | grep -qiE "no authorized|no longer valid|Authentication Error|Failed to authenticate|not logged in"; then
+  die "firebase-tools auth is stale${WHO:+ (stored account: $WHO)}.
+  Needs a browser, so run this in YOUR OWN terminal, then re-run this script:
+
+      npx firebase-tools@15.16.0 login --reauth
+
+  Check the account it reauths as. Deploying needs roles/cloudfunctions.admin
+  and roles/iam.serviceAccountUser on $PROJECT; the repo handover names Luke as
+  the project admin, so if the reauth lands on an account without those, the
+  deploy 403s and it is his to run."
 fi
+echo "  firebase-tools authenticated${WHO:+ as $WHO}"
 ONLY=$(echo $TARGETS | tr ' ' '\n' | sed 's/^/functions:/' | paste -sd, -)
 echo "  --only $ONLY"
 npx firebase-tools@15.16.0 deploy --only "$ONLY" --project "$PROJECT" 2>&1 \

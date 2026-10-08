@@ -36,7 +36,17 @@ hr()  { printf '%s\n' "---------------------------------------------------------
 TOKEN=""
 token() {
   TOKEN=$(gcloud auth application-default print-access-token 2>/dev/null)
-  [ "${#TOKEN}" -ge 100 ] || die "ADC unavailable. Run: gcloud auth application-default login"
+  # Workspace reauth policy invalidates ADC every day or so (invalid_rapt), so
+  # this fires routinely rather than exceptionally. The login needs a browser,
+  # which is why it cannot live inside this script.
+  [ "${#TOKEN}" -ge 100 ] || die "ADC expired or missing. In a terminal with a browser:
+
+      gcloud auth application-default login
+      gcloud auth application-default set-quota-project $PROJECT
+
+  The second line is not optional: identitytoolkit returns 403 'requires a
+  quota project' without it, and this script then cannot read the IdP config
+  it gates on. Then re-run this script."
 }
 
 # identitytoolkit returns 403 "requires a quota project" for bare user ADC, and
@@ -67,12 +77,24 @@ hr; echo "STEP 2  build + test"; hr
 export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 nvm use 22 >/dev/null 2>&1 || die "Node 22 required (nvm install 22)"
 echo "  node $(node -v)"
-# npm 10 crashes in arborist on vitest's optional peer set (edgesOut); npm 11
-# resolves it. Pinning a vitest version does not hold — keep the npm 11 route.
-( cd "$REPO/functions" && npx -y npm@11 install >/dev/null 2>&1 ) || die "functions install"
+# `npm ci`, NOT `npm install`. npm 10 — which Node 22 ships and which Cloud
+# Build uses — crashes in arborist while RESOLVING this dependency set:
+# "Cannot read properties of null (reading 'edgesOut')". npm ci does no
+# resolution, so it is immune. When deps change, regenerate the lockfile with
+#     cd functions && npx -y npm@11 install --package-lock-only
+# npm 10 can read that lockfile but cannot write it.
+( cd "$REPO/functions" && npm ci >/dev/null 2>&1 ) || die "functions npm ci failed. If deps changed:
+      cd functions && npx -y npm@11 install --package-lock-only"
 ( cd "$REPO/functions" && npm run build >/dev/null ) || die "functions build (tsc)"
 ( cd "$REPO/functions" && npm test >/dev/null 2>&1 ) || die "functions tests"
-git -C "$REPO" checkout -- functions/package-lock.json 2>/dev/null
+# The lockfile must REACH Cloud Build, or it resolves from scratch and hits the
+# same crash. This is what made the first deploy attempt fail.
+python3 -c "
+import json, sys
+ig = json.load(open('$REPO/firebase.json'))['functions'][0].get('ignore', [])
+sys.exit(1 if 'package-lock.json' in ig else 0)" \
+  || die "firebase.json lists package-lock.json under functions.ignore.
+  Cloud Build would get no lockfile, resolve from scratch, and crash. Remove it."
 grep -q '"folder"' "$REPO/functions/lib/lifecycle/resolveDocRef.js" \
   || die "compiled resolveDocRef.js has no \"folder\" — wrong artifact, do not deploy"
 echo "  built; resolveDocRef.js carries \"folder\""

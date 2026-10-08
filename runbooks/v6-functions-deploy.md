@@ -252,19 +252,48 @@ to avoid. Run it first, before B–F.
 
 ## Cutover log — operator fill
 
-| Step                        | Run at (UTC) | Result | Notes |
-| --------------------------- | ------------ | ------ | ----- |
-| 0 env + `gcloud auth login` |              |        |       |
-| 1 snapshot                  |              |        |       |
-| 2 build + `npm test`        |              |        |       |
-| 3 deploy                    |              |        |       |
-| 4 bindings re-checked       |              |        |       |
-| 5 gate A sign-in            |              |        |       |
-| 5 gate B empty delete       |              |        |       |
-| 5 gate C cascade            |              |        |       |
-| 5 gate D refusal            |              |        |       |
-| 5 gate E audit rows         |              |        |       |
-| 5 gate F restore            |              |        |       |
+### Run 1 — 2026-10-07, FAILED in Cloud Build
+
+| Step         | Run at (UTC)  | Result | Notes                                                                                                                           |
+| ------------ | ------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| 1 snapshot   | 2026-10-07 16 | PASS   | 7/7 invoker bindings, 2 triggers, mfa ENABLED                                                                                   |
+| 2 build      | 2026-10-07 16 | PASS   | npm 11 local                                                                                                                    |
+| 3 deploy     | 2026-10-07 16 | FAIL   | All 5 died in Cloud Build: `npm error Cannot read properties of null (reading 'edgesOut')`. "Deploys failed. Skipping deletes." |
+| 4 re-checked | 2026-10-07 16 | PASS   | nothing lost — no partial state, sign-in unaffected                                                                             |
+
+Cause: `firebase.json` listed `package-lock.json` under `functions.ignore`, so
+Cloud Build received no lockfile, ran `npm install`, and resolved with the
+image's npm 10 — which crashes on this tree. Fixed by un-ignoring it and
+committing a fresh npm 11 lockfile; Cloud Build now runs `npm ci`, which does
+no resolution.
+
+### Run 2 — 2026-10-08, DEPLOYED
+
+| Step                  | Run at (UTC)     | Result | Notes                                                                                        |
+| --------------------- | ---------------- | ------ | -------------------------------------------------------------------------------------------- |
+| 0 ADC reauth          | 2026-10-08 ~10:2 | PASS   | ADC had expired overnight (carry-forward #5) + `set-quota-project`                           |
+| 0 firebase reauth     | 2026-10-08 ~10:3 | PASS   | `login --reauth` as **business@bedeveloped.com** — not the repo user; it holds deploy rights |
+| 1 snapshot            | 2026-10-08 09:4  | PASS   | 7/7 bindings, 2 triggers, mfa ENABLED                                                        |
+| 2 build + `npm test`  | 2026-10-08 09:4  | PASS   | `npm ci` under npm 10, tsc, 339 tests                                                        |
+| 3 deploy              | 2026-10-08 09:43 | PASS   | all 5 "Successful update operation"                                                          |
+| 4 bindings re-checked | 2026-10-08 09:4  | PASS   | **nothing lost** — bindings, triggers, mfa.state unchanged                                   |
+| 4b revisions verified | 2026-10-08 09:4  | PASS   | cloudfunctions v2 API: all 5 `state ACTIVE`, `updateTime 2026-10-08T09:43:2*Z`               |
+| 5 gate A sign-in      |                  |        |                                                                                              |
+| 5 gate B empty delete |                  |        |                                                                                              |
+| 5 gate C cascade      |                  |        |                                                                                              |
+| 5 gate D refusal      |                  |        |                                                                                              |
+| 5 gate E audit rows   |                  |        |                                                                                              |
+| 5 gate F restore      |                  |        |                                                                                              |
+
+Two false alarms cost round trips and are worth not repeating:
+
+1. Bare user ADC 403s on `identitytoolkit` (`requires a quota project`). A
+   reader that did not check for an error payload rendered that as
+   `blockingFunctions.triggers: 0 / mfa.state = None` — indistinguishable from
+   wiped blocking handlers, on a healthy project.
+2. `firebase login:list` prints "Logged in as ..." from the stored id_token
+   without validating it, so it reports success for an expired credential.
+   `run.sh` now probes with `firebase projects:list`.
 
 ## Rollback
 

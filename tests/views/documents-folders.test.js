@@ -12,6 +12,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import snapshotOrg from "../fixtures/snapshot-org.json";
 import { makeWindowFB, fakeTimestamp } from "../mocks/window-fb.js";
 
+// The delete path goes through the softDelete callable, so the seam is stubbed
+// here rather than the Firebase SDK: src/cloud/soft-delete.js is what the view
+// dynamically imports, and stubbing it keeps the whole firebase/functions.js
+// chain (a real initializeApp, a real callable URL) out of the test.
+const softDeleteMock = vi.hoisted(() => vi.fn());
+vi.mock("../../src/cloud/soft-delete.js", () => ({
+  softDelete: softDeleteMock,
+  restoreSoftDeleted: vi.fn(),
+  permanentlyDeleteSoftDeleted: vi.fn(),
+}));
+
 const ORG_ID = snapshotOrg.orgMetas[0].id;
 
 /** @type {ReturnType<typeof makeWindowFB>} */
@@ -105,6 +116,16 @@ async function settle() {
   await Promise.resolve();
   await Promise.resolve();
   await Promise.resolve();
+}
+
+/**
+ * Drain the microtask queue. The folder-delete handler awaits a dynamic
+ * `import("../cloud/soft-delete.js")` and then one callable per folder in the
+ * cascade, which is more promise jobs than settle()'s fixed three.
+ * @param {number} [turns]
+ */
+async function drain(turns = 40) {
+  for (let i = 0; i < turns; i++) await Promise.resolve();
 }
 
 function folderNames() {
@@ -376,26 +397,109 @@ describe("documents — moving (FILE-03)", () => {
 });
 
 describe("documents — deleting a folder (FILE-04)", () => {
+  // Board pack > Q3 > Week 1, all three empty of files, plus an empty Admin at
+  // the root and one file at the root. This is the shape the old guard refused:
+  // nothing here holds a document, so the whole chain should go in one step.
+  const EMPTY_TREE_SEED = {
+    [`orgs/${ORG_ID}/folders/f_board`]: folderDoc({ id: "f_board", name: "Board pack" }),
+    [`orgs/${ORG_ID}/folders/f_q3`]: folderDoc({ id: "f_q3", name: "Q3", parentId: "f_board" }),
+    [`orgs/${ORG_ID}/folders/f_wk1`]: folderDoc({ id: "f_wk1", name: "Week 1", parentId: "f_q3" }),
+    [`orgs/${ORG_ID}/folders/f_admin`]: folderDoc({ id: "f_admin", name: "Admin" }),
+    [`orgs/${ORG_ID}/documents/d_root`]: fileDoc({ filename: "root.pdf", folderId: null }),
+  };
+
+  /** The callable the real cascade calls, tombstoning in the double so the
+   * listeners repaint exactly as they would in production. */
+  const stubSoftDelete = () =>
+    softDeleteMock.mockImplementation(async (/** @type {*} */ { type, orgId, id }) => {
+      const path = `orgs/${orgId}/${type === "folder" ? "folders" : "documents"}/${id}`;
+      const cur = fb.read(path);
+      if (cur) fb.seedDoc(path, { ...cur, deletedAt: fakeTimestamp(2_000_000) });
+      return { ok: true };
+    });
+
+  /** The ids passed to softDelete, in call order. */
+  const deletedIds = () => softDeleteMock.mock.calls.map((c) => c[0].id);
+
+  function modalMessage() {
+    return (document.querySelector("#modalRoot p")?.textContent || "").trim();
+  }
+
+  beforeEach(() => {
+    softDeleteMock.mockReset();
+  });
+
   it("refuses a folder holding files, and names what is in the way", async () => {
     await bootAs("u_internal-luke", TREE_SEED);
     openFolder("Board pack");
     clickIn(folderRowFor("Q3"), "Delete");
     // No confirmation dialogue — the refusal happens first
     expect(document.querySelector("#modalRoot h3")).toBeNull();
-    expect(toastText()).toContain("1 file");
+    expect(toastText()).toContain("This folder still holds 1 file");
   });
 
-  it("refuses a folder holding sub-folders", async () => {
+  it("refuses when only a sub-folder holds files, and totals the subtree", async () => {
+    // Board pack holds board.pdf; Q3 beneath it holds q3.pdf. Both count.
     await bootAs("u_internal-luke", TREE_SEED);
     clickIn(folderRowFor("Board pack"), "Delete");
     expect(document.querySelector("#modalRoot h3")).toBeNull();
-    expect(toastText()).toContain("sub-folder");
+    expect(toastText()).toContain("This folder and its sub-folders still hold 2 files");
   });
 
   it("asks for confirmation on an empty folder", async () => {
     await bootAs("u_internal-luke", TREE_SEED);
     clickIn(folderRowFor("Admin"), "Delete");
     expect(document.querySelector("#modalRoot h3")?.textContent).toBe("Delete folder?");
+    expect(modalMessage()).toContain("It is empty.");
+  });
+
+  it("deletes a folder whose sub-folders are all empty, and says how many go with it", async () => {
+    stubSoftDelete();
+    await bootAs("u_internal-luke", EMPTY_TREE_SEED);
+    clickIn(folderRowFor("Board pack"), "Delete");
+    expect(document.querySelector("#modalRoot h3")?.textContent).toBe("Delete folder?");
+    expect(modalMessage()).toContain("2 empty sub-folders");
+
+    clickInModal("Delete");
+    await drain();
+    await settle();
+
+    // Deepest first, so no survivor is ever briefly parentless.
+    expect(deletedIds()).toEqual(["f_wk1", "f_q3", "f_board"]);
+    expect(folderNames()).toEqual(["Admin"]);
+    expect(fileNames()).toEqual(["root.pdf"]);
+  });
+
+  it("says one sub-folder, singular", async () => {
+    stubSoftDelete();
+    await bootAs("u_internal-luke", EMPTY_TREE_SEED);
+    openFolder("Board pack");
+    clickIn(folderRowFor("Q3"), "Delete");
+    expect(modalMessage()).toContain("1 empty sub-folder inside it");
+    expect(modalMessage()).not.toContain("1 empty sub-folders");
+  });
+
+  it("stops at the first failure and reports how far it got", async () => {
+    let n = 0;
+    softDeleteMock.mockImplementation(async (/** @type {*} */ { type, orgId, id }) => {
+      n += 1;
+      if (n === 2) throw new Error("permission-denied");
+      const path = `orgs/${orgId}/${type === "folder" ? "folders" : "documents"}/${id}`;
+      fb.seedDoc(path, { ...fb.read(path), deletedAt: fakeTimestamp(2_000_000) });
+      return { ok: true };
+    });
+    await bootAs("u_internal-luke", EMPTY_TREE_SEED);
+    clickIn(folderRowFor("Board pack"), "Delete");
+    clickInModal("Delete");
+    await drain();
+    await settle();
+
+    expect(toastText()).toContain("Deleted 1 of 3 folders");
+    // Week 1 is gone; Q3 and Board pack survive where they were, not orphaned
+    // at the root — which is the whole point of going deepest-first.
+    expect(folderNames()).toEqual(["Admin", "Board pack"]);
+    expect(fb.read(`orgs/${ORG_ID}/folders/f_q3`).parentId).toBe("f_board");
+    expect(fb.read(`orgs/${ORG_ID}/folders/f_q3`).deletedAt).toBeNull();
   });
 });
 

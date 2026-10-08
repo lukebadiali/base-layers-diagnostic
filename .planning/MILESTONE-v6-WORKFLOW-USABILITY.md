@@ -46,7 +46,11 @@ phase outcomes and the deployment order below.
 - **FILE-01**: Internal users can create folders inside an org's document area, nested to a bounded depth.
 - **FILE-02**: Documents belong to a folder or to the root; the flat list is replaced by folder-scoped navigation with a breadcrumb.
 - **FILE-03**: A document can be moved between folders without the Storage object being rewritten.
-- **FILE-04**: Folders can be renamed and deleted; deleting a folder that still holds anything is refused with a message saying so.
+- **FILE-04**: Folders can be renamed and deleted; deleting a folder that still holds a document — its own or one in a
+  sub-folder at any depth — is refused with a message saying so. _Amended 2026-10-07:_ as shipped this also refused a
+  folder holding only **empty** sub-folders, which forced the user to delete a chain bottom-up by hand. An empty
+  sub-folder holds no client data, so it now cascades: the delete takes the folder and every empty folder beneath it,
+  deepest first, and the confirm dialogue says how many go with it.
 - **FILE-05**: The document list sorts by date added (default, newest first), by name, or by uploader; the choice persists for the user.
 - **FILE-06**: Folders are soft-deleted with the same 30-day restore window as documents.
 

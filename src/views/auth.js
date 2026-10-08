@@ -269,15 +269,23 @@ export function createAuthView(deps) {
     form.appendChild(
       h("div", { class: "auth-field" }, [h("label", {}, "Verification code"), code]),
     );
-    const submit = h("button", { type: "submit", class: "auth-submit" }, "Verify");
+    const submit = /** @type {HTMLButtonElement} */ (
+      h("button", { type: "submit", class: "auth-submit" }, "Verify")
+    );
     form.appendChild(submit);
     form.addEventListener("submit", async (/** @type {Event} */ e) => {
       e.preventDefault();
       const codeVal = /** @type {HTMLInputElement} */ (code).value;
+      // Same round trip, same need as renderMfaChallenge. Enrolment has never
+      // been walked end to end (HANDOFF.md 5.1), so the first person through it
+      // should not also be the one guessing whether their click registered.
+      const pending = pendingButton(submit, "Verifying…");
+      pending.start();
       try {
         if (deps.enrollTotp) await deps.enrollTotp(codeVal);
       } catch (err) {
         notify("error", (err && /** @type {*} */ (err).message) || "Verification failed");
+        pending.stop();
       }
     });
     formSide.appendChild(form);
@@ -369,11 +377,21 @@ export function createAuthView(deps) {
     form.appendChild(
       h("div", { class: "auth-field" }, [h("label", {}, "Verification code"), code]),
     );
-    const submit = h("button", { type: "submit", class: "auth-submit" }, "Verify");
+    const submit = /** @type {HTMLButtonElement} */ (
+      h("button", { type: "submit", class: "auth-submit" }, "Verify")
+    );
     form.appendChild(submit);
     form.addEventListener("submit", async (/** @type {Event} */ e) => {
       e.preventDefault();
       const codeVal = /** @type {HTMLInputElement} */ (code).value;
+      // resolveSignIn is a 5-10s round trip and this view gives no other
+      // feedback — the failure path is deliberately silent (see below), so
+      // without a pending state a correct code and a wrong one look identical
+      // for ten seconds and people click Verify again mid-flight.
+      // Mirrors renderSignIn: on success the post-auth render tears this view
+      // down, so only the failure path restores the button.
+      const pending = pendingButton(submit, "Verifying…");
+      pending.start();
       try {
         if (deps.verifyMfaCode && deps.mfaResolver) {
           await deps.verifyMfaCode(deps.mfaResolver, codeVal);
@@ -386,6 +404,10 @@ export function createAuthView(deps) {
         // that survives even a successful retry into the app. Not worth the bad
         // look in front of a client, and nothing here is worth surfacing: the
         // code input stays populated for an immediate re-try.
+        //
+        // The button must still come back, though: silence about *why* it
+        // failed is the deliberate choice, leaving it spinning for ever is not.
+        pending.stop();
       }
     });
     formSide.appendChild(form);

@@ -20,7 +20,7 @@ import type { Embedder } from "./embedder";
 import { FormError } from "./form";
 import { ingestSessionForm, type IngestResult } from "./ingest";
 import { finishUpload, listUploads, logQuery, startUpload, type UploadRow } from "./logs";
-import { setOrgKnowledgeStatus } from "./store";
+import { orgCoverage, setOrgKnowledgeStatus, type OrgCoverage } from "./store";
 import type { PillarKey } from "./types";
 
 export interface Caller {
@@ -94,6 +94,11 @@ export async function handleIngest(
   if (file[0] !== 0x50 || file[1] !== 0x4b) throw new HttpsError("invalid-argument", "File is not a .docx document");
 
   const clientName = await clientNameFor(deps.db, input.orgId);
+  // An archived client stays archived as a whole: a new upload would bring one
+  // pillar back while the rest stayed off. Restore first, then upload.
+  if ((await orgCoverage(deps.db, input.orgId)).status === "archived") {
+    throw new HttpsError("failed-precondition", `${clientName}'s knowledge is archived. Restore it before uploading.`);
+  }
   const startedAt = (deps.now?.() ?? new Date()).toISOString();
   const uploadId = await startUpload(deps.db, {
     orgId: input.orgId,
@@ -224,4 +229,18 @@ export async function handleSetStatus(
   if (who.role !== "admin") throw new HttpsError("permission-denied", "Admin only");
   const input = validateInput(StatusInput, data ?? {});
   return { updated: await setOrgKnowledgeStatus(deps.db, input.orgId, input.status) };
+}
+
+// ── Coverage ("what the agent knows") ─────────────────────────────────────
+
+const CoverageInput = z.object({ orgId: z.string().min(1).max(128) });
+
+export async function handleCoverage(
+  deps: Pick<HandlerDeps, "db">,
+  caller: Caller | null,
+  data: unknown,
+): Promise<OrgCoverage> {
+  requireStaff(caller);
+  const input = validateInput(CoverageInput, data ?? {});
+  return orgCoverage(deps.db, input.orgId);
 }

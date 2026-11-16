@@ -3241,6 +3241,13 @@ import {
           ingest: cloud.knowledgeIngest,
           ask: cloud.knowledgeAsk,
           listUploads: cloud.knowledgeUploads,
+          getCoverage: cloud.knowledgeCoverage,
+          setStatus: cloud.knowledgeSetStatus,
+          isAdmin: !!(
+            state.fbUser &&
+            state.fbUser.appClaims &&
+            state.fbUser.appClaims.role === "admin"
+          ),
         }),
       );
       void knowledgePanelPromise.then((panel) => {

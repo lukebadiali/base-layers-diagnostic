@@ -9,12 +9,17 @@ import { functions, httpsCallable } from "../firebase/functions.js";
 const ingestCallable = httpsCallable(functions, "knowledgeIngest", { timeout: 130_000 });
 const askCallable = httpsCallable(functions, "knowledgeAsk", { timeout: 70_000 });
 const uploadsCallable = httpsCallable(functions, "knowledgeUploads");
+const coverageCallable = httpsCallable(functions, "knowledgeCoverage");
+const setStatusCallable = httpsCallable(functions, "knowledgeSetStatus", { timeout: 70_000 });
 
 /**
  * @typedef {{ id: string, orgId: string, clientName: string, fileName: string, uploadedBy: string,
  *   status: "processing" | "succeeded" | "failed", startedAt: string, finishedAt?: string,
  *   pillar?: string, sessionDate?: string, chunks?: number, replacedChunks?: number, error?: string }} UploadRow
  * @typedef {{ pillar: string, sessionName: string, sessionDate: string }} AskSource
+ * @typedef {{ pillar: string, pillarName: string, status: "current" | "archived", sessionDate: string,
+ *   sessionName: string, sourceFileName: string, uploadedAt: string, chunkCount: number }} PillarCoverage
+ * @typedef {{ status: "current" | "archived" | "none", pillars: PillarCoverage[] }} OrgCoverage
  * @typedef {{ answer: string, answered: boolean, hitCount: number, model: string, provider: string,
  *   sources?: AskSource[] }} AskResult
  */
@@ -44,4 +49,24 @@ export async function knowledgeAsk(input) {
 export async function knowledgeUploads(input) {
   const res = await uploadsCallable(input);
   return /** @type {{ uploads: UploadRow[] }} */ (res.data).uploads;
+}
+
+/**
+ * What the agent holds for one client, per pillar. Staff only.
+ * @param {{ orgId: string }} input
+ * @returns {Promise<OrgCoverage>}
+ */
+export async function knowledgeCoverage(input) {
+  const res = await coverageCallable(input);
+  return /** @type {OrgCoverage} */ (res.data);
+}
+
+/**
+ * Archive or restore everything held for a client. Admin only.
+ * @param {{ orgId: string, status: "current" | "archived" }} input
+ * @returns {Promise<{ updated: number }>}
+ */
+export async function knowledgeSetStatus(input) {
+  const res = await setStatusCallable(input);
+  return /** @type {{ updated: number }} */ (res.data);
 }

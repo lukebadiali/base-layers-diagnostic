@@ -112,6 +112,10 @@
         "source": "/knowledgeSetStatus",
         "function": { "functionId": "knowledgeSetStatus", "region": "europe-west2" }
       },
+      {
+        "source": "/knowledgeCoverage",
+        "function": { "functionId": "knowledgeCoverage", "region": "europe-west2" }
+      },
       { "source": "**", "destination": "/index.html" }
     ]
   },

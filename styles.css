@@ -4814,8 +4814,19 @@ button.action-chevron:focus-visible {
   font-size: 13px;
   color: var(--ink-3);
 }
-.knowledge-table tr.is-replaced td {
+.knowledge-table tr.is-replaced td,
+.knowledge-table tr.is-empty td {
   color: var(--ink-4);
+}
+.knowledge-archived {
+  margin: 10px 0 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--red-bg);
+  color: var(--red);
+}
+.knowledge-status .row {
+  margin-top: 8px;
 }
 .knowledge-table {
   width: 100%;

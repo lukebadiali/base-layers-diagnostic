@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Answerer, AnswerInput } from "../../src/knowledge/answer";
 import { NOTHING_YET } from "../../src/knowledge/ask";
 import {
+  handleCoverage,
   CONFIG_COLLECTION,
   readClientAccess,
   handleAsk,
@@ -247,5 +248,52 @@ describe("readClientAccess", () => {
     expect(await readClientAccess(fake.asFirestore())).toBe(false);
     fake.col(CONFIG_COLLECTION).set("access", { clientAccess: true });
     expect(await readClientAccess(fake.asFirestore())).toBe(true);
+  });
+});
+
+describe("handleCoverage", () => {
+  it("is none before any upload, then lists live pillars in pillar order", async () => {
+    expect(await handleCoverage(deps, internal, { orgId: "org-nw" })).toEqual({ status: "none", pillars: [] });
+    await upload("org-nw", "northwind-p2.docx");
+    await upload("org-nw", "northwind-p1-v2.docx");
+    const c = await handleCoverage(deps, internal, { orgId: "org-nw" });
+    expect(c.status).toBe("current");
+    expect(c.pillars.map((p) => [p.pillar, p.sessionDate, p.sourceFileName, p.status])).toEqual([
+      ["1", "2026-11-11", "northwind-p1-v2.docx", "current"],
+      ["2", "2026-11-04", "northwind-p2.docx", "current"],
+    ]);
+    expect(c.pillars[0].chunkCount).toBeGreaterThan(0);
+    expect(c.pillars[0].sessionName).not.toBe("");
+  });
+
+  it("only shows the live form for a pillar after a replacement", async () => {
+    await upload("org-nw", "northwind-p1-v1.docx");
+    await upload("org-nw", "northwind-p1-v2.docx");
+    const c = await handleCoverage(deps, admin, { orgId: "org-nw" });
+    expect(c.pillars).toHaveLength(1);
+    expect(c.pillars[0].sessionDate).toBe("2026-11-11");
+  });
+
+  it("reports archived, and is staff only", async () => {
+    await upload("org-nw", "northwind-p1-v1.docx");
+    await handleSetStatus(deps, admin, { orgId: "org-nw", status: "archived" });
+    expect((await handleCoverage(deps, internal, { orgId: "org-nw" })).status).toBe("archived");
+    await expect(handleCoverage(deps, nwClient, { orgId: "org-nw" })).rejects.toMatchObject({ code: "permission-denied" });
+    await expect(handleCoverage(deps, internal, {})).rejects.toMatchObject({ code: "invalid-argument" });
+  });
+});
+
+describe("uploading to an archived client", () => {
+  it("is refused until the client is restored, and nothing is logged", async () => {
+    await upload("org-nw", "northwind-p1-v1.docx");
+    await handleSetStatus(deps, admin, { orgId: "org-nw", status: "archived" });
+    const before = fake.col(UPLOADS_COLLECTION).size;
+    await expect(upload("org-nw", "northwind-p2.docx")).rejects.toMatchObject({
+      code: "failed-precondition",
+      message: expect.stringMatching(/archived\. Restore it/),
+    });
+    expect(fake.col(UPLOADS_COLLECTION).size).toBe(before);
+    await handleSetStatus(deps, admin, { orgId: "org-nw", status: "current" });
+    await expect(upload("org-nw", "northwind-p2.docx")).resolves.toMatchObject({ pillar: "2" });
   });
 });

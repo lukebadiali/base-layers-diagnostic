@@ -4,6 +4,7 @@
 //   knowledgeAsk         ask a client's agent (staff: any client; client: own org, once enabled)
 //   knowledgeUploads     staff read the upload log
 //   knowledgeSetStatus   admin archive / restore a client's knowledge
+//   knowledgeCoverage    staff read what the agent holds for a client, per pillar
 //   knowledgeOnOrgDelete archive (not delete) a client's knowledge when its org is deleted
 //
 // Secrets OPENAI_API_KEY (embeddings) and OPENROUTER_API_KEY (describer and
@@ -23,6 +24,7 @@ import { openrouterDescriber } from "./describer";
 import { openaiEmbedder } from "./embedder";
 import {
   handleAsk,
+  handleCoverage,
   handleIngest,
   handleSetStatus,
   handleUploads,
@@ -93,6 +95,13 @@ export const knowledgeSetStatus = onCall(
   { region: REGION, secrets: [SENTRY_DSN], memory: "256MiB", timeoutSeconds: 60 },
   withSentry(async (request: CallableRequest<unknown>) =>
     handleSetStatus({ db: getFirestore() }, callerOf(request), request.data),
+  ),
+);
+
+export const knowledgeCoverage = onCall(
+  { region: REGION, secrets: [SENTRY_DSN], memory: "256MiB", timeoutSeconds: 30 },
+  withSentry(async (request: CallableRequest<unknown>) =>
+    handleCoverage({ db: getFirestore() }, callerOf(request), request.data),
   ),
 );
 

@@ -57,7 +57,8 @@ export function toBase64(buf) {
 /**
  * @typedef {import("../cloud/knowledge.js").UploadRow} UploadRow
  * @typedef {import("../cloud/knowledge.js").AskResult} AskResult
- * @typedef {"live" | "replaced" | "failed" | "processing"} RowState
+ * @typedef {import("../cloud/knowledge.js").OrgCoverage} OrgCoverage
+ * @typedef {"live" | "archived" | "replaced" | "failed" | "processing"} RowState
  */
 
 /**
@@ -65,16 +66,17 @@ export function toBase64(buf) {
  * upload for a pillar is live, older successful ones were replaced by it.
  * Rows arrive newest first.
  * @param {UploadRow[]} rows
+ * @param {boolean} [archived] the client's knowledge is archived: its live forms show as archived
  * @returns {RowState[]}
  */
-export function uploadStates(rows) {
+export function uploadStates(rows, archived = false) {
   const seen = new Set();
   return rows.map((r) => {
     if (r.status !== "succeeded") return r.status;
     const key = r.pillar ?? "";
     if (seen.has(key)) return "replaced";
     seen.add(key);
-    return "live";
+    return archived ? "archived" : "live";
   });
 }
 
@@ -93,9 +95,16 @@ export function bulletItems(answer) {
   return lines.map((l) => l.replace(/^[-•*]\s+/, ""));
 }
 
-const STATE_BADGE = { live: "green", replaced: "", failed: "red", processing: "amber" };
+const STATE_BADGE = {
+  live: "green",
+  archived: "",
+  replaced: "",
+  failed: "red",
+  processing: "amber",
+};
 const STATE_LABEL = {
   live: "Live",
+  archived: "Archived",
   replaced: "Replaced",
   failed: "Failed",
   processing: "Processing",
@@ -126,6 +135,9 @@ function pillarLabel(p) {
  *   ingest: (input: { orgId: string, fileName: string, fileBase64: string }) => Promise<{ pillar: string, sessionDate: string, chunks: number, replacedChunks: number }>,
  *   ask: (input: { orgId: string, question: string }) => Promise<AskResult>,
  *   listUploads: (input: { orgId?: string }) => Promise<UploadRow[]>,
+ *   getCoverage: (input: { orgId: string }) => Promise<OrgCoverage>,
+ *   setStatus: (input: { orgId: string, status: "current" | "archived" }) => Promise<{ updated: number }>,
+ *   isAdmin?: boolean,
  *   h?: typeof defaultH,
  * }} KnowledgeAdminDeps
  * @typedef {HTMLElement & {
@@ -151,7 +163,7 @@ export function createKnowledgeAdminPanel(deps) {
     h(
       "p",
       { class: "muted-paragraph" },
-      "Upload a client's Session Capture Form and test their agent. Clients can't see any of this yet.",
+      "Upload a client's Session Capture Forms, see what their agent knows and test it. Clients can't see any of this yet.",
     ),
   );
 
@@ -183,6 +195,180 @@ export function createKnowledgeAdminPanel(deps) {
   // ── Upload log ───────────────────────────────────────────────────────
   const log = h("div", { class: "knowledge-log" });
 
+  // ── What the agent knows ─────────────────────────────────────────────
+  const coverageBox = h("div", { class: "knowledge-coverage" });
+  const statusBox = h("div", { class: "knowledge-status" });
+  /** @type {OrgCoverage["status"] | null} */
+  let coverageStatus = null;
+
+  async function refreshCoverage() {
+    const forOrg = orgId();
+    if (!forOrg) return;
+    coverageBox.replaceChildren(h("p", { class: "muted-paragraph" }, "Loading…"));
+    statusBox.replaceChildren();
+    try {
+      const c = await deps.getCoverage({ orgId: forOrg });
+      if (forOrg !== orgId()) return;
+      coverageStatus = c.status;
+      uploadBtn.disabled = busy || c.status === "archived";
+      renderCoverage(c);
+      renderStatus(c);
+    } catch {
+      coverageBox.replaceChildren(
+        h("p", { class: "auth-error" }, "Couldn't load what the agent knows."),
+      );
+    }
+  }
+
+  /** @param {OrgCoverage} c */
+  function renderCoverage(c) {
+    if (c.status === "none") {
+      coverageBox.replaceChildren(
+        h(
+          "p",
+          { class: "muted-paragraph" },
+          "Nothing uploaded yet. The agent will tell this client there's no delivered material.",
+        ),
+      );
+      return;
+    }
+    const byPillar = new Map(c.pillars.map((p) => [p.pillar, p]));
+    const keys = [
+      ...(byPillar.has("review") ? ["review"] : []),
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+    ];
+    coverageBox.replaceChildren(
+      h("table", { class: "knowledge-table" }, [
+        h(
+          "thead",
+          {},
+          h(
+            "tr",
+            {},
+            ["Pillar", "Session", "Session date", "From file", "Uploaded"].map((t) =>
+              h("th", {}, t),
+            ),
+          ),
+        ),
+        h(
+          "tbody",
+          {},
+          keys.map((k) => {
+            const p = byPillar.get(k);
+            if (!p) {
+              return h("tr", { class: "is-empty" }, [
+                h("td", {}, pillarLabel(k)),
+                h("td", { colspan: "4" }, "Not covered yet"),
+              ]);
+            }
+            return h("tr", { class: p.status === "archived" ? "is-replaced" : "" }, [
+              h("td", {}, p.pillarName ? `${pillarLabel(k)}: ${p.pillarName}` : pillarLabel(k)),
+              h("td", {}, p.sessionName || "—"),
+              h("td", {}, p.sessionDate || "—"),
+              h("td", {}, p.sourceFileName || "—"),
+              h("td", {}, p.uploadedAt ? when(p.uploadedAt) : "—"),
+            ]);
+          }),
+        ),
+      ]),
+    );
+  }
+
+  /** @param {OrgCoverage} c */
+  function renderStatus(c) {
+    statusBox.replaceChildren();
+    if (c.status === "none") return;
+    const name = select.selectedOptions[0]?.textContent ?? "this client";
+    const archived = c.status === "archived";
+    if (archived) {
+      statusBox.appendChild(
+        h(
+          "div",
+          { class: "knowledge-archived" },
+          `Archived. ${name}'s agent answers nothing until this is restored, and new uploads are blocked.`,
+        ),
+      );
+    }
+    if (!deps.isAdmin) {
+      statusBox.appendChild(
+        h(
+          "p",
+          { class: "knowledge-hint" },
+          "Only an admin can archive or restore a client's knowledge.",
+        ),
+      );
+      return;
+    }
+    const action = /** @type {HTMLButtonElement} */ (
+      h(
+        "button",
+        { class: "btn secondary sm" },
+        archived ? "Restore knowledge" : "Archive knowledge",
+      )
+    );
+    const row = h("div", { class: "row" }, [action]);
+    statusBox.appendChild(row);
+    const run = async () => {
+      const pending = pendingButton(action, archived ? "Restoring…" : "Archiving…");
+      pending.start();
+      try {
+        await deps.setStatus({ orgId: orgId(), status: archived ? "current" : "archived" });
+      } catch (err) {
+        statusBox.appendChild(
+          h(
+            "div",
+            { class: "auth-error" },
+            (err && /** @type {*} */ (err).message) || "That didn't work.",
+          ),
+        );
+        pending.stop();
+        return;
+      }
+      uploadMsg.replaceChildren();
+      void refreshAll();
+    };
+    if (archived) {
+      action.addEventListener("click", () => void run());
+      return;
+    }
+    // Archiving switches the agent off for the client: confirm in place first.
+    action.addEventListener("click", () => {
+      const confirmBtn = /** @type {HTMLButtonElement} */ (
+        h("button", { class: "btn ghost danger sm" }, "Confirm archive")
+      );
+      const cancelBtn = h("button", { class: "btn secondary sm" }, "Cancel");
+      confirmBtn.addEventListener("click", () => {
+        row.replaceChildren(action);
+        void run();
+      });
+      cancelBtn.addEventListener("click", () => row.replaceChildren(action));
+      row.replaceChildren(
+        h(
+          "span",
+          { class: "knowledge-hint" },
+          `Switch off ${name}'s agent? It can be restored later.`,
+        ),
+        confirmBtn,
+        cancelBtn,
+      );
+    });
+  }
+
+  /** Coverage first: the upload log labels live forms "Archived" when the client is archived. */
+  async function refreshAll() {
+    await refreshCoverage();
+    await refreshLog();
+  }
+
   async function refreshLog() {
     const forOrg = orgId();
     if (!forOrg) return;
@@ -196,7 +382,7 @@ export function createKnowledgeAdminPanel(deps) {
         );
         return;
       }
-      const states = uploadStates(rows);
+      const states = uploadStates(rows, coverageStatus === "archived");
       log.replaceChildren(
         h("table", { class: "knowledge-table" }, [
           h(
@@ -279,7 +465,7 @@ export function createKnowledgeAdminPanel(deps) {
       busy = false;
       select.disabled = false;
       uploadPending.stop();
-      void refreshLog();
+      void refreshAll();
     }
   });
 
@@ -359,7 +545,7 @@ export function createKnowledgeAdminPanel(deps) {
   select.addEventListener("change", () => {
     uploadMsg.replaceChildren();
     answerBox.replaceChildren();
-    void refreshLog();
+    void refreshAll();
   });
 
   const empty = h("p", { class: "muted-paragraph" }, "Create an organisation first.");
@@ -371,6 +557,9 @@ export function createKnowledgeAdminPanel(deps) {
     h("h3", {}, "Upload a Session Capture Form"),
     h("div", { class: "row" }, [fileInput, uploadBtn]),
     uploadMsg,
+    h("h3", {}, "What the agent knows"),
+    coverageBox,
+    statusBox,
     h("h3", {}, "Uploads"),
     log,
     h("h3", {}, "Test the agent"),
@@ -416,7 +605,7 @@ export function createKnowledgeAdminPanel(deps) {
     if (want !== prev) {
       uploadMsg.replaceChildren();
       answerBox.replaceChildren();
-      void refreshLog();
+      void refreshAll();
     }
   };
 

@@ -198,3 +198,41 @@ export async function coveredPillars(db: Firestore, orgId: string): Promise<Pill
     .get();
   return snap.docs.map((d) => d.get("pillar") as PillarKey);
 }
+
+export interface PillarCoverage {
+  pillar: PillarKey;
+  pillarName: string;
+  status: KnowledgeStatus;
+  sessionDate: string;
+  sessionName: string;
+  sourceFileName: string;
+  uploadedAt: string;
+  chunkCount: number;
+}
+
+export interface OrgCoverage {
+  /** "none" when nothing has ever been uploaded; "archived" when every record is archived. */
+  status: KnowledgeStatus | "none";
+  pillars: PillarCoverage[];
+}
+
+const PILLAR_ORDER: PillarKey[] = ["review", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+
+/** What the agent holds for one client, one row per pillar record, in pillar order. */
+export async function orgCoverage(db: Firestore, orgId: string): Promise<OrgCoverage> {
+  const snap = await db.collection(RECORDS_COLLECTION).where("orgId", "==", orgId).get();
+  const pillars = snap.docs
+    .map((d) => ({
+      pillar: d.get("pillar") as PillarKey,
+      pillarName: (d.get("pillarName") as string) ?? "",
+      status: d.get("status") as KnowledgeStatus,
+      sessionDate: (d.get("sessionDate") as string) ?? "",
+      sessionName: (d.get("sessionName") as string) ?? "",
+      sourceFileName: (d.get("sourceFileName") as string) ?? "",
+      uploadedAt: (d.get("uploadedAt") as string) ?? "",
+      chunkCount: (d.get("chunkCount") as number) ?? 0,
+    }))
+    .sort((a, b) => PILLAR_ORDER.indexOf(a.pillar) - PILLAR_ORDER.indexOf(b.pillar));
+  const status = !pillars.length ? "none" : pillars.some((p) => p.status === "current") ? "current" : "archived";
+  return { status, pillars };
+}

@@ -23,7 +23,7 @@ const ORGS = [
   { id: "org-bf", name: "Bluefin Legal" },
 ];
 
-/** @param {Partial<import("../../src/views/knowledge-admin.js").KnowledgeAdminDeps>} [over] */
+/** @param {Record<string, any>} [over] partial KnowledgeAdminDeps; loosely typed so mocks need no casts */
 function setup(over = {}) {
   const deps = {
     orgs: ORGS,
@@ -53,6 +53,9 @@ function setup(over = {}) {
         error: "Form is for Bluefin",
       },
     ]),
+    getCoverage: vi.fn(async () => ({ status: /** @type {const} */ ("none"), pillars: [] })),
+    setStatus: vi.fn(async () => ({ updated: 9 })),
+    isAdmin: true,
     ...over,
   };
   const el = createKnowledgeAdminPanel(/** @type {*} */ (deps));
@@ -351,5 +354,190 @@ describe("focus across re-renders", () => {
     other.focus();
     /** @type {*} */ (el).restoreFocus();
     expect(document.activeElement).toBe(other);
+  });
+});
+
+const P1 = {
+  pillar: "1",
+  pillarName: "Strategy & ICP",
+  status: /** @type {const} */ ("current"),
+  sessionDate: "2026-11-11",
+  sessionName: "Week 5 - ICP refresh",
+  sourceFileName: "p1.docx",
+  uploadedAt: "2026-11-16T10:43:00.000Z",
+  chunkCount: 8,
+};
+
+describe("what the agent knows", () => {
+  it("says so when nothing has been uploaded", async () => {
+    const { el } = setup();
+    await flush();
+    expect(el.querySelector(".knowledge-coverage")?.textContent).toMatch(/Nothing uploaded yet/);
+    expect(el.querySelector(".knowledge-status")?.textContent).toBe("");
+  });
+
+  it("lists the live form per pillar and marks the rest not covered", async () => {
+    const { el, deps } = setup({
+      getCoverage: vi.fn(async () => ({ status: "current", pillars: [P1] })),
+    });
+    await flush();
+    expect(deps.getCoverage).toHaveBeenCalledWith({ orgId: "org-nw" });
+    const rows = [...el.querySelectorAll(".knowledge-coverage tbody tr")];
+    expect(rows).toHaveLength(10);
+    expect(rows[0].textContent).toMatch(
+      /Pillar 1: Strategy & ICP.*Week 5 - ICP refresh.*2026-11-11.*p1\.docx/,
+    );
+    expect(rows[1].textContent).toBe("Pillar 2Not covered yet");
+    expect(rows[1].className).toBe("is-empty");
+  });
+
+  it("reloads coverage when the client changes", async () => {
+    const { el, deps } = setup();
+    const select = /** @type {HTMLSelectElement} */ (el.querySelector("select"));
+    select.value = "org-bf";
+    select.dispatchEvent(new Event("change"));
+    await flush();
+    expect(deps.getCoverage).toHaveBeenLastCalledWith({ orgId: "org-bf" });
+  });
+
+  it("admins archive after an in-place confirmation, and can cancel", async () => {
+    let status = "current";
+    const { el, deps } = setup({
+      getCoverage: vi.fn(async () => ({ status, pillars: [{ ...P1, status }] })),
+      setStatus: vi.fn(async (/** @type {*} */ i) => {
+        status = i.status;
+        return { updated: 9 };
+      }),
+    });
+    await flush();
+    button(el, "Archive knowledge").click();
+    expect(el.querySelector(".knowledge-status")?.textContent).toMatch(
+      /Switch off Northwind Analytics's agent\?/,
+    );
+    button(el, "Cancel").click();
+    expect(button(el, "Archive knowledge")).toBeTruthy();
+    expect(deps.setStatus).not.toHaveBeenCalled();
+
+    button(el, "Archive knowledge").click();
+    button(el, "Confirm archive").click();
+    await vi.waitFor(() => expect(el.querySelector(".knowledge-archived")).toBeTruthy());
+    expect(deps.setStatus).toHaveBeenCalledWith({ orgId: "org-nw", status: "archived" });
+    expect(el.querySelector(".knowledge-archived")?.textContent).toMatch(/new uploads are blocked/);
+    expect(button(el, "Upload form").disabled).toBe(true);
+    expect(el.querySelector(".knowledge-coverage tbody tr")?.className).toBe("is-replaced");
+  });
+
+  it("admins restore an archived client in one click", async () => {
+    let status = "archived";
+    const { el, deps } = setup({
+      getCoverage: vi.fn(async () => ({ status, pillars: [{ ...P1, status }] })),
+      setStatus: vi.fn(async (/** @type {*} */ i) => {
+        status = i.status;
+        return { updated: 9 };
+      }),
+    });
+    await flush();
+    expect(button(el, "Upload form").disabled).toBe(true);
+    button(el, "Restore knowledge").click();
+    await vi.waitFor(() => expect(el.querySelector(".knowledge-archived")).toBeNull());
+    expect(deps.setStatus).toHaveBeenCalledWith({ orgId: "org-nw", status: "current" });
+    expect(button(el, "Upload form").disabled).toBe(false);
+    expect(button(el, "Archive knowledge")).toBeTruthy();
+  });
+
+  it("non-admin staff see the state but no buttons", async () => {
+    const { el } = setup({
+      isAdmin: false,
+      getCoverage: vi.fn(async () => ({
+        status: "archived",
+        pillars: [{ ...P1, status: "archived" }],
+      })),
+    });
+    await flush();
+    expect(el.querySelector(".knowledge-archived")).toBeTruthy();
+    expect(button(el, "Restore knowledge")).toBeUndefined();
+    expect(el.querySelector(".knowledge-status")?.textContent).toMatch(
+      /Only an admin can archive or restore/,
+    );
+  });
+
+  it("shows the server's reason if archiving fails and keeps the button usable", async () => {
+    const { el } = setup({
+      getCoverage: vi.fn(async () => ({ status: "current", pillars: [P1] })),
+      setStatus: vi.fn(async () => Promise.reject(new Error("Admin only"))),
+    });
+    await flush();
+    button(el, "Archive knowledge").click();
+    button(el, "Confirm archive").click();
+    await vi.waitFor(() =>
+      expect(el.querySelector(".knowledge-status .auth-error")?.textContent).toBe("Admin only"),
+    );
+    expect(button(el, "Archive knowledge").disabled).toBe(false);
+  });
+
+  it("refreshes coverage after an upload", async () => {
+    const { el, deps } = setup();
+    await flush();
+    chooseFile(el, new File([new Uint8Array([0x50, 0x4b])], "f.docx"));
+    button(el, "Upload form").click();
+    await vi.waitFor(() => expect(deps.getCoverage).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe("archive keeps the rest of the panel honest", () => {
+  it("uploadStates shows live forms as archived for an archived client", () => {
+    const row = (/** @type {*} */ o) => ({
+      id: "x",
+      orgId: "o",
+      clientName: "c",
+      fileName: "f",
+      uploadedBy: "u",
+      startedAt: "",
+      ...o,
+    });
+    expect(
+      uploadStates(
+        [row({ status: "succeeded", pillar: "1" }), row({ status: "succeeded", pillar: "1" })],
+        true,
+      ),
+    ).toEqual(["archived", "replaced"]);
+  });
+
+  it("clears the last upload message and relabels the log after archiving", async () => {
+    let status = "current";
+    const { el } = setup({
+      getCoverage: vi.fn(async () => ({ status, pillars: [{ ...P1, status }] })),
+      setStatus: vi.fn(async (/** @type {*} */ i) => {
+        status = i.status;
+        return { updated: 9 };
+      }),
+      listUploads: vi.fn(async () => [
+        {
+          id: "u1",
+          orgId: "org-nw",
+          clientName: "c",
+          fileName: "p1.docx",
+          uploadedBy: "a",
+          status: "succeeded",
+          pillar: "1",
+          sessionDate: "2026-11-11",
+          startedAt: "2026-11-16T10:43:00.000Z",
+        },
+      ]),
+    });
+    await flush();
+    chooseFile(el, new File([new Uint8Array([0x50, 0x4b])], "f.docx"));
+    button(el, "Upload form").click();
+    await vi.waitFor(() => expect(el.querySelector(".knowledge-ok")).toBeTruthy());
+    await vi.waitFor(() => expect(el.querySelector(".knowledge-log")?.textContent).toMatch(/Live/));
+
+    button(el, "Archive knowledge").click();
+    button(el, "Confirm archive").click();
+    await vi.waitFor(() => expect(el.querySelector(".knowledge-archived")).toBeTruthy());
+    await vi.waitFor(() =>
+      expect(el.querySelector(".knowledge-log")?.textContent).toMatch(/Archived/),
+    );
+    expect(el.querySelector(".knowledge-ok")).toBeNull();
+    expect(el.querySelector(".knowledge-log")?.textContent).not.toMatch(/Live/);
   });
 });

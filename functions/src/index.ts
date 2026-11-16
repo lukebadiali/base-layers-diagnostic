@@ -59,5 +59,6 @@ export {
   knowledgeAsk,
   knowledgeUploads,
   knowledgeSetStatus,
+  knowledgeCoverage,
   knowledgeOnOrgDelete,
 } from "./knowledge/callables.js";

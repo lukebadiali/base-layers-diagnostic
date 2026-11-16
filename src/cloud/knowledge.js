@@ -3,7 +3,7 @@
 // Client Knowledge Agent callables (functions/src/knowledge/callables.ts).
 // Staff-only in this release: the panel that uses these is hidden behind
 // VITE_KNOWLEDGE_ADMIN and the server keeps clients out until
-// KNOWLEDGE_CLIENT_ACCESS is switched on.
+// knowledgeConfig/access { clientAccess: true } is set.
 import { functions, httpsCallable } from "../firebase/functions.js";
 
 const ingestCallable = httpsCallable(functions, "knowledgeIngest", { timeout: 130_000 });

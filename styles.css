@@ -4775,8 +4775,47 @@ button.action-chevron:focus-visible {
   align-items: center;
   flex-wrap: wrap;
 }
-.knowledge-admin input[type="text"] {
+.knowledge-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 360px;
+}
+.knowledge-select,
+.knowledge-question {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+}
+.knowledge-question {
   flex: 1 1 280px;
+}
+.knowledge-file {
+  flex: 0 1 auto;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.knowledge-file::file-selector-button {
+  margin-right: 10px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.knowledge-hint {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.knowledge-table tr.is-replaced td {
+  color: var(--ink-4);
 }
 .knowledge-table {
   width: 100%;
@@ -4802,8 +4841,14 @@ button.action-chevron:focus-visible {
   background: var(--green-bg);
   color: var(--green);
 }
+ul.knowledge-answer-text {
+  padding-left: 30px;
+}
+ul.knowledge-answer-text li + li {
+  margin-top: 4px;
+}
 .knowledge-answer-text {
-  margin-top: 10px;
+  margin: 10px 0 0;
   padding: 10px 12px;
   border-radius: 6px;
   background: var(--brand-tint);

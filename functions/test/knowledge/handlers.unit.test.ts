@@ -8,6 +8,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Answerer, AnswerInput } from "../../src/knowledge/answer";
 import { NOTHING_YET } from "../../src/knowledge/ask";
 import {
+  CONFIG_COLLECTION,
+  readClientAccess,
   handleAsk,
   handleIngest,
   handleSetStatus,
@@ -24,15 +26,18 @@ const admin: Caller = { uid: "u-admin", role: "admin" };
 const internal: Caller = { uid: "u-int", role: "internal" };
 const nwClient: Caller = { uid: "u-nw", role: "client", orgId: "org-nw" };
 
-function stubAnswerer(): Answerer & { seen: AnswerInput[]; fail?: boolean } {
+function stubAnswerer(): Answerer & { seen: AnswerInput[]; fail?: boolean; answered: boolean } {
   const a = {
     model: "test-answerer",
     seen: [] as AnswerInput[],
     fail: false,
+    answered: true,
     async answer(input: AnswerInput) {
       if (a.fail) throw new Error("upstream 503");
       a.seen.push(input);
-      return { answer: "- grounded answer", provider: "test-provider" };
+      return a.answered
+        ? { answer: "- grounded answer", answered: true, provider: "test-provider" }
+        : { answer: "That hasn't been covered yet.", answered: false, provider: "test-provider" };
     },
   };
   return a;
@@ -220,5 +225,27 @@ describe("handleAsk pillar filter", () => {
     const r = await handleAsk(deps, admin, { orgId: "org-nw", question: "pricing?", pillar: "10" });
     expect(r).toMatchObject({ answered: false, answer: NOTHING_YET });
     expect(answerer.seen).toHaveLength(0);
+  });
+});
+
+describe("unanswered questions", () => {
+  it("are logged as unanswered and carry no sources", async () => {
+    await upload("org-nw", "northwind-p1-v1.docx");
+    answerer.answered = false;
+    const r = await handleAsk(deps, admin, { orgId: "org-nw", question: "What is our TikTok budget?" });
+    expect(r).toMatchObject({ answered: false, answer: "That hasn't been covered yet." });
+    expect(r.sources).toBeUndefined();
+    const [log] = [...fake.col(QUERIES_COLLECTION).values()];
+    expect(log).toMatchObject({ answered: false, hitCount: 8 });
+  });
+});
+
+describe("readClientAccess", () => {
+  it("is off unless knowledgeConfig/access has clientAccess true", async () => {
+    expect(await readClientAccess(fake.asFirestore())).toBe(false);
+    fake.col(CONFIG_COLLECTION).set("access", { clientAccess: "yes" });
+    expect(await readClientAccess(fake.asFirestore())).toBe(false);
+    fake.col(CONFIG_COLLECTION).set("access", { clientAccess: true });
+    expect(await readClientAccess(fake.asFirestore())).toBe(true);
   });
 });

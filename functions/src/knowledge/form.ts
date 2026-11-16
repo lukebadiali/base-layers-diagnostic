@@ -138,14 +138,19 @@ export function parseSessionForm(blocks: DocxBlock[]): ParsedForm {
 }
 
 /** Case, spacing and punctuation-insensitive comparison for the Client check. */
+/** Legal-form words a consultant may leave off the form ("Acme" for an org named "Acme Ltd"). */
+const LEGAL_SUFFIX = /(?: (?:ltd|limited|plc|llp|inc|incorporated|llc|corp|corporation))+$/;
+
 export function sameClient(a: string, b: string): boolean {
   const norm = (s: string) =>
     s
       .toLowerCase()
       .replace(/&/g, "and")
       .replace(/[^a-z0-9]+/g, " ")
-      .trim();
-  return norm(a) === norm(b);
+      .trim()
+      .replace(LEGAL_SUFFIX, "");
+  const x = norm(a);
+  return x !== "" && x === norm(b);
 }
 
 /**

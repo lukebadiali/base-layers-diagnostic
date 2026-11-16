@@ -2839,6 +2839,9 @@ import {
   // ================================================================
   // ADMIN (internal only)
   // ================================================================
+  /** Client Knowledge Agent staff panel, created on first Admin render (VITE_KNOWLEDGE_ADMIN=1 only). */
+  let knowledgePanelPromise = null;
+
   function renderAdmin(user) {
     const frag = h("div");
     frag.appendChild(h("h1", { class: "view-title" }, "Admin"));
@@ -3223,21 +3226,28 @@ import {
     // Client Knowledge Agent staff preview. Off unless the build sets
     // VITE_KNOWLEDGE_ADMIN=1; the check is inline so Vite drops this branch
     // (and the lazy chunk) from a production build without the flag.
+    // The panel is created once and reused: the Admin page re-renders on
+    // unrelated changes, and rebuilding would drop an upload in progress.
     if (import.meta.env.VITE_KNOWLEDGE_ADMIN === "1") {
       const slot = h("div");
       frag.appendChild(slot);
-      void Promise.all([import("./views/knowledge-admin.js"), import("./cloud/knowledge.js")]).then(
-        ([view, cloud]) => {
-          slot.replaceChildren(
-            view.createKnowledgeAdminPanel({
-              orgs: loadOrgMetas(),
-              ingest: cloud.knowledgeIngest,
-              ask: cloud.knowledgeAsk,
-              listUploads: cloud.knowledgeUploads,
-            }),
-          );
-        },
+      const next = { orgs: loadOrgMetas(), activeOrgId: state.orgId };
+      knowledgePanelPromise ??= Promise.all([
+        import("./views/knowledge-admin.js"),
+        import("./cloud/knowledge.js"),
+      ]).then(([view, cloud]) =>
+        view.createKnowledgeAdminPanel({
+          ...next,
+          ingest: cloud.knowledgeIngest,
+          ask: cloud.knowledgeAsk,
+          listUploads: cloud.knowledgeUploads,
+        }),
       );
+      void knowledgePanelPromise.then((panel) => {
+        panel.update(next);
+        slot.replaceChildren(panel);
+        panel.restoreFocus();
+      });
     }
 
     return frag;

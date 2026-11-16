@@ -33,7 +33,7 @@ export interface AskSource {
 
 export interface AskResult {
   answer: string;
-  /** False when nothing was retrieved and no model was called. */
+  /** False when nothing was retrieved, or the model found the excerpts did not answer the question. */
   answered: boolean;
   hitCount: number;
   model: string;
@@ -65,7 +65,7 @@ export async function askKnowledge(deps: AskDeps, input: AskInput): Promise<AskR
     return { answer: NOTHING_YET, answered: false, hitCount: 0, model: "", provider: "" };
   }
 
-  const { answer, provider } = await deps.answerer.answer({
+  const { answer, answered, provider } = await deps.answerer.answer({
     question,
     clientName: input.clientName,
     hits,
@@ -73,8 +73,8 @@ export async function askKnowledge(deps: AskDeps, input: AskInput): Promise<AskR
     format: input.format ?? "bullets",
   });
 
-  const result: AskResult = { answer, answered: true, hitCount: hits.length, model: deps.answerer.model, provider };
-  if (input.includeSources) {
+  const result: AskResult = { answer, answered, hitCount: hits.length, model: deps.answerer.model, provider };
+  if (input.includeSources && answered) {
     const seen = new Map<string, AskSource>();
     for (const h of hits) {
       const key = `${h.pillar}|${h.sessionDate}|${h.sessionName}`;

@@ -8,19 +8,28 @@
 //
 // Secrets OPENAI_API_KEY (embeddings) and OPENROUTER_API_KEY (describer and
 // answerer) must exist in Secret Manager before these deploy.
-// KNOWLEDGE_CLIENT_ACCESS stays false until the agent is released to clients.
+// Clients stay out until knowledgeConfig/access { clientAccess: true } is set
+// (handlers.ts readClientAccess); missing means off.
 
 import { onCall, type CallableRequest } from "firebase-functions/v2/https";
 import { onDocumentDeleted } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/logger";
-import { defineBoolean, defineSecret } from "firebase-functions/params";
+import { defineSecret } from "firebase-functions/params";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { withSentry } from "../util/sentry.js";
 import { openrouterAnswerer } from "./answer";
 import { openrouterDescriber } from "./describer";
 import { openaiEmbedder } from "./embedder";
-import { handleAsk, handleIngest, handleSetStatus, handleUploads, type Caller, type HandlerDeps } from "./handlers";
+import {
+  handleAsk,
+  handleIngest,
+  handleSetStatus,
+  handleUploads,
+  readClientAccess,
+  type Caller,
+  type HandlerDeps,
+} from "./handlers";
 import { setOrgKnowledgeStatus } from "./store";
 
 if (!getApps().length) initializeApp();
@@ -28,7 +37,6 @@ if (!getApps().length) initializeApp();
 const SENTRY_DSN = defineSecret("SENTRY_DSN");
 const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 const OPENROUTER_API_KEY = defineSecret("OPENROUTER_API_KEY");
-const KNOWLEDGE_CLIENT_ACCESS = defineBoolean("KNOWLEDGE_CLIENT_ACCESS", { default: false });
 
 const REGION = "europe-west2";
 
@@ -42,13 +50,13 @@ function callerOf(request: CallableRequest<unknown>): Caller | null {
   };
 }
 
-function deps(): HandlerDeps {
+function deps(clientAccess = false): HandlerDeps {
   return {
     db: getFirestore(),
     embedder: openaiEmbedder({ apiKey: OPENAI_API_KEY.value() }),
     describer: openrouterDescriber({ apiKey: OPENROUTER_API_KEY.value() }),
     answerer: openrouterAnswerer({ apiKey: OPENROUTER_API_KEY.value() }),
-    clientAccess: KNOWLEDGE_CLIENT_ACCESS.value(),
+    clientAccess,
   };
 }
 
@@ -69,7 +77,9 @@ export const knowledgeAsk = onCall(
     memory: "256MiB",
     timeoutSeconds: 60,
   },
-  withSentry(async (request: CallableRequest<unknown>) => handleAsk(deps(), callerOf(request), request.data)),
+  withSentry(async (request: CallableRequest<unknown>) =>
+    handleAsk(deps(await readClientAccess(getFirestore())), callerOf(request), request.data),
+  ),
 );
 
 export const knowledgeUploads = onCall(

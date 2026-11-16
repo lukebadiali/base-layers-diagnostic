@@ -5,6 +5,8 @@
 // answers rendered as text, never HTML.
 import { describe, it, expect, vi } from "vitest";
 import {
+  bulletItems,
+  uploadStates,
   checkFormFile,
   createKnowledgeAdminPanel,
   knowledgeAdminEnabled,
@@ -109,7 +111,7 @@ describe("createKnowledgeAdminPanel", () => {
     expect(el.textContent).toMatch(/Clients can't see any of this yet/);
     expect(deps.listUploads).toHaveBeenCalledWith({ orgId: "org-nw" });
     expect(el.querySelector(".knowledge-table")?.textContent).toMatch(
-      /p1\.docx.*failed.*Form is for Bluefin/,
+      /p1\.docx.*Failed.*Form is for Bluefin/,
     );
   });
 
@@ -175,9 +177,9 @@ describe("createKnowledgeAdminPanel", () => {
       orgId: "org-nw",
       question: "Who is our ideal customer?",
     });
-    expect(el.querySelector(".knowledge-answer-text")?.textContent).toBe(
-      "- Target cold-chain firms\n- Price per site",
-    );
+    expect(
+      [...el.querySelectorAll(".knowledge-answer-text li")].map((li) => li.textContent),
+    ).toEqual(["Target cold-chain firms", "Price per site"]);
     expect(el.querySelector(".knowledge-sources")?.textContent).toBe(
       "Drew on: Pillar 1, ICP refresh (2026-11-11)",
     );
@@ -218,5 +220,136 @@ describe("createKnowledgeAdminPanel", () => {
         /couldn't answer/,
       ),
     );
+  });
+});
+
+describe("uploadStates", () => {
+  it("marks the newest successful upload per pillar live and older ones replaced", () => {
+    const row = (/** @type {*} */ o) => ({
+      id: "x",
+      orgId: "o",
+      clientName: "c",
+      fileName: "f",
+      uploadedBy: "u",
+      startedAt: "",
+      ...o,
+    });
+    expect(
+      uploadStates([
+        row({ status: "succeeded", pillar: "2" }),
+        row({ status: "failed" }),
+        row({ status: "succeeded", pillar: "1" }),
+        row({ status: "processing" }),
+        row({ status: "succeeded", pillar: "1" }),
+      ]),
+    ).toEqual(["live", "failed", "live", "processing", "replaced"]);
+  });
+});
+
+describe("bulletItems", () => {
+  it("splits an all-bullet answer and leaves prose alone", () => {
+    expect(bulletItems("- one\n\n- two")).toEqual(["one", "two"]);
+    expect(bulletItems("• a\n* b")).toEqual(["a", "b"]);
+    expect(bulletItems("Not covered yet.")).toBeNull();
+    expect(bulletItems("- one\nplain")).toBeNull();
+  });
+});
+
+describe("panel behaviour after the local walkthrough", () => {
+  it("starts on the org open in the top bar", async () => {
+    const { el, deps } = setup({ activeOrgId: "org-bf" });
+    await flush();
+    expect(/** @type {HTMLSelectElement} */ (el.querySelector("select")).value).toBe("org-bf");
+    expect(deps.listUploads).toHaveBeenCalledWith({ orgId: "org-bf" });
+  });
+
+  it("flags an unanswered question and shows it as a sentence, not a list", async () => {
+    const { el } = setup({
+      ask: vi.fn(async () => ({
+        answer: "That hasn't been covered yet.",
+        answered: false,
+        hitCount: 8,
+        model: "",
+        provider: "",
+      })),
+    });
+    /** @type {HTMLInputElement} */ (el.querySelector('input[type="text"]')).value = "TikTok?";
+    button(el, "Ask").click();
+    await vi.waitFor(() =>
+      expect(el.querySelector(".knowledge-sources")?.textContent).toMatch(/Not covered/),
+    );
+    expect(el.querySelector("ul.knowledge-answer-text")).toBeNull();
+    expect(el.querySelector(".knowledge-answer-text")?.textContent).toBe(
+      "That hasn't been covered yet.",
+    );
+  });
+
+  it("update() keeps the same element, adds new orgs and follows the top bar", async () => {
+    const { el, deps } = setup();
+    await flush();
+    const panel = /** @type {*} */ (el);
+    panel.update({ orgs: [...ORGS, { id: "org-new", name: "New Co" }], activeOrgId: "org-new" });
+    await flush();
+    expect(document.querySelector(".knowledge-admin")).toBe(el);
+    const select = /** @type {HTMLSelectElement} */ (el.querySelector("select"));
+    expect([...select.options].map((o) => o.textContent)).toContain("New Co");
+    expect(select.value).toBe("org-new");
+    expect(deps.listUploads).toHaveBeenLastCalledWith({ orgId: "org-new" });
+  });
+
+  it("does not switch client while an upload is running", async () => {
+    /** @type {(v: *) => void} */
+    let finish = () => {};
+    const { el } = setup({ ingest: vi.fn(() => new Promise((r) => (finish = r))) });
+    await flush();
+    chooseFile(el, new File([new Uint8Array([0x50, 0x4b])], "f.docx"));
+    button(el, "Upload form").click();
+    await flush();
+    const select = /** @type {HTMLSelectElement} */ (el.querySelector("select"));
+    expect(select.disabled).toBe(true);
+    expect(el.querySelector(".knowledge-hint")?.textContent).toMatch(/up to a minute/);
+    /** @type {*} */ (el).update({ orgs: ORGS, activeOrgId: "org-bf" });
+    expect(select.value).toBe("org-nw");
+    finish({ pillar: "1", sessionDate: "2026-11-11", chunks: 8, replacedChunks: 0 });
+    await vi.waitFor(() =>
+      expect(el.querySelector(".knowledge-ok")?.textContent).toMatch(
+        /now live for Northwind Analytics\.$/,
+      ),
+    );
+    expect(select.disabled).toBe(false);
+  });
+
+  it("shows the empty state when the last org goes and recovers when one returns", () => {
+    const { el } = setup();
+    /** @type {*} */ (el).update({ orgs: [] });
+    expect(el.textContent).toMatch(/Create an organisation first/);
+    /** @type {*} */ (el).update({ orgs: ORGS });
+    expect(el.querySelector("select")).toBeTruthy();
+  });
+});
+
+describe("focus across re-renders", () => {
+  it("puts focus back in the question box when the panel is re-attached", () => {
+    const { el } = setup();
+    const q = /** @type {HTMLInputElement} */ (el.querySelector('input[type="text"]'));
+    q.focus();
+    q.value = "half-typed";
+    const slot = document.createElement("div");
+    document.body.replaceChildren(slot); // what a page re-render does
+    slot.appendChild(el);
+    /** @type {*} */ (el).restoreFocus();
+    expect(document.activeElement).toBe(q);
+    expect(q.value).toBe("half-typed");
+  });
+
+  it("does not steal focus the user moved elsewhere", () => {
+    const { el } = setup();
+    const q = /** @type {HTMLInputElement} */ (el.querySelector('input[type="text"]'));
+    const other = document.createElement("input");
+    document.body.appendChild(other);
+    q.focus();
+    other.focus();
+    /** @type {*} */ (el).restoreFocus();
+    expect(document.activeElement).toBe(other);
   });
 });

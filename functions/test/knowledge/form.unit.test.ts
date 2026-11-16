@@ -83,6 +83,13 @@ describe("field helpers", () => {
     expect(sameClient("Northwind Analytics", "northwind  analytics")).toBe(true);
     expect(sameClient("Smith & Co", "Smith and Co")).toBe(true);
     expect(sameClient("Northwind Analytics", "Northwind Logistics")).toBe(false);
+    // Legal suffixes are ignored, nothing else is.
+    expect(sameClient("Northwind Analytics", "Northwind Analytics Ltd")).toBe(true);
+    expect(sameClient("Bluefin Legal LLP", "Bluefin Legal Limited")).toBe(true);
+    expect(sameClient("Acme PLC", "acme")).toBe(true);
+    expect(sameClient("Northwind Analytics UK", "Northwind Analytics")).toBe(false);
+    expect(sameClient("Ltd", "")).toBe(false);
+    expect(sameClient("", "")).toBe(false);
   });
 
   it("tags BeDeveloped leads without mistaking a client's namesake", () => {

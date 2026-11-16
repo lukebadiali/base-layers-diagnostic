@@ -40,6 +40,17 @@ export interface HandlerDeps {
 }
 
 const STAFF = new Set(["admin", "internal"]);
+
+/**
+ * Release switch for clients: knowledgeConfig/access { clientAccess: true }.
+ * Server-only (no rules match), so only an admin with project access can flip
+ * it, and releasing the agent to clients needs no redeploy. Missing = off.
+ */
+export const CONFIG_COLLECTION = "knowledgeConfig";
+export async function readClientAccess(db: Firestore): Promise<boolean> {
+  const snap = await db.collection(CONFIG_COLLECTION).doc("access").get();
+  return snap.exists && snap.get("clientAccess") === true;
+}
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const PILLARS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "review"] as const;
 

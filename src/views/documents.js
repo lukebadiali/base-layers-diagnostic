@@ -442,25 +442,42 @@ export function createDocumentsView(deps) {
 
     /** @param {*} folder */
     const deleteFolder = (folder) => {
-      // FILE-04: refuse rather than cascade. Cascading is recoverable — it all
-      // goes through the 30-day window — but it is far easier to do by
-      // accident, and what is being accidentally deleted is a client's
-      // document set. The refusal names what is in the way so the user knows
-      // what to do next instead of just being told no.
+      // FILE-04: a file anywhere beneath refuses; an empty subtree cascades.
+      // The guard decides which, and hands back the exact set to delete — the
+      // view does not recompute it, so what the dialogue promises and what the
+      // loop deletes cannot drift apart.
       const verdict = canDeleteFolder(folders, documents, String(folder.id));
       if (!verdict.ok) {
         notify("error", verdict.reason);
         return;
       }
+      const ids = verdict.folderIds;
+      const nested = ids.length - 1;
+      const detail = nested
+        ? `This also removes ${nested} empty sub-folder${nested === 1 ? "" : "s"} inside it. These can be restored within 30 days.`
+        : "It is empty. This can be restored within 30 days.";
       confirmDialog(
         "Delete folder?",
-        `Remove "${folder.name}" from ${org.name}? It is empty. This can be restored within 30 days.`,
+        `Remove "${folder.name}" from ${org.name}? ${detail}`,
         async () => {
+          // One callable per folder, deepest first — softDelete tombstones a
+          // single document and there is no batch form. Sequential and
+          // stop-on-error: a part-failed cascade then leaves the survivors
+          // still parented where they were, rather than orphaned at the root.
+          let done = 0;
           try {
             const { softDelete } = await import("../cloud/soft-delete.js");
-            await softDelete({ type: "folder", orgId: org.id, id: String(folder.id) });
+            for (const id of ids) {
+              await softDelete({ type: "folder", orgId: org.id, id });
+              done += 1;
+            }
           } catch (e) {
-            notify("error", "Couldn't delete the folder: " + errText(e));
+            notify(
+              "error",
+              done
+                ? `Deleted ${done} of ${ids.length} folders, then stopped: ${errText(e)}`
+                : "Couldn't delete the folder: " + errText(e),
+            );
           }
         },
         "Delete",

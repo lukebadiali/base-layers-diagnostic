@@ -278,8 +278,13 @@ Back as internal.
 49. Open the move picker for a folder that has children: **its own name and its
     own children are disabled, and say why.**
 50. Delete a folder that holds a file → **refused**, and the message names what
-    is in the way.
+    is in the way. A file in a *sub*-folder refuses the parent too, and the
+    message totals the whole subtree.
 51. Delete an empty folder → confirm dialogue → it goes.
+51a. Delete a folder whose sub-folders are **all empty** → confirm dialogue
+    naming how many sub-folders go with it → the whole chain goes. (Amended
+    2026-10-07: FILE-04 originally refused this. Needs the §5.2 functions
+    deploy — `folder` is not in the deployed `SOFT_DELETABLE_TYPES`.)
 52. Nest to five levels, then try a sixth → refused with the depth message.
 
 ### G. Documents — sorting

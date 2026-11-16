@@ -184,33 +184,69 @@ describe("canMoveFolder — the cycle guard rules cannot enforce", () => {
 });
 
 describe("canDeleteFolder", () => {
-  it("allows deleting an empty folder", () => {
-    expect(canDeleteFolder(TREE, [], "c")).toEqual({ ok: true });
+  it("allows deleting a leaf folder, and the cascade is just itself", () => {
+    expect(canDeleteFolder(TREE, [], "c")).toEqual({ ok: true, folderIds: ["c"] });
   });
+
+  it("allows deleting a folder whose whole subtree is empty, deepest first", () => {
+    // The old guard refused this outright because `a` held a sub-folder. An
+    // empty sub-folder holds no client data, so refusing bought nothing and
+    // forced the user to delete the chain bottom-up by hand.
+    expect(canDeleteFolder(TREE, [], "a")).toEqual({ ok: true, folderIds: ["c", "b", "a"] });
+  });
+
+  it("orders the cascade deepest-first so no survivor is ever orphaned", () => {
+    // Two branches of unequal depth under one root: every child must come
+    // before its own parent, whatever order the input happens to be in.
+    const wide = [f("p", null), f("x", "p"), f("y", "p"), f("x1", "x"), f("x2", "x1")];
+    const v = canDeleteFolder(wide, [], "p");
+    expect(v.ok).toBe(true);
+    const order = v.ok === true ? v.folderIds : [];
+    expect(order[order.length - 1]).toBe("p");
+    expect(order.indexOf("x2")).toBeLessThan(order.indexOf("x1"));
+    expect(order.indexOf("x1")).toBeLessThan(order.indexOf("x"));
+    expect(order.indexOf("y")).toBeLessThan(order.indexOf("p"));
+    expect(order).toHaveLength(5);
+  });
+
   it("refuses a folder holding files, and says how many", () => {
     const v = canDeleteFolder(TREE, [file("x", "c")], "c");
     expect(v.ok).toBe(false);
-    expect(v.ok === false && v.reason).toContain("1 file");
+    expect(v.ok === false && v.reason).toContain("This folder still holds 1 file");
   });
-  it("refuses a folder holding sub-folders, and says how many", () => {
-    const v = canDeleteFolder(TREE, [], "a");
+
+  it("refuses when the files are in a sub-folder, not in the folder itself", () => {
+    // `a` is empty; `c`, two levels down, is not. The subtree is what counts.
+    const v = canDeleteFolder(TREE, [file("deep", "c")], "a");
     expect(v.ok).toBe(false);
-    expect(v.ok === false && v.reason).toContain("1 sub-folder");
+    expect(v.ok === false && v.reason).toContain("This folder's sub-folders still hold 1 file");
   });
-  it("names both when both are in the way, pluralised", () => {
+
+  it("totals files above and below when both are in the way", () => {
+    const v = canDeleteFolder(TREE, [file("x", "a"), file("y", "c")], "a");
+    expect(v.ok).toBe(false);
+    expect(v.ok === false && v.reason).toContain(
+      "This folder and its sub-folders still hold 2 files",
+    );
+  });
+
+  it("pluralises the file count", () => {
     const v = canDeleteFolder(TREE, [file("x", "a"), file("y", "a")], "a");
-    expect(v.ok).toBe(false);
-    expect(v.ok === false && v.reason).toContain("2 files");
-    expect(v.ok === false && v.reason).toContain("1 sub-folder");
+    expect(v.ok === false && v.reason).toContain("still holds 2 files");
   });
-  it("does not count a grandchild's files as blocking the grandparent directly", () => {
-    // `b` holds `c`; the sub-folder is what blocks, not the file inside `c`.
-    const v = canDeleteFolder(TREE, [file("deep", "c")], "b");
-    expect(v.ok).toBe(false);
-    expect(v.ok === false && v.reason).not.toContain("file");
+
+  it("does not count a file whose folderId dangles — it lives at the root", () => {
+    expect(canDeleteFolder(TREE, [file("orphan", "deleted-folder")], "a").ok).toBe(true);
   });
+
   it("refuses a folder that no longer exists", () => {
     expect(canDeleteFolder(TREE, [], "gone").ok).toBe(false);
+  });
+
+  it("terminates on a cyclic subtree rather than hanging", () => {
+    const cyclic = [f("x", "y"), f("y", "x"), f("z", null)];
+    expect(() => canDeleteFolder(cyclic, [], "x")).not.toThrow();
+    expect(canDeleteFolder(cyclic, [], "z")).toEqual({ ok: true, folderIds: ["z"] });
   });
 });
 
@@ -250,12 +286,11 @@ describe("folder-tree — defensive and boundary paths", () => {
     expect(descendantIds(/** @type {*} */ (null), "a").size).toBe(0);
   });
 
-  it("canDeleteFolder pluralises sub-folders correctly", () => {
+  it("canDeleteFolder cascades a flat set of empty siblings", () => {
     const many = [f("p", null), f("c1", "p"), f("c2", "p")];
     const v = canDeleteFolder(many, [], "p");
-    expect(v.ok).toBe(false);
-    expect(v.ok === false && v.reason).toContain("2 sub-folders");
-    expect(v.ok === false && v.reason).not.toContain("file");
+    expect(v.ok).toBe(true);
+    expect(v.ok === true && v.folderIds.slice().sort()).toEqual(["c1", "c2", "p"]);
   });
 
   it("canDeleteFolder says one file, singular", () => {

@@ -263,6 +263,37 @@ describe("renderMfaEnrol (Phase 6 D-16)", () => {
   });
 });
 
+describe("renderMfaEnrol — Verify pending state", () => {
+  it("locks Verify while enrolment is in flight and restores it on failure", async () => {
+    // Enrolment has never been walked end to end (HANDOFF.md 5.1), so the first
+    // person through it should not also be guessing whether their click landed.
+    /** @type {(reason?: unknown) => void} */
+    let rejectEnrol = () => {};
+    const view = createAuthView({
+      enrollTotp: () =>
+        new Promise((_res, rej) => {
+          rejectEnrol = rej;
+        }),
+      notify: () => {},
+    });
+    const el = view.renderMfaEnrol();
+    const form = /** @type {HTMLFormElement} */ (el.querySelector("form"));
+    const submit = /** @type {HTMLButtonElement} */ (el.querySelector('button[type="submit"]'));
+
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    expect(submit.disabled).toBe(true);
+    expect(submit.classList.contains("is-loading")).toBe(true);
+    expect(submit.textContent).toBe("Verifying…");
+
+    rejectEnrol(new Error("Invalid verification code"));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(submit.disabled).toBe(false);
+    expect(submit.textContent).toBe("Verify");
+  });
+});
+
 describe("renderMfaChallenge (Phase 6 follow-up — sign-in 2nd-factor prompt)", () => {
   it("exports renderMfaChallenge as a function", () => {
     expect(typeof renderMfaChallenge).toBe("function");
@@ -314,6 +345,66 @@ describe("renderMfaChallenge (Phase 6 follow-up — sign-in 2nd-factor prompt)",
     await Promise.resolve();
     expect(calls).toEqual([{ resolver: fakeResolver, code: "123456" }]);
   });
+  it("locks Verify and spins while the authenticator code is in flight", async () => {
+    // resolveSignIn is a 5-10s round trip and this view's failure path is
+    // deliberately silent, so before this the screen looked identical whether
+    // the code was right, wrong, or the click had not registered at all.
+    /** @type {(value?: unknown) => void} */
+    let resolveVerify = () => {};
+    const view = createAuthView({
+      mfaResolver: { hints: [{ uid: "f1" }] },
+      verifyMfaCode: () =>
+        new Promise((res) => {
+          resolveVerify = res;
+        }),
+    });
+    const el = view.renderMfaChallenge();
+    const form = /** @type {HTMLFormElement} */ (el.querySelector("form"));
+    const submit = /** @type {HTMLButtonElement} */ (el.querySelector('button[type="submit"]'));
+
+    expect(submit.disabled).toBe(false);
+    expect(submit.textContent).toBe("Verify");
+
+    // The synchronous head of the handler runs during dispatch, before it
+    // awaits — so the pending state is visible with no microtask flush.
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    expect(submit.disabled).toBe(true);
+    expect(submit.classList.contains("is-loading")).toBe(true);
+    expect(submit.textContent).toBe("Verifying…");
+
+    resolveVerify();
+  });
+
+  it("restores Verify after a rejected code, despite the silent failure path", async () => {
+    // The silence is about not showing a sticky red toast for a rotated code.
+    // It must not extend to leaving the button spinning for ever — codes expire
+    // every 30s, so retry is the common path.
+    /** @type {(reason?: unknown) => void} */
+    let rejectVerify = () => {};
+    const view = createAuthView({
+      mfaResolver: { hints: [{ uid: "f1" }] },
+      verifyMfaCode: () =>
+        new Promise((_res, rej) => {
+          rejectVerify = rej;
+        }),
+    });
+    const el = view.renderMfaChallenge();
+    const form = /** @type {HTMLFormElement} */ (el.querySelector("form"));
+    const submit = /** @type {HTMLButtonElement} */ (el.querySelector('button[type="submit"]'));
+
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    expect(submit.disabled).toBe(true);
+
+    rejectVerify(new Error("Invalid verification code"));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(submit.disabled).toBe(false);
+    expect(submit.classList.contains("is-loading")).toBe(false);
+    expect(submit.textContent).toBe("Verify");
+  });
+
   it("stays silent (no error toast) when the authenticator code is invalid", async () => {
     /** @type {string[]} */
     const levels = [];

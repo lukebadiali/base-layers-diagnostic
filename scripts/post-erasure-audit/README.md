@@ -50,7 +50,7 @@ documents.legacyAppUserId (sub.)  PASS   0 hits
 documents.legacyAppUserId (leg.)  PASS   0 hits
 funnelComments.authorId           PASS   0 hits
 redactionList/{uid}               PASS   exists, tombstoneToken=deleted-user-14461cc2e6f67959
-Auth user.disabled                PASS   true
+Auth record removed               PASS   user not found
 ────────────────────────────────────────────────────────
 RESULT: PASS (zero residual PII)
 ```
@@ -71,13 +71,25 @@ deduplicates on `clientReqId`, not on the overall erasure operation).
 `gdprEraseUser` did not complete. Check Cloud Functions logs for errors.
 Ensure `GDPR_PSEUDONYM_SECRET` is set in Firebase Secret Manager.
 
-### FAIL — Auth user.disabled = false
+### FAIL — Auth record removed
 
-The Auth disable step may have been skipped due to a user-not-found error.
-Check Cloud Functions logs for `compliance.erase.auth.user_not_found` warnings.
-If the Auth user still exists, manually disable via:
+The identity record still exists, so the data subject's email has not been
+erased — and the address stays claimed, which blocks any future invite to it.
+Note this FAILS even when the record is present but `disabled=true`: disabling
+was the pre-2026-10 behaviour and is no longer sufficient.
+
+Check Cloud Functions logs for `compliance.erase.auth.deleted` (success) and
+`compliance.erase.auth.user_not_found` (swallowed miss) from `gdprEraseUser`.
+Re-running the erasure is the fix; it is idempotent. To remove the record by
+hand:
 ```bash
-firebase auth:update <userId> --disabled --project=bedeveloped-base-layers
+cd functions && node -e '
+const admin = require("firebase-admin");
+admin.initializeApp({projectId: "bedeveloped-base-layers"});
+admin.auth().deleteUser("<userId>")
+  .then(() => { console.log("[OK] Auth record deleted"); process.exit(0); })
+  .catch(e => { console.error("[FAIL]", e.code || e.message); process.exit(1); });
+'
 ```
 
 ## Notes

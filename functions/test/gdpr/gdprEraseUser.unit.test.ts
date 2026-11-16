@@ -9,9 +9,12 @@
 //   1. non-admin → permission-denied
 //   2. unauthenticated → unauthenticated
 //   3. missing GDPR_PSEUDONYM_SECRET (empty) → throws
-//   4. happy path: cascade applied; redactionList written; Auth disabled; audit event written
+//   4. happy path: cascade applied; redactionList written; Auth record DELETED; audit event written
 //   5. idempotent re-run (same clientReqId) → already-exists; new clientReqId re-runs
-//   6. Auth updateUser({disabled:true}) called once for target uid
+//   6. (2026-10) Auth deleteUser called once for target uid — an Art. 17 erasure
+//      must not leave the data subject's email claimed in the identity tier,
+//      which also made the address permanently un-reusable. Replaces the former
+//      updateUser({disabled:true}) assertion.
 //   7. Storage deletion: 2 seeded objects deleted; counts.storageObjectsDeleted===2
 //   8. Storage missing tolerance: counts.storageObjectsMissing increments (no throw)
 //   9. (integration only - covered in integration test)
@@ -84,6 +87,10 @@ const VALID_REQ_ID_C = "cccccccc-3333-4444-8888-000000000003";
 const VALID_REQ_ID_D = "dddddddd-4444-4444-8888-000000000004";
 const VALID_REQ_ID_E = "eeeeeeee-5555-4444-8888-000000000005";
 const VALID_REQ_ID_F = "ffffffff-6666-4444-8888-000000000006";
+// 2026-10 additions (Auth-record deletion tests) — distinct ids so the 5-min
+// idempotency window can never alias them onto another test's erasure.
+const VALID_REQ_ID_G = "11111111-7777-4444-8888-000000000007";
+const VALID_REQ_ID_H = "22222222-8888-4444-8888-000000000008";
 
 const ADMIN_UID = "admin-uid-001";
 const TARGET_UID = "u-target";
@@ -245,19 +252,61 @@ describe("gdprEraseUser — unit tests", () => {
     expect(token1).toBe(token3);
   });
 
-  // Test 6: Auth updateUser({disabled: true}) called once for target uid
-  it("calls getAuth().updateUser(userId, {disabled:true}) once", async () => {
+  // Test 6: the Auth identity record is DELETED, not disabled.
+  it("calls getAuth().deleteUser(userId) once — and never merely disables", async () => {
     adminMockState._seedDoc(`users/${TARGET_UID}`, { email: "t@x.com" });
+    adminMockState._seedUser({ uid: TARGET_UID, email: "t@x.com" });
 
     await wrapped({
       data: { userId: TARGET_UID, clientReqId: VALID_REQ_ID_E },
       auth: adminAuthCtx,
     } as never);
 
-    const calls = adminMockState._allUpdateUserCalls();
-    expect(calls).toHaveLength(1);
-    expect(calls[0].uid).toBe(TARGET_UID);
-    expect(calls[0].properties).toMatchObject({ disabled: true });
+    expect(adminMockState._allDeleteUserCalls()).toEqual([TARGET_UID]);
+    // The old behaviour left the record in place with disabled:true. Assert it
+    // is gone, so a regression back to disabling fails here rather than
+    // silently re-claiming the email forever.
+    const disableCalls = adminMockState
+      ._allUpdateUserCalls()
+      .filter((c) => c.properties.disabled === true);
+    expect(disableCalls).toHaveLength(0);
+  });
+
+  // The operability half of the same change: once erased, the address must be
+  // free for a fresh invite. This is what made the delete button feel useless —
+  // the person was gone from the admin panel but their email stayed claimed.
+  it("frees the email address — getUserByEmail no longer resolves after erasure", async () => {
+    adminMockState._seedDoc(`users/${TARGET_UID}`, { email: "freeme@x.com" });
+    adminMockState._seedUser({ uid: TARGET_UID, email: "freeme@x.com" });
+
+    await wrapped({
+      data: { userId: TARGET_UID, clientReqId: VALID_REQ_ID_G },
+      auth: adminAuthCtx,
+    } as never);
+
+    expect(adminMockState._readUserByUid(TARGET_UID)).toBeUndefined();
+    expect(adminMockState._readUser("freeme@x.com")).toBeUndefined();
+  });
+
+  // Idempotency / retry safety: a second erasure, or a uid whose Auth record is
+  // already gone, must not fail the cascade. deleteUser throws user-not-found
+  // and gdprEraseUser swallows it.
+  it("survives an Auth record that is already absent (retry / orphaned profile)", async () => {
+    adminMockState._seedDoc(`users/${TARGET_UID}`, { email: "ghost@x.com" });
+    // Deliberately NOT seeding the Auth user.
+
+    const res = (await wrapped({
+      data: { userId: TARGET_UID, clientReqId: VALID_REQ_ID_H },
+      auth: adminAuthCtx,
+    } as never)) as { ok?: boolean };
+
+    expect(adminMockState._allDeleteUserCalls()).toEqual([TARGET_UID]);
+    // The cascade still completed — the redactionList row proves it ran past
+    // the Auth step rather than aborting there.
+    expect(
+      adminMockState._readDoc(`redactionList/${TARGET_UID}`)?.tombstoneToken,
+    ).toEqual(expect.any(String));
+    expect(res).toBeTruthy();
   });
 
   // Test 7: Storage deletion — 2 seeded objects deleted; counts.storageObjectsDeleted===2

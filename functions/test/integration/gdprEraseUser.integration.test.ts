@@ -189,10 +189,13 @@ describe("gdprEraseUser — integration test (Test 9)", () => {
 
     expect(adminMockState._allStorageObjects().size).toBe(0);
 
-    // ── Auth user disabled ────────────────────────────────────────────────────
+    // ── Auth identity record deleted ──────────────────────────────────────────
+    // 2026-10: erasure now removes the record rather than disabling it, so the
+    // subject's email leaves the identity tier and the address is reusable.
 
-    const authCalls = adminMockState._allUpdateUserCalls();
-    expect(authCalls).toHaveLength(1);
-    expect(authCalls[0]).toMatchObject({ uid: TARGET_UID, properties: { disabled: true } });
+    expect(adminMockState._allDeleteUserCalls()).toEqual([TARGET_UID]);
+    expect(
+      adminMockState._allUpdateUserCalls().filter((c) => c.properties.disabled === true),
+    ).toHaveLength(0);
   });
 });

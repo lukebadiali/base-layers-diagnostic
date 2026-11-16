@@ -10,17 +10,42 @@
 //   3. Idempotency key shape + scope + 5-min window.
 //   4. Happy create (internal) -> createUser(strong temp pw) + claims + mirror doc + audit + {uid,tempPassword}.
 //   5. Happy create (admin) -> claims role:"admin".
-//   6. Email already exists -> already-exists; no createUser/claims/mirror.
+//   6. Email already exists + HEALTHY -> already-exists; no createUser/claims/mirror.
 //   7. getUserByEmail non-user-not-found error -> internal; no createUser.
+//   8. (2026-10) Existing-but-unusable states are classified, and surfaced in
+//      err.details as {state, reclaimable, uid} so the UI can offer reactivation
+//      instead of dead-ending. Still refused without reclaim:true.
+//   9. (2026-10) reclaim:true on a reclaimable state revives IN PLACE: same uid,
+//      re-enabled, MFA cleared, claims reset with firstRun, profile overwritten,
+//      redactionList row cleared, audit carries reclaimedFrom.
+//  10. (2026-10) reclaim:true on a HEALTHY or CLIENT account is still refused —
+//      reclaim must never be a way to hijack a live colleague's account.
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const getUserByEmailSpy = vi.fn();
 const createUserSpy = vi.fn();
 const setCustomUserClaimsSpy = vi.fn();
+const updateUserSpy = vi.fn();
 
 const firestoreSetSpy = vi.fn();
-const firestoreDocSpy = vi.fn(() => ({ set: firestoreSetSpy }));
+const firestoreDeleteSpy = vi.fn();
+// Path-aware doc() mock: the reclaim path reads users/{uid} and
+// redactionList/{uid} and writes/deletes both, so the stub has to tell them
+// apart. Seeded per-test via seedDocs().
+let docState: Record<string, { exists: boolean; data?: Record<string, unknown> }> = {};
+const firestoreDocSpy = vi.fn((path: string) => ({
+  set: (v: unknown) => firestoreSetSpy(path, v),
+  delete: () => firestoreDeleteSpy(path),
+  get: async () => {
+    const hit = docState[path] ?? { exists: false };
+    return { exists: hit.exists, data: () => hit.data ?? {} };
+  },
+}));
+
+function seedDocs(state: Record<string, { exists: boolean; data?: Record<string, unknown> }>) {
+  docState = state;
+}
 
 const ensureIdempotentSpy = vi.fn();
 const writeAuditEventSpy = vi.fn();
@@ -35,6 +60,7 @@ vi.mock("firebase-admin/auth", () => ({
     getUserByEmail: getUserByEmailSpy,
     createUser: createUserSpy,
     setCustomUserClaims: setCustomUserClaimsSpy,
+    updateUser: updateUserSpy,
   }),
 }));
 
@@ -94,8 +120,11 @@ beforeEach(() => {
   getUserByEmailSpy.mockReset();
   createUserSpy.mockReset().mockResolvedValue({ uid: "new-staff-uid" });
   setCustomUserClaimsSpy.mockReset().mockResolvedValue(undefined);
+  updateUserSpy.mockReset().mockResolvedValue(undefined);
   firestoreSetSpy.mockReset().mockResolvedValue(undefined);
+  firestoreDeleteSpy.mockReset().mockResolvedValue(undefined);
   firestoreDocSpy.mockClear();
+  docState = {};
   ensureIdempotentSpy.mockReset().mockResolvedValue(undefined);
   writeAuditEventSpy.mockReset().mockResolvedValue(undefined);
 });
@@ -210,7 +239,7 @@ describe("inviteInternal — happy create (internal)", () => {
 
     // Mirror /users/{uid} doc so the admin "Internal team" table shows them.
     expect(firestoreDocSpy).toHaveBeenCalledWith("users/new-staff-uid");
-    const mirror = firestoreSetSpy.mock.calls[0][0] as Record<string, unknown>;
+    const mirror = firestoreSetSpy.mock.calls[0][1] as Record<string, unknown>;
     expect(mirror).toMatchObject({
       id: "new-staff-uid",
       email: baseValidData.email,
@@ -242,21 +271,222 @@ describe("inviteInternal — happy create (admin role)", () => {
       orgId: null,
       firstRun: true,
     });
-    const mirror = firestoreSetSpy.mock.calls[0][0] as Record<string, unknown>;
+    const mirror = firestoreSetSpy.mock.calls[0][1] as Record<string, unknown>;
     expect(mirror).toMatchObject({ role: "admin" });
   });
 });
 
-describe("inviteInternal — email already exists", () => {
+// A live, working colleague: enabled, staff claims, intact profile.
+function seedHealthyExisting() {
+  getUserByEmailSpy.mockResolvedValueOnce({
+    uid: "existing-uid",
+    disabled: false,
+    customClaims: { role: "internal", orgId: null },
+  });
+  seedDocs({
+    "users/existing-uid": {
+      exists: true,
+      data: { id: "existing-uid", email: baseValidData.email, role: "internal" },
+    },
+    "redactionList/existing-uid": { exists: false },
+  });
+}
+
+describe("inviteInternal — email already exists (healthy)", () => {
   it("refuses with already-exists and performs NO mutation", async () => {
-    getUserByEmailSpy.mockResolvedValueOnce({ uid: "existing-uid", customClaims: {} });
+    seedHealthyExisting();
     const handler = await loadHandler();
     await expect(
       handler({ auth: adminAuthCtx, data: { ...baseValidData } }),
     ).rejects.toMatchObject({ code: "already-exists" });
     expect(createUserSpy).not.toHaveBeenCalled();
     expect(setCustomUserClaimsSpy).not.toHaveBeenCalled();
+    expect(updateUserSpy).not.toHaveBeenCalled();
     expect(firestoreSetSpy).not.toHaveBeenCalled();
+  });
+
+  it("marks a healthy account NOT reclaimable, and reclaim:true cannot override", async () => {
+    seedHealthyExisting();
+    const handler = await loadHandler();
+    await expect(
+      handler({ auth: adminAuthCtx, data: { ...baseValidData, reclaim: true } }),
+    ).rejects.toMatchObject({
+      code: "already-exists",
+      details: { state: "healthy", reclaimable: false },
+    });
+    expect(updateUserSpy).not.toHaveBeenCalled();
+    expect(firestoreSetSpy).not.toHaveBeenCalled();
+  });
+
+  it("refuses a client-role account as not reclaimable even with reclaim:true", async () => {
+    getUserByEmailSpy.mockResolvedValueOnce({
+      uid: "client-uid",
+      disabled: false,
+      customClaims: { role: "client", orgId: "org-1" },
+    });
+    seedDocs({
+      "users/client-uid": { exists: true, data: { id: "client-uid", role: "client" } },
+      "redactionList/client-uid": { exists: false },
+    });
+    const handler = await loadHandler();
+    await expect(
+      handler({ auth: adminAuthCtx, data: { ...baseValidData, reclaim: true } }),
+    ).rejects.toMatchObject({
+      code: "already-exists",
+      details: { state: "client", reclaimable: false },
+    });
+    expect(updateUserSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("inviteInternal — existing-but-unusable states are diagnosed", () => {
+  // Seeds the three reclaimable shapes. Each is a real situation the product
+  // could previously neither explain nor escape.
+  const cases = [
+    {
+      label: "disabled (what gdprEraseUser leaves behind, or a Console disable)",
+      state: "disabled",
+      rec: { uid: "ex-uid", disabled: true, customClaims: { role: "admin", orgId: null } },
+      docs: {
+        "users/ex-uid": { exists: true, data: { id: "ex-uid", role: "admin" } },
+        "redactionList/ex-uid": { exists: false },
+      },
+    },
+    {
+      label: "erased (GDPR cascade ran — redactionList row present)",
+      state: "erased",
+      rec: { uid: "ex-uid", disabled: true, customClaims: { role: "admin", orgId: null } },
+      docs: {
+        "users/ex-uid": {
+          exists: true,
+          data: { id: "ex-uid", role: "admin", email: null, name: null, erasedAt: "2026-10-01" },
+        },
+        "redactionList/ex-uid": { exists: true, data: { tombstoneToken: "tok" } },
+      },
+    },
+    {
+      label: "orphaned (Auth record survives, /users profile does not)",
+      state: "orphaned",
+      rec: { uid: "ex-uid", disabled: false, customClaims: { role: "admin", orgId: null } },
+      docs: {
+        "users/ex-uid": { exists: false },
+        "redactionList/ex-uid": { exists: false },
+      },
+    },
+  ];
+
+  for (const c of cases) {
+    it(`refuses WITHOUT reclaim but reports state="${c.state}" + uid — ${c.label}`, async () => {
+      getUserByEmailSpy.mockResolvedValueOnce(c.rec);
+      seedDocs(c.docs);
+      const handler = await loadHandler();
+      await expect(
+        handler({ auth: adminAuthCtx, data: { ...baseValidData } }),
+      ).rejects.toMatchObject({
+        code: "already-exists",
+        details: { code: "auth/email-already-exists", state: c.state, reclaimable: true, uid: "ex-uid" },
+      });
+      // Diagnosis only — nothing mutated until the admin opts in.
+      expect(updateUserSpy).not.toHaveBeenCalled();
+      expect(setCustomUserClaimsSpy).not.toHaveBeenCalled();
+      expect(firestoreSetSpy).not.toHaveBeenCalled();
+      expect(firestoreDeleteSpy).not.toHaveBeenCalled();
+    });
+
+    it(`reclaim:true revives in place — ${c.label}`, async () => {
+      getUserByEmailSpy.mockResolvedValueOnce(c.rec);
+      seedDocs(c.docs);
+      const handler = await loadHandler();
+      const res = (await handler({
+        auth: adminAuthCtx,
+        data: { ...baseValidData, role: "admin", reclaim: true },
+      })) as { uid: string; tempPassword: string; existed: boolean };
+
+      // Same uid — authored content, uploads and audit history stay attached.
+      expect(res.uid).toBe("ex-uid");
+      expect(res.existed).toBe(true);
+      expect(res.tempPassword).toEqual(expect.any(String));
+      expect(res.tempPassword.length).toBeGreaterThanOrEqual(12);
+      // Never created a second account for the same person.
+      expect(createUserSpy).not.toHaveBeenCalled();
+
+      // Re-enabled, re-credentialled, and MFA cleared (the old authenticator
+      // is gone with the access).
+      expect(updateUserSpy).toHaveBeenCalledWith("ex-uid", {
+        disabled: false,
+        password: res.tempPassword,
+        emailVerified: true,
+        displayName: baseValidData.name,
+        multiFactor: { enrolledFactors: [] },
+      });
+      // firstRun forces password reset + TOTP re-enrolment on next sign-in.
+      expect(setCustomUserClaimsSpy).toHaveBeenCalledWith("ex-uid", {
+        role: "admin",
+        orgId: null,
+        firstRun: true,
+      });
+      // Full overwrite, so an erasure tombstone cannot survive into the profile.
+      expect(firestoreSetSpy).toHaveBeenCalledWith("users/ex-uid", {
+        id: "ex-uid",
+        email: baseValidData.email,
+        name: baseValidData.name,
+        role: "admin",
+        orgId: null,
+        createdAt: expect.any(String),
+      });
+
+      // Audit records that this was a revival and of what.
+      expect(writeAuditEventSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "auth.internal.invite",
+          payload: expect.objectContaining({ reclaimed: true, reclaimedFrom: c.state }),
+        }),
+        expect.anything(),
+      );
+      // The temp password must never reach the audit payload (Pitfall 17).
+      expect(JSON.stringify(writeAuditEventSpy.mock.calls)).not.toContain(res.tempPassword);
+    });
+  }
+
+  it("clears the redactionList row on reclaim so a restore cannot re-erase them", async () => {
+    getUserByEmailSpy.mockResolvedValueOnce({
+      uid: "ex-uid",
+      disabled: true,
+      customClaims: { role: "admin", orgId: null },
+    });
+    seedDocs({
+      "users/ex-uid": { exists: true, data: { id: "ex-uid", erasedAt: "2026-10-01" } },
+      "redactionList/ex-uid": { exists: true, data: { tombstoneToken: "tok" } },
+    });
+    const handler = await loadHandler();
+    await handler({ auth: adminAuthCtx, data: { ...baseValidData, reclaim: true } });
+    expect(firestoreDeleteSpy).toHaveBeenCalledWith("redactionList/ex-uid");
+  });
+
+  it("leaves redactionList alone when there was no erasure to undo", async () => {
+    getUserByEmailSpy.mockResolvedValueOnce({
+      uid: "ex-uid",
+      disabled: true,
+      customClaims: { role: "admin", orgId: null },
+    });
+    seedDocs({
+      "users/ex-uid": { exists: true, data: { id: "ex-uid", role: "admin" } },
+      "redactionList/ex-uid": { exists: false },
+    });
+    const handler = await loadHandler();
+    await handler({ auth: adminAuthCtx, data: { ...baseValidData, reclaim: true } });
+    expect(firestoreDeleteSpy).not.toHaveBeenCalled();
+  });
+
+  it("still enforces the admin-only gate on the reclaim path", async () => {
+    const handler = await loadHandler();
+    await expect(
+      handler({
+        auth: { uid: "int-uid", token: { role: "internal" } },
+        data: { ...baseValidData, reclaim: true },
+      }),
+    ).rejects.toMatchObject({ code: "permission-denied" });
+    expect(updateUserSpy).not.toHaveBeenCalled();
   });
 });
 

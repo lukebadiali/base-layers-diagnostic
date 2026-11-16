@@ -202,12 +202,30 @@ export const gdprEraseUser = onCall(
       await batch.commit();
     }
 
-    // ── Disable Auth user (idempotent — repeated disable is a no-op) ─────────
+    // ── DELETE the Auth user (idempotent — a repeat is user-not-found) ──────
+    // 2026-10: was `updateUser(userId, { disabled: true })`. Disabling left the
+    // identity record — and therefore the email address, which is itself PII —
+    // in the Auth tier after an Art. 17 erasure. Two consequences, both bad:
+    //
+    //   1. Compliance: an "erasure" that retains the data subject's email in
+    //      the identity tier is a weaker posture than the docs claimed. Deleting
+    //      the record removes the last copy of the address outside the
+    //      deliberately-retained audit carve-out (GDPR-04 / Pitfall 11).
+    //   2. Operability: the address stayed permanently claimed. inviteInternal
+    //      refuses an email that already has an Auth record, so the person could
+    //      neither sign in NOR be re-created — invisible in the admin panel and
+    //      un-recreatable at the same time, with nothing explaining why.
+    //
+    // The /users/{uid} tombstone is deliberately NOT removed: the pseudonym
+    // token linkage and audit referential integrity depend on it (GDPR-02/04).
+    // Firebase never reuses a uid, so deleting the identity record cannot cause
+    // a future account to inherit this one's history.
     try {
-      await getAuth().updateUser(userId, { disabled: true });
+      await getAuth().deleteUser(userId);
+      logger.info("compliance.erase.auth.deleted", { userId });
     } catch (err) {
-      // user-not-found is acceptable (the Firestore profile may exist
-      // for a uid the Auth tier no longer recognises). Log and continue.
+      // user-not-found is acceptable and expected on a retry, or when the
+      // Firestore profile exists for a uid the Auth tier no longer recognises.
       logger.warn("compliance.erase.auth.user_not_found", {
         userId,
         err: (err as Error).message,

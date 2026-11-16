@@ -306,25 +306,30 @@ async function main() {
     }
   }
 
-  // ── 9. Auth user.disabled ────────────────────────────────────────────────────
+  // ── 9. Auth identity record removed ─────────────────────────────────────────
+  // 2026-10: was "Auth user.disabled". gdprEraseUser now DELETES the identity
+  // record rather than disabling it, because the record carries the data
+  // subject's email — itself PII — and a retained record also kept the address
+  // permanently claimed against re-invite. The assertion inverts accordingly:
+  // user-not-found is the only PASS, and a surviving record is a FAIL even
+  // when disabled, since the email is still there to be read.
   {
     try {
       const user = await auth.getUser(uid);
-      if (user.disabled) {
-        printRow("Auth user.disabled", "PASS", "true");
-      } else {
-        printRow("Auth user.disabled", "FAIL", "user exists but disabled=false");
-        allPass = false;
-        failures.push({ check: "Auth user.disabled", reason: "disabled=false" });
-      }
+      const detail = user.disabled
+        ? "record still present (disabled=true) — email not erased"
+        : "record still present and ENABLED — erasure did not reach the Auth tier";
+      printRow("Auth record removed", "FAIL", detail);
+      allPass = false;
+      failures.push({ check: "Auth record removed", reason: detail });
     } catch (err) {
       const msg = /** @type {Error} */ (err).message ?? String(err);
       if (/not.*found|user.*not.*exist/i.test(msg)) {
-        printRow("Auth user.disabled", "PASS", "user not found (acceptable)");
+        printRow("Auth record removed", "PASS", "user not found");
       } else {
-        printRow("Auth user.disabled", "FAIL", msg);
+        printRow("Auth record removed", "FAIL", msg);
         allPass = false;
-        failures.push({ check: "Auth user.disabled", reason: msg });
+        failures.push({ check: "Auth record removed", reason: msg });
       }
     }
   }

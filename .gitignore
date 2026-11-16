@@ -13,3 +13,4 @@ coverage/
 firestore-debug.log
 firebase-debug.log
 
+.claude/settings.local.json

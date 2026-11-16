@@ -81,7 +81,7 @@ See `docs/RETENTION.md` for the full per-data-class retention manifest. Summary:
 ## 5. Data subject rights (GDPR Art. 15 + Art. 17 + Art. 21)
 
 - **Art. 15 — Right of access.** The `gdprExportUser` callable (Phase 8 GDPR-01) assembles a JSON bundle across the seven user-linked collection paths and returns a Cloud-Storage V4 signed URL with a 24-hour TTL. Server entry point: `functions/src/gdpr/exportUser.ts`. Client wrapper: `src/cloud/gdpr.js` `exportUser`.
-- **Art. 17 — Right to erasure.** The `gdprEraseUser` callable (Phase 8 GDPR-02) cascades deletion across all user-linked collections and writes a tombstone marker for consistent-token replay. Audit-log retention is preserved per Pitfall 11 (regulatory-evidence carve-out). Server entry point: `functions/src/gdpr/eraseUser.ts`. Client wrapper: `src/cloud/gdpr.js`.
+- **Art. 17 — Right to erasure.** The `gdprEraseUser` callable (Phase 8 GDPR-02) cascades deletion across all user-linked collections and writes a tombstone marker for consistent-token replay. The Firebase Auth identity record is deleted, so the email address is removed from the identity tier and freed for future use. Audit-log retention is preserved per Pitfall 11 (regulatory-evidence carve-out). Server entry point: `functions/src/gdpr/gdprEraseUser.ts`. Client wrapper: `src/cloud/gdpr.js`.
 - **Art. 21 — Right to object.** Handled out-of-band via `security@bedeveloped.com`; not currently exposed as a callable.
 
 **Response SLA:** 30 days from receipt of a verified request, per GDPR Art. 12(3). One-time 60-day extension available where the request is complex or numerous, with reasoned communication to the data subject within the initial 30 days.

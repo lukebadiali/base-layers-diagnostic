@@ -51,3 +51,13 @@ export { gdprEraseUser } from "./gdpr/gdprEraseUser.js";
 // (auth-fail burst, MFA disenrol [DORMANT], role escalation, unusual-hour
 // GDPR export). Runs as audit-alert-sa in europe-west2.
 export { authAnomalyAlert } from "./observability/authAnomalyAlert.js";
+// Client Knowledge Agent (2026-11): per-client RAG. Staff upload and test via
+// the Admin panel; clients are refused until knowledgeConfig/access
+// { clientAccess: true }. Needs secrets OPENAI_API_KEY + OPENROUTER_API_KEY.
+export {
+  knowledgeIngest,
+  knowledgeAsk,
+  knowledgeUploads,
+  knowledgeSetStatus,
+  knowledgeOnOrgDelete,
+} from "./knowledge/callables.js";

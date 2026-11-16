@@ -41,6 +41,12 @@ export class FakeFirestore {
       id,
       _collection: collection,
       get: async () => this.snapshot(collection, id),
+      set: async (data: Data) => void this.col(collection).set(id, { ...data }),
+      update: async (data: Data) => {
+        const cur = this.col(collection).get(id);
+        if (!cur) throw new Error(`No document to update: ${collection}/${id}`);
+        this.col(collection).set(id, { ...cur, ...data });
+      },
     };
   }
 
@@ -56,14 +62,22 @@ export class FakeFirestore {
     };
   }
 
-  query(collection: string, filters: Filter[] = []) {
-    const run = () =>
-      [...this.col(collection).entries()]
-        .filter(([, d]) => filters.every((f) => d[f.field] === f.value))
-        .map(([id]) => this.snapshot(collection, id));
+  query(collection: string, filters: Filter[] = [], order?: { field: string; dir: "asc" | "desc" }, max?: number) {
+    const run = () => {
+      let rows = [...this.col(collection).entries()].filter(([, d]) => filters.every((f) => d[f.field] === f.value));
+      if (order) {
+        const sign = order.dir === "desc" ? -1 : 1;
+        rows = rows.sort(([, a], [, b]) => (String(a[order.field]) < String(b[order.field]) ? -sign : String(a[order.field]) > String(b[order.field]) ? sign : 0));
+      }
+      if (max !== undefined) rows = rows.slice(0, max);
+      return rows.map(([id]) => this.snapshot(collection, id));
+    };
     return {
       _collection: collection,
-      where: (field: string, _op: string, value: unknown) => this.query(collection, [...filters, { field, value }]),
+      where: (field: string, _op: string, value: unknown) =>
+        this.query(collection, [...filters, { field, value }], order, max),
+      orderBy: (field: string, dir: "asc" | "desc" = "asc") => this.query(collection, filters, { field, dir }, max),
+      limit: (n: number) => this.query(collection, filters, order, n),
       get: async () => {
         const docs = run();
         return { docs, size: docs.length, empty: docs.length === 0 };

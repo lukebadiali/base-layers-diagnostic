@@ -18,6 +18,14 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "embedding", "vectorConfig": { "dimension": 1536, "flat": {} } }
       ]
+    },
+    {
+      "collectionGroup": "knowledgeUploads",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId", "order": "ASCENDING" },
+        { "fieldPath": "startedAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

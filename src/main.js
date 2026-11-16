@@ -3220,6 +3220,26 @@ import {
 
     frag.appendChild(settingsCard);
 
+    // Client Knowledge Agent staff preview. Off unless the build sets
+    // VITE_KNOWLEDGE_ADMIN=1; the check is inline so Vite drops this branch
+    // (and the lazy chunk) from a production build without the flag.
+    if (import.meta.env.VITE_KNOWLEDGE_ADMIN === "1") {
+      const slot = h("div");
+      frag.appendChild(slot);
+      void Promise.all([import("./views/knowledge-admin.js"), import("./cloud/knowledge.js")]).then(
+        ([view, cloud]) => {
+          slot.replaceChildren(
+            view.createKnowledgeAdminPanel({
+              orgs: loadOrgMetas(),
+              ingest: cloud.knowledgeIngest,
+              ask: cloud.knowledgeAsk,
+              listUploads: cloud.knowledgeUploads,
+            }),
+          );
+        },
+      );
+    }
+
     return frag;
   }
 

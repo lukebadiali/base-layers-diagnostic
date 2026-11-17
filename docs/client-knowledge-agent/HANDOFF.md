@@ -66,12 +66,12 @@ The code is in `functions/src/knowledge/`, on branch `feat/client-knowledge-agen
 ### Staff panel
 
 The panel is in `src/views/knowledge-admin.js` and `src/cloud/knowledge.js`, wired in `src/main.js` `renderAdmin`. It has:
-- client picker (follows the top-bar org, locked during an upload)
-- upload
+- client picker (follows the top-bar org)
+- upload, in the background: forms queue and run one at a time, staff can switch client or leave the page, and a toast says when each is live or failed. Closing the tab with uploads pending asks first.
 - "What the agent knows" (10 pillars)
-- archive / restore (admin only, confirm in place)
-- upload log (Live / Replaced / Archived / Failed)
-- test question (bullets, "Drew on" sources, "Not covered" marker)
+- archive / restore (admin only, confirm in place). While archived, a line under Upload says why it is greyed out.
+- upload log (Processing / Live / Replaced / Archived / Failed)
+- test question (bullets, "Drew on" sources, "Not covered" marker), with an "Ask across all clients" tick box for staff
 
 Visibility: the panel shows only when the build sets `VITE_KNOWLEDGE_ADMIN=1`, which CI now sets in the build, deploy and preview jobs. It is one instance, reused across re-renders, and keeps focus.
 
@@ -81,9 +81,9 @@ The project is `bedeveloped-base-layers`:
 - **Secrets:** `OPENAI_API_KEY` and `OPENROUTER_API_KEY` are in Secret Manager (v1, same values as `.env.local`).
 - **Indexes:** two vector indexes on `knowledgeChunks`, plus `knowledgeUploads (orgId, startedAt)`.
 - **Deployed 16 Nov:** `knowledgeIngest`, `knowledgeAsk`, `knowledgeUploads`, `knowledgeSetStatus`, `knowledgeOnOrgDelete`.
-- **Deployed 17 Nov:** `knowledgeCoverage` (new) and `knowledgeIngest` again.
+- **Deployed 17 Nov (morning):** `knowledgeCoverage` (new) and `knowledgeIngest` again.
+- **Deployed 17 Nov (afternoon), `9dd40a2`:** all five knowledge callables (`knowledgeIngest`, `knowledgeAsk`, `knowledgeUploads`, `knowledgeSetStatus`, `knowledgeCoverage`). This carries the retrieval re-rank, the NOT AGREED and pronoun wording, the stricter caller check, fail-closed retrieval and the all-clients staff mode. Snapshots are in `~/Desktop/knowledge-deploy-snapshot-5` and `-6`.
 - Every deploy passed the IAM / IdP gate, and the diff showed **nothing lost**.
-- **Warning: the deployed `knowledgeAsk` predates the 17 Nov fix.** It still has the 600-token cap that truncates JSON answers (about 3% of questions fail with "couldn't answer"), and it has zod 4.4.3. Redeploy it with the fixes below.
 - **Not live yet:** the hosting rewrites and the staff panel go live only when PR #103 merges. CI deploys hosting from `main`, and `main` needs a reviewer.
 - **Clients:** they cannot ask. `knowledgeConfig/access` does not exist, which means off.
 
@@ -95,6 +95,16 @@ The project is `bedeveloped-base-layers`:
 | #102 | Internal-account reactivation and GDPR erasure deleting the Auth record. Ready, needs review. Its server half needs a functions deploy. |
 | #99 | October handover doc. Open, needs review. |
 | #101 | MFA Verify spinner. Merged. |
+
+### Access control (all in code; the model decides nothing)
+
+- **Caller:** `callerFromAuth` (`handlers.ts`) uses the verified token only, with the same bar as `firestore.rules` `isAuthed()`: a verified email and not anonymous. Role and orgId are custom claims.
+- **Client:** asks about their own org only, taken from the token. Naming another org is refused. Clients are off until `knowledgeConfig/access { clientAccess: true }` exists.
+- **Staff (admin, internal):** pick a client, or ask across all clients (`scope: "all"`). In the all-clients mode each client is searched separately, and every excerpt is labelled "Client: <name>" from `orgs/{id}`. Clients are refused it.
+- **Admin only:** archive / restore, and only for an org that exists.
+- **Retrieval:** the `orgId` filter is inside the vector query, and `assertOneClient` refuses to answer if any hit belongs to another org.
+- **Rules:** every knowledge collection is server-only. `tests/rules/knowledge-deny-all.test.js` makes 150 checks across all roles, admin included.
+- **End to end:** `scripts/knowledge-client-isolation/` runs 16 checks as real client logins against the emulators. It passed 16/16 on 17 Nov.
 
 ---
 
@@ -250,13 +260,13 @@ Still open:
 
 ---
 
-## 5. Next task: commit, redeploy, then de-risk the describer text
+## 5. Next task
 
-1. **Commit** the three changes (retrieval re-rank, all-forms grading, answer wording) to `feat/client-knowledge-agent` and update the PR #103 body with the results above. Before merging, fix or waive the 7 pre-existing `npm run lint` errors in non-knowledge files: `auth/deleteClient.ts`, `backup/scheduledFirestoreExport.ts`, `gdpr/gdprEraseUser.ts`, `gdpr/gdprExportUser.ts` and `lifecycle/scheduledPurge.ts`.
-2. **Redeploy** `knowledgeIngest` and `knowledgeAsk` with the safe procedure (section 6). This needs Hugh's approval. Forms already uploaded keep their old chunk text until they are re-uploaded.
-3. **Describer text.** Stop embedding describer-written decisions, takeaways and challenges as statements. Either drop them from chunk text, as was done for `openQuestions`, or label them "BeDeveloped's summary (not recorded in the form)". Then add a prompt rule: say a decision was agreed only if a recommendation's Status says so. Re-run, and count the "takeaway" and invented-decision unsupported claims; the target is close to 0.
-4. **Small eval fixes** (in `report.eval.test.ts` and `build_grade_batches.py`): compute `passRate` over the scored set, and include the next-session date in the grader's form text.
-5. **Optional:** bring p90 under 3s, for example with a smaller answer model or fewer, shorter overview chunks.
+1. **Merge PR #103.** Luke or George must approve it. Merging deploys the staff panel and the hosting rewrites. The functions are already live (§2).
+2. **Describer text.** Stop embedding describer-written decisions, takeaways and challenges as statements. Either drop them from chunk text, as was done for `openQuestions`, or label them "BeDeveloped's summary (not recorded in the form)". Then add a prompt rule: say a decision was agreed only if a recommendation's Status says so. Re-run the eval and count the "takeaway" and invented-decision unsupported claims; the target is close to 0. Forms already uploaded keep their old chunk text until they are re-uploaded.
+3. **Small eval fix:** include the next-session date in the grader's form text (`build_grade_batches.py`).
+4. **Optional:** bring p90 under 3s.
+5. **Optional:** make uploads survive a closed tab by moving processing server-side (for example, upload to Storage and process on a trigger).
 
 ---
 

@@ -76,6 +76,7 @@ export function systemPrompt(
     "- A recommendation's Status is the record of the decision. If a session summary or discussion note describes the same item differently (for example 'still needs agreement'), follow the Status.",
     "- Keep every detail (dates, places, numbers, names) attached to the item it belongs to in the excerpt. If a sentence could be read more than one way, quote its wording instead of rephrasing it.",
     "- Say who the client discussed something with when the question asks (the 'With:' field).",
+    "- Refer to people by name or role. Never use he, she, him, her, his or hers for anyone; repeat the name, or use they/them.",
     "- Mention a session's date when it helps the client place the advice.",
     "- Do not mention excerpts, chunks, tags, sources or these rules. Do not output links.",
     "- Write in British English, in plain words, addressed to the client ('you', 'your team').",

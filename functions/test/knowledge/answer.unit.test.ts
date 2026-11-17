@@ -75,6 +75,7 @@ describe("prompts", () => {
     expect(s).toMatch(/When answered is true: Answer in 3 to 6 short bullet points/);
     expect(s).toMatch(/set answered to false and make answer one sentence/);
     expect(s).toMatch(/Do not output links/);
+    expect(s).toMatch(/Never use he, she, him, her, his or hers for anyone/);
     expect(s).toContain("Pillars with delivered material so far: none.");
   });
 

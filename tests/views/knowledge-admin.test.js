@@ -56,6 +56,7 @@ function setup(over = {}) {
     getCoverage: vi.fn(async () => ({ status: /** @type {const} */ ("none"), pillars: [] })),
     setStatus: vi.fn(async () => ({ updated: 9 })),
     isAdmin: true,
+    notify: vi.fn(),
     ...over,
   };
   const el = createKnowledgeAdminPanel(/** @type {*} */ (deps));
@@ -151,7 +152,8 @@ describe("createKnowledgeAdminPanel", () => {
     expect(el.querySelector(".knowledge-ok")?.textContent).toMatch(
       /Pillar 1 form from 2026-11-11 .*replaced the previous one/,
     );
-    await vi.waitFor(() => expect(deps.listUploads).toHaveBeenCalledTimes(2));
+    // Loaded on open, again when the job starts (shows "Processing"), and after it finishes.
+    await vi.waitFor(() => expect(deps.listUploads).toHaveBeenCalledTimes(3));
   });
 
   it("shows the server's reason when an upload fails", async () => {
@@ -300,26 +302,71 @@ describe("panel behaviour after the local walkthrough", () => {
     expect(deps.listUploads).toHaveBeenLastCalledWith({ orgId: "org-new" });
   });
 
-  it("does not switch client while an upload is running", async () => {
+  it("runs an upload in the background: the panel stays usable and a toast reports the result", async () => {
     /** @type {(v: *) => void} */
     let finish = () => {};
-    const { el } = setup({ ingest: vi.fn(() => new Promise((r) => (finish = r))) });
+    const { el, deps } = setup({ ingest: vi.fn(() => new Promise((r) => (finish = r))) });
     await flush();
     chooseFile(el, new File([new Uint8Array([0x50, 0x4b])], "f.docx"));
     button(el, "Upload form").click();
     await flush();
     const select = /** @type {HTMLSelectElement} */ (el.querySelector("select"));
-    expect(select.disabled).toBe(true);
-    expect(el.querySelector(".knowledge-hint")?.textContent).toMatch(/up to a minute/);
+    expect(select.disabled).toBe(false);
+    expect(button(el, "Upload form").disabled).toBe(false);
+    expect(el.querySelector(".knowledge-msg")?.textContent).toMatch(/you can carry on/);
+    expect(el.querySelector(".knowledge-queue")?.textContent).toMatch(
+      /Processing f\.docx for Northwind Analytics in the background/,
+    );
+    // Staff move to another client while it runs: the upload stays with Northwind.
     /** @type {*} */ (el).update({ orgs: ORGS, activeOrgId: "org-bf" });
-    expect(select.value).toBe("org-nw");
+    expect(select.value).toBe("org-bf");
     finish({ pillar: "1", sessionDate: "2026-11-11", chunks: 8, replacedChunks: 0 });
     await vi.waitFor(() =>
-      expect(el.querySelector(".knowledge-ok")?.textContent).toMatch(
-        /now live for Northwind Analytics\.$/,
+      expect(deps.notify).toHaveBeenCalledWith(
+        "success",
+        "Pillar 1 form from 2026-11-11 is now live for Northwind Analytics.",
       ),
     );
-    expect(select.disabled).toBe(false);
+    expect(deps.ingest).toHaveBeenCalledWith(expect.objectContaining({ orgId: "org-nw" }));
+    expect(el.querySelector(".knowledge-ok")).toBeNull(); // Bluefin is on screen now
+    expect(el.querySelector(".knowledge-queue")?.textContent).toBe("");
+  });
+
+  it("queues a second form and uploads them one at a time, in order", async () => {
+    /** @type {Array<(v: *) => void>} */
+    const finishers = [];
+    const { el, deps } = setup({ ingest: vi.fn(() => new Promise((r) => finishers.push(r))) });
+    await flush();
+    chooseFile(el, new File([new Uint8Array([0x50, 0x4b])], "a.docx"));
+    button(el, "Upload form").click();
+    await flush();
+    chooseFile(el, new File([new Uint8Array([0x50, 0x4b])], "b.docx"));
+    button(el, "Upload form").click();
+    await flush();
+    expect(deps.ingest).toHaveBeenCalledTimes(1);
+    expect(el.querySelector(".knowledge-queue")?.textContent).toMatch(/a\.docx.* 1 more waiting/);
+    finishers[0]({ pillar: "1", sessionDate: "2026-11-11", chunks: 8, replacedChunks: 0 });
+    await vi.waitFor(() => expect(deps.ingest).toHaveBeenCalledTimes(2));
+    expect(/** @type {*} */ (deps.ingest).mock.calls[1][0]).toMatchObject({ fileName: "b.docx" });
+    finishers[1]({ pillar: "2", sessionDate: "2026-11-12", chunks: 8, replacedChunks: 0 });
+    await vi.waitFor(() => expect(deps.notify).toHaveBeenCalledTimes(2));
+  });
+
+  it("toasts a failed background upload with the file, client and reason", async () => {
+    const { el, deps } = setup({
+      ingest: vi.fn(async () => {
+        throw new Error("Upload stopped.");
+      }),
+    });
+    await flush();
+    chooseFile(el, new File([new Uint8Array([0x50, 0x4b])], "f.docx"));
+    button(el, "Upload form").click();
+    await vi.waitFor(() =>
+      expect(deps.notify).toHaveBeenCalledWith(
+        "error",
+        "f.docx for Northwind Analytics didn't upload: Upload stopped.",
+      ),
+    );
   });
 
   it("shows the empty state when the last org goes and recovers when one returns", () => {
@@ -459,6 +506,25 @@ describe("what the agent knows", () => {
     expect(el.querySelector(".knowledge-status")?.textContent).toMatch(
       /Only an admin can archive or restore/,
     );
+  });
+
+  it("says why Upload is greyed out while the client is archived, and clears it on restore", async () => {
+    let status = "archived";
+    const { el } = setup({
+      getCoverage: vi.fn(async () => ({ status, pillars: [{ ...P1, status }] })),
+      setStatus: vi.fn(async (/** @type {*} */ i) => {
+        status = i.status;
+        return { updated: 9 };
+      }),
+    });
+    await flush();
+    expect(button(el, "Upload form").disabled).toBe(true);
+    expect(el.querySelector(".knowledge-blocked")?.textContent).toMatch(
+      /Uploads are blocked while this client is archived/,
+    );
+    button(el, "Restore knowledge").click();
+    await vi.waitFor(() => expect(button(el, "Upload form").disabled).toBe(false));
+    expect(el.querySelector(".knowledge-blocked")?.textContent).toBe("");
   });
 
   it("shows the server's reason if archiving fails and keeps the button usable", async () => {

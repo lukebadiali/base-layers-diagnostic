@@ -18,6 +18,7 @@
 // update() on each render instead.
 import { h as defaultH } from "../ui/dom.js";
 import { pendingButton } from "../ui/pending-button.js";
+import { notify as defaultNotify } from "../ui/toast.js";
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
@@ -138,6 +139,7 @@ function pillarLabel(p) {
  *   getCoverage: (input: { orgId: string }) => Promise<OrgCoverage>,
  *   setStatus: (input: { orgId: string, status: "current" | "archived" }) => Promise<{ updated: number }>,
  *   isAdmin?: boolean,
+ *   notify?: (level: "info" | "success" | "warn" | "error", message: string) => void,
  *   h?: typeof defaultH,
  * }} KnowledgeAdminDeps
  * @typedef {HTMLElement & {
@@ -170,7 +172,6 @@ export function createKnowledgeAdminPanel(deps) {
   const card = h("div", { class: "card" });
   root.appendChild(card);
 
-  let busy = false;
   /** @type {string | null | undefined} */
   let lastActive;
 
@@ -189,8 +190,8 @@ export function createKnowledgeAdminPanel(deps) {
     })
   );
   const uploadBtn = /** @type {HTMLButtonElement} */ (h("button", { class: "btn" }, "Upload form"));
-  const uploadPending = pendingButton(uploadBtn, "Processing…");
   const uploadMsg = h("div", { class: "knowledge-msg", role: "status" });
+  const uploadBlocked = h("div", { class: "knowledge-hint knowledge-blocked" });
 
   // ── Upload log ───────────────────────────────────────────────────────
   const log = h("div", { class: "knowledge-log" });
@@ -210,7 +211,12 @@ export function createKnowledgeAdminPanel(deps) {
       const c = await deps.getCoverage({ orgId: forOrg });
       if (forOrg !== orgId()) return;
       coverageStatus = c.status;
-      uploadBtn.disabled = busy || c.status === "archived";
+      uploadBtn.disabled = c.status === "archived";
+      uploadBlocked.replaceChildren(
+        c.status === "archived"
+          ? "Uploads are blocked while this client is archived. Restore knowledge to upload again."
+          : "",
+      );
       renderCoverage(c);
       renderStatus(c);
     } catch {
@@ -419,6 +425,69 @@ export function createKnowledgeAdminPanel(deps) {
     }
   }
 
+  // Uploads run in the background, one at a time, in the order chosen. Staff
+  // can carry on (another client, another page of the app) while a form is
+  // read and tagged; a toast says when each one is live or has failed. Jobs
+  // run one at a time so two forms for the same pillar never race.
+  /** @type {Array<{ orgId: string, name: string, fileName: string, fileBase64: string }>} */
+  const queue = [];
+  /** @type {{ orgId: string, name: string, fileName: string } | null} */
+  let current = null;
+  const queueLine = h("div", { class: "knowledge-hint knowledge-queue", role: "status" });
+
+  function renderQueue() {
+    if (!current) {
+      queueLine.replaceChildren();
+      return;
+    }
+    const waiting = queue.length ? ` ${queue.length} more waiting.` : "";
+    queueLine.replaceChildren(
+      `Processing ${current.fileName} for ${current.name} in the background.${waiting}`,
+    );
+  }
+
+  /** @param {string} level @param {string} message */
+  const toast = (level, message) =>
+    (deps.notify ?? defaultNotify)(/** @type {*} */ (level), message);
+
+  async function drain() {
+    if (current) return;
+    while (queue.length) {
+      const job = /** @type {(typeof queue)[number]} */ (queue.shift());
+      current = job;
+      renderQueue();
+      if (job.orgId === orgId()) void refreshLog();
+      try {
+        const r = await deps.ingest({
+          orgId: job.orgId,
+          fileName: job.fileName,
+          fileBase64: job.fileBase64,
+        });
+        const text =
+          `${pillarLabel(r.pillar)} form from ${r.sessionDate} is now live for ${job.name}` +
+          (r.replacedChunks ? " (it replaced the previous one)." : ".");
+        toast("success", text);
+        if (job.orgId === orgId()) {
+          uploadMsg.replaceChildren(h("div", { class: "knowledge-ok" }, text));
+        }
+      } catch (err) {
+        const reason = (err && /** @type {*} */ (err).message) || "Upload failed.";
+        toast("error", `${job.fileName} for ${job.name} didn't upload: ${reason}`);
+        if (job.orgId === orgId()) {
+          uploadMsg.replaceChildren(h("div", { class: "auth-error" }, reason));
+        }
+      }
+      current = null;
+      renderQueue();
+      if (job.orgId === orgId()) void refreshAll();
+    }
+  }
+
+  // Closing the tab drops forms not yet sent, so ask first while any are pending.
+  window.addEventListener("beforeunload", (e) => {
+    if (current || queue.length) e.preventDefault();
+  });
+
   uploadBtn.addEventListener("click", async () => {
     const file = fileInput.files?.[0];
     const problem = checkFormFile(file);
@@ -426,47 +495,23 @@ export function createKnowledgeAdminPanel(deps) {
       uploadMsg.replaceChildren(h("div", { class: "auth-error" }, problem ?? "Choose a file."));
       return;
     }
-    const forOrg = orgId();
-    const forName = select.selectedOptions[0]?.textContent ?? "";
-    busy = true;
-    select.disabled = true;
+    const job = {
+      orgId: orgId(),
+      name: select.selectedOptions[0]?.textContent ?? "",
+      fileName: file.name,
+      fileBase64: toBase64(await file.arrayBuffer()),
+    };
+    fileInput.value = "";
+    queue.push(job);
     uploadMsg.replaceChildren(
       h(
         "div",
         { class: "knowledge-hint" },
-        `Reading and tagging the form for ${forName}. This can take up to a minute.`,
+        `${job.fileName} is uploading for ${job.name}. It takes up to a minute; you can carry on and you'll get a notification when it's live.`,
       ),
     );
-    uploadPending.start();
-    try {
-      const r = await deps.ingest({
-        orgId: forOrg,
-        fileName: file.name,
-        fileBase64: toBase64(await file.arrayBuffer()),
-      });
-      uploadMsg.replaceChildren(
-        h(
-          "div",
-          { class: "knowledge-ok" },
-          `${pillarLabel(r.pillar)} form from ${r.sessionDate} is now live for ${forName}` +
-            (r.replacedChunks ? " (it replaced the previous one)." : "."),
-        ),
-      );
-      fileInput.value = "";
-    } catch (err) {
-      uploadMsg.replaceChildren(
-        h(
-          "div",
-          { class: "auth-error" },
-          (err && /** @type {*} */ (err).message) || "Upload failed.",
-        ),
-      );
-    } finally {
-      busy = false;
-      select.disabled = false;
-      uploadPending.stop();
-      void refreshAll();
-    }
+    void drain();
+    renderQueue();
   });
 
   // ── Test question ────────────────────────────────────────────────────
@@ -556,6 +601,8 @@ export function createKnowledgeAdminPanel(deps) {
     ]),
     h("h3", {}, "Upload a Session Capture Form"),
     h("div", { class: "row" }, [fileInput, uploadBtn]),
+    uploadBlocked,
+    queueLine,
     uploadMsg,
     h("h3", {}, "What the agent knows"),
     coverageBox,
@@ -569,7 +616,7 @@ export function createKnowledgeAdminPanel(deps) {
 
   /**
    * Refresh the client list and follow the org open in the top bar, without
-   * rebuilding the panel. Never switches client while an upload is running.
+   * rebuilding the panel. Uploads keep running for the client they were started for.
    * @param {{ orgs: OrgOption[], activeOrgId?: string | null }} next
    */
   root.update = (next) => {
@@ -592,12 +639,7 @@ export function createKnowledgeAdminPanel(deps) {
     const activeChanged = next.activeOrgId !== lastActive;
     lastActive = next.activeOrgId;
     let want = prev;
-    if (
-      !busy &&
-      activeChanged &&
-      next.activeOrgId &&
-      next.orgs.some((o) => o.id === next.activeOrgId)
-    ) {
+    if (activeChanged && next.activeOrgId && next.orgs.some((o) => o.id === next.activeOrgId)) {
       want = next.activeOrgId;
     }
     if (!next.orgs.some((o) => o.id === want)) want = next.orgs[0].id;

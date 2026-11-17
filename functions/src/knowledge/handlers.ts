@@ -42,6 +42,24 @@ export interface HandlerDeps {
 const STAFF = new Set(["admin", "internal"]);
 
 /**
+ * The caller, from the verified ID token only. Same bar as firestore.rules
+ * isAuthed(): a verified email and not an anonymous session. Role and orgId
+ * are custom claims, which only the setClaims / invite functions write.
+ * Anything short of that is treated as signed out.
+ */
+export function callerFromAuth(auth: { uid?: string; token?: Record<string, unknown> } | undefined): Caller | null {
+  if (!auth?.uid) return null;
+  const t = auth.token ?? {};
+  const provider = (t.firebase as { sign_in_provider?: unknown } | undefined)?.sign_in_provider;
+  if (t.email_verified !== true || provider === "anonymous") return null;
+  return {
+    uid: auth.uid,
+    role: typeof t.role === "string" ? t.role : "",
+    orgId: typeof t.orgId === "string" ? t.orgId : undefined,
+  };
+}
+
+/**
  * Release switch for clients: knowledgeConfig/access { clientAccess: true }.
  * Server-only (no rules match), so only an admin with project access can flip
  * it, and releasing the agent to clients needs no redeploy. Missing = off.
@@ -228,6 +246,7 @@ export async function handleSetStatus(
   const who = requireStaff(caller);
   if (who.role !== "admin") throw new HttpsError("permission-denied", "Admin only");
   const input = validateInput(StatusInput, data ?? {});
+  await clientNameFor(deps.db, input.orgId); // an org that exists, not any string
   return { updated: await setOrgKnowledgeStatus(deps.db, input.orgId, input.status) };
 }
 

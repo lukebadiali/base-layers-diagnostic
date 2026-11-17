@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { FormError } from "../../src/knowledge/form";
 import { ingestSessionForm } from "../../src/knowledge/ingest";
-import { keywordTerms, rerankByKeywords, searchKnowledge } from "../../src/knowledge/retrieve";
+import { assertOneClient, keywordTerms, rerankByKeywords, searchKnowledge } from "../../src/knowledge/retrieve";
 import { coveredPillars, recordId, setOrgKnowledgeStatus, TAG_FIELDS } from "../../src/knowledge/store";
 import { CHUNKS_COLLECTION, RECORDS_COLLECTION, type UploadMeta } from "../../src/knowledge/types";
 import { FakeFirestore, hashingEmbedder, stubDescriber } from "./fakes";
@@ -137,6 +137,13 @@ describe("searchKnowledge", () => {
     expect(await coveredPillars(db, "org-nw")).toEqual([]);
     await setOrgKnowledgeStatus(db, "org-nw", "current");
     expect((await searchKnowledge(db, deps.embedder, { orgId: "org-nw", query: "ICP" })).length).toBeGreaterThan(0);
+  });
+});
+
+describe("assertOneClient", () => {
+  it("passes one client's hits and refuses any mix", () => {
+    expect(() => assertOneClient("org-nw", [{ orgId: "org-nw" }, { orgId: "org-nw" }])).not.toThrow();
+    expect(() => assertOneClient("org-nw", [{ orgId: "org-nw" }, { orgId: "org-bf" }])).toThrow(/another client/);
   });
 });
 

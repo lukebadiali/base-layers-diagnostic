@@ -15,6 +15,7 @@ import { CHUNKS_COLLECTION, type ChunkKind, type PillarKey } from "./types";
 
 export interface SearchHit {
   id: string;
+  orgId: string;
   distance: number;
   kind: ChunkKind;
   pillar: PillarKey;
@@ -68,6 +69,17 @@ export function rerankByKeywords<T extends { distance: number; text: string }>(q
     .map((x) => x.h);
 }
 
+/**
+ * Fail closed. The orgId filter is inside the vector query, so this should
+ * never fire; if a chunk for any other client ever comes back (an index or
+ * query bug), the question is refused rather than answered from it.
+ */
+export function assertOneClient(orgId: string, hits: Array<{ orgId: string }>): void {
+  if (hits.some((h) => h.orgId !== orgId)) {
+    throw new Error("Retrieval returned another client's material; refusing to answer.");
+  }
+}
+
 export async function searchKnowledge(db: Firestore, embedder: Embedder, opts: SearchOptions): Promise<SearchHit[]> {
   if (!opts.orgId) throw new Error("orgId is required");
   const [queryVector] = await embedder.embed([opts.query]);
@@ -85,6 +97,7 @@ export async function searchKnowledge(db: Firestore, embedder: Embedder, opts: S
     .get();
   const hits: SearchHit[] = snap.docs.map((d) => ({
     id: d.id,
+    orgId: d.get("orgId") as string,
     distance: d.get("distance") as number,
     kind: d.get("kind") as ChunkKind,
     pillar: d.get("pillar") as PillarKey,
@@ -94,5 +107,6 @@ export async function searchKnowledge(db: Firestore, embedder: Embedder, opts: S
     topicArea: d.get("topicArea") as string | undefined,
     agreedStatus: d.get("agreedStatus") as string | undefined,
   }));
+  assertOneClient(opts.orgId, hits);
   return rerankByKeywords(opts.query, hits).slice(0, limit);
 }

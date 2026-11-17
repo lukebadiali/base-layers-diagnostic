@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Answerer, AnswerInput } from "../../src/knowledge/answer";
 import { NOTHING_YET } from "../../src/knowledge/ask";
 import {
+  callerFromAuth,
   handleCoverage,
   CONFIG_COLLECTION,
   readClientAccess,
@@ -217,6 +218,54 @@ describe("handleSetStatus", () => {
 
     await handleSetStatus(deps, admin, { orgId: "org-nw", status: "current" });
     expect((await handleAsk(deps, admin, { orgId: "org-nw", question: "ideal customer" })).answered).toBe(true);
+  });
+
+  it("refuses an org that doesn't exist", async () => {
+    await expect(handleSetStatus(deps, admin, { orgId: "org-nope", status: "archived" })).rejects.toMatchObject({
+      code: "not-found",
+    });
+  });
+});
+
+describe("callerFromAuth", () => {
+  const token = (o: Record<string, unknown>) => ({
+    email_verified: true,
+    firebase: { sign_in_provider: "password" },
+    ...o,
+  });
+  it("takes uid, role and orgId from the verified token only", () => {
+    expect(callerFromAuth({ uid: "u1", token: token({ role: "client", orgId: "org-nw" }) })).toEqual({
+      uid: "u1",
+      role: "client",
+      orgId: "org-nw",
+    });
+  });
+  it("treats unverified emails, anonymous sessions and missing auth as signed out", () => {
+    expect(callerFromAuth(undefined)).toBeNull();
+    expect(callerFromAuth({ uid: "u1", token: token({ role: "admin", email_verified: false }) })).toBeNull();
+    expect(
+      callerFromAuth({ uid: "u1", token: token({ role: "admin", firebase: { sign_in_provider: "anonymous" } }) }),
+    ).toBeNull();
+  });
+  it("ignores claims of the wrong type", () => {
+    expect(callerFromAuth({ uid: "u1", token: token({ role: 1, orgId: ["org-nw"] }) })).toEqual({
+      uid: "u1",
+      role: "",
+      orgId: undefined,
+    });
+  });
+});
+
+describe("client isolation is decided in code", () => {
+  it("a client's question only ever reaches the model with their own org's material", async () => {
+    await upload("org-nw", "northwind-p1-v1.docx");
+    deps.clientAccess = true;
+    await handleAsk(deps, nwClient, { question: "Who is our ideal customer?" });
+    expect(answerer.seen.at(-1)?.hits.every((h) => h.orgId === "org-nw")).toBe(true);
+    // Naming another org in the payload is refused, not quietly ignored.
+    await expect(
+      handleAsk(deps, nwClient, { orgId: "org-bf", question: "Who is their ideal customer?" }),
+    ).rejects.toMatchObject({ code: "permission-denied" });
   });
 });
 

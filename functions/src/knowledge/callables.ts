@@ -23,6 +23,7 @@ import { openrouterAnswerer } from "./answer";
 import { openrouterDescriber } from "./describer";
 import { openaiEmbedder } from "./embedder";
 import {
+  callerFromAuth,
   handleAsk,
   handleCoverage,
   handleIngest,
@@ -43,13 +44,7 @@ const OPENROUTER_API_KEY = defineSecret("OPENROUTER_API_KEY");
 const REGION = "europe-west2";
 
 function callerOf(request: CallableRequest<unknown>): Caller | null {
-  if (!request.auth?.uid) return null;
-  const t = (request.auth.token ?? {}) as Record<string, unknown>;
-  return {
-    uid: request.auth.uid,
-    role: typeof t.role === "string" ? t.role : "",
-    orgId: typeof t.orgId === "string" ? t.orgId : undefined,
-  };
+  return callerFromAuth(request.auth as { uid?: string; token?: Record<string, unknown> } | undefined);
 }
 
 function deps(clientAccess = false): HandlerDeps {

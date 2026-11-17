@@ -100,3 +100,31 @@ describe("parseAnswer", () => {
     expect(() => parseAnswer("not json")).toThrow();
   });
 });
+
+describe("answerer retries", () => {
+  it("retries once when the reply is cut off mid-JSON, and uses the second reply", async () => {
+    const bodies = [
+      { choices: [{ message: { content: '{"answered": true, "answer": "- Target mid-market PE ho' } }] },
+      { provider: "Fireworks", choices: [{ message: { content: JSON.stringify({ answered: true, answer: "- Target mid-market PE houses" }) } }] },
+    ];
+    let n = 0;
+    const fetchImpl = (async () => new Response(JSON.stringify(bodies[n++]), { status: 200 })) as unknown as typeof fetch;
+    const a = openrouterAnswerer({ apiKey: "k", fetchImpl, maxAttempts: 1 });
+    const res = await a.answer({ question: "q", clientName: "c", hits: [hit("x")], coveredPillars: ["1"], format: "bullets" });
+    expect(n).toBe(2);
+    expect(res).toEqual({ answer: "- Target mid-market PE houses", answered: true, provider: "Fireworks" });
+  });
+
+  it("gives up after two bad replies", async () => {
+    let n = 0;
+    const fetchImpl = (async () => {
+      n++;
+      return new Response(JSON.stringify({ choices: [{ message: { content: "" } }] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const a = openrouterAnswerer({ apiKey: "k", fetchImpl, maxAttempts: 1 });
+    await expect(
+      a.answer({ question: "q", clientName: "c", hits: [hit("x")], coveredPillars: ["1"], format: "short" }),
+    ).rejects.toThrow(/no content/);
+    expect(n).toBe(2);
+  });
+});

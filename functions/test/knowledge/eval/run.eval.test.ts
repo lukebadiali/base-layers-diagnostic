@@ -4,7 +4,9 @@
 //   2. uploads all 100 forms, then the 5 later v2 forms, through handleIngest (staff path)
 //   3. asks every case in eval/data/cases.json through handleAsk as that client
 //   4. saves eval/out/results.json; grading and the report are report.eval.test.ts
-// Skipped unless KNOWLEDGE_EVAL=1.
+// Skipped unless KNOWLEDGE_EVAL=1. KNOWLEDGE_EVAL_REUSE=1 skips building and
+// uploading (the forms are already in the emulator) and re-asks every case,
+// keeping the upload timings from the previous results.json.
 //
 //   FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-knowledge-eval KNOWLEDGE_EVAL=1 \
 //   OPENAI_API_KEY=... OPENROUTER_API_KEY=... ANTHROPIC_API_KEY=... \
@@ -59,9 +61,10 @@ describe.skipIf(!RUN)("knowledge eval: run", () => {
     const cases = JSON.parse(readFileSync(join(HERE, "data", "cases.json"), "utf8")) as EvalCase[];
     mkdirSync(FORMS, { recursive: true });
 
+    const reuse = process.env.KNOWLEDGE_EVAL_REUSE === "1";
     // 1. Build the forms.
     const specs = readdirSync(SPECS).filter((f) => f.endsWith(".json") && !f.endsWith(".content.json"));
-    for (const f of specs) {
+    for (const f of reuse ? [] : specs) {
       execFileSync("python3", ["-I", FILLER, TEMPLATE, join(SPECS, f), join(FORMS, f.replace(/\.json$/, ".docx"))]);
     }
     expect(specs).toHaveLength(105);
@@ -75,11 +78,13 @@ describe.skipIf(!RUN)("knowledge eval: run", () => {
       answerer: openrouterAnswerer({ apiKey: process.env.OPENROUTER_API_KEY ?? "" }),
       clientAccess: true,
     };
-    for (const c of EVAL_CLIENTS) await db.collection("orgs").doc(orgId(c.id)).set({ name: c.name });
+    if (!reuse) for (const c of EVAL_CLIENTS) await db.collection("orgs").doc(orgId(c.id)).set({ name: c.name });
 
     // 2. Upload: all v1 forms, then the later v2 forms on top.
     const admin = { uid: "eval-admin", role: "admin" };
-    const ingestLog: Array<{ file: string; ms: number; ok: boolean; error?: string; chunks?: number }> = [];
+    const ingestLog: Array<{ file: string; ms: number; ok: boolean; error?: string; chunks?: number }> = reuse
+      ? JSON.parse(readFileSync(join(OUT, "results.json"), "utf8")).ingestLog
+      : [];
     const upload = async (file: string) => {
       const client = file.split("__")[0];
       const t0 = Date.now();
@@ -92,8 +97,10 @@ describe.skipIf(!RUN)("knowledge eval: run", () => {
       }
     };
     const docx = readdirSync(FORMS).filter((f) => f.endsWith(".docx"));
-    await pool(docx.filter((f) => !f.includes("__v2")), 4, (f) => upload(f));
-    await pool(docx.filter((f) => f.includes("__v2")), 4, (f) => upload(f));
+    if (!reuse) {
+      await pool(docx.filter((f) => !f.includes("__v2")), 4, (f) => upload(f));
+      await pool(docx.filter((f) => f.includes("__v2")), 4, (f) => upload(f));
+    }
 
     // 3. Coverage: every client has all 10 pillars live.
     const coverage: Record<string, number> = {};

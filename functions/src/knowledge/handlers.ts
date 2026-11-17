@@ -14,7 +14,7 @@ import type { Firestore } from "firebase-admin/firestore";
 import { z } from "zod";
 import { validateInput } from "../util/zod-helpers.js";
 import type { Answerer } from "./answer";
-import { askKnowledge, type AskResult } from "./ask";
+import { askAcrossClients, askKnowledge, type AskResult } from "./ask";
 import type { Describer } from "./describer";
 import type { Embedder } from "./embedder";
 import { FormError } from "./form";
@@ -158,12 +158,25 @@ const AskInput = z.object({
   question: z.string().trim().min(1).max(500),
   pillar: z.enum(PILLARS).optional(),
   format: z.enum(["bullets", "short"]).optional(),
+  /** "all": BeDeveloped staff only, one question across every client. */
+  scope: z.enum(["client", "all"]).optional(),
 });
+
+/** Logged orgId for staff questions across every client. Never a real org id. */
+export const ALL_CLIENTS = "*all-clients*";
 
 export async function handleAsk(deps: HandlerDeps, caller: Caller | null, data: unknown): Promise<AskResult> {
   if (!caller?.uid) throw new HttpsError("unauthenticated", "Sign in required");
   const input = validateInput(AskInput, data ?? {});
   const staff = STAFF.has(caller.role);
+
+  if (input.scope === "all") {
+    if (!staff) throw new HttpsError("permission-denied", "Only BeDeveloped staff can ask across all clients");
+    if (input.orgId || input.pillar) {
+      throw new HttpsError("invalid-argument", "An all-clients question takes no orgId or pillar");
+    }
+    return askAll(deps, caller, input.question, input.format);
+  }
 
   let orgId: string;
   if (staff) {
@@ -191,6 +204,39 @@ export async function handleAsk(deps: HandlerDeps, caller: Caller | null, data: 
       format: input.format,
       includeSources: staff,
     });
+    await logQuery(deps.db, {
+      ...base,
+      answered: result.answered,
+      hitCount: result.hitCount,
+      model: result.model,
+      provider: result.provider,
+      latencyMs: Date.now() - started,
+    });
+    return result;
+  } catch (err) {
+    await logQuery(deps.db, {
+      ...base,
+      answered: false,
+      hitCount: 0,
+      model: deps.answerer.model,
+      provider: "",
+      latencyMs: Date.now() - started,
+      error: err instanceof Error ? err.message.slice(0, 500) : String(err),
+    });
+    throw new HttpsError("internal", "The agent couldn't answer just now. Try again in a moment.");
+  }
+}
+
+async function askAll(
+  deps: HandlerDeps,
+  caller: Caller,
+  question: string,
+  format: "bullets" | "short" | undefined,
+): Promise<AskResult> {
+  const started = Date.now();
+  const base = { orgId: ALL_CLIENTS, uid: caller.uid, role: caller.role, question, pillar: null };
+  try {
+    const result = await askAcrossClients(deps, { question, format });
     await logQuery(deps.db, {
       ...base,
       answered: result.answered,

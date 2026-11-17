@@ -190,6 +190,12 @@ export async function setOrgKnowledgeStatus(db: Firestore, orgId: string, status
 }
 
 /** Pillars with current knowledge for a client, so the agent can say a pillar is not covered yet. */
+/** Every org with live (not archived) knowledge, for staff questions across all clients. */
+export async function orgsWithKnowledge(db: Firestore): Promise<string[]> {
+  const snap = await db.collection(RECORDS_COLLECTION).where("status", "==", "current").get();
+  return [...new Set(snap.docs.map((d) => d.get("orgId") as string))].sort();
+}
+
 export async function coveredPillars(db: Firestore, orgId: string): Promise<PillarKey[]> {
   const snap = await db
     .collection(RECORDS_COLLECTION)

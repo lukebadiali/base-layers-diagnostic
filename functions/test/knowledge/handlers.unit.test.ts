@@ -346,3 +346,56 @@ describe("uploading to an archived client", () => {
     await expect(upload("org-nw", "northwind-p2.docx")).resolves.toMatchObject({ pillar: "2" });
   });
 });
+
+describe("staff questions across all clients", () => {
+  it("searches each client separately and labels every excerpt with that client's name from the orgs collection", async () => {
+    await upload("org-nw", "northwind-p1-v1.docx");
+    await upload("org-bf", "bluefin-p1.docx");
+    const r = await handleAsk(deps, admin, { scope: "all", question: "Who is the ideal customer?" });
+    expect(r.answered).toBe(true);
+    const seen = answerer.seen.at(-1)!;
+    expect(seen.scope).toBe("all");
+    for (const h of seen.hits) {
+      expect(h.clientName).toBe(h.orgId === "org-nw" ? "Northwind Analytics" : "Bluefin Legal");
+    }
+    expect(new Set(seen.hits.map((h) => h.orgId))).toEqual(new Set(["org-nw", "org-bf"]));
+    expect(new Set(r.sources?.map((s) => s.clientName))).toEqual(new Set(["Northwind Analytics", "Bluefin Legal"]));
+    const log = [...fake.col(QUERIES_COLLECTION).values()].at(-1) as Record<string, unknown>;
+    expect(log).toMatchObject({ orgId: "*all-clients*", role: "admin", answered: true });
+  });
+
+  it("internal staff can ask across clients too", async () => {
+    await upload("org-nw", "northwind-p1-v1.docx");
+    await expect(handleAsk(deps, internal, { scope: "all", question: "ideal customer" })).resolves.toMatchObject({
+      answered: true,
+    });
+  });
+
+  it("is refused to clients even with client access on, and to unknown roles", async () => {
+    await upload("org-nw", "northwind-p1-v1.docx");
+    deps.clientAccess = true;
+    await expect(handleAsk(deps, nwClient, { scope: "all", question: "ideal customer" })).rejects.toMatchObject({
+      code: "permission-denied",
+    });
+    await expect(
+      handleAsk(deps, { uid: "u-x", role: "partner" }, { scope: "all", question: "ideal customer" }),
+    ).rejects.toMatchObject({ code: "permission-denied" });
+    expect(answerer.seen).toHaveLength(0);
+  });
+
+  it("leaves out archived clients", async () => {
+    await upload("org-nw", "northwind-p1-v1.docx");
+    await upload("org-bf", "bluefin-p1.docx");
+    await handleSetStatus(deps, admin, { orgId: "org-bf", status: "archived" });
+    await handleAsk(deps, admin, { scope: "all", question: "ideal customer" });
+    expect(answerer.seen.at(-1)!.hits.every((h) => h.orgId === "org-nw")).toBe(true);
+  });
+
+  it("takes no orgId or pillar, and says so when nothing is uploaded", async () => {
+    await expect(
+      handleAsk(deps, admin, { scope: "all", orgId: "org-nw", question: "ideal customer" }),
+    ).rejects.toMatchObject({ code: "invalid-argument" });
+    const r = await handleAsk(deps, admin, { scope: "all", question: "ideal customer" });
+    expect(r).toMatchObject({ answer: NOTHING_YET, answered: false });
+  });
+});

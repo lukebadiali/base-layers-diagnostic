@@ -607,3 +607,55 @@ describe("archive keeps the rest of the panel honest", () => {
     expect(el.querySelector(".knowledge-log")?.textContent).not.toMatch(/Live/);
   });
 });
+
+describe("asking across all clients", () => {
+  it("sends scope all with no orgId, and shows each source's client", async () => {
+    const { el, deps } = setup({
+      ask: vi.fn(async () => ({
+        answer: "- Northwind Analytics targets cold-chain firms\n- Bluefin Legal targets law firms",
+        answered: true,
+        hitCount: 4,
+        model: "m",
+        provider: "p",
+        sources: [
+          {
+            clientName: "Northwind Analytics",
+            pillar: "1",
+            sessionName: "ICP",
+            sessionDate: "2026-11-11",
+          },
+          {
+            clientName: "Bluefin Legal",
+            pillar: "1",
+            sessionName: "ICP",
+            sessionDate: "2026-11-12",
+          },
+        ],
+      })),
+    });
+    await flush();
+    const box = /** @type {HTMLInputElement} */ (el.querySelector("#knowledge-all-clients"));
+    box.click();
+    const q = /** @type {HTMLInputElement} */ (el.querySelector(".knowledge-question"));
+    q.value = "Who do our clients target?";
+    button(el, "Ask").click();
+    await vi.waitFor(() => expect(el.querySelector(".knowledge-sources")).toBeTruthy());
+    expect(deps.ask).toHaveBeenCalledWith({ scope: "all", question: "Who do our clients target?" });
+    expect(el.querySelector(".knowledge-sources")?.textContent).toMatch(
+      /Northwind Analytics: Pillar 1.*Bluefin Legal: Pillar 1/,
+    );
+  });
+
+  it("asks only the selected client when the box is not ticked", async () => {
+    const { el, deps } = setup();
+    await flush();
+    const q = /** @type {HTMLInputElement} */ (el.querySelector(".knowledge-question"));
+    q.value = "Who is our ideal customer?";
+    button(el, "Ask").click();
+    await vi.waitFor(() => expect(deps.ask).toHaveBeenCalled());
+    expect(deps.ask).toHaveBeenCalledWith({
+      orgId: "org-nw",
+      question: "Who is our ideal customer?",
+    });
+  });
+});

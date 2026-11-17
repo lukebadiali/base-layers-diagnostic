@@ -5,8 +5,8 @@
 import type { Firestore } from "firebase-admin/firestore";
 import type { AnswerFormat, Answerer } from "./answer";
 import type { Embedder } from "./embedder";
-import { searchKnowledge } from "./retrieve";
-import { coveredPillars } from "./store";
+import { rerankByKeywords, searchKnowledge, type SearchHit } from "./retrieve";
+import { coveredPillars, orgsWithKnowledge } from "./store";
 import type { PillarKey } from "./types";
 
 export interface AskDeps {
@@ -26,6 +26,8 @@ export interface AskInput {
 }
 
 export interface AskSource {
+  /** Cross-client staff questions only: which client this session belongs to. */
+  clientName?: string;
   pillar: PillarKey;
   sessionName: string;
   sessionDate: string;
@@ -80,6 +82,73 @@ export async function askKnowledge(deps: AskDeps, input: AskInput): Promise<AskR
     for (const h of hits) {
       const key = `${h.pillar}|${h.sessionDate}|${h.sessionName}`;
       if (!seen.has(key)) seen.set(key, { pillar: h.pillar, sessionName: h.sessionName, sessionDate: h.sessionDate });
+    }
+    result.sources = [...seen.values()];
+  }
+  return result;
+}
+
+/** Per client, then overall, for staff questions across every client. */
+export const CROSS_CLIENT_PER_CLIENT = 6;
+export const CROSS_CLIENT_LIMIT = 16;
+
+export interface AskAllInput {
+  question: string;
+  format?: AnswerFormat;
+}
+
+/**
+ * BeDeveloped staff only (the handler checks the role): one question across
+ * every client with live knowledge. Each client is searched on its own, with
+ * the same orgId filter and fail-closed check as a single-client question, and
+ * every hit is labelled with that client's name from the orgs collection. The
+ * model never decides which client material belongs to.
+ */
+export async function askAcrossClients(deps: AskDeps, input: AskAllInput): Promise<AskResult> {
+  const question = input.question.trim();
+  if (!question) throw new Error("question is required");
+  const orgIds = await orgsWithKnowledge(deps.db);
+  if (!orgIds.length) return { answer: NOTHING_YET, answered: false, hitCount: 0, model: "", provider: "" };
+
+  const perClient = await Promise.all(
+    orgIds.map(async (orgId): Promise<SearchHit[]> => {
+      const org = await deps.db.collection("orgs").doc(orgId).get();
+      const name = org.exists ? (org.get("name") as unknown) : undefined;
+      // A deleted org's knowledge is archived by knowledgeOnOrgDelete; until that
+      // runs, skip it rather than answer under an unknown name.
+      if (typeof name !== "string" || !name.trim()) return [];
+      const hits = await searchKnowledge(deps.db, deps.embedder, {
+        orgId,
+        query: question,
+        limit: CROSS_CLIENT_PER_CLIENT,
+      });
+      return hits.map((h) => ({ ...h, clientName: name }));
+    }),
+  );
+  const hits = rerankByKeywords(question, perClient.flat()).slice(0, CROSS_CLIENT_LIMIT);
+  if (!hits.length) return { answer: NOTHING_YET, answered: false, hitCount: 0, model: "", provider: "" };
+
+  const { answer, answered, provider } = await deps.answerer.answer({
+    question,
+    clientName: "all clients",
+    hits,
+    coveredPillars: [],
+    format: input.format ?? "bullets",
+    scope: "all",
+  });
+  const result: AskResult = { answer, answered, hitCount: hits.length, model: deps.answerer.model, provider };
+  if (answered) {
+    const seen = new Map<string, AskSource>();
+    for (const h of hits) {
+      const key = `${h.clientName}|${h.pillar}|${h.sessionDate}|${h.sessionName}`;
+      if (!seen.has(key)) {
+        seen.set(key, {
+          clientName: h.clientName,
+          pillar: h.pillar,
+          sessionName: h.sessionName,
+          sessionDate: h.sessionDate,
+        });
+      }
     }
     result.sources = [...seen.values()];
   }

@@ -134,7 +134,7 @@ function pillarLabel(p) {
  *   orgs: OrgOption[],
  *   activeOrgId?: string | null,
  *   ingest: (input: { orgId: string, fileName: string, fileBase64: string }) => Promise<{ pillar: string, sessionDate: string, chunks: number, replacedChunks: number }>,
- *   ask: (input: { orgId: string, question: string }) => Promise<AskResult>,
+ *   ask: (input: { orgId?: string, question: string, scope?: "client" | "all" }) => Promise<AskResult>,
  *   listUploads: (input: { orgId?: string }) => Promise<UploadRow[]>,
  *   getCoverage: (input: { orgId: string }) => Promise<OrgCoverage>,
  *   setStatus: (input: { orgId: string, status: "current" | "archived" }) => Promise<{ updated: number }>,
@@ -527,8 +527,19 @@ export function createKnowledgeAdminPanel(deps) {
   const askBtn = /** @type {HTMLButtonElement} */ (h("button", { class: "btn secondary" }, "Ask"));
   const askPending = pendingButton(askBtn, "Thinking…");
   const answerBox = h("div", { class: "knowledge-answer", "aria-live": "polite" });
+  // Staff only (the server refuses it to anyone else): one question across
+  // every client with live knowledge. Each point names its client.
+  const allClients = /** @type {HTMLInputElement} */ (
+    h("input", { type: "checkbox", id: "knowledge-all-clients" })
+  );
+  allClients.addEventListener("change", () => {
+    question.placeholder = allClients.checked
+      ? "e.g. Which clients target founder-led businesses?"
+      : "e.g. Who is our ideal customer now?";
+    answerBox.replaceChildren();
+  });
 
-  /** @param {AskResult} r */
+  /** @param {AskResult & { scope?: "client" | "all" }} r */
   function renderAnswer(r) {
     const items = bulletItems(r.answer);
     const body = items
@@ -544,7 +555,9 @@ export function createKnowledgeAdminPanel(deps) {
         h(
           "div",
           { class: "knowledge-sources" },
-          "Not covered by this client's delivered material. Logged as unanswered.",
+          r.scope === "all"
+            ? "Not covered by any client's delivered material. Logged as unanswered."
+            : "Not covered by this client's delivered material. Logged as unanswered.",
         ),
       );
     } else if (r.sources?.length) {
@@ -555,7 +568,9 @@ export function createKnowledgeAdminPanel(deps) {
           "Drew on: " +
             r.sources
               .map(
-                (s) => `${pillarLabel(s.pillar)}, ${s.sessionName || "session"} (${s.sessionDate})`,
+                (s) =>
+                  (s.clientName ? `${s.clientName}: ` : "") +
+                  `${pillarLabel(s.pillar)}, ${s.sessionName || "session"} (${s.sessionDate})`,
               )
               .join("; "),
         ),
@@ -569,7 +584,11 @@ export function createKnowledgeAdminPanel(deps) {
     askPending.start();
     answerBox.replaceChildren();
     try {
-      renderAnswer(await deps.ask({ orgId: orgId(), question: q }));
+      const all = allClients.checked;
+      const r = await deps.ask(
+        all ? { scope: "all", question: q } : { orgId: orgId(), question: q },
+      );
+      renderAnswer({ ...r, scope: all ? "all" : "client" });
     } catch (err) {
       answerBox.replaceChildren(
         h(
@@ -611,6 +630,10 @@ export function createKnowledgeAdminPanel(deps) {
     log,
     h("h3", {}, "Test the agent"),
     h("div", { class: "row" }, [question, askBtn]),
+    h("label", { class: "knowledge-scope", for: "knowledge-all-clients" }, [
+      allClients,
+      " Ask across all clients (staff only; each point names its client)",
+    ]),
     answerBox,
   ]);
 

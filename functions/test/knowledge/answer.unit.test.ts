@@ -3,7 +3,14 @@
 // latest-wins and stay-in-the-excerpts rules.
 
 import { describe, expect, it } from "vitest";
-import { MAX_ANSWER_TOKENS, openrouterAnswerer, parseAnswer, systemPrompt, userPrompt } from "../../src/knowledge/answer";
+import {
+  crossClientSystemPrompt,
+  MAX_ANSWER_TOKENS,
+  openrouterAnswerer,
+  parseAnswer,
+  systemPrompt,
+  userPrompt,
+} from "../../src/knowledge/answer";
 import { US_PROVIDERS } from "../../src/knowledge/describer";
 import type { SearchHit } from "../../src/knowledge/retrieve";
 
@@ -154,5 +161,19 @@ describe("answerer retries", () => {
       a.answer({ question: "q", clientName: "c", hits: [hit("x")], coveredPillars: ["1"], format: "short" }),
     ).rejects.toThrow(/no content/);
     expect(n).toBe(2);
+  });
+});
+
+describe("cross-client staff prompt", () => {
+  it("names the client in every point and keeps clients apart", () => {
+    const s = crossClientSystemPrompt("bullets");
+    expect(s).toMatch(/Name the client in every point/);
+    expect(s).toMatch(/Never attach one client's facts/);
+    expect(s).toMatch(/never address them as 'you'/);
+    expect(s).toMatch(/Never use he, she/);
+  });
+  it("puts the system's client label at the top of each excerpt", () => {
+    const hit = { text: "Ctx\nBody", clientName: "Bluefin Legal" } as never;
+    expect(userPrompt("Q?", [hit])).toContain("[Excerpt 1]\nClient: Bluefin Legal\nCtx");
   });
 });

@@ -16,7 +16,7 @@ const setStatusCallable = httpsCallable(functions, "knowledgeSetStatus", { timeo
  * @typedef {{ id: string, orgId: string, clientName: string, fileName: string, uploadedBy: string,
  *   status: "processing" | "succeeded" | "failed", startedAt: string, finishedAt?: string,
  *   pillar?: string, sessionDate?: string, chunks?: number, replacedChunks?: number, error?: string }} UploadRow
- * @typedef {{ pillar: string, sessionName: string, sessionDate: string }} AskSource
+ * @typedef {{ clientName?: string, pillar: string, sessionName: string, sessionDate: string }} AskSource
  * @typedef {{ pillar: string, pillarName: string, status: "current" | "archived", sessionDate: string,
  *   sessionName: string, sourceFileName: string, uploadedAt: string, chunkCount: number }} PillarCoverage
  * @typedef {{ status: "current" | "archived" | "none", pillars: PillarCoverage[] }} OrgCoverage
@@ -34,7 +34,7 @@ export async function knowledgeIngest(input) {
 }
 
 /**
- * @param {{ orgId: string, question: string, pillar?: string, format?: "bullets" | "short" }} input
+ * @param {{ orgId?: string, question: string, pillar?: string, format?: "bullets" | "short", scope?: "client" | "all" }} input
  * @returns {Promise<AskResult>}
  */
 export async function knowledgeAsk(input) {

@@ -24,6 +24,8 @@ export interface SearchHit {
   text: string;
   topicArea?: string;
   agreedStatus?: string;
+  /** Set only for cross-client staff questions, from the orgs collection. */
+  clientName?: string;
 }
 
 export interface SearchOptions {

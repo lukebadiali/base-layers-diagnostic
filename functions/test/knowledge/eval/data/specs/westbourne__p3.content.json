@@ -1,0 +1,77 @@
+{
+  "sessionName": "Week 3 - LP outreach programme",
+  "summary": "Planned how Westbourne reaches LPs for Fund III. Agreed a channel split between direct re-ups, a placement agent for continental Europe and direct new LP outreach, plus an 80-name target list. An Edinburgh LP day is pending and a gated website section was rejected.",
+  "discussion": [
+    {
+      "topic": "Who owns which LP",
+      "keyPoints": "Natalie handles most Fund II LPs. Richard has the senior relationships with the three largest. New LPs have no clear owner."
+    },
+    {
+      "topic": "Continental Europe",
+      "keyPoints": "Westbourne has almost no reach into continental and Nordic LPs. Richard accepts a placement agent may be needed there but nowhere else."
+    },
+    {
+      "topic": "Events",
+      "keyPoints": "Natalie wants a Westbourne LP day in Edinburgh to show the Scottish team. Richard was unsure about cost and timing."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Channel mix",
+      "recommendation": "Raise 50% through direct re-ups, 30% through a placement agent covering continental Europe and 20% through direct new LP outreach.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Outbound",
+      "recommendation": "Approach 80 new LP targets with a goal of 25 first meetings by the end of Q1 2027.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Cadences and sequences",
+      "recommendation": "Send prospective LPs a quarterly update letter before launch and follow up every first meeting within 6 weeks.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Events",
+      "recommendation": "Host a Westbourne LP day in Edinburgh in March and attend two LP conferences.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Inbound",
+      "recommendation": "Add a gated Fund III teaser section to the website.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Assign a named relationship owner to each of the 80 new LP targets",
+      "owner": "Natalie Grieve"
+    }
+  ],
+  "nextFocus": "Improve how LP first meetings and due diligence are run.",
+  "nextPreparation": "Bring the last DDQ Westbourne answered and notes from recent LP meetings.",
+  "tests": [
+    {
+      "question": "What channel split did we agree for the raise?",
+      "expectedFacts": [
+        "50% through direct re-ups",
+        "30% through a placement agent",
+        "20% through direct new"
+      ]
+    },
+    {
+      "question": "How many new LPs are we approaching?",
+      "expectedFacts": [
+        "80 new LP targets",
+        "25 first meetings"
+      ]
+    },
+    {
+      "question": "Is the Edinburgh LP day agreed?",
+      "expectedFacts": [
+        "Pending",
+        "Edinburgh in March"
+      ]
+    }
+  ]
+}

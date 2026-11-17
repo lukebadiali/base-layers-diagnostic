@@ -1,0 +1,70 @@
+{
+  "sessionName": "Week 9 - Portfolio support and follow-ons",
+  "summary": "Luke Badiali reviewed portfolio support with Daniel Reese and Amira Khan. Fernhill has 14 portfolio companies and support is uneven. We agreed onboarding standards, a follow-on approach and asking founders for referrals.",
+  "discussion": [
+    {
+      "topic": "Support",
+      "keyPoints": "Daniel said 4 companies get most of the team's time; others hear from Fernhill only at board meetings."
+    },
+    {
+      "topic": "Follow-ons",
+      "keyPoints": "Fernhill reserves 30% of the fund for follow-ons but has used only 12%."
+    },
+    {
+      "topic": "Referrals",
+      "keyPoints": "Founders have referred 2 deals in 3 years."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Onboarding",
+      "recommendation": "Run the 100-day plan for every new investment, with a named operating partner.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Upsell and cross-sell",
+      "recommendation": "Offer follow-on funding to the top 4 performing companies before their next external round.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Advocacy",
+      "recommendation": "Ask each portfolio founder to host one founder breakfast table a year.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Customer satisfaction",
+      "recommendation": "Run a founder net promoter survey every 6 months.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Review the follow-on case for the top 4 companies",
+      "owner": "Amira Khan"
+    }
+  ],
+  "nextFocus": "Model fund economics and deal team costs.",
+  "nextPreparation": "Daniel to bring management fee income and team costs.",
+  "tests": [
+    {
+      "question": "How much of the follow-on reserve have we used?",
+      "expectedFacts": [
+        "12%",
+        "30% of the fund"
+      ]
+    },
+    {
+      "question": "Is offering follow-ons to the top 4 companies agreed?",
+      "expectedFacts": [
+        "pending",
+        "top 4"
+      ]
+    },
+    {
+      "question": "What are we asking portfolio founders to do?",
+      "expectedFacts": [
+        "host one founder breakfast table"
+      ]
+    }
+  ]
+}

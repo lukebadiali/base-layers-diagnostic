@@ -1,0 +1,79 @@
+{
+  "sessionName": "Week 6 - CRM and forecasting",
+  "summary": "Luke Badiali reviewed revenue operations with Andrew Fenwick and Kate Rowley. Elmstead runs pipeline in a spreadsheet alongside an underused CRM with 8 licences. We agreed to make the CRM the single source of truth for the six-stage pipeline from week 5 and to introduce a monthly forecast with commit and best-case figures.",
+  "discussion": [
+    {
+      "topic": "Systems today",
+      "keyPoints": "Andrew confirmed 8 CRM licences, mostly unused, with the real pipeline held in Kate's spreadsheet. Partners log almost nothing about pre-tender conversations."
+    },
+    {
+      "topic": "Forecasting",
+      "keyPoints": "The board receives a single pipeline total each month. Luke suggested splitting commit and best case so the lumpy tender timing is visible. Andrew agreed the board would welcome it."
+    },
+    {
+      "topic": "Data hygiene",
+      "keyPoints": "Kate raised that contact data for change directors is out of date and many records lack the organisation's regulator."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "CRM",
+      "recommendation": "Retire the pipeline spreadsheet by the end of next month and run all six stages in the existing CRM, extending licences from 8 to 15.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Forecasting",
+      "recommendation": "Present a monthly forecast to the board with commit, best case and pipeline columns, with commit only from Preferred bidder stage.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Data quality",
+      "recommendation": "Add a mandatory regulator field and a last-contact date to every account record.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Reporting and dashboards",
+      "recommendation": "Build one partner dashboard showing pre-tender conversations against the 20 per quarter target.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Playbooks",
+      "recommendation": "Write a full sales playbook for each segment this quarter.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Migrate the spreadsheet pipeline into the CRM",
+      "owner": "Kate Rowley"
+    },
+    {
+      "action": "Approve seven additional CRM licences",
+      "owner": "Andrew Fenwick"
+    }
+  ],
+  "nextFocus": "Align marketing campaigns with the regulatory-pressure narrative and the partner outbound programme.",
+  "nextPreparation": "Kate to bring the last 12 months of marketing activity and spend.",
+  "tests": [
+    {
+      "question": "How many CRM licences are we moving to?",
+      "expectedFacts": [
+        "8 to 15"
+      ]
+    },
+    {
+      "question": "Is the mandatory regulator field agreed?",
+      "expectedFacts": [
+        "Pending",
+        "regulator field"
+      ]
+    },
+    {
+      "question": "Which stage counts towards commit in the forecast?",
+      "expectedFacts": [
+        "Preferred bidder",
+        "commit, best case and pipeline"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "sessionName": "Week 4 - Founder meetings and deal execution",
+  "summary": "Luke Badiali worked with James Whitlow and Sophie Archer on how Ashcombe runs founder meetings through to heads of terms. First meetings are too focused on Ashcombe's credentials and partners rarely qualify founder intent. We agreed a discovery structure and a qualification checklist.",
+  "discussion": [
+    {
+      "topic": "First meetings",
+      "keyPoints": "James admitted first meetings are mostly a fund pitch. Founders often leave without having said why they might sell."
+    },
+    {
+      "topic": "Qualification",
+      "keyPoints": "Sophie said 30% of partner time last year went on founders who were never going to sell inside 3 years."
+    },
+    {
+      "topic": "Heads of terms",
+      "keyPoints": "James asked about speed; Ashcombe's average time from first meeting to heads of terms is 19 weeks."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Discovery",
+      "recommendation": "Spend the first 30 minutes of any founder meeting on the founder's goals, succession and team, with Ashcombe credentials kept to 5 minutes.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Qualification",
+      "recommendation": "Qualify on four points before a second meeting: timing within 18 months, willingness to sell a majority, EBITDA over £2m, and management depth.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Objection handling",
+      "recommendation": "Prepare answers to the top three founder objections: valuation, loss of control, and being flipped quickly.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Proposals and procurement",
+      "recommendation": "Issue an indicative offer letter within 10 working days of a second meeting.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Enablement and coaching",
+      "recommendation": "Run quarterly role-play sessions for the 4 partners led by Luke.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Write the four-point founder qualification checklist",
+      "owner": "Sophie Archer"
+    },
+    {
+      "action": "Draft objection answers for valuation, control and flipping",
+      "owner": "Luke Badiali"
+    }
+  ],
+  "nextFocus": "Map the origination pipeline stages and exit criteria.",
+  "nextPreparation": "Sophie to export the current target tracker spreadsheet.",
+  "tests": [
+    {
+      "question": "What are the four qualification points before a second meeting?",
+      "expectedFacts": [
+        "timing within 18 months",
+        "sell a majority",
+        "management depth"
+      ]
+    },
+    {
+      "question": "Did we agree the 10 working day indicative offer letter?",
+      "expectedFacts": [
+        "pending",
+        "10 working days"
+      ]
+    },
+    {
+      "question": "Are partner role-play sessions agreed?",
+      "expectedFacts": [
+        "not agreed",
+        "quarterly role-play"
+      ]
+    }
+  ]
+}

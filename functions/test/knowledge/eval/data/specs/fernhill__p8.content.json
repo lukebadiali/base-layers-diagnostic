@@ -1,0 +1,75 @@
+{
+  "sessionName": "Week 8 - Advisers and partner networks",
+  "summary": "George Berrington reviewed Fernhill's partner relationships with Daniel Reese and Amira Khan. Advisers still bring 70% of deals, so the aim is earlier and better-fitting introductions. We agreed a tiered adviser programme and new referral partners.",
+  "discussion": [
+    {
+      "topic": "Advisers",
+      "keyPoints": "Amira's list shows 15 advisers, 5 of whom bring most relevant deals."
+    },
+    {
+      "topic": "New sources",
+      "keyPoints": "Daniel suggested tech-specialist accountants and university spin-out offices in Manchester and Leeds."
+    },
+    {
+      "topic": "Co-investment",
+      "keyPoints": "Larger funds have offered to co-invest; Daniel was cautious about losing the founder relationship."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Partner strategy",
+      "recommendation": "Treat the top 5 advisers as tier one with a named partner and a quarterly pipeline call.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Referral networks",
+      "recommendation": "Build referral links with 10 tech-specialist accountancy firms in the North West and Yorkshire.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Alliances and joint ventures",
+      "recommendation": "Agree a co-investment arrangement with one larger fund for rounds over £20m.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Industry presence",
+      "recommendation": "Sponsor the Manchester tech awards at £15,000.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Assign named partners to the top 5 advisers",
+      "owner": "Daniel Reese"
+    },
+    {
+      "action": "Shortlist the 10 accountancy firms",
+      "owner": "Amira Khan"
+    }
+  ],
+  "nextFocus": "Look at portfolio founder support and follow-on investment.",
+  "nextPreparation": "Daniel to bring the current portfolio list with follow-on capacity.",
+  "tests": [
+    {
+      "question": "How many tier one advisers do we have?",
+      "expectedFacts": [
+        "top 5 advisers",
+        "quarterly pipeline call"
+      ]
+    },
+    {
+      "question": "Is the co-investment arrangement agreed?",
+      "expectedFacts": [
+        "pending",
+        "over £20m"
+      ]
+    },
+    {
+      "question": "Did we agree to sponsor the tech awards?",
+      "expectedFacts": [
+        "not agreed",
+        "£15,000"
+      ]
+    }
+  ]
+}

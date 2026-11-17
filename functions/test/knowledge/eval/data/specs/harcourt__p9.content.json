@@ -1,0 +1,82 @@
+{
+  "sessionName": "Week 9 - Portfolio retention and expansion",
+  "summary": "Luke Badiali ran a session with Simon Clarke and Priya Natarajan on expanding work across portfolio companies and funds. Most 100-day plans end at day 100 with no follow-on. We agreed a post-plan advisory retainer and quarterly reviews with the top funds.",
+  "discussion": [
+    {
+      "topic": "After the 100-day plan",
+      "keyPoints": "Simon said only 3 of the last 14 portfolio companies bought anything after the plan. Priya felt CIOs want help with delivery oversight but nobody offers it."
+    },
+    {
+      "topic": "Fund-level accounts",
+      "keyPoints": "Four funds account for 55% of revenue. Priya meets their deal partners often but rarely their operating partners."
+    },
+    {
+      "topic": "Satisfaction",
+      "keyPoints": "There is no formal feedback after DD or 100-day plans. Simon was keen but worried about survey fatigue among deal teams."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Upsell and cross-sell",
+      "recommendation": "Offer a 9-month delivery assurance retainer at 8,000 GBP per month at day 80 of every 100-day plan.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Key accounts",
+      "recommendation": "Treat the 4 funds that make up 55% of revenue as key accounts with a quarterly review including the operating partner.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Customer satisfaction",
+      "recommendation": "Ask for a 3-question rating after each DD readout.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Advocacy",
+      "recommendation": "Ask portfolio CEOs for a reference call within 90 days of the plan ending.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Onboarding",
+      "recommendation": "Run a formal onboarding pack for each new portfolio company.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Draft the delivery assurance retainer scope and day-80 conversation guide",
+      "owner": "Luke Badiali"
+    },
+    {
+      "action": "Book quarterly reviews with the 4 key account funds",
+      "owner": "Priya Natarajan"
+    }
+  ],
+  "nextFocus": "Model the economics of DD, 100-day plans and the delivery assurance retainer.",
+  "nextPreparation": "Simon to bring utilisation, day rates and margin by service line for the last 12 months.",
+  "tests": [
+    {
+      "question": "What did we agree to offer after the 100-day plan?",
+      "expectedFacts": [
+        "9-month delivery assurance retainer",
+        "8,000 GBP per month",
+        "day 80"
+      ]
+    },
+    {
+      "question": "What did we agree about key account funds?",
+      "expectedFacts": [
+        "4 funds",
+        "55% of revenue",
+        "quarterly review"
+      ]
+    },
+    {
+      "question": "Is the rating after each DD readout agreed?",
+      "expectedFacts": [
+        "3-question rating",
+        "Pending"
+      ]
+    }
+  ]
+}

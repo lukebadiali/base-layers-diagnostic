@@ -1,0 +1,81 @@
+{
+  "sessionName": "Week 3 - Getting in before the tender",
+  "summary": "George Berrington led a demand generation session with Andrew Fenwick and Kate Rowley focused on reaching buyers before tenders are published. Elmstead currently has no outbound activity and relies on tender portals. We agreed a partner-led outbound programme into named change directors and a small roundtable series, with tender portal monitoring kept but deprioritised.",
+  "discussion": [
+    {
+      "topic": "Current channels",
+      "keyPoints": "Kate confirmed almost all opportunities come from tender portal alerts and two frameworks. There is no outbound and the website gets about 300 visits a month."
+    },
+    {
+      "topic": "Pre-market engagement",
+      "keyPoints": "Andrew noted that many public bodies run pre-market engagement events six to nine months before a tender. Elmstead rarely attends them. George suggested treating these as a primary channel."
+    },
+    {
+      "topic": "Partner time",
+      "keyPoints": "Kate worried partners will not find time for outbound. Andrew agreed to ring-fence half a day a week for each of the five partners."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Channel mix",
+      "recommendation": "Shift effort to 50 percent outbound and pre-market engagement, 30 percent frameworks and 20 percent open tenders over the next two quarters.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Outbound",
+      "recommendation": "Each of the five partners to run a named list of 25 change directors, with half a day a week ring-fenced for outreach.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Events",
+      "recommendation": "Run a quarterly roundtable in Leeds for water utility change directors, capped at 12 attendees.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Cadences and sequences",
+      "recommendation": "Use a six-touch sequence over 30 days mixing LinkedIn, email and a phone call from the partner.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Lead quality and volume",
+      "recommendation": "Track pre-tender conversations as the lead metric, targeting 20 per quarter, rather than tender alerts received.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Build partner target lists of 25 change directors each",
+      "owner": "Kate Rowley"
+    },
+    {
+      "action": "Book every pre-market engagement event in the water and NHS calendars for the next six months",
+      "owner": "Andrew Fenwick"
+    }
+  ],
+  "nextFocus": "Sharpen discovery and qualification so partners turn pre-tender conversations into shaped opportunities.",
+  "nextPreparation": "Kate to bring the current bid/no-bid checklist and two recent proposals.",
+  "tests": [
+    {
+      "question": "What channel mix split did we agree?",
+      "expectedFacts": [
+        "50 percent outbound",
+        "30 percent frameworks",
+        "20 percent open tenders"
+      ]
+    },
+    {
+      "question": "Is the Leeds roundtable for water utility change directors agreed?",
+      "expectedFacts": [
+        "Pending",
+        "12 attendees"
+      ]
+    },
+    {
+      "question": "How many change directors is each partner targeting?",
+      "expectedFacts": [
+        "25 change directors",
+        "half a day a week"
+      ]
+    }
+  ]
+}

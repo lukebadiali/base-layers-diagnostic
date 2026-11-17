@@ -1,0 +1,81 @@
+{
+  "sessionName": "Week 10 - Bid costs and revenue scenarios",
+  "summary": "Luke Badiali closed the programme with Andrew Fenwick and Kate Rowley on financial and commercial modelling. Using utilisation, day rates and bid costs we found each tender win costs around 55 consultant days of bid effort. We built three revenue scenarios for the shift from tenders to pre-tender shaping and agreed pricing and margin targets.",
+  "discussion": [
+    {
+      "topic": "Cost of winning",
+      "keyPoints": "Andrew's data showed 46 bids at about 12 days each against 10 wins, so roughly 55 bid days per win. Kate said this has never been costed before."
+    },
+    {
+      "topic": "Utilisation and rates",
+      "keyPoints": "Average utilisation is 64 percent and the blended day rate is 1,050 pounds. Luke noted that freeing bid days could lift utilisation if pre-tender work converts."
+    },
+    {
+      "topic": "Scenarios",
+      "keyPoints": "Andrew wanted a downside case if pre-tender shaping takes longer than expected to show results."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Cost of acquisition",
+      "recommendation": "Track bid days per win as the core acquisition cost metric, targeting a reduction from 55 to 30 days within 12 months.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pricing strategy",
+      "recommendation": "Raise the blended day rate from 1,050 to 1,150 pounds for regulated-sector work from April.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Margins",
+      "recommendation": "Set a minimum programme margin of 35 percent, with subcontract work held to the 25 percent floor.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Revenue scenarios",
+      "recommendation": "Use three scenarios for next year: downside 5.2m, base 5.9m and upside 6.6m, with base assuming 50 percent of revenue from tenders.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Unit economics",
+      "recommendation": "Model profitability per consultant monthly.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Present the three revenue scenarios to the board",
+      "owner": "Andrew Fenwick"
+    },
+    {
+      "action": "Add bid days per opportunity to the CRM",
+      "owner": "Kate Rowley"
+    }
+  ],
+  "nextFocus": "Programme complete; quarterly check-ins to track tender share and bid days per win.",
+  "nextPreparation": "Kate to prepare a quarterly scorecard covering tender share, pre-tender conversations and bid days per win.",
+  "tests": [
+    {
+      "question": "How many bid days does each win cost us today?",
+      "expectedFacts": [
+        "55",
+        "bid days per win"
+      ]
+    },
+    {
+      "question": "Is the day rate increase agreed?",
+      "expectedFacts": [
+        "Pending",
+        "1,050 to 1,150"
+      ]
+    },
+    {
+      "question": "What were the three revenue scenarios?",
+      "expectedFacts": [
+        "5.2m",
+        "5.9m",
+        "6.6m"
+      ]
+    }
+  ]
+}

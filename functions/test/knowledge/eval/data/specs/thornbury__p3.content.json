@@ -1,0 +1,75 @@
+{
+  "sessionName": "Week 3 - Demand generation and channel mix",
+  "summary": "Luke Badiali reviewed lead sources with Paul and Rebecca. Most work comes from Paul's personal network and a few CFO referrals. We agreed a spend-analysis offer as the main outbound hook and a focused CFO events plan.",
+  "discussion": [
+    {
+      "topic": "Lead sources",
+      "keyPoints": "Rebecca found 26 opportunities in 12 months; 17 came through Paul personally. If Paul is unavailable, the pipeline dries up."
+    },
+    {
+      "topic": "Outbound hook",
+      "keyPoints": "Paul suggested a free spend analysis; Rebecca worried it devalues paid diagnostic work. Compromise discussed was a limited, two-category version."
+    },
+    {
+      "topic": "Lead quality",
+      "keyPoints": "Many inbound enquiries are from companies under £20m spend that do not fit the ICP."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Outbound",
+      "recommendation": "Offer a free two-category spend snapshot to CFOs at PE portfolio companies, aiming for 4 snapshots a month.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Events",
+      "recommendation": "Host three CFO breakfasts a year in London on supplier inflation, 15 guests each.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Channel mix",
+      "recommendation": "Rebecca and two senior consultants take on outbound so Paul's share of new leads falls below 50% within 12 months.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Lead quality and volume",
+      "recommendation": "Turn away any enquiry with third-party spend under £20m, using a qualifying question on the website form.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Build the two-category spend snapshot template",
+      "owner": "Rebecca Shaw"
+    },
+    {
+      "action": "Draft the target list of 80 PE portfolio CFOs",
+      "owner": "Paul Ingram"
+    }
+  ],
+  "nextFocus": "Tighten the sales process and proposals.",
+  "nextPreparation": "Paul to bring the last six proposals, won and lost.",
+  "tests": [
+    {
+      "question": "What outbound offer did we agree?",
+      "expectedFacts": [
+        "two-category spend snapshot",
+        "4 snapshots a month"
+      ]
+    },
+    {
+      "question": "Are the CFO breakfasts agreed?",
+      "expectedFacts": [
+        "Pending",
+        "three CFO breakfasts"
+      ]
+    },
+    {
+      "question": "What did we agree about Paul's share of new leads?",
+      "expectedFacts": [
+        "below 50%",
+        "within 12 months"
+      ]
+    }
+  ]
+}

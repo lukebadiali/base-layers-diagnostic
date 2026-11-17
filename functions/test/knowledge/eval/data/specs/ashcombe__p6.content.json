@@ -1,0 +1,77 @@
+{
+  "sessionName": "Week 6 - Deal CRM and reporting",
+  "summary": "Luke Badiali reviewed systems with James Whitlow and Sophie Archer. Ashcombe runs origination on spreadsheets and partner inboxes, with no shared relationship history. We agreed to move to a relationship-intelligence CRM built for private equity and set up a weekly origination dashboard.",
+  "discussion": [
+    {
+      "topic": "Current tools",
+      "keyPoints": "Sophie keeps the tracker in Excel; partners hold relationships in Outlook. James was worried about losing intermediary relationships when people leave."
+    },
+    {
+      "topic": "CRM options",
+      "keyPoints": "We compared a PE-specific relationship CRM at about £18,000 a year against a general CRM. Sophie preferred the PE-specific one for automatic email capture."
+    },
+    {
+      "topic": "Data",
+      "keyPoints": "Around a third of the 340 targets have missing founder age or EBITDA."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "CRM",
+      "recommendation": "Adopt a PE-specific relationship-intelligence CRM at around £18,000 a year, live by the end of Q1.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Data quality",
+      "recommendation": "Fill founder age, EBITDA band and sub-sector for every qualified target before migration.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Reporting and dashboards",
+      "recommendation": "Run a weekly origination dashboard for the Monday partner meeting showing new contacts, first meetings and qualified founders.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Forecasting",
+      "recommendation": "Do not forecast deal completions from the CRM until 6 months of clean data exist.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Book demos with two PE-specific CRM vendors",
+      "owner": "Sophie Archer"
+    },
+    {
+      "action": "Mock up the Monday origination dashboard",
+      "owner": "Luke Badiali"
+    }
+  ],
+  "nextFocus": "Plan campaigns and thought leadership to support founder outreach.",
+  "nextPreparation": "James to share any articles or reports Ashcombe has published in the last 2 years.",
+  "tests": [
+    {
+      "question": "Is the new CRM agreed?",
+      "expectedFacts": [
+        "pending",
+        "£18,000 a year"
+      ]
+    },
+    {
+      "question": "What does the Monday dashboard show?",
+      "expectedFacts": [
+        "new contacts",
+        "first meetings",
+        "qualified founders"
+      ]
+    },
+    {
+      "question": "Which fields must be filled before migration?",
+      "expectedFacts": [
+        "founder age",
+        "EBITDA band",
+        "sub-sector"
+      ]
+    }
+  ]
+}

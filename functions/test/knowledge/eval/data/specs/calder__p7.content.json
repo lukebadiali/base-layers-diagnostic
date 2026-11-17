@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 7 - Marketing to founders",
+  "summary": "Agreed marketing that supports the 40% proprietary origination target from week 3. The main vehicle is a quarterly succession report for Northern owner-managers, with case studies now cleared. Helen's personal LinkedIn presence is still under discussion and a rebrand was ruled out.",
+  "discussion": [
+    {
+      "topic": "Case studies",
+      "keyPoints": "Helen confirmed two of the four portfolio CEOs have given consent since week 2, which is enough to start."
+    },
+    {
+      "topic": "Content founders read",
+      "keyPoints": "Mark said founders respond to data about businesses like theirs. Nobody publishes regular data on succession among Northern owner-managers."
+    },
+    {
+      "topic": "Personal profile",
+      "keyPoints": "Helen is unsure about posting on LinkedIn under her own name and worried about the time it takes."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Content strategy",
+      "recommendation": "Publish a quarterly Northern Founder Succession report based on a survey of 200 owner-managers.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Case studies and social proof",
+      "recommendation": "Publish the two consented case studies now and add the other two when consent arrives.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Founder brand",
+      "recommendation": "Helen to publish a fortnightly operator article on LinkedIn drawn from portfolio work.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Campaign measurement",
+      "recommendation": "Judge marketing by proprietary first meetings sourced, with a target of 30 a year.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Brand and thought leadership",
+      "recommendation": "Refresh the Calder Bridge brand and website identity.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Brief the survey for the first Northern Founder Succession report",
+      "owner": "Mark Lyons"
+    }
+  ],
+  "nextFocus": "Work on the corporate finance adviser network and other referral partners.",
+  "nextPreparation": "Bring the list of advisers from week 2 with deals sent and deals won by each.",
+  "tests": [
+    {
+      "question": "What is the main content piece we agreed?",
+      "expectedFacts": [
+        "Northern Founder Succession report",
+        "200 owner-managers"
+      ]
+    },
+    {
+      "question": "How will we measure marketing?",
+      "expectedFacts": [
+        "proprietary first meetings",
+        "30 a year"
+      ]
+    },
+    {
+      "question": "Is Helen's LinkedIn article plan agreed?",
+      "expectedFacts": [
+        "Pending",
+        "fortnightly operator article"
+      ]
+    }
+  ]
+}

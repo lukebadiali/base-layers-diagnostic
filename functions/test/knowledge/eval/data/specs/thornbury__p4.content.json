@@ -1,0 +1,71 @@
+{
+  "sessionName": "Week 4 - Sales process and proposals",
+  "summary": "George Berrington reviewed six recent proposals with Paul and Rebecca. Proposals offer both gain-share and fixed fee without a recommendation, and procurement teams use that to stall. We agreed a single recommended fee option and a clearer qualification step.",
+  "discussion": [
+    {
+      "topic": "Proposal review",
+      "keyPoints": "Four of six proposals listed two fee options side by side. Rebecca said clients spent weeks comparing them and two went quiet."
+    },
+    {
+      "topic": "Negotiation",
+      "keyPoints": "Paul tends to discount fixed fees by 10% to 15% at the end. Rebecca thinks this signals the price was padded."
+    },
+    {
+      "topic": "Qualification",
+      "keyPoints": "Thornbury often scopes before confirming the CFO is sponsoring the project, so procurement managers block it."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Proposals and procurement",
+      "recommendation": "Present one recommended fee option: gain-share at 25% of verified first-year savings for engagements with spend over £40m.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Negotiation and closing",
+      "recommendation": "No discounting on fixed fees; trade scope instead, such as removing a category.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Qualification",
+      "recommendation": "Confirm CFO sponsorship in writing before any scoping work starts.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Objection handling",
+      "recommendation": "Prepare a one-page answer to the 'we already have a procurement team' objection.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Rewrite the proposal template with a single fee recommendation",
+      "owner": "Rebecca Shaw"
+    }
+  ],
+  "nextFocus": "Define pipeline stages and conversion targets.",
+  "nextPreparation": "Rebecca to export all open opportunities with stage and expected fee.",
+  "tests": [
+    {
+      "question": "What fee option do our proposals recommend?",
+      "expectedFacts": [
+        "gain-share at 25%",
+        "verified first-year savings"
+      ]
+    },
+    {
+      "question": "Is written CFO sponsorship before scoping agreed?",
+      "expectedFacts": [
+        "Pending",
+        "CFO sponsorship in writing"
+      ]
+    },
+    {
+      "question": "What did we agree about discounting?",
+      "expectedFacts": [
+        "No discounting on fixed fees",
+        "trade scope instead"
+      ]
+    }
+  ]
+}

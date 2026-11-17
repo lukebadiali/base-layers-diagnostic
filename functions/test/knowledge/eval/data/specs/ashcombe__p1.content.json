@@ -1,0 +1,81 @@
+{
+  "sessionName": "Week 1 - Origination strategy and target profile",
+  "summary": "First session with James Whitlow and Sophie Archer, run by George Berrington. We reviewed where Ashcombe's last 14 completed deals came from and agreed that too many arrive through corporate finance advisers in competitive auctions. We set out a target profile for a proprietary origination engine focused on founder-owned UK business services companies.",
+  "discussion": [
+    {
+      "topic": "Current deal flow",
+      "keyPoints": "Sophie showed that 11 of the last 14 deals came via corporate finance advisers, mostly in auctions with 6 or more bidders. James said entry multiples have crept from 6x to around 8x EBITDA as a result."
+    },
+    {
+      "topic": "Where Ashcombe wins",
+      "keyPoints": "Ashcombe wins when it gets in early with first-generation founders who want a partner for a buy-and-build, not the highest price. James was concerned that going direct takes partner time the team does not have."
+    },
+    {
+      "topic": "Fund position",
+      "keyPoints": "The £300m fund is about 40% deployed, so the next 30 months need roughly 8 new platforms and 25 bolt-ons."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Ideal Customer Profile",
+      "recommendation": "Target founder-owned UK business services companies with £2m to £8m EBITDA where the founder is over 55 and has no succession plan.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Market segmentation",
+      "recommendation": "Concentrate proprietary effort on three sub-sectors: compliance and testing services, facilities maintenance, and payroll and HR bureaux.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Positioning and differentiation",
+      "recommendation": "Position Ashcombe as the buy-and-build partner for first-time sellers, leading with the 4 platform exits since 2016 rather than fund size.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Commercial strategy",
+      "recommendation": "Set a target that 40% of new platform deals originate proprietary within 24 months, up from 3 of 14 today.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pricing and value",
+      "recommendation": "Do not offer a premium price for proprietary deals; hold entry at 6x to 7x EBITDA and compete on speed and certainty instead.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Pull the full 2019 to 2025 deal log with source and multiple for each deal",
+      "owner": "Sophie Archer"
+    },
+    {
+      "action": "Draft a one-page target profile for the three sub-sectors",
+      "owner": "George Berrington"
+    }
+  ],
+  "nextFocus": "Turn the buy-and-build partner positioning into a value proposition founders will respond to.",
+  "nextPreparation": "Sophie to bring three examples of founder letters or teasers that got a response in the past.",
+  "tests": [
+    {
+      "question": "What EBITDA range did we agree for our ideal target?",
+      "expectedFacts": [
+        "£2m to £8m EBITDA",
+        "founder over 55"
+      ]
+    },
+    {
+      "question": "Which sub-sectors are we focusing proprietary origination on?",
+      "expectedFacts": [
+        "compliance and testing services",
+        "facilities maintenance",
+        "payroll and HR bureaux"
+      ]
+    },
+    {
+      "question": "Did we agree to pay a premium price for proprietary deals?",
+      "expectedFacts": [
+        "not agreed",
+        "6x to 7x EBITDA"
+      ]
+    }
+  ]
+}

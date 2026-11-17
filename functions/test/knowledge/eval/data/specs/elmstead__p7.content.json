@@ -1,0 +1,80 @@
+{
+  "sessionName": "Week 7 - Campaigns around regulatory cycles",
+  "summary": "George Berrington led a marketing campaign session with Andrew Fenwick and Kate Rowley. Marketing spend of about 28k last year went mostly on sponsorships with no tracked outcome. We agreed to plan campaigns around regulatory cycles, starting with the water price review, and to build Andrew's profile as the public voice of the firm.",
+  "discussion": [
+    {
+      "topic": "Past spend",
+      "keyPoints": "Kate shared that around 28k went on two conference sponsorships and a brochure refresh. Nobody could link any opportunity to that spend. Andrew decided not to renew the larger sponsorship at 15k."
+    },
+    {
+      "topic": "Regulatory calendar",
+      "keyPoints": "George suggested timing campaigns to the water price review and NHS planning guidance releases. Andrew liked this because it matches the narrative from week 2."
+    },
+    {
+      "topic": "Founder visibility",
+      "keyPoints": "Andrew was reluctant to post on LinkedIn personally. Kate argued buyers know Andrew from previous programmes and would engage with him."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Campaign planning",
+      "recommendation": "Build a 12-month campaign calendar anchored on the water price review and the annual NHS planning guidance release.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Founder brand",
+      "recommendation": "Andrew to post on LinkedIn twice a week on lessons from regulated change programmes.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Case studies and social proof",
+      "recommendation": "Publish the four anonymised case studies from week 2 as a gated pack for the water price review campaign.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Campaign measurement",
+      "recommendation": "Measure each campaign by pre-tender conversations generated, logged in the CRM with a campaign source field.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Brand and thought leadership",
+      "recommendation": "Renew the larger of the two conference sponsorships at 15k.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Draft the 12-month campaign calendar",
+      "owner": "Kate Rowley"
+    },
+    {
+      "action": "Write three trial LinkedIn posts before committing to the cadence",
+      "owner": "Andrew Fenwick"
+    }
+  ],
+  "nextFocus": "Look at partnerships and frameworks as routes to market beyond open tenders.",
+  "nextPreparation": "Andrew to list associate firms and larger consultancies Elmstead has subcontracted to.",
+  "tests": [
+    {
+      "question": "Is Andrew posting on LinkedIn agreed?",
+      "expectedFacts": [
+        "Pending",
+        "twice a week"
+      ]
+    },
+    {
+      "question": "Are we renewing the conference sponsorship?",
+      "expectedFacts": [
+        "15k",
+        "not to renew"
+      ]
+    },
+    {
+      "question": "What is the campaign calendar anchored on?",
+      "expectedFacts": [
+        "water price review",
+        "NHS planning guidance"
+      ]
+    }
+  ]
+}

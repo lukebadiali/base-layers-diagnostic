@@ -1,0 +1,82 @@
+{
+  "sessionName": "Week 10 - Fees, pitch costs and scenarios",
+  "summary": "George Berrington closed the programme with Thomas Avery and Grace Lindqvist on financial and commercial modelling. Average CDD fee has fallen from 145k to 118k because of discounting, and pitching absorbs around 9 percent of consultant time. We agreed a tiered fee card, a margin floor and three revenue scenarios for next year.",
+  "discussion": [
+    {
+      "topic": "Fee erosion",
+      "keyPoints": "Thomas's data showed the average fee fell from 145k to 118k over two years. Grace said the cut came entirely from discounts, not smaller scopes."
+    },
+    {
+      "topic": "Cost of pitching",
+      "keyPoints": "Pitches take about 9 percent of consultant time across the 20 consultants. George noted the scoping call rule from week 4 should cut wasted pitches."
+    },
+    {
+      "topic": "Scenarios",
+      "keyPoints": "Thomas wanted to see the effect of the portfolio work from week 9 in the upside case."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Pricing strategy",
+      "recommendation": "Introduce a fee card with three tiers: red flag at 45k, full CDD at 120k and VDD at 150k.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Margins",
+      "recommendation": "Set a project margin floor of 40 percent, below which Thomas must sign off.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Cost of acquisition",
+      "recommendation": "Cut pitch time from 9 percent to 6 percent of consultant time.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Revenue scenarios",
+      "recommendation": "Model next year at downside 4.1m, base 4.6m and upside 5.3m, with upside including 8 portfolio sprints.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Lifetime value",
+      "recommendation": "Calculate lifetime value per PE house.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Publish the fee card internally and brief all directors",
+      "owner": "Grace Lindqvist"
+    },
+    {
+      "action": "Review scenarios with the partners at the next Monday meeting",
+      "owner": "Thomas Avery"
+    }
+  ],
+  "nextFocus": "Programme complete; quarterly check-ins on win rate, average fee and key accounts.",
+  "nextPreparation": "Grace to prepare a quarterly scorecard on win rate, average fee and pitch time.",
+  "tests": [
+    {
+      "question": "What are the fee card tiers?",
+      "expectedFacts": [
+        "red flag at 45k",
+        "full CDD at 120k",
+        "VDD at 150k"
+      ]
+    },
+    {
+      "question": "Is the target to cut pitch time agreed?",
+      "expectedFacts": [
+        "Pending",
+        "9 percent to 6 percent"
+      ]
+    },
+    {
+      "question": "What were the revenue scenarios?",
+      "expectedFacts": [
+        "4.1m",
+        "4.6m",
+        "5.3m"
+      ]
+    }
+  ]
+}

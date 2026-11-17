@@ -1,0 +1,83 @@
+{
+  "sessionName": "Week 1 - ICP and the shift to retained advisory",
+  "summary": "George Berrington ran the opening session with Joanna Pike and Oliver Grant to define who Larkspur should be selling to as it moves from one-off projects to retained advisory. We agreed the core ICP is mid-market PE-backed businesses going through a buy-and-build, with the PE operating partner as the economic buyer. Pricing for a retainer was discussed but not settled.",
+  "discussion": [
+    {
+      "topic": "Current client mix",
+      "keyPoints": "Joanna said roughly 70% of last year's fee income came from one-off leadership assessments, mostly corporates with no repeat work. Oliver noted the post-deal integration projects were smaller in number but far more likely to lead to follow-on work."
+    },
+    {
+      "topic": "Who actually buys",
+      "keyPoints": "Both agreed the people who rehire them are PE operating partners and portfolio CHROs, not the HR directors of standalone corporates. Joanna was worried that narrowing the focus would cut off the corporate assessment work that pays the bills today."
+    },
+    {
+      "topic": "Retained model appetite",
+      "keyPoints": "Oliver felt operating partners would pay a monthly fee for on-call people advice across a portfolio, but had no evidence yet. Joanna wants to test it with three existing PE relationships before committing."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Ideal Customer Profile",
+      "recommendation": "Define the primary ICP as PE-backed businesses with 150 to 1,500 employees in a buy-and-build phase, with the PE operating partner as economic buyer.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Market segmentation",
+      "recommendation": "Split the market into three segments: PE portfolio buy-and-build, mid-market PE houses at fund level, and standalone corporates, with corporates treated as a secondary segment only.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Positioning and differentiation",
+      "recommendation": "Position Larkspur as the people integration partner for the first 18 months after a deal, rather than a generalist HR consultancy.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pricing and value",
+      "recommendation": "Introduce a portfolio people retainer at 6,500 GBP per month covering up to 4 portfolio companies.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Competitive landscape",
+      "recommendation": "Map the five Bristol and London boutiques that pitch to the same operating partners before the Week 2 session.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "List the top 12 PE operating partner relationships and rate each on retainer potential",
+      "owner": "Oliver Grant"
+    },
+    {
+      "action": "Send the three-segment market map to the partners for comment",
+      "owner": "George Berrington"
+    }
+  ],
+  "nextFocus": "Turn the buy-and-build ICP into a value proposition and commercial narrative for operating partners.",
+  "nextPreparation": "Joanna to bring two recent integration project write-ups that show measurable outcomes.",
+  "tests": [
+    {
+      "question": "What did we agree as our primary ICP in the first session?",
+      "expectedFacts": [
+        "PE-backed businesses",
+        "150 to 1,500 employees",
+        "buy-and-build"
+      ]
+    },
+    {
+      "question": "Is the portfolio people retainer price agreed yet?",
+      "expectedFacts": [
+        "6,500 GBP per month",
+        "up to 4 portfolio companies",
+        "Pending"
+      ]
+    },
+    {
+      "question": "How did we decide to split the market into segments?",
+      "expectedFacts": [
+        "three segments",
+        "standalone corporates",
+        "secondary segment"
+      ]
+    }
+  ]
+}

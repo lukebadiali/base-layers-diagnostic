@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 7 - Marketing campaign and thought leadership",
+  "summary": "George Berrington ran a marketing session with Joanna Pike and Oliver Grant to put the operating partner narrative into campaigns. We agreed a single annual research piece on people risk in buy-and-build deals and a Joanna-led LinkedIn presence. The logistics case study from Week 2 is now approved and will anchor the first campaign.",
+  "discussion": [
+    {
+      "topic": "Thought leadership",
+      "keyPoints": "Joanna has spoken at two HR conferences but nothing aimed at PE audiences. Oliver suggested a survey of operating partners on post-deal people issues."
+    },
+    {
+      "topic": "Founder brand",
+      "keyPoints": "Joanna was reluctant to post regularly. George argued that operating partners buy from the person, and a modest cadence would be enough."
+    },
+    {
+      "topic": "Case studies",
+      "keyPoints": "The logistics client has agreed to be named. Oliver wants a second case study from a software buy-and-build but sign-off is uncertain."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Brand and thought leadership",
+      "recommendation": "Publish an annual People Risk in Buy-and-Build report based on a survey of at least 50 operating partners, launched at the Q1 roundtable.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Founder brand",
+      "recommendation": "Joanna to post on LinkedIn twice a week, focused on post-deal people lessons.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Case studies and social proof",
+      "recommendation": "Release the named logistics case study (94% key people retained) as the first campaign asset this month.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Campaign measurement",
+      "recommendation": "Measure each campaign by operating partner meetings booked, with a target of 4 meetings per campaign.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Content strategy",
+      "recommendation": "Produce a monthly newsletter for portfolio CHROs.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Draft the 12-question operating partner survey",
+      "owner": "Oliver Grant"
+    }
+  ],
+  "nextFocus": "Build referral and partnership routes into PE houses.",
+  "nextPreparation": "Joanna to list firms that regularly sit alongside Larkspur on deals, such as financial DD providers and executive search.",
+  "tests": [
+    {
+      "question": "What did we agree about the annual research report?",
+      "expectedFacts": [
+        "People Risk in Buy-and-Build",
+        "50 operating partners"
+      ]
+    },
+    {
+      "question": "Is Joanna posting on LinkedIn twice a week agreed?",
+      "expectedFacts": [
+        "twice a week",
+        "Pending"
+      ]
+    },
+    {
+      "question": "How are we measuring campaign success?",
+      "expectedFacts": [
+        "operating partner meetings booked",
+        "4 meetings per campaign"
+      ]
+    }
+  ]
+}

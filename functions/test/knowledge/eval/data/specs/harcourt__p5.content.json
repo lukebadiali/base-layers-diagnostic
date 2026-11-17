@@ -1,0 +1,71 @@
+{
+  "sessionName": "Week 5 - Pipeline architecture for two motions",
+  "summary": "Luke Badiali worked with Simon Clarke and Priya Natarajan on pipeline design. DD and 100-day plans behave very differently, and the current pipeline mixes them. We agreed two separate pipelines with their own stages, and a weekly review of stalled 100-day plan opportunities.",
+  "discussion": [
+    {
+      "topic": "Mixed pipeline",
+      "keyPoints": "Simon's export showed DD and post-deal work in one list, making the pipeline look healthier than it is. Many DD opportunities are deals that never progressed."
+    },
+    {
+      "topic": "Velocity",
+      "keyPoints": "Priya said DD runs 2 to 4 weeks from instruction to readout, while 100-day plans take 6 to 10 weeks to sign. Lost deals often happen when the fund's own deal falls away."
+    },
+    {
+      "topic": "Conversion",
+      "keyPoints": "Only about 1 in 5 DD engagements currently turns into a 100-day plan. Simon wants that doubled."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Stages and exit criteria",
+      "recommendation": "Run two pipelines: DD (Panel enquiry, Instructed, Readout, Closed) and 100-day plan (Readout briefing, Proposal, Signed), with exit criteria for each.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Conversion rates",
+      "recommendation": "Raise DD to 100-day plan conversion from 1 in 5 to 2 in 5 within a year.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Stalled deals",
+      "recommendation": "Review 100-day plan opportunities with no movement for 21 days at a weekly Monday pipeline call.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Pipeline coverage",
+      "recommendation": "Hold 2.5 times next quarter's post-deal revenue target in the 100-day plan pipeline.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Split the current pipeline export into the two pipelines",
+      "owner": "Priya Natarajan"
+    }
+  ],
+  "nextFocus": "Set up CRM, data and forecasting to support the two pipelines.",
+  "nextPreparation": "Simon to confirm which systems hold client and fund contacts today.",
+  "tests": [
+    {
+      "question": "What pipelines did we agree to run?",
+      "expectedFacts": [
+        "two pipelines",
+        "Readout briefing"
+      ]
+    },
+    {
+      "question": "What conversion target did we set from DD to 100-day plans?",
+      "expectedFacts": [
+        "1 in 5 to 2 in 5"
+      ]
+    },
+    {
+      "question": "Is the weekly review of stalled 100-day plan deals agreed?",
+      "expectedFacts": [
+        "21 days",
+        "Monday pipeline call",
+        "Pending"
+      ]
+    }
+  ]
+}

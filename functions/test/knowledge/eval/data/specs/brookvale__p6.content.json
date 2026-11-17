@@ -1,0 +1,81 @@
+{
+  "sessionName": "Week 6 - One system for deal partners",
+  "summary": "George Berrington reviewed revenue operations with Thomas Avery and Grace Lindqvist. Deal partner contacts are split across Outlook, a shared spreadsheet and the timesheet system, and nobody can see relationship history. We agreed to adopt a relationship-focused CRM, define the core funnel metrics and give the partners a fortnightly pipeline view.",
+  "discussion": [
+    {
+      "topic": "Systems",
+      "keyPoints": "Thomas confirmed contacts live in personal Outlook folders and a spreadsheet. Grace said when a director leaves, relationships go with them."
+    },
+    {
+      "topic": "CRM choice",
+      "keyPoints": "George suggested a relationship-intelligence CRM built for advisory firms rather than a generic sales CRM. Thomas was concerned about cost at around 900 pounds per user per year."
+    },
+    {
+      "topic": "Metrics",
+      "keyPoints": "Grace wanted the five-stage pipeline from week 5 and win rate by sector visible in one place."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "CRM",
+      "recommendation": "Adopt a relationship-intelligence CRM for all 8 directors and partners, live by the end of next quarter.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Data quality",
+      "recommendation": "Each deal partner record must show fund, sector focus and last meeting date, reviewed monthly by Grace.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Funnel metrics",
+      "recommendation": "Track four metrics: pre-RFP conversations, scoping call rate, win rate by sector and average fee.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Reporting and dashboards",
+      "recommendation": "Review a fortnightly pipeline dashboard in the Monday partners meeting.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Forecasting",
+      "recommendation": "Forecast revenue weekly by mandate probability.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Get quotes from two relationship-intelligence CRM vendors",
+      "owner": "Grace Lindqvist"
+    },
+    {
+      "action": "Approve CRM budget once quotes are in",
+      "owner": "Thomas Avery"
+    }
+  ],
+  "nextFocus": "Plan marketing campaigns around sector insight and the deal library.",
+  "nextPreparation": "Grace to gather any sector content Brookvale has published in the last year.",
+  "tests": [
+    {
+      "question": "Is the CRM decision agreed?",
+      "expectedFacts": [
+        "Pending",
+        "relationship-intelligence CRM"
+      ]
+    },
+    {
+      "question": "What four funnel metrics are we tracking?",
+      "expectedFacts": [
+        "scoping call rate",
+        "win rate by sector",
+        "average fee"
+      ]
+    },
+    {
+      "question": "When do we review the pipeline dashboard?",
+      "expectedFacts": [
+        "fortnightly",
+        "Monday partners meeting"
+      ]
+    }
+  ]
+}

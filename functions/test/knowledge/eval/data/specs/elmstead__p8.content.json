@@ -1,0 +1,79 @@
+{
+  "sessionName": "Week 8 - Frameworks and subcontracting",
+  "summary": "Luke Badiali reviewed partnerships with Andrew Fenwick and Kate Rowley. Elmstead earns about 18 percent of revenue as a subcontractor to two larger consultancies and sits on two public sector frameworks. We agreed to formalise one prime-contractor alliance and to apply for a third framework focused on health.",
+  "discussion": [
+    {
+      "topic": "Subcontracting",
+      "keyPoints": "Andrew said subcontract work to two larger consultancies brings 18 percent of revenue but margins are thin, around 21 percent. Kate said the work is steady and helps smooth the lumpy pipeline."
+    },
+    {
+      "topic": "Frameworks",
+      "keyPoints": "Elmstead sits on two frameworks but only one has produced call-offs in two years. Luke suggested focusing effort where call-offs actually happen."
+    },
+    {
+      "topic": "Referrals",
+      "keyPoints": "Former client change directors who have moved roles have referred work three times. Nobody tracks these relationships."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Alliances and joint ventures",
+      "recommendation": "Agree a formal alliance with one prime contractor for regulated sectors, with a minimum 25 percent margin floor on subcontracted work.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Partner strategy",
+      "recommendation": "Apply for a health-focused framework lot in the next refresh and stop chasing call-offs on the dormant framework.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Referral networks",
+      "recommendation": "Track every former client change director in the CRM and contact each one at least once a quarter.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Industry presence",
+      "recommendation": "Join the water industry's change practitioners forum and attend all four meetings a year.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Partner enablement",
+      "recommendation": "Create a co-selling pack for prime contractors.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Open margin discussions with the preferred prime contractor",
+      "owner": "Andrew Fenwick"
+    },
+    {
+      "action": "Tag all former client change directors in the CRM",
+      "owner": "Kate Rowley"
+    }
+  ],
+  "nextFocus": "Look at retention and expansion inside existing water and NHS clients.",
+  "nextPreparation": "Kate to list all clients with work in the last three years and total fees per client.",
+  "tests": [
+    {
+      "question": "Is the prime contractor alliance agreed?",
+      "expectedFacts": [
+        "Pending",
+        "25 percent margin floor"
+      ]
+    },
+    {
+      "question": "What did we say about frameworks?",
+      "expectedFacts": [
+        "health-focused framework",
+        "dormant framework"
+      ]
+    },
+    {
+      "question": "How often should we contact former client change directors?",
+      "expectedFacts": [
+        "once a quarter"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "sessionName": "Week 9 - Portfolio founders and LP relationships",
+  "summary": "George Berrington worked with James Whitlow and Sophie Archer on how Ashcombe looks after its existing relationships: portfolio founders and LPs. Happy founders and LPs are a source of referrals and the next fund. We agreed onboarding and advocacy steps for both.",
+  "discussion": [
+    {
+      "topic": "Portfolio founder experience",
+      "keyPoints": "James said the first 100 days after completion are inconsistent across platforms. One founder complained about reporting demands."
+    },
+    {
+      "topic": "LPs",
+      "keyPoints": "Ashcombe has 22 LPs; fundraise for Fund III is planned in 2028. Sophie noted LPs have asked for more detail on origination."
+    },
+    {
+      "topic": "Referrals from founders",
+      "keyPoints": "Only 2 deals in 5 years came from portfolio founder referrals."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Onboarding",
+      "recommendation": "Use a standard 100-day plan for every new platform with a single reporting pack template.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Advocacy",
+      "recommendation": "Ask every portfolio founder for two introductions to peers each year.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Key accounts",
+      "recommendation": "Assign each of the top 6 LPs a partner and give them a twice-yearly origination update.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Customer satisfaction",
+      "recommendation": "Run an annual founder survey across portfolio companies, scored out of 10.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Draft the 100-day plan template",
+      "owner": "George Berrington"
+    },
+    {
+      "action": "Prepare the first LP origination update",
+      "owner": "Sophie Archer"
+    }
+  ],
+  "nextFocus": "Model the economics of the origination engine.",
+  "nextPreparation": "Sophie to bring costs for the analyst, CRM, events and report.",
+  "tests": [
+    {
+      "question": "How many introductions are we asking portfolio founders for?",
+      "expectedFacts": [
+        "two introductions",
+        "each year"
+      ]
+    },
+    {
+      "question": "Is the top 6 LP update agreed?",
+      "expectedFacts": [
+        "pending",
+        "twice-yearly origination update"
+      ]
+    },
+    {
+      "question": "What template did we agree for new platforms?",
+      "expectedFacts": [
+        "100-day plan",
+        "single reporting pack"
+      ]
+    }
+  ]
+}

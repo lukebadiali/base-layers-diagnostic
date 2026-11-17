@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 8 - Partnerships with deal advisers",
+  "summary": "Luke Badiali met Joanna Pike and Oliver Grant to look at partnerships with firms that sit around PE deals. We agreed to formalise referral relationships with executive search and financial due diligence firms and to explore a joint people DD offer. A formal referral fee was discussed and not agreed.",
+  "discussion": [
+    {
+      "topic": "Who is already on the deals",
+      "keyPoints": "Joanna listed two executive search firms and one transaction services team that keep appearing on the same deals. Oliver said referrals from them are informal and one way."
+    },
+    {
+      "topic": "Joint offer",
+      "keyPoints": "Luke suggested a people due diligence module bolted onto financial DD before completion, which leads straight into Larkspur's 100-day integration work."
+    },
+    {
+      "topic": "Referral fees",
+      "keyPoints": "Joanna was uncomfortable paying fees to firms that also advise the PE house, for independence reasons."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Partner strategy",
+      "recommendation": "Focus on 3 strategic partners: two executive search firms and one financial DD team, with a named Larkspur partner owning each.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Alliances and joint ventures",
+      "recommendation": "Pilot a joint pre-completion people DD module with the financial DD partner, priced at 12,000 GBP per deal.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Referral networks",
+      "recommendation": "Offer a 10% referral fee on first-year fees for introductions that convert.",
+      "agreed": "No"
+    },
+    {
+      "area": "Industry presence",
+      "recommendation": "Attend two PE-focused events per year, including a mid-market private equity conference, rather than HR conferences.",
+      "agreed": "Yes"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Brief the financial DD partner on the people DD module and propose a pilot deal",
+      "owner": "Joanna Pike"
+    },
+    {
+      "action": "Set up quarterly pipeline swaps with the two executive search firms",
+      "owner": "Oliver Grant"
+    }
+  ],
+  "nextFocus": "Move existing clients onto retainers and protect key accounts.",
+  "nextPreparation": "Oliver to list every client with work in the last 18 months and what was delivered.",
+  "tests": [
+    {
+      "question": "Which firms did we agree to partner with?",
+      "expectedFacts": [
+        "3 strategic partners",
+        "two executive search firms",
+        "financial DD"
+      ]
+    },
+    {
+      "question": "What did we decide about paying referral fees?",
+      "expectedFacts": [
+        "10% referral fee",
+        "No"
+      ]
+    },
+    {
+      "question": "Is the joint people DD module agreed and what would it cost?",
+      "expectedFacts": [
+        "12,000 GBP per deal",
+        "Pending"
+      ]
+    }
+  ]
+}

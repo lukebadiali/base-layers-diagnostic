@@ -1,0 +1,80 @@
+{
+  "sessionName": "Week 3 - Founder outreach channels",
+  "summary": "George Berrington reviewed Ashcombe's outreach activity with James Whitlow and Sophie Archer. Current direct outreach is ad hoc and partner-led, with about 15 founder emails a month. We agreed a structured channel mix weighted to research-led outbound and a small events programme.",
+  "discussion": [
+    {
+      "topic": "Current activity",
+      "keyPoints": "Sophie sends about 15 founder emails a month with a 9% reply rate. Partners send occasional LinkedIn messages with no tracking."
+    },
+    {
+      "topic": "Behavioural triggers",
+      "keyPoints": "James noted that the best conversations started when founders were facing a trigger: a lost key contract, a co-founder leaving, or a big customer asking about succession."
+    },
+    {
+      "topic": "Resource",
+      "keyPoints": "James was clear partners will not run cadences themselves; Sophie needs an analyst."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Outbound",
+      "recommendation": "Hire a junior origination analyst to run research-led outbound at 120 founder touches per month across the target sub-sectors.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Cadences and sequences",
+      "recommendation": "Use a 5-touch sequence over 4 weeks: letter, email, LinkedIn, email, partner call.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Events",
+      "recommendation": "Host two founder dinners a year, 12 guests each, starting with compliance and testing founders in March.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Behavioural drivers",
+      "recommendation": "Monitor succession triggers such as director resignations and founder age at Companies House, and prioritise those founders.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Inbound",
+      "recommendation": "Do not invest in paid inbound or SEO this year.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Write a job spec for the origination analyst",
+      "owner": "Sophie Archer"
+    },
+    {
+      "action": "Draft the 5-touch sequence templates",
+      "owner": "George Berrington"
+    }
+  ],
+  "nextFocus": "Tighten how partners run first meetings with founders.",
+  "nextPreparation": "James to share notes from two recent first meetings with founders.",
+  "tests": [
+    {
+      "question": "What sequence did we agree for founder outreach?",
+      "expectedFacts": [
+        "5-touch sequence",
+        "over 4 weeks"
+      ]
+    },
+    {
+      "question": "Is the origination analyst hire agreed?",
+      "expectedFacts": [
+        "pending",
+        "120 founder touches per month"
+      ]
+    },
+    {
+      "question": "When is the first founder dinner?",
+      "expectedFacts": [
+        "March",
+        "compliance and testing founders"
+      ]
+    }
+  ]
+}

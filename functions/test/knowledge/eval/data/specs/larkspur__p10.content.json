@@ -1,0 +1,81 @@
+{
+  "sessionName": "Week 10 - Retainer economics and revenue scenarios",
+  "summary": "Luke Badiali closed the programme with Joanna Pike and Oliver Grant by modelling the retained model against Larkspur's project business. Retainers carry better margins and lower acquisition cost but need disciplined scoping to avoid over-servicing. We agreed a target mix and a margin floor; the move to a tiered retainer price is still pending.",
+  "discussion": [
+    {
+      "topic": "Current economics",
+      "keyPoints": "Joanna's figures showed fee income of about 1.9m GBP last year at 62% utilisation, with gross margin around 48% on project work."
+    },
+    {
+      "topic": "Retainer margins",
+      "keyPoints": "Luke's model showed the 6,500 GBP per month retainer from Week 1 would run at about 60% gross margin if capped at 3 days per month. Oliver worried consultants would give more time than the cap."
+    },
+    {
+      "topic": "Scenarios",
+      "keyPoints": "Both partners wanted a realistic rather than aggressive target for next year."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Revenue scenarios",
+      "recommendation": "Plan for retainers to make up 30% of fee income within 24 months, with a base case of 8 active retainers by the end of next year.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Margins",
+      "recommendation": "Set a 55% gross margin floor on all retainers and cap delivery at 3 consultant days per month.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pricing strategy",
+      "recommendation": "Move to tiered retainers at 4,500, 6,500 and 9,500 GBP per month by number of portfolio companies covered.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Cost of acquisition",
+      "recommendation": "Track cost of acquisition per new PE house, including partner time, with a ceiling of 15,000 GBP.",
+      "agreed": "No"
+    },
+    {
+      "area": "Lifetime value",
+      "recommendation": "Use a 3-year lifetime value for each key account PE house when deciding how much partner time to invest.",
+      "agreed": "Yes"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Build the retainer margin tracker in the monthly partner dashboard",
+      "owner": "Luke Badiali"
+    },
+    {
+      "action": "Test the tiered pricing with two key account PE houses",
+      "owner": "Joanna Pike"
+    }
+  ],
+  "nextFocus": "Review progress against the 8 retainer target at the first quarterly check-in.",
+  "nextPreparation": "Oliver to report retainer count, margin and day-75 conversations held.",
+  "tests": [
+    {
+      "question": "What revenue mix target did we agree for retainers?",
+      "expectedFacts": [
+        "30% of fee income",
+        "24 months",
+        "8 active retainers"
+      ]
+    },
+    {
+      "question": "What margin floor did we set for retainers?",
+      "expectedFacts": [
+        "55% gross margin floor",
+        "3 consultant days per month"
+      ]
+    },
+    {
+      "question": "Is the tiered retainer pricing agreed?",
+      "expectedFacts": [
+        "4,500, 6,500 and 9,500 GBP",
+        "Pending"
+      ]
+    }
+  ]
+}

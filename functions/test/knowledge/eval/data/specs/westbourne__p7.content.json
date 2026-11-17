@@ -1,0 +1,78 @@
+{
+  "sessionName": "Week 7 - Fund III marketing",
+  "summary": "Planned marketing to support the raise. Agreed two annual sector outlooks, three Fund II case studies and a quarterly LP letter. Richard's speaking programme is pending and campaign measurement was put off.",
+  "discussion": [
+    {
+      "topic": "Thought leadership",
+      "keyPoints": "Richard and Natalie agreed the specialist positioning needs visible sector research behind it."
+    },
+    {
+      "topic": "Case studies",
+      "keyPoints": "Natalie proposed the domiciliary care platform, the nursery group and the specialist schools business as the strongest Fund II stories."
+    },
+    {
+      "topic": "Richard's profile",
+      "keyPoints": "Richard is willing to speak but is worried about time away from deals during the raise."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Brand and thought leadership",
+      "recommendation": "Publish two annual outlooks, one on UK healthcare services and one on UK education.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Case studies and social proof",
+      "recommendation": "Produce three Fund II case studies: the domiciliary care platform, the nursery group and the specialist schools business.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Content strategy",
+      "recommendation": "Send a quarterly LP letter combining portfolio news with one sector insight.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Founder brand",
+      "recommendation": "Richard to speak at 3 healthcare or education industry events in 2027.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Campaign measurement",
+      "recommendation": "Track data room visits and meeting requests against each marketing piece.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Brief the first healthcare services outlook",
+      "owner": "Natalie Grieve"
+    }
+  ],
+  "nextFocus": "Work on placement agents, investment consultants and co-investment.",
+  "nextPreparation": "Bring the placement agent proposals received and the list of investment consultants.",
+  "tests": [
+    {
+      "question": "Which case studies did we pick?",
+      "expectedFacts": [
+        "domiciliary care platform",
+        "nursery group",
+        "specialist schools"
+      ]
+    },
+    {
+      "question": "What outlooks are we publishing?",
+      "expectedFacts": [
+        "healthcare services",
+        "education",
+        "two annual outlooks"
+      ]
+    },
+    {
+      "question": "Is Richard's speaking plan agreed?",
+      "expectedFacts": [
+        "Pending",
+        "3 healthcare or education industry events"
+      ]
+    }
+  ]
+}

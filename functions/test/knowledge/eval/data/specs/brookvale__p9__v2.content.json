@@ -1,0 +1,103 @@
+{
+  "sessionName": "Week 21 - Keeping and growing PE relationships revisited",
+  "summary": "Luke Badiali revisited retention and expansion with Thomas Avery and Grace Lindqvist, 12 weeks after the week 9 session. The 100-day market sprint sold only once at 60k, while three sponsors asked for help preparing portfolio companies for exit. We changed two positions: key account coverage now focuses on 5 PE houses with a named director pairing, and the post-deal offer is now an exit readiness review rather than the 100-day sprint.",
+  "discussion": [
+    {
+      "topic": "What happened since week 9",
+      "keyPoints": "Grace reported one 100-day sprint sold in 12 weeks. Sponsors said their operating partners already cover the 100-day plan. Three sponsors instead asked about vendor due diligence preparation 12 to 18 months before exit."
+    },
+    {
+      "topic": "Key account coverage",
+      "keyPoints": "Thomas said spreading attention across 8 key accounts was too thin. Three of the eight are now largely using their own in-house teams. Luke proposed concentrating on the 5 most active PE houses."
+    },
+    {
+      "topic": "Debriefs and win-back",
+      "keyPoints": "The 20-minute debrief calls are working and have been held on 9 of 11 reports. One of the two quiet accounts came back after its free sector briefing."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Key accounts",
+      "recommendation": "Focus key account coverage on 5 PE houses, each with a partner and a director pairing and a monthly touchpoint. This replaces the earlier approach of naming all 8 top PE houses with a quarterly relationship review.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Upsell and cross-sell",
+      "recommendation": "Offer an exit readiness review at 75k to sponsors 12 to 18 months before a planned exit. This replaces the earlier 100-day value creation market sprint at 60k, which is withdrawn.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Customer satisfaction",
+      "recommendation": "Keep the 20-minute debrief call within two weeks of every report.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Retention and churn",
+      "recommendation": "Run the free sector briefing win-back with the remaining quiet account.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Advocacy",
+      "recommendation": "Ask satisfied deal partners for introductions to their portfolio company CEOs.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Agree partner and director pairings for the 5 key accounts",
+      "owner": "Thomas Avery"
+    },
+    {
+      "action": "Write the exit readiness review scope and a one-page offer",
+      "owner": "Grace Lindqvist"
+    }
+  ],
+  "nextFocus": "Test the exit readiness review with the three sponsors who asked about it.",
+  "nextPreparation": "Grace to bring a draft exit readiness scope and the list of portfolio companies expected to exit in 2027 and 2028.",
+  "tests": [
+    {
+      "question": "How many debrief calls have we held?",
+      "expectedFacts": [
+        "9 of 11"
+      ]
+    },
+    {
+      "question": "Is the win-back with the remaining quiet account agreed?",
+      "expectedFacts": [
+        "Pending",
+        "free sector briefing"
+      ]
+    },
+    {
+      "question": "How many 100-day sprints did we sell?",
+      "expectedFacts": [
+        "one",
+        "12 weeks"
+      ]
+    }
+  ],
+  "changeTests": [
+    {
+      "question": "What is our current approach to key accounts?",
+      "expectedFacts": [
+        "5 PE houses",
+        "partner and a director pairing",
+        "monthly touchpoint"
+      ],
+      "forbiddenFacts": [
+        "all 8 top PE houses",
+        "quarterly relationship review"
+      ]
+    },
+    {
+      "question": "What post-deal offer are we selling to sponsors now?",
+      "expectedFacts": [
+        "exit readiness review",
+        "75k"
+      ],
+      "forbiddenFacts": [
+        "100-day value creation market sprint at 60k"
+      ]
+    }
+  ]
+}

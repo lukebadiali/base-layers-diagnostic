@@ -1,0 +1,70 @@
+{
+  "sessionName": "Week 5 - Pipeline stages and conversion",
+  "summary": "George Berrington worked through the open pipeline with Chris and Leanne. Pipeline was £2.1m across 19 opportunities but stage definitions were loose and several deals had not moved in months. We agreed five stages with exit criteria and a rule for stalled deals.",
+  "discussion": [
+    {
+      "topic": "Current pipeline",
+      "keyPoints": "£2.1m across 19 opportunities, but Leanne thought only about £900k was real. Six deals had no activity for over 60 days."
+    },
+    {
+      "topic": "Conversion",
+      "keyPoints": "Proposal to win conversion is around 35%, which Chris felt was fine, but first meeting to proposal is low because partners chase every conversation."
+    },
+    {
+      "topic": "Cycle time",
+      "keyPoints": "Average cycle from first meeting to signed letter is 74 days. Post-acquisition work closes much faster, often in under 30 days."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Stages and exit criteria",
+      "recommendation": "Use five stages: Conversation, Qualified, Proposal, Verbal, Signed, with Qualified requiring the operating partner to have joined a discovery call.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Stalled deals",
+      "recommendation": "Move any deal with no client activity for 45 days to a closed-dormant status.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pipeline coverage",
+      "recommendation": "Hold 3x coverage of the next quarter's fee target in Qualified stage or later.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Velocity and cycle time",
+      "recommendation": "Set a target cycle of 45 days for post-acquisition work and track it separately.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Re-stage all 19 open opportunities against the new criteria",
+      "owner": "Leanne Morris"
+    }
+  ],
+  "nextFocus": "Set up the CRM and reporting to support the new stages.",
+  "nextPreparation": "Leanne to share the current CRM fields and the monthly report she sends Chris.",
+  "tests": [
+    {
+      "question": "What pipeline stages did we agree?",
+      "expectedFacts": [
+        "Conversation, Qualified, Proposal, Verbal, Signed"
+      ]
+    },
+    {
+      "question": "What do we do with stalled deals?",
+      "expectedFacts": [
+        "45 days",
+        "closed-dormant"
+      ]
+    },
+    {
+      "question": "Is the 3x pipeline coverage target agreed?",
+      "expectedFacts": [
+        "Pending",
+        "3x coverage"
+      ]
+    }
+  ]
+}

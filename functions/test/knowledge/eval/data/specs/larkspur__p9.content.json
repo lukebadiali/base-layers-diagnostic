@@ -1,0 +1,77 @@
+{
+  "sessionName": "Week 9 - Retention and retainer conversion",
+  "summary": "George Berrington ran a session with Joanna Pike and Oliver Grant on turning project clients into retained advisory, the core goal from Week 1. Larkspur has 14 clients from the last 18 months, of whom only one is on any ongoing arrangement. We agreed an end-of-project retainer conversation and a key accounts list of PE houses.",
+  "discussion": [
+    {
+      "topic": "Current retention",
+      "keyPoints": "Oliver's list showed 14 clients in 18 months and just one retained, a small monthly coaching arrangement. Joanna said most projects simply end with a final report."
+    },
+    {
+      "topic": "When to sell the retainer",
+      "keyPoints": "George suggested raising the retainer at day 75 of a 100-day integration, while value is visible. Oliver worried consultants would feel uncomfortable selling."
+    },
+    {
+      "topic": "Key accounts",
+      "keyPoints": "Three PE houses account for half of fee income. Joanna wants each to have a named relationship partner."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Upsell and cross-sell",
+      "recommendation": "Hold a retainer conversation at day 75 of every 100-day integration, offering the 12-month retainer option from the proposal.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Key accounts",
+      "recommendation": "Treat the 3 PE houses that make up half of fee income as key accounts, each with a named partner and a quarterly portfolio review.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Customer satisfaction",
+      "recommendation": "Run a short client survey at project close and track Net Promoter Score, targeting 50 or above.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Onboarding",
+      "recommendation": "Introduce a 30-minute kick-off with the operating partner on every new engagement to agree success measures.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Advocacy",
+      "recommendation": "Ask every satisfied client for a named reference within 60 days of project close.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Write the day-75 retainer conversation guide",
+      "owner": "George Berrington"
+    }
+  ],
+  "nextFocus": "Model the economics of the retained model against project work.",
+  "nextPreparation": "Joanna to bring last year's fee income, consultant utilisation and delivery costs.",
+  "tests": [
+    {
+      "question": "When did we agree to have the retainer conversation with project clients?",
+      "expectedFacts": [
+        "day 75",
+        "100-day integration"
+      ]
+    },
+    {
+      "question": "What did we agree about key accounts?",
+      "expectedFacts": [
+        "3 PE houses",
+        "quarterly portfolio review"
+      ]
+    },
+    {
+      "question": "Is the NPS survey at project close agreed?",
+      "expectedFacts": [
+        "Net Promoter Score",
+        "50 or above",
+        "Pending"
+      ]
+    }
+  ]
+}

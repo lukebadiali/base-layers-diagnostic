@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 6 - Deal CRM and reporting",
+  "summary": "Looked at replacing the Excel deal log with a proper deal-flow CRM and how the week 5 pipeline is reported. Agreed data ownership rules, a quarterly deployment forecast and a one-page Monday dashboard. The CRM purchase and the portfolio playbook portal were not signed off.",
+  "discussion": [
+    {
+      "topic": "Excel deal log",
+      "keyPoints": "Mark said the deal log is maintained by one analyst and is often a week out of date. Adviser contacts live in partners' inboxes."
+    },
+    {
+      "topic": "CRM options",
+      "keyPoints": "Two deal-flow CRM vendors quoted around £18k a year. Helen wants to see the Fund II budget before committing."
+    },
+    {
+      "topic": "Portfolio playbook",
+      "keyPoints": "Helen wants a shared portal for the commercial playbook. Mark felt it was too early until the playbook content is settled."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "CRM",
+      "recommendation": "Replace the Excel deal log with a dedicated deal-flow CRM at around £18k a year, choosing between the two shortlisted vendors.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Data quality",
+      "recommendation": "Every adviser and founder contact has a named owner in the deal team, and sector, EBITDA band and source are mandatory fields.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Forecasting",
+      "recommendation": "Produce a quarterly deployment forecast against the £180m Fund II.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Reporting and dashboards",
+      "recommendation": "One-page dashboard for the Monday pipeline meeting showing stage counts, the adviser versus proprietary split and deals stalled over 45 days.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Playbooks",
+      "recommendation": "Store the portfolio commercial playbook in a shared portal for the 7 portfolio companies.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Get final pricing and a demo from both CRM vendors",
+      "owner": "Mark Lyons"
+    }
+  ],
+  "nextFocus": "Plan marketing that supports proprietary origination with founders and advisers.",
+  "nextPreparation": "Bring the case study consents from week 2 and any founder-facing content already published.",
+  "tests": [
+    {
+      "question": "What did we agree about mandatory fields in the CRM?",
+      "expectedFacts": [
+        "sector, EBITDA band and source",
+        "named owner"
+      ]
+    },
+    {
+      "question": "What is the forecast reported against?",
+      "expectedFacts": [
+        "quarterly deployment forecast",
+        "£180m Fund II"
+      ]
+    },
+    {
+      "question": "Have we approved the new CRM?",
+      "expectedFacts": [
+        "Pending",
+        "£18k a year"
+      ]
+    }
+  ]
+}

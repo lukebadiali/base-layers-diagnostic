@@ -1,0 +1,75 @@
+{
+  "sessionName": "Week 9 - Expansion across PE portfolios",
+  "summary": "George Berrington looked at retention and expansion with Chris and Leanne. Meridian rarely gets a second site or a second portfolio company from the same PE house without the operating partner pushing it. We agreed account plans for the three core PE houses and a structured close-out review on every engagement.",
+  "discussion": [
+    {
+      "topic": "Portfolio mapping",
+      "keyPoints": "Leanne's map showed the three core PE houses own 41 manufacturers between them; Meridian has worked with 9."
+    },
+    {
+      "topic": "Close-out",
+      "keyPoints": "Engagements end with a final report but no formal review with the operating partner, so results are not captured as proof."
+    },
+    {
+      "topic": "Churn risk",
+      "keyPoints": "Chris noted one core PE house is raising a new fund and may change operating partners, which could cut off work."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Key accounts",
+      "recommendation": "Write an account plan for each of the three core PE houses with a named Meridian partner owner and a target of 2 new portfolio companies each per year.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Customer satisfaction",
+      "recommendation": "Hold a close-out review with the operating partner on every engagement, scoring results against the agreed EBITDA bridge.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Upsell and cross-sell",
+      "recommendation": "Offer a 6-month sustainment retainer at £8k a month after each 100-day plan.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Advocacy",
+      "recommendation": "Ask every operating partner with a close-out score of 8 or more to act as a reference.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Draft the first account plan for the largest PE house",
+      "owner": "Chris Barlow"
+    },
+    {
+      "action": "Build the close-out review template",
+      "owner": "Leanne Morris"
+    }
+  ],
+  "nextFocus": "Model the economics behind the new pricing, acquisition and retention choices.",
+  "nextPreparation": "Chris to bring utilisation, day rates and margin by engagement for the last year.",
+  "tests": [
+    {
+      "question": "What did we agree for key accounts?",
+      "expectedFacts": [
+        "account plan for each",
+        "2 new portfolio companies each"
+      ]
+    },
+    {
+      "question": "Is the sustainment retainer agreed?",
+      "expectedFacts": [
+        "Pending",
+        "£8k a month"
+      ]
+    },
+    {
+      "question": "What happens at the end of every engagement?",
+      "expectedFacts": [
+        "close-out review",
+        "EBITDA bridge"
+      ]
+    }
+  ]
+}

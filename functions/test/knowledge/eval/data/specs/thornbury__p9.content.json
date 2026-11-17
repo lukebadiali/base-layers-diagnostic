@@ -1,0 +1,71 @@
+{
+  "sessionName": "Week 9 - Retention, expansion and renewals",
+  "summary": "Luke Badiali looked at client retention with Paul and Rebecca. Most engagements end after one savings wave and the relationship goes cold. We agreed a post-project savings tracking service and key account plans for the largest clients.",
+  "discussion": [
+    {
+      "topic": "Repeat business",
+      "keyPoints": "Rebecca's list showed 38 clients in three years but only 9 bought a second project."
+    },
+    {
+      "topic": "Savings leakage",
+      "keyPoints": "Paul said clients often lose 20% to 30% of agreed savings within a year because contracts are not policed."
+    },
+    {
+      "topic": "Gain-share renewals",
+      "keyPoints": "Gain-share contracts end after 12 months; there is no renewal conversation built in."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Upsell and cross-sell",
+      "recommendation": "Offer a savings assurance retainer at £3,500 a month to track compliance after each project.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Key accounts",
+      "recommendation": "Name a client director for each of the top 6 clients with a quarterly business review.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Renewals",
+      "recommendation": "Start the renewal conversation at month 9 of every 12-month gain-share contract.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Advocacy",
+      "recommendation": "Invite satisfied CFOs to speak at the CFO breakfasts.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Write the savings assurance retainer offer",
+      "owner": "Rebecca Shaw"
+    }
+  ],
+  "nextFocus": "Model fees, margins and unit economics across gain-share and fixed fee.",
+  "nextPreparation": "Paul to bring margin by engagement and gain-share cash receipts for the last two years.",
+  "tests": [
+    {
+      "question": "What retainer did we agree to offer after projects?",
+      "expectedFacts": [
+        "savings assurance retainer",
+        "£3,500 a month"
+      ]
+    },
+    {
+      "question": "Is the month 9 renewal conversation agreed?",
+      "expectedFacts": [
+        "Pending",
+        "month 9"
+      ]
+    },
+    {
+      "question": "What did we agree for our top clients?",
+      "expectedFacts": [
+        "top 6 clients",
+        "quarterly business review"
+      ]
+    }
+  ]
+}

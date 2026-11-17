@@ -1,0 +1,74 @@
+{
+  "sessionName": "Week 6 - Deal CRM and reporting",
+  "summary": "George Berrington looked at Fernhill's systems with Daniel Reese and Amira Khan. Deals sit in a shared spreadsheet and founder relationships in individual inboxes. We agreed a lightweight CRM, data rules and a fortnightly pipeline report.",
+  "discussion": [
+    {
+      "topic": "Current tools",
+      "keyPoints": "The deal tracker is a shared spreadsheet with 900 rows, many duplicated."
+    },
+    {
+      "topic": "Budget",
+      "keyPoints": "Daniel wants to stay under £10,000 a year on software."
+    },
+    {
+      "topic": "LP reporting",
+      "keyPoints": "Amira said LPs ask about pipeline and the team rebuilds the numbers by hand each quarter."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "CRM",
+      "recommendation": "Move to a general CRM with an investor pipeline template at about £7,500 a year.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Data quality",
+      "recommendation": "De-duplicate the 900 rows and require revenue band and region on every record.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Reporting and dashboards",
+      "recommendation": "Produce a fortnightly pipeline report for the partners meeting and reuse it for quarterly LP updates.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Forecasting",
+      "recommendation": "Do not forecast deployment by quarter until the pipeline is clean.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Start a 30-day CRM trial",
+      "owner": "Amira Khan"
+    },
+    {
+      "action": "Draft the fortnightly pipeline report layout",
+      "owner": "George Berrington"
+    }
+  ],
+  "nextFocus": "Plan campaigns and content to raise Fernhill's profile with founders.",
+  "nextPreparation": "Daniel to share any content published in the last year.",
+  "tests": [
+    {
+      "question": "What will the CRM cost?",
+      "expectedFacts": [
+        "£7,500 a year"
+      ]
+    },
+    {
+      "question": "Is the fortnightly pipeline report agreed?",
+      "expectedFacts": [
+        "pending",
+        "fortnightly"
+      ]
+    },
+    {
+      "question": "What fields are required on every record?",
+      "expectedFacts": [
+        "revenue band",
+        "region"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "sessionName": "Week 22 - Commercial model and margins revisited",
+  "summary": "Luke Badiali revisited the commercial model with Chris and Leanne after a quarter of live data. Fixed fees worked on margin but two clients pushed back on paying upfront, and scope creep hit one engagement. We changed the pricing strategy to a base fee plus success fee, and replaced the 42% margin floor with a 45% floor.",
+  "discussion": [
+    {
+      "topic": "Quarter results",
+      "keyPoints": "Four new engagements were signed on fixed fees averaging 47% gross margin. One ran 20% over scope despite the change-control clause."
+    },
+    {
+      "topic": "Client pushback",
+      "keyPoints": "Two operating partners asked for part of the fee to be tied to EBITDA results. Chris now sees this as a selling point rather than a risk."
+    },
+    {
+      "topic": "Acquisition cost",
+      "keyPoints": "Actual business development cost came in at about £12k per new client, under the cap discussed in week 10."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Pricing strategy",
+      "recommendation": "Price 100-day plans as a £35k base fee per workstream plus a success fee of 10% of EBITDA uplift delivered, capped at £60k. This replaces the earlier fixed fee from £45k per workstream.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Margins",
+      "recommendation": "Raise the minimum gross margin to 45% before signing. This replaces the earlier 42% floor.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Cost of acquisition",
+      "recommendation": "Cap business development cost at £15k per new client, tracked quarterly.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Revenue scenarios",
+      "recommendation": "Model a base case of £5.2m fees next year and a downside where one core PE house drops out.",
+      "agreed": "Pending"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Redraft the engagement letter for base plus success fee",
+      "owner": "Chris Barlow"
+    },
+    {
+      "action": "Define how EBITDA uplift is measured with the operating partner",
+      "owner": "Leanne Morris"
+    }
+  ],
+  "nextFocus": "Test the base plus success fee model on the next two proposals.",
+  "nextPreparation": "Leanne to bring the two live proposals priced on the new model.",
+  "tests": [
+    {
+      "question": "Is the £15k acquisition cost cap now agreed?",
+      "expectedFacts": [
+        "Yes",
+        "£15k per new client"
+      ]
+    },
+    {
+      "question": "Is the revenue scenario modelling agreed yet?",
+      "expectedFacts": [
+        "Pending",
+        "£5.2m fees",
+        "downside"
+      ]
+    },
+    {
+      "question": "What happened with scope creep last quarter?",
+      "expectedFacts": [
+        "20% over scope"
+      ]
+    }
+  ],
+  "changeTests": [
+    {
+      "question": "What is our current pricing model for 100-day plans?",
+      "expectedFacts": [
+        "£35k base fee",
+        "10% of EBITDA uplift",
+        "capped at £60k"
+      ],
+      "forbiddenFacts": [
+        "fixed fee from £45k"
+      ]
+    },
+    {
+      "question": "What minimum gross margin do we require now?",
+      "expectedFacts": [
+        "45%"
+      ],
+      "forbiddenFacts": [
+        "42% floor",
+        "minimum gross margin of 42%"
+      ]
+    }
+  ]
+}

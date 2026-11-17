@@ -1,0 +1,77 @@
+{
+  "sessionName": "Week 9 - Portfolio support and references",
+  "summary": "Applied the customer success lens to Calder's portfolio companies and management teams. Agreed that the 100-day plan from week 2 starts within two weeks of completion and that the three largest portfolio companies get a monthly commercial review. Add-on targets are pending and a formal satisfaction survey was declined.",
+  "discussion": [
+    {
+      "topic": "After completion",
+      "keyPoints": "Helen said the first month after completion is often lost to reporting set-up. The 100-day plan promised to founders needs to start quickly to be credible."
+    },
+    {
+      "topic": "Using exited CEOs",
+      "keyPoints": "Mark said vendors trust other founders more than Calder's partners. Several exited CEOs have offered to take calls."
+    },
+    {
+      "topic": "Buy-and-build",
+      "keyPoints": "Helen wants each platform to make add-on acquisitions. Mark was cautious about committing to a number before the Fund II deployment forecast is clearer."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Onboarding",
+      "recommendation": "Start the 100-day plan within 2 weeks of completion with the named operating partner in place on day one.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Key accounts",
+      "recommendation": "Run a monthly commercial review at the 3 largest portfolio companies using the commercial playbook.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Upsell and cross-sell",
+      "recommendation": "Target at least one add-on acquisition per platform company within 24 months.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Advocacy",
+      "recommendation": "Build a panel of 5 exited CEOs willing to take reference calls from vendors.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Customer satisfaction",
+      "recommendation": "Run an annual survey of portfolio management teams.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Contact exited CEOs to confirm the 5 reference panel members",
+      "owner": "Helen Brooks"
+    }
+  ],
+  "nextFocus": "Model the economics of origination, including cost per completed deal and the proprietary programme budget.",
+  "nextPreparation": "Bring abort costs for the last three years and the proposed marketing and origination budget.",
+  "tests": [
+    {
+      "question": "When does the 100-day plan start?",
+      "expectedFacts": [
+        "within 2 weeks of completion",
+        "named operating partner"
+      ]
+    },
+    {
+      "question": "Is the add-on acquisition target agreed?",
+      "expectedFacts": [
+        "Pending",
+        "one add-on acquisition per platform",
+        "24 months"
+      ]
+    },
+    {
+      "question": "How many exited CEOs are on the reference panel?",
+      "expectedFacts": [
+        "5 exited CEOs",
+        "reference calls"
+      ]
+    }
+  ]
+}

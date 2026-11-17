@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 4 - Deal execution with founders",
+  "summary": "Covered how the deal team runs founder meetings from first contact to indicative offer. Agreed a standard first meeting guide, a five-criterion go or no-go screen and a 10 working day turnaround on indicative offers. Rolling the same coaching out to portfolio sales teams was turned down for now.",
+  "discussion": [
+    {
+      "topic": "First meetings",
+      "keyPoints": "Each partner runs first meetings differently. Mark said notes are inconsistent and IC often asks questions that should have been covered at the first meeting."
+    },
+    {
+      "topic": "Founder objections",
+      "keyPoints": "The three objections that come up most are loss of control, how much debt goes on the business, and earn-outs. Helen said founders are wary after seeing other buy-outs over-leveraged."
+    },
+    {
+      "topic": "Portfolio sales teams",
+      "keyPoints": "Helen asked whether the same coaching could be given to portfolio company sales teams. Mark wanted to prove the approach on Calder's own deal team first."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Discovery",
+      "recommendation": "Use a standard 12-question first meeting guide covering succession, management depth, customer concentration and growth plans.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Qualification",
+      "recommendation": "Score every opportunity at first meeting against five criteria. Anything scoring below 3 does not go to IC.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Objection handling",
+      "recommendation": "Prepare written answers to the top three founder objections and state that leverage will not exceed 2.5x EBITDA.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Proposals and procurement",
+      "recommendation": "Issue an indicative offer letter within 10 working days of the management meeting.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Enablement and coaching",
+      "recommendation": "Run a monthly sales clinic led by Helen for the sales leads of all 7 portfolio companies.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Write the 12-question first meeting guide and the five-criterion scoring sheet",
+      "owner": "Mark Lyons"
+    }
+  ],
+  "nextFocus": "Define pipeline stages and exit criteria using the new scoring screen.",
+  "nextPreparation": "Bring the current deal log with dates of first meeting, offer and exclusivity for the last two years.",
+  "tests": [
+    {
+      "question": "What score does a deal need to go to IC?",
+      "expectedFacts": [
+        "five criteria",
+        "below 3"
+      ]
+    },
+    {
+      "question": "How quickly should we issue indicative offer letters?",
+      "expectedFacts": [
+        "10 working days",
+        "management meeting"
+      ]
+    },
+    {
+      "question": "Did we agree the monthly sales clinic for portfolio companies?",
+      "expectedFacts": [
+        "No",
+        "7 portfolio companies"
+      ]
+    }
+  ]
+}

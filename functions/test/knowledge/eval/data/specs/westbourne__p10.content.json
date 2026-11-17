@@ -1,0 +1,77 @@
+{
+  "sessionName": "Week 10 - Fundraising economics",
+  "summary": "Closing session on the economics of Fund III. Agreed the fee terms, the fundraising budget and the management company break-even point. The three fund size scenarios depend on the hard cap decision from week 1, and a minimum raise condition on the placement agent was rejected.",
+  "discussion": [
+    {
+      "topic": "Fees",
+      "keyPoints": "Richard wants to keep fee terms in line with Fund II rather than discount to win LPs."
+    },
+    {
+      "topic": "Raise budget",
+      "keyPoints": "Natalie estimated total raise costs at around £2.4m including placement fees, legal and travel."
+    },
+    {
+      "topic": "Fund size",
+      "keyPoints": "Partners have not yet signed off the £550m hard cap. Natalie wants plans for a smaller fund in case the raise is slow."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Pricing strategy",
+      "recommendation": "Keep a 1.75% management fee on commitments in the investment period, 1.5% on invested capital afterwards, and 20% carry over an 8% hurdle.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Cost of acquisition",
+      "recommendation": "Cap total fundraising costs at £2.4m, around 0.5% of the target fund.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Margins",
+      "recommendation": "Plan the management company to break even at a £380m fund size.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Revenue scenarios",
+      "recommendation": "Plan on three fund sizes: low £380m, base £450m and high £550m.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Sales and marketing ROI",
+      "recommendation": "Only keep the placement agent if they commit to raising at least £60m.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Get partner sign-off on the hard cap and the three scenarios",
+      "owner": "Richard Hale"
+    }
+  ],
+  "nextFocus": "Review progress against soft circles and the June 2027 first close at the quarterly check-in.",
+  "nextPreparation": "Bring the monthly fundraising dashboard and the latest weighted forecast.",
+  "tests": [
+    {
+      "question": "What fee terms did we agree for Fund III?",
+      "expectedFacts": [
+        "1.75% management fee",
+        "20% carry",
+        "8% hurdle"
+      ]
+    },
+    {
+      "question": "At what fund size does the management company break even?",
+      "expectedFacts": [
+        "£380m fund size",
+        "break even"
+      ]
+    },
+    {
+      "question": "Did we agree a minimum raise for the placement agent?",
+      "expectedFacts": [
+        "No",
+        "at least £60m"
+      ]
+    }
+  ]
+}

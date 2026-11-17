@@ -1,0 +1,80 @@
+{
+  "sessionName": "Week 8 - Corporate finance advisers and referrals",
+  "summary": "George Berrington reviewed partnerships with Thomas Avery and Grace Lindqvist. Brookvale works alongside financial and legal due diligence providers on most deals but has no structured relationships with them. We agreed to prioritise sell-side corporate finance advisers for VDD and to set up a referral arrangement with one financial due diligence firm.",
+  "discussion": [
+    {
+      "topic": "Who sits around the deal",
+      "keyPoints": "Thomas listed 12 advisers Brookvale regularly works alongside, including FDD and legal teams. Grace said FDD partners often get asked who to use for CDD."
+    },
+    {
+      "topic": "Sell-side advisers",
+      "keyPoints": "Building on week 3, Grace confirmed only two corporate finance advisers currently recommend Brookvale for VDD."
+    },
+    {
+      "topic": "Conflicts",
+      "keyPoints": "Thomas raised concern that a formal tie-up with an FDD firm could look like a conflict to some sponsors. For that reason a joint CDD and FDD package was ruled out."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Partner strategy",
+      "recommendation": "Prioritise sell-side corporate finance advisers as the main partner group, growing VDD recommenders from 2 to 8 in 12 months.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Referral networks",
+      "recommendation": "Agree an informal mutual referral arrangement with one mid-market FDD firm, with no fees exchanged.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Alliances and joint ventures",
+      "recommendation": "Offer a joint CDD and FDD package to sponsors.",
+      "agreed": "No"
+    },
+    {
+      "area": "Partner enablement",
+      "recommendation": "Give each corporate finance adviser a one-page sector capability sheet and a 48-hour quote promise for VDD.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Industry presence",
+      "recommendation": "Attend the two main mid-market private equity conferences each year with Thomas and one director.",
+      "agreed": "Yes"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Approach the preferred FDD firm about a referral arrangement",
+      "owner": "Thomas Avery"
+    },
+    {
+      "action": "Produce the one-page sector capability sheets",
+      "owner": "Grace Lindqvist"
+    }
+  ],
+  "nextFocus": "Look at retention and expansion with the PE houses Brookvale already serves.",
+  "nextPreparation": "Grace to list all PE clients from the last three years with fees and number of mandates.",
+  "tests": [
+    {
+      "question": "How many VDD recommenders are we aiming for?",
+      "expectedFacts": [
+        "2 to 8",
+        "12 months"
+      ]
+    },
+    {
+      "question": "Is the referral arrangement with the FDD firm agreed?",
+      "expectedFacts": [
+        "Pending",
+        "no fees exchanged"
+      ]
+    },
+    {
+      "question": "Did we agree to offer a joint CDD and FDD package?",
+      "expectedFacts": [
+        "ruled out",
+        "conflict"
+      ]
+    }
+  ]
+}

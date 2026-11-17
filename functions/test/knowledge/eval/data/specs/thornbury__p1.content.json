@@ -1,0 +1,72 @@
+{
+  "sessionName": "Week 1 - ICP and market focus",
+  "summary": "Luke Badiali ran the first session with Paul Ingram and Rebecca Shaw on who Thornbury should target. The firm sells to too many sectors with a mix of gain-share and fixed fees. We agreed to focus on PE portfolio companies with £50m to £300m revenue and third-party spend above £20m.",
+  "discussion": [
+    {
+      "topic": "Client mix",
+      "keyPoints": "Rebecca said 22 consultants are spread across 14 sectors. Paul noted PE portfolio companies made up 35% of fees but most of the repeat work."
+    },
+    {
+      "topic": "Fee model",
+      "keyPoints": "Gain-share deals have strong margins but long payment tails; fixed-fee work is predictable but often discounted. Paul is attached to gain-share as the firm's signature."
+    },
+    {
+      "topic": "Competition",
+      "keyPoints": "Main competitors are two national procurement consultancies and freelance interim category managers. Thornbury wins on speed of savings identification."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Ideal Customer Profile",
+      "recommendation": "Target PE portfolio companies with £50m to £300m revenue and third-party spend over £20m, with the CFO as the buyer.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Positioning and differentiation",
+      "recommendation": "Position Thornbury as the firm that finds bankable savings in 12 weeks, ahead of the next lender covenant test.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Market segmentation",
+      "recommendation": "Drop low-margin public sector bids and narrow to 4 sectors: food manufacturing, logistics, business services and healthcare services.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Commercial strategy",
+      "recommendation": "Win 8 new PE portfolio clients in the next 12 months through PE operating partners rather than direct to CFOs.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Pull fees and margin by sector for the last three years",
+      "owner": "Rebecca Shaw"
+    }
+  ],
+  "nextFocus": "Build the value proposition and narrative for PE-backed CFOs.",
+  "nextPreparation": "Paul to bring three savings case examples with verified figures.",
+  "tests": [
+    {
+      "question": "Who did we agree is our ideal customer?",
+      "expectedFacts": [
+        "PE portfolio companies",
+        "£50m to £300m revenue",
+        "spend over £20m"
+      ]
+    },
+    {
+      "question": "Is narrowing to four sectors agreed?",
+      "expectedFacts": [
+        "Pending",
+        "food manufacturing, logistics"
+      ]
+    },
+    {
+      "question": "What positioning did we agree?",
+      "expectedFacts": [
+        "bankable savings in 12 weeks",
+        "lender covenant test"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "sessionName": "Week 7 - Founder campaigns and content",
+  "summary": "Luke Badiali ran the marketing session with Daniel Reese and Amira Khan. Fernhill is little known outside Manchester. We agreed a content plan led by Daniel and a founder benchmarking report.",
+  "discussion": [
+    {
+      "topic": "Profile",
+      "keyPoints": "Amira found Fernhill appears in few founder searches; larger funds dominate podcasts and newsletters."
+    },
+    {
+      "topic": "Founder brand",
+      "keyPoints": "Daniel is willing to be visible and already speaks at local events."
+    },
+    {
+      "topic": "Data assets",
+      "keyPoints": "The portfolio holds useful data on SaaS metrics for £3m to £15m revenue companies."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Founder brand",
+      "recommendation": "Daniel to post weekly on LinkedIn about scaling Northern software businesses.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Content strategy",
+      "recommendation": "Publish an annual Northern SaaS Benchmark report, first edition in September.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Case studies and social proof",
+      "recommendation": "Produce three short written case studies from current portfolio founders.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Brand and thought leadership",
+      "recommendation": "Launch a Fernhill podcast.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Define the benchmark survey questions",
+      "owner": "Amira Khan"
+    },
+    {
+      "action": "Draft Daniel's first four LinkedIn posts",
+      "owner": "Luke Badiali"
+    }
+  ],
+  "nextFocus": "Review advisers, accountants and other partners as sources of deals.",
+  "nextPreparation": "Amira to list the top 15 advisers by deals shown.",
+  "tests": [
+    {
+      "question": "When is the first benchmark report?",
+      "expectedFacts": [
+        "Northern SaaS Benchmark",
+        "September"
+      ]
+    },
+    {
+      "question": "Did we agree to launch a podcast?",
+      "expectedFacts": [
+        "not agreed",
+        "podcast"
+      ]
+    },
+    {
+      "question": "How often is Daniel posting on LinkedIn?",
+      "expectedFacts": [
+        "weekly"
+      ]
+    }
+  ]
+}

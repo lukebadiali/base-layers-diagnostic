@@ -1,0 +1,70 @@
+{
+  "sessionName": "Week 7 - Campaigns and thought leadership",
+  "summary": "Luke Badiali reviewed marketing with Paul and Rebecca. Thornbury produces little content and has no campaign rhythm. We agreed a supplier inflation campaign aimed at PE-backed CFOs and a case study programme.",
+  "discussion": [
+    {
+      "topic": "Content",
+      "keyPoints": "Five articles in the last year, none aimed at CFOs. Paul has strong views on supplier inflation that he shares in meetings but never publishes."
+    },
+    {
+      "topic": "Case studies",
+      "keyPoints": "Only the logistics client has signed off figures so far. Rebecca thinks two more clients may agree."
+    },
+    {
+      "topic": "Measurement",
+      "keyPoints": "Nobody tracks where enquiries come from beyond 'Paul knows them'."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Campaign planning",
+      "recommendation": "Run a 'Supplier inflation index' campaign each quarter, sent to 300 PE portfolio CFOs.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Case studies and social proof",
+      "recommendation": "Publish 3 finance-verified case studies by the end of the quarter.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Founder brand",
+      "recommendation": "Paul writes one LinkedIn article a month on supplier inflation and covenant pressure.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Campaign measurement",
+      "recommendation": "Track every new opportunity's source in Pipedrive and report campaign-sourced pipeline monthly.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Draft the first Supplier inflation index",
+      "owner": "Paul Ingram"
+    }
+  ],
+  "nextFocus": "Partnerships with PE houses and adjacent advisers.",
+  "nextPreparation": "Paul to list advisers who have introduced work in the past three years.",
+  "tests": [
+    {
+      "question": "What campaign did we agree?",
+      "expectedFacts": [
+        "Supplier inflation index",
+        "300 PE portfolio CFOs"
+      ]
+    },
+    {
+      "question": "Are the case studies agreed?",
+      "expectedFacts": [
+        "Pending",
+        "3 finance-verified case studies"
+      ]
+    },
+    {
+      "question": "How often will Paul publish on LinkedIn?",
+      "expectedFacts": [
+        "one LinkedIn article a month"
+      ]
+    }
+  ]
+}

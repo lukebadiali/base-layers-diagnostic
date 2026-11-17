@@ -1,0 +1,75 @@
+{
+  "sessionName": "Week 6 - CRM and reporting",
+  "summary": "Luke Badiali reviewed Meridian's CRM and reporting with Chris and Leanne. The CRM is used mainly as a contact list and forecasting is done in a spreadsheet. We agreed to configure the CRM around the five stages from week 5 and to run a weekly forecast.",
+  "discussion": [
+    {
+      "topic": "CRM usage",
+      "keyPoints": "Meridian uses HubSpot Starter. Only Leanne updates it; partners keep notes in email. Chris admitted he has not logged in for months."
+    },
+    {
+      "topic": "Data quality",
+      "keyPoints": "Around 40% of contacts have no company or PE owner recorded, which makes the PE relationship mapping impossible."
+    },
+    {
+      "topic": "Forecasting",
+      "keyPoints": "Forecast is a monthly spreadsheet built by Leanne from conversations with partners, with no probability weighting."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "CRM",
+      "recommendation": "Upgrade to HubSpot Sales Professional for 6 seats and configure the five agreed stages.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Data quality",
+      "recommendation": "Add a mandatory PE owner field on every company record and clean the existing 40% gap by end of next month.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Forecasting",
+      "recommendation": "Run a weekly 30-minute forecast call on Mondays using stage-weighted probabilities.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Reporting and dashboards",
+      "recommendation": "Build one dashboard showing pipeline by PE house, so concentration risk is visible.",
+      "agreed": "Yes"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Get a quote for HubSpot Sales Professional for 6 seats",
+      "owner": "Leanne Morris"
+    },
+    {
+      "action": "Chair the first Monday forecast call",
+      "owner": "Chris Barlow"
+    }
+  ],
+  "nextFocus": "Align marketing campaigns with the operating partner proposition.",
+  "nextPreparation": "Leanne to collect all marketing content produced in the last year.",
+  "tests": [
+    {
+      "question": "Is the HubSpot upgrade agreed?",
+      "expectedFacts": [
+        "Pending",
+        "HubSpot Sales Professional",
+        "6 seats"
+      ]
+    },
+    {
+      "question": "What did we agree about forecasting?",
+      "expectedFacts": [
+        "weekly 30-minute forecast call",
+        "Mondays"
+      ]
+    },
+    {
+      "question": "What field did we agree to make mandatory?",
+      "expectedFacts": [
+        "PE owner field"
+      ]
+    }
+  ]
+}

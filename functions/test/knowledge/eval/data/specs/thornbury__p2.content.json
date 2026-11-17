@@ -1,0 +1,71 @@
+{
+  "sessionName": "Week 2 - Value proposition for PE-backed CFOs",
+  "summary": "George Berrington worked with Paul and Rebecca on the value proposition for CFOs of PE portfolio companies, building on the week 1 ICP. We agreed a message centred on cash and EBITDA ahead of covenant tests, backed by audited savings. Point of view content still needs agreement.",
+  "discussion": [
+    {
+      "topic": "Buyer priorities",
+      "keyPoints": "Rebecca said CFOs care most about savings that land in the P&L this financial year and can be shown to the board and lenders."
+    },
+    {
+      "topic": "Proof",
+      "keyPoints": "Paul had three examples, including a logistics client with £2.4m annualised savings on £31m spend. Rebecca warned that unverified figures have been challenged before."
+    },
+    {
+      "topic": "Messaging",
+      "keyPoints": "Current website talks about 'strategic sourcing excellence', which Paul agreed means nothing to a CFO."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Value proposition",
+      "recommendation": "Lead with: we deliver 6% to 9% savings on addressable spend, signed off by your finance team, within 12 weeks.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Proof and outcomes",
+      "recommendation": "Only use savings figures verified by the client finance team, starting with the logistics client at £2.4m on £31m spend.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Messaging architecture",
+      "recommendation": "Rewrite the website and pitch deck around three messages: cash, covenant headroom, audited savings.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Differentiation and point of view",
+      "recommendation": "Publish a point of view arguing that savings claimed without finance sign-off are worthless.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Get written sign-off from the logistics client to use their figures",
+      "owner": "Rebecca Shaw"
+    }
+  ],
+  "nextFocus": "Plan how to generate demand from PE operating partners and CFOs.",
+  "nextPreparation": "Rebecca to list all lead sources from the last 12 months.",
+  "tests": [
+    {
+      "question": "What savings range do we promise in our value proposition?",
+      "expectedFacts": [
+        "6% to 9%",
+        "within 12 weeks"
+      ]
+    },
+    {
+      "question": "Which case study figures can we use?",
+      "expectedFacts": [
+        "£2.4m",
+        "£31m spend",
+        "verified by the client finance team"
+      ]
+    },
+    {
+      "question": "Is the point of view piece on unverified savings agreed?",
+      "expectedFacts": [
+        "No"
+      ]
+    }
+  ]
+}

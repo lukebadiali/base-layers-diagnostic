@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 10 - Service line economics",
+  "summary": "George Berrington closed the programme with Simon Clarke and Priya Natarajan by modelling the economics of each service line. DD runs at lower margin than 100-day plans because of discounting and peak-load contractors. We agreed a margin target for DD, a revenue scenario to reach the 50% post-deal mix from Week 1, and left a DD price rise pending.",
+  "discussion": [
+    {
+      "topic": "Margins by service",
+      "keyPoints": "Simon's figures showed DD at 38% gross margin and 100-day plans at 52%. Contractors brought in for DD peaks cost about 1,100 GBP a day."
+    },
+    {
+      "topic": "Utilisation",
+      "keyPoints": "Average utilisation across 28 consultants was 68%, with DD leads swinging between 40% and over 100%."
+    },
+    {
+      "topic": "Pricing",
+      "keyPoints": "Priya argued DD is underpriced for the risk it carries. Simon was nervous about losing panel places."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Margins",
+      "recommendation": "Lift DD gross margin from 38% to 45% by reducing peak contractor days by half.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pricing strategy",
+      "recommendation": "Raise the standard DD fee from 35,000 GBP to 40,000 GBP for deals above 100m GBP enterprise value.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Revenue scenarios",
+      "recommendation": "Model the base case on 18 delivery assurance retainers and 25 100-day plans next year to reach a 50% post-deal mix.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Lifetime value",
+      "recommendation": "Measure lifetime value at fund level over 3 years, not per DD engagement.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Sales and marketing ROI",
+      "recommendation": "Allocate a 60,000 GBP annual marketing budget tied to the Tech Risk Index and conference sponsorship.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Build the service line margin model into the monthly board pack",
+      "owner": "Simon Clarke"
+    }
+  ],
+  "nextFocus": "Review progress on DD margin and post-deal mix at the first quarterly check-in.",
+  "nextPreparation": "Priya to report DD-to-100-day plan conversion and retainer count.",
+  "tests": [
+    {
+      "question": "What DD margin target did we agree?",
+      "expectedFacts": [
+        "38% to 45%",
+        "peak contractor days"
+      ]
+    },
+    {
+      "question": "Is the DD fee increase agreed?",
+      "expectedFacts": [
+        "35,000 GBP to 40,000 GBP",
+        "Pending"
+      ]
+    },
+    {
+      "question": "What revenue scenario did we agree for next year?",
+      "expectedFacts": [
+        "18 delivery assurance retainers",
+        "25 100-day plans"
+      ]
+    }
+  ]
+}

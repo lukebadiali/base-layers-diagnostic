@@ -1,0 +1,75 @@
+{
+  "sessionName": "Week 2 - Value proposition for operating partners",
+  "summary": "Luke Badiali worked with Chris and Leanne on the value proposition built on the week 1 ICP of PE-backed manufacturers. We drafted a narrative around protecting the EBITDA bridge in the value-creation plan. The cost of inaction story and proof points need more work before they go into pitch materials.",
+  "discussion": [
+    {
+      "topic": "What operating partners care about",
+      "keyPoints": "Chris said operating partners judge them on EBITDA delivered against the investment case, not on lean maturity scores. Leanne agreed most pitch decks still lead with methodology."
+    },
+    {
+      "topic": "Proof available",
+      "keyPoints": "There are good numbers from a recent packaging client (OEE up 14 points in 6 months) but client confidentiality limits naming. Chris is nervous about using any portfolio company name without consent."
+    },
+    {
+      "topic": "Narrative structure",
+      "keyPoints": "Agreed the story should open with the gap between the investment case and actual plant performance, then show how Meridian closes it within the hold period."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Value proposition",
+      "recommendation": "Lead with: we deliver the operational EBITDA in your value-creation plan, typically £1m to £3m within 12 months per site.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Commercial narrative",
+      "recommendation": "Use a three-part story: investment case gap, 100-day mobilisation, measured EBITDA bridge, in every first meeting deck.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Proof and outcomes",
+      "recommendation": "Build 4 anonymised proof cards, starting with the packaging client OEE gain of 14 points.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Cost of inaction",
+      "recommendation": "Quantify the cost of a 6-month delay in operational improvements as lost EBITDA multiplied by the exit multiple.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Draft the four anonymised proof cards",
+      "owner": "Leanne Morris"
+    },
+    {
+      "action": "Ask the packaging client for consent to quote the OEE result",
+      "owner": "Chris Barlow"
+    }
+  ],
+  "nextFocus": "Work out how Meridian generates demand beyond the three existing PE houses.",
+  "nextPreparation": "Leanne to bring a list of all inbound enquiries and referral sources from the last 12 months.",
+  "tests": [
+    {
+      "question": "What value proposition did we agree to lead with?",
+      "expectedFacts": [
+        "operational EBITDA",
+        "£1m to £3m within 12 months"
+      ]
+    },
+    {
+      "question": "Did we agree to use the cost of inaction calculation?",
+      "expectedFacts": [
+        "No",
+        "exit multiple"
+      ]
+    },
+    {
+      "question": "What was the plan for proof points?",
+      "expectedFacts": [
+        "4 anonymised proof cards",
+        "OEE gain of 14 points"
+      ]
+    }
+  ]
+}

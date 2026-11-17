@@ -1,0 +1,74 @@
+{
+  "sessionName": "Week 5 - Pipeline stages and stalled deals",
+  "summary": "Luke Badiali worked through the pipeline with Paul and Rebecca. There were 21 open opportunities worth £1.6m in expected fees, many stuck at proposal. We agreed stage exit criteria tied to CFO sponsorship and a rule for stalled deals.",
+  "discussion": [
+    {
+      "topic": "Pipeline review",
+      "keyPoints": "£1.6m across 21 opportunities, with 11 at proposal stage. Rebecca said several had been there over 90 days."
+    },
+    {
+      "topic": "Conversion",
+      "keyPoints": "Proposal to win is about 30%. Paul thinks gain-share deals convert better once the CFO is involved."
+    },
+    {
+      "topic": "Cycle time",
+      "keyPoints": "Average cycle is 96 days, longer for gain-share because of contract negotiation over savings baselines."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Stages and exit criteria",
+      "recommendation": "Use stages Lead, Snapshot, Scoped, Proposal, Contract, with Scoped requiring CFO sponsorship confirmed.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Stalled deals",
+      "recommendation": "Any opportunity at proposal for 60 days gets a closing call from Paul, then moves to lost if no response in 14 days.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Conversion rates",
+      "recommendation": "Set a target of 40% proposal to win within two quarters.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Velocity and cycle time",
+      "recommendation": "Agree savings baseline method in the proposal to cut the gain-share cycle to 70 days.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Re-stage all 21 opportunities",
+      "owner": "Rebecca Shaw"
+    },
+    {
+      "action": "Make closing calls on the 11 proposal-stage deals",
+      "owner": "Paul Ingram"
+    }
+  ],
+  "nextFocus": "Set up CRM and forecasting to support the new stages.",
+  "nextPreparation": "Rebecca to share how the pipeline is tracked today.",
+  "tests": [
+    {
+      "question": "What pipeline stages did we agree?",
+      "expectedFacts": [
+        "Lead, Snapshot, Scoped, Proposal, Contract"
+      ]
+    },
+    {
+      "question": "What happens to deals stuck at proposal?",
+      "expectedFacts": [
+        "60 days",
+        "closing call from Paul"
+      ]
+    },
+    {
+      "question": "Is the 40% conversion target agreed?",
+      "expectedFacts": [
+        "Pending",
+        "40% proposal to win"
+      ]
+    }
+  ]
+}

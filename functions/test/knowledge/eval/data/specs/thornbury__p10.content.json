@@ -1,0 +1,70 @@
+{
+  "sessionName": "Week 10 - Fee model and unit economics",
+  "summary": "George Berrington modelled the economics with Paul and Rebecca. Gain-share earns higher margins but cash arrives up to 18 months after work starts. We agreed a margin target per fee type and to model three revenue scenarios.",
+  "discussion": [
+    {
+      "topic": "Margins",
+      "keyPoints": "Gain-share engagements averaged 52% margin against 34% for fixed fee. Rebecca pointed out the gain-share figure ignores the cost of waiting for cash."
+    },
+    {
+      "topic": "Cash",
+      "keyPoints": "Gain-share receivables stood at £780k. Paul accepted that this limits hiring."
+    },
+    {
+      "topic": "Acquisition cost",
+      "keyPoints": "Estimated cost to acquire a new client is £18k, mostly Paul's time."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Margins",
+      "recommendation": "Set minimum margins of 40% on fixed-fee and 50% on gain-share engagements.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pricing strategy",
+      "recommendation": "Introduce a hybrid fee with a £20k upfront diagnostic credited against gain-share.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Revenue scenarios",
+      "recommendation": "Model three scenarios for next year: £3.4m, £4.0m and £4.6m fees.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Cost of acquisition",
+      "recommendation": "Reduce cost to acquire to £12k by moving outbound to Rebecca and the senior team.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Build the three-scenario revenue model",
+      "owner": "Rebecca Shaw"
+    }
+  ],
+  "nextFocus": "Review the commercial model after one quarter of data.",
+  "nextPreparation": "Rebecca to track margin by fee type for every new engagement.",
+  "tests": [
+    {
+      "question": "What minimum margins did we agree?",
+      "expectedFacts": [
+        "40% on fixed-fee",
+        "50% on gain-share"
+      ]
+    },
+    {
+      "question": "Is the hybrid fee with an upfront diagnostic agreed?",
+      "expectedFacts": [
+        "Pending",
+        "£20k upfront diagnostic"
+      ]
+    },
+    {
+      "question": "What revenue scenarios are we modelling?",
+      "expectedFacts": [
+        "£3.4m, £4.0m and £4.6m"
+      ]
+    }
+  ]
+}

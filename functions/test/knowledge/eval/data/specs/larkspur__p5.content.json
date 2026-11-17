@@ -1,0 +1,73 @@
+{
+  "sessionName": "Week 5 - Pipeline stages and conversion",
+  "summary": "George Berrington worked through Larkspur's open opportunities with Joanna Pike and Oliver Grant. The spreadsheet tracker had 31 rows with no stage definitions and several deals untouched for months. We agreed five stages with exit criteria tied to the operating partner discovery from Week 4, and a rule for stalled deals.",
+  "discussion": [
+    {
+      "topic": "State of the pipeline",
+      "keyPoints": "Of 31 open rows, Oliver judged only 11 to be live. Several were corporate assessment enquiries from last year that nobody had closed off."
+    },
+    {
+      "topic": "Conversion",
+      "keyPoints": "Joanna estimated a 40% win rate on proposals, but Larkspur has no data on how many conversations become proposals. George noted this hides where deals actually drop out."
+    },
+    {
+      "topic": "Cycle time",
+      "keyPoints": "Integration work moves fast around completion dates, while retainers will likely take longer. Joanna was concerned about forecasting retainers at all."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Stages and exit criteria",
+      "recommendation": "Adopt five stages: Conversation, Discovery held, Proposal sent, Verbal yes, Signed, with Discovery held requiring the operating partner present.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Stalled deals",
+      "recommendation": "Close any opportunity with no client contact for 45 days and move it to a nurture list.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pipeline coverage",
+      "recommendation": "Hold 3 times quarterly fee target in qualified pipeline, around 540k GBP against a 180k GBP quarter.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Conversion rates",
+      "recommendation": "Track conversion stage by stage from next month, aiming for 50% Discovery to Proposal.",
+      "agreed": "Yes"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Clean the tracker down to the 11 live opportunities and re-stage them",
+      "owner": "Oliver Grant"
+    }
+  ],
+  "nextFocus": "Choose a CRM and decide which metrics and dashboards the partners will review.",
+  "nextPreparation": "Joanna to confirm budget for a CRM licence for 15 users.",
+  "tests": [
+    {
+      "question": "What pipeline stages did we agree?",
+      "expectedFacts": [
+        "five stages",
+        "Discovery held",
+        "Verbal yes"
+      ]
+    },
+    {
+      "question": "What is our rule for stalled deals?",
+      "expectedFacts": [
+        "45 days",
+        "nurture list"
+      ]
+    },
+    {
+      "question": "Is the pipeline coverage target agreed?",
+      "expectedFacts": [
+        "3 times quarterly fee target",
+        "540k GBP",
+        "Pending"
+      ]
+    }
+  ]
+}

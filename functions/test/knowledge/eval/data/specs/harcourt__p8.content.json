@@ -1,0 +1,77 @@
+{
+  "sessionName": "Week 8 - Partnerships with deal advisers",
+  "summary": "George Berrington met Simon Clarke and Priya Natarajan on partnerships and channels. Harcourt often sits alongside the same financial and commercial DD providers but has no formal relationships. We agreed a small set of referral partners and a pilot joint offer with a commercial DD firm.",
+  "discussion": [
+    {
+      "topic": "Existing adjacencies",
+      "keyPoints": "Priya listed two financial DD teams and one commercial DD boutique that appear on the same deals. Introductions happen informally."
+    },
+    {
+      "topic": "Joint offer",
+      "keyPoints": "George suggested bundling commercial and tech DD for software deals, where the two overlap heavily. Simon was keen but worried about sharing margin."
+    },
+    {
+      "topic": "Implementation partners",
+      "keyPoints": "Simon noted portfolio companies often need a systems integrator after the 100-day plan, which could be a referral source back to Harcourt."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Partner strategy",
+      "recommendation": "Formalise 3 referral partners: two financial DD teams and one commercial DD boutique, each with a named Harcourt partner.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Alliances and joint ventures",
+      "recommendation": "Pilot a combined commercial and tech DD offer for software deals with the commercial DD boutique on 3 deals.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Channel partners",
+      "recommendation": "Build a preferred list of 4 systems integrators for 100-day plan delivery, with mutual referral terms.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Referral networks",
+      "recommendation": "Pay a 5% introducer fee to systems integrators.",
+      "agreed": "No"
+    },
+    {
+      "area": "Industry presence",
+      "recommendation": "Sponsor one mid-market private equity conference a year instead of general IT events.",
+      "agreed": "Yes"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Propose the 3-deal pilot to the commercial DD boutique",
+      "owner": "Priya Natarajan"
+    }
+  ],
+  "nextFocus": "Retention and expansion across portfolio companies and funds.",
+  "nextPreparation": "Simon to list every portfolio company Harcourt has served in the last two years.",
+  "tests": [
+    {
+      "question": "Which referral partners did we agree to formalise?",
+      "expectedFacts": [
+        "3 referral partners",
+        "commercial DD boutique"
+      ]
+    },
+    {
+      "question": "Is the combined commercial and tech DD pilot agreed?",
+      "expectedFacts": [
+        "software deals",
+        "3 deals",
+        "Pending"
+      ]
+    },
+    {
+      "question": "Did we agree to pay an introducer fee to systems integrators?",
+      "expectedFacts": [
+        "5% introducer fee",
+        "No"
+      ]
+    }
+  ]
+}

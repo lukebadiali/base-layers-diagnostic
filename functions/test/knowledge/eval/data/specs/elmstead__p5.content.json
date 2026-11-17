@@ -1,0 +1,77 @@
+{
+  "sessionName": "Week 5 - Pipeline stages for tender-led work",
+  "summary": "George Berrington worked through pipeline architecture with Andrew Fenwick and Kate Rowley. The current pipeline has three stages and mixes tender alerts with genuine opportunities, which makes coverage look healthier than it is. We agreed a six-stage pipeline with a dedicated pre-tender shaping stage and clear exit criteria.",
+  "discussion": [
+    {
+      "topic": "Pipeline export",
+      "keyPoints": "Kate's export showed 64 open opportunities worth 7.8m, but 38 of them were tender alerts with no contact. Andrew was surprised the real pipeline was closer to 3.1m."
+    },
+    {
+      "topic": "Stage design",
+      "keyPoints": "George proposed separating pre-tender shaping from formal bid stages so the work from week 3 is visible. Kate wanted to keep stage names familiar to the bid team."
+    },
+    {
+      "topic": "Stalled work",
+      "keyPoints": "Several opportunities had sat in 'proposal' for more than 120 days because the buyer delayed the procurement. Andrew asked whether these should stay in the forecast."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Stages and exit criteria",
+      "recommendation": "Adopt six stages: Identified, Pre-tender shaping, Tender live, Submitted, Preferred bidder, Won, each with a written exit criterion.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pipeline coverage",
+      "recommendation": "Target 3x coverage against the next two quarters' revenue gap, counting only opportunities at Pre-tender shaping or later.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Stalled deals",
+      "recommendation": "Move any opportunity with no buyer contact for 90 days to a dormant list outside the forecast.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Conversion rates",
+      "recommendation": "Measure conversion from Pre-tender shaping to Won separately from cold tenders, aiming for 40 percent versus the current 22 percent.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Velocity and cycle time",
+      "recommendation": "Report average days from Identified to Won by segment, starting with NHS integrated care boards.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Rebuild the pipeline in the six new stages and remove the 38 tender alerts",
+      "owner": "Kate Rowley"
+    }
+  ],
+  "nextFocus": "Get the CRM and reporting to support the new stages and forecasting.",
+  "nextPreparation": "Andrew to confirm which CRM licences Elmstead holds and who maintains them.",
+  "tests": [
+    {
+      "question": "What pipeline stages did we agree?",
+      "expectedFacts": [
+        "Pre-tender shaping",
+        "Preferred bidder",
+        "six stages"
+      ]
+    },
+    {
+      "question": "Is the 90-day dormant list rule agreed?",
+      "expectedFacts": [
+        "Pending",
+        "90 days"
+      ]
+    },
+    {
+      "question": "What was the real pipeline value once tender alerts were removed?",
+      "expectedFacts": [
+        "3.1m",
+        "38 of them were tender alerts"
+      ]
+    }
+  ]
+}

@@ -2,10 +2,12 @@
 // Capture Form content, plus later "v2" forms for five client/pillar pairs,
 // and the test questions with the facts a correct answer must contain.
 //
-// Claude Haiku 5.5 writes the content (Hugh, 17 Nov 2026: Claude generates and
-// grades, DeepSeek stays the agent under test). Output is plain JSON under
-// eval/data/ and is committed, so the forms can be rebuilt without calling a
-// model. Skipped unless KNOWLEDGE_EVAL_GENERATE=1.
+// Content per form lives in eval/data/specs/<client>__p<N>[__v2].content.json.
+// It was written by Claude (sub-agents in a Claude Code session, on Hugh's
+// allowance, 17 Nov 2026); DeepSeek stays the agent under test. When every
+// content file exists this script calls no model: it only assembles the cell
+// specs and cases.json. A missing file is generated with Claude Haiku 5.5 via
+// the API, which needs ANTHROPIC_API_KEY. Skipped unless KNOWLEDGE_EVAL_GENERATE=1.
 //
 //   cd functions && KNOWLEDGE_EVAL_GENERATE=1 ANTHROPIC_API_KEY=... npx vitest run test/knowledge/eval/generate.eval.test.ts
 
@@ -64,7 +66,7 @@ export function sessionDate(clientIndex: number, pillar: string, v2 = false): Da
   return addDays(start, (Number(pillar) - 1) * 7 + (v2 ? 84 : 0));
 }
 
-function rules(client: EvalClient, pillar: string, lead: string): string {
+export function rules(client: EvalClient, pillar: string, lead: string): string {
   const areas = topicAreas(pillar as never);
   return [
     `You write realistic, fictional consulting session notes for testing software. The consultancy is BeDeveloped (B2B growth advisers). The client is ${client.name}: ${client.profile}`,
@@ -145,7 +147,8 @@ async function pool<T>(items: T[], size: number, fn: (t: T) => Promise<void>): P
 
 describe.skipIf(!RUN)("knowledge eval: generate test forms", () => {
   it("writes 100 forms, 5 v2 forms and the test cases", async () => {
-    const anthropic = new Anthropic();
+    let anthropicClient: Anthropic | undefined;
+    const anthropic = () => (anthropicClient ??= new Anthropic());
     mkdirSync(SPECS, { recursive: true });
     const cases: EvalCase[] = [];
     const jobs = EVAL_CLIENTS.flatMap((c, ci) => PILLARS.map((p) => ({ c, ci, p })));
@@ -156,8 +159,8 @@ describe.skipIf(!RUN)("knowledge eval: generate test forms", () => {
       const cache = join(SPECS, `${c.id}__p${p}.content.json`);
       const lead = leadFor(ci, p);
       const content = existsSync(cache)
-        ? (JSON.parse(readFileSync(cache, "utf8")) as FormContent)
-        : await generate(anthropic, FormContent, rules(c, p, lead), "Write the form content now.");
+        ? FormContent.parse(JSON.parse(readFileSync(cache, "utf8")))
+        : await generate(anthropic(), FormContent, rules(c, p, lead), "Write the form content now.");
       writeFileSync(cache, JSON.stringify(content, null, 2));
       writeFileSync(file, JSON.stringify(toSpec(c, p, lead, sessionDate(ci, p), content), null, 2));
       v1[`${c.id}__${p}`] = content;
@@ -197,9 +200,9 @@ describe.skipIf(!RUN)("knowledge eval: generate test forms", () => {
       const lead = leadFor(ci, p);
       const cache = join(SPECS, `${id}__p${p}__v2.content.json`);
       const content = existsSync(cache)
-        ? (JSON.parse(readFileSync(cache, "utf8")) as V2Content)
+        ? V2Content.parse(JSON.parse(readFileSync(cache, "utf8")))
         : await generate(
-            anthropic,
+            anthropic(),
             V2Content,
             rules(c, p, lead) +
               "\n\nThis is a LATER follow-up session, 12 weeks after the one below. Change the recommendation in 2 areas to a clearly different position (say what replaced what), keep the others broadly the same. changeTests: exactly 2 questions about the changed positions; expectedFacts are the NEW position, forbiddenFacts are 1 to 2 short phrases from the OLD position that must not be presented as current.",

@@ -100,7 +100,7 @@ function systemPrompt(areas: string[]): string {
     "- keyDecisions: every decision made, wherever it appears.",
     "- pillarKeyPoints: the main points for this pillar.",
     "- topicAreaKeyPoints: main points per topic area covered.",
-    "- openQuestions: anything unresolved or still to be decided.",
+    "- openQuestions: only questions the form itself says are unresolved or undecided; never infer; empty list if none.",
     "- clientContext: one or two sentences of background on the client's business, market or situation.",
     "- discussion: one entry per discussion row (same index): clientViews = opinions or positions the client stated; challengesRaised = objections, risks or concerns; topicArea = best-fitting area.",
     "- recommendationAreas: one entry per recommendation row (same index) with the best-fitting area.",

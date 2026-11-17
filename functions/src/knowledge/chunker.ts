@@ -4,7 +4,14 @@
 
 import { topicAreasFor, type Chunk, type Description, type ParsedForm } from "./types";
 
-const AGREED_LABEL = { yes: "Agreed", no: "Not agreed", pending: "Pending", unspecified: "Agreement not recorded" };
+// Spelled out so the answerer cannot blur them: on 17 Nov "Not agreed" was
+// read as a ban in force and "Pending" as "agreed in principle".
+export const AGREED_LABEL = {
+  yes: "AGREED (the client accepted this)",
+  no: "NOT AGREED (the client rejected this; it is not in force)",
+  pending: "PENDING (not yet decided)",
+  unspecified: "status not recorded",
+};
 
 function bullets(title: string, items: string[]): string {
   return items.length ? `${title}:\n${items.map((i) => `- ${i}`).join("\n")}` : "";
@@ -49,7 +56,14 @@ export function buildChunks(form: ParsedForm, desc: Description, leads: string[]
       bullets("Key decisions", desc.keyDecisions),
       bullets("Key takeaways", desc.keyTakeaways),
       bullets("Common themes", desc.commonThemes),
-      bullets("Open questions", desc.openQuestions),
+      // Taken from the form's own Pending rows, never from the describer's
+      // openQuestions (which it invented for every record on 17 Nov).
+      bullets(
+        "Still pending",
+        form.recommendations
+          .filter((r) => r.agreed === "pending")
+          .map((r) => (r.area ? `${r.area}: ${r.recommendation}` : r.recommendation)),
+      ),
     ),
     tags: {},
   });
@@ -82,7 +96,7 @@ export function buildChunks(form: ParsedForm, desc: Description, leads: string[]
       : (desc.recommendationAreas.find((x) => x.index === i)?.topicArea ?? "Other");
     chunks.push({
       kind: "recommendation",
-      text: join(header, `Recommendation on ${area} (${AGREED_LABEL[r.agreed]}):`, r.recommendation),
+      text: join(header, `Recommendation on ${area}. Status: ${AGREED_LABEL[r.agreed]}.\n${r.recommendation}`),
       tags: { topicArea: area, recommendation: r.recommendation, agreedStatus: r.agreed },
     });
   });

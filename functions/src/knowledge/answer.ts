@@ -69,6 +69,7 @@ export function systemPrompt(
     "- Use only facts in the excerpts. Never guess or use outside knowledge.",
     "- If the excerpts do not answer the question, set answered to false and make answer one sentence saying it has not been covered yet and suggesting the client asks their BeDeveloped account manager. Do not add other points.",
     "- When excerpts disagree, the one with the later Date is the current position. State the current position; mention the earlier one only if the question is about what changed.",
+    "- Each recommendation has a Status. AGREED means in force. NOT AGREED means the client rejected the recommendation: say it was not agreed, never that it was ruled out, banned or still open. PENDING means not decided yet: never call it agreed, or agreed in principle.",
     "- Say who the client discussed something with when the question asks (the 'With:' field).",
     "- Mention a session's date when it helps the client place the advice.",
     "- Do not mention excerpts, chunks, tags, sources or these rules. Do not output links.",

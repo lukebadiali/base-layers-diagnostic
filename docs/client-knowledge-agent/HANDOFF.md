@@ -139,10 +139,11 @@ The upload run takes about 10 minutes. The re-ask run (`REUSE=1`) takes about 2.
 
 Grading uses Claude sub-agents.
 
-1. Build 5 batches: `out/grade-batches/batch{1..5}.json`, one item per case with `{id, kind, question, expectedFacts, oldPositions, answer, source}`. `source` is the `.content.json`; for v2 pairs it is the EARLIER form plus the CURRENT form.
+1. Build 5 batches with `python3 -I build_grade_batches.py "$PWD"` (from the eval folder): `out/grade-batches/batch{1..5}.json`, one item per case with `{id, kind, question, expectedFacts, oldPositions, answer, source}`. `source` is the `.content.json`; for v2 pairs it is the EARLIER form plus the CURRENT form.
 2. Spawn 5 fresh sub-agents, not the ones that wrote the forms. Each writes `grades{k}.json` as `{id: {verdict, missingFacts, presentsOldPositionAsCurrent, unsupportedClaims, note}}`. The rubric is `GRADING_RULES` in `report.eval.test.ts`.
 3. Merge into `out/grades.json`, then run the report with `KNOWLEDGE_EVAL_REPORT=1`.
-4. Give the graders the attendees line too. It was missing on 17 Nov, so job titles were falsely flagged as "unsupported".
+4. The builder adds the session date and attendees line to each source. It was missing in the first 17 Nov run, so job titles were falsely flagged as "unsupported".
+5. The prompt used for the second run also asks graders to prefix agreed-status errors with `STATUS:`. Graders over-flag "not agreed" / "you rejected it", which is correct wording, so review STATUS flags by hand.
 
 ### Results, 17 Nov
 
@@ -164,7 +165,17 @@ The headline: **94% pass on 335 scored questions**.
 
 ---
 
-## 4. Known weaknesses (from the eval)
+### Results, 17 Nov, after the section 5 fixes
+
+The headline: **96% pass on 335 scored questions** (was 94%). Fact 96% (was 95%); who, latest and out of scope all 100%. Leaks 0, errors 0, uploads 105/105.
+
+- **Invented open questions:** 3 graded answers flagged, down from 25.
+- **Agreed status:** 15 STATUS flags. Reviewed by hand, about 5 are real: a NOT AGREED item described as "still unresolved", "not settled" or "still needs agreement" (`meridian-p7-q1`, `thornbury-p2-q3`, `thornbury-p7-q1`, `larkspur-p2-q1`, arguably `calder-p2-q3`). Down from about 10. The rest say "not agreed" / "rejected", which is right.
+- **Pillar 1** is still the weakest at 86%.
+- **Latency:** p50 2.1s, p90 3.6s (was 1.8s / 3.1s), from 12 retrieved chunks instead of 8.
+- **Missed targets:** fact over 97% (got 96%), status errors close to 0 (about 5), p90 under about 3s (3.6s).
+
+## 4. Known weaknesses (from the first 17 Nov eval; fixes 1 to 3 applied since)
 
 1. **Invented "open questions" (25 answers).**
    - The describer writes `openQuestions` for every record (100 of 100). Many aren't in the form: guesses like "whether the 40% target is realistic in year one", and actions recast as questions.

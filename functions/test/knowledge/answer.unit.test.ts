@@ -75,6 +75,9 @@ describe("prompts", () => {
     expect(s).toMatch(/When answered is true: Answer in 3 to 6 short bullet points/);
     expect(s).toMatch(/set answered to false and make answer one sentence/);
     expect(s).toMatch(/Do not output links/);
+    expect(s).toMatch(/AGREED means in force/);
+    expect(s).toMatch(/NOT AGREED means the client rejected the recommendation: say it was not agreed, never that it was ruled out, banned or still open/);
+    expect(s).toMatch(/PENDING means not decided yet: never call it agreed, or agreed in principle/);
     expect(s).toContain("Pillars with delivered material so far: none.");
     expect(systemPrompt("Acme", ["review"], "short")).toMatch(/at most 3 short sentences[\s\S]*Review\.$/);
   });

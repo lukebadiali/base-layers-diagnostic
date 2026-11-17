@@ -41,7 +41,8 @@ export interface AskResult {
   sources?: AskSource[];
 }
 
-export const RETRIEVE_LIMIT = 8;
+/** 8 let overview chunks crowd out specific rows (eval, 17 Nov 2026). */
+export const RETRIEVE_LIMIT = 12;
 export const NOTHING_YET =
   "There's no delivered material for this yet. Your BeDeveloped account manager can help in the meantime.";
 

@@ -58,6 +58,7 @@ function graderPrompt(c: EvalCase, answer: string, source: string): string {
 
 interface Graded extends Result {
   grade?: Grade;
+  superseded?: boolean;
   leakedClients: string[];
   pass: boolean;
 }
@@ -89,6 +90,10 @@ describe.skipIf(!RUN)("knowledge eval: grade and report", () => {
         });
         if (res.stop_reason !== "refusal" && res.parsed_output) g.grade = res.parsed_output;
       }
+      // A fact question on a pillar that later got a v2 form asks about the
+      // superseded form; the agent rightly answers with the current one. Those
+      // are reported, not scored (the "latest" cases test that behaviour).
+      g.superseded = g.kind === "fact" && g.pillar !== null && v2Pairs.has(`${g.client}__${g.pillar}`);
       g.pass =
         !!g.grade &&
         g.leakedClients.length === 0 &&
@@ -99,38 +104,41 @@ describe.skipIf(!RUN)("knowledge eval: grade and report", () => {
     }
 
     results.sort((a, b) => a.id.localeCompare(b.id));
+    const all = results;
+    const scored = results.filter((r) => !r.superseded);
     const rate = (rs: Graded[]) => (rs.length ? Math.round((100 * rs.filter((r) => r.pass).length) / rs.length) : 0);
     const kinds = ["fact", "who", "latest", "out_of_scope"] as const;
     const pct = (xs: number[], p: number) => [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor((p / 100) * xs.length))] ?? 0;
     const ingestMs = raw.ingestLog.filter((l) => l.ok).map((l) => l.ms);
-    const askMs = results.filter((r) => !r.error).map((r) => r.latencyMs);
+    const askMs = all.filter((r) => !r.error).map((r) => r.latencyMs);
     const summary = {
-      cases: results.length,
+      cases: scored.length,
+      excludedSuperseded: all.length - scored.length,
       passRate: rate(results),
-      byKind: Object.fromEntries(kinds.map((k) => [k, { n: results.filter((r) => r.kind === k).length, pass: rate(results.filter((r) => r.kind === k)) }])),
+      byKind: Object.fromEntries(kinds.map((k) => [k, { n: scored.filter((r) => r.kind === k).length, pass: rate(scored.filter((r) => r.kind === k)) }])),
       byPillar: Object.fromEntries(
-        Object.keys(PILLAR_NAMES).map((p) => [p, { n: results.filter((r) => r.pillar === p).length, pass: rate(results.filter((r) => r.pillar === p)) }]),
+        Object.keys(PILLAR_NAMES).map((p) => [p, { n: scored.filter((r) => r.pillar === p).length, pass: rate(scored.filter((r) => r.pillar === p)) }]),
       ),
-      byClient: Object.fromEntries(EVAL_CLIENTS.map((c) => [c.name, rate(results.filter((r) => r.client === c.id))])),
-      verdicts: Object.fromEntries(["correct", "partial", "incorrect", "declined"].map((v) => [v, results.filter((r) => r.grade?.verdict === v).length])),
-      ungraded: results.filter((r) => !r.grade).length,
-      errors: results.filter((r) => r.error).length,
-      leaks: results.filter((r) => r.leakedClients.length).length,
-      unsupportedClaims: results.filter((r) => r.grade?.unsupportedClaims.length).length,
-      oldPositionAsCurrent: results.filter((r) => r.grade?.presentsOldPositionAsCurrent).length,
-      answeredFlagWrongOnCovered: results.filter((r) => r.kind !== "out_of_scope" && !r.answered).length,
-      answeredFlagWrongOnOutOfScope: results.filter((r) => r.kind === "out_of_scope" && r.answered).length,
+      byClient: Object.fromEntries(EVAL_CLIENTS.map((c) => [c.name, rate(scored.filter((r) => r.client === c.id))])),
+      verdicts: Object.fromEntries(["correct", "partial", "incorrect", "declined"].map((v) => [v, scored.filter((r) => r.grade?.verdict === v).length])),
+      ungraded: scored.filter((r) => !r.grade).length,
+      errors: scored.filter((r) => r.error).length,
+      leaks: scored.filter((r) => r.leakedClients.length).length,
+      unsupportedClaims: scored.filter((r) => r.grade?.unsupportedClaims.length).length,
+      oldPositionAsCurrent: scored.filter((r) => r.grade?.presentsOldPositionAsCurrent).length,
+      answeredFlagWrongOnCovered: scored.filter((r) => r.kind !== "out_of_scope" && !r.answered).length,
+      answeredFlagWrongOnOutOfScope: scored.filter((r) => r.kind === "out_of_scope" && r.answered).length,
       uploads: { total: raw.ingestLog.length, failed: raw.ingestLog.filter((l) => !l.ok).length, p50ms: pct(ingestMs, 50), p90ms: pct(ingestMs, 90), maxMs: Math.max(0, ...ingestMs) },
       asks: { p50ms: pct(askMs, 50), p90ms: pct(askMs, 90), maxMs: Math.max(0, ...askMs) },
       coverage: raw.coverage,
     };
-    writeFileSync(join(OUT, "report.json"), JSON.stringify({ summary, results }, null, 2));
+    writeFileSync(join(OUT, "report.json"), JSON.stringify({ summary, results: all }, null, 2));
 
-    const failures = results.filter((r) => !r.pass);
+    const failures = scored.filter((r) => !r.pass);
     const md = [
       `# Client Knowledge Agent evaluation`,
       ``,
-      `${summary.cases} questions over 10 fictional PE and consultancy clients x 10 pillars (+5 later forms). Pass rate **${summary.passRate}%**.`,
+      `${summary.cases} scored questions over 10 fictional PE and consultancy clients x 10 pillars (+5 later forms); ${summary.excludedSuperseded} fact questions about superseded forms reported but not scored. Pass rate **${summary.passRate}%**.`,
       ``,
       `| Kind | Questions | Pass |`,
       `|---|---|---|`,

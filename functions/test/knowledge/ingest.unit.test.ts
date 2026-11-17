@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { FormError } from "../../src/knowledge/form";
 import { ingestSessionForm } from "../../src/knowledge/ingest";
-import { searchKnowledge } from "../../src/knowledge/retrieve";
+import { keywordTerms, rerankByKeywords, searchKnowledge } from "../../src/knowledge/retrieve";
 import { coveredPillars, recordId, setOrgKnowledgeStatus, TAG_FIELDS } from "../../src/knowledge/store";
 import { CHUNKS_COLLECTION, RECORDS_COLLECTION, type UploadMeta } from "../../src/knowledge/types";
 import { FakeFirestore, hashingEmbedder, stubDescriber } from "./fakes";
@@ -123,6 +123,13 @@ describe("searchKnowledge", () => {
     expect(hits.every((h) => h.pillar === "1")).toBe(true);
   });
 
+  it("returns at most the limit, though it fetches more candidates to re-rank", async () => {
+    const all = await searchKnowledge(fake.asFirestore(), deps.embedder, { orgId: "org-nw", query: "ICP", limit: 50 });
+    const hits = await searchKnowledge(fake.asFirestore(), deps.embedder, { orgId: "org-nw", query: "ICP", limit: 3 });
+    expect(all.length).toBeGreaterThan(3);
+    expect(hits).toHaveLength(3);
+  });
+
   it("returns nothing once a client's knowledge is archived, and everything again when restored", async () => {
     const db = fake.asFirestore();
     await setOrgKnowledgeStatus(db, "org-nw", "archived");
@@ -130,5 +137,38 @@ describe("searchKnowledge", () => {
     expect(await coveredPillars(db, "org-nw")).toEqual([]);
     await setOrgKnowledgeStatus(db, "org-nw", "current");
     expect((await searchKnowledge(db, deps.embedder, { orgId: "org-nw", query: "ICP" })).length).toBeGreaterThan(0);
+  });
+});
+
+describe("rerankByKeywords", () => {
+  const ctx = "Client: Fernhill | Pillar 1 | Date: 2026-07-09";
+  const hit = (distance: number, body: string) => ({ distance, text: `${ctx}\n\n${body}` });
+
+  it("lifts the row holding the question's rarer words above a nearer same-topic row", () => {
+    const hits = [
+      hit(0.5, "Model deployment pace under three revenue scenarios for the fund."),
+      hit(0.52, "Track cost per completed deal including abort costs."),
+      hit(0.51, "Target founder-led businesses with £3m to £15m revenue, growing 30% or more."),
+    ];
+    const out = rerankByKeywords("What revenue range did we agree for target companies?", hits);
+    expect(out[0].text).toMatch(/£3m to £15m/);
+    expect(out).toHaveLength(3);
+  });
+
+  it("leaves the order alone when no candidate shares a word with the question", () => {
+    const hits = [hit(0.4, "Alpha."), hit(0.5, "Beta."), hit(0.6, "Gamma.")];
+    expect(rerankByKeywords("What did we agree?", hits)).toEqual(hits);
+    expect(rerankByKeywords("pipeline coverage", hits)).toEqual(hits);
+  });
+
+  it("ignores the context line, so the client or session name earns no bonus", () => {
+    const hits = [hit(0.4, "Alpha."), { distance: 0.45, text: "Client: Fernhill | Session: Week 1\n\nBeta." }];
+    expect(rerankByKeywords("Fernhill week", hits)).toEqual(hits);
+  });
+});
+
+describe("keywordTerms", () => {
+  it("drops stop words and a plural s, keeps figures", () => {
+    expect([...keywordTerms("What ticket sizes did we agree for target LPs at £15m?")]).toEqual(["ticket", "size", "target", "lps", "£15m"]);
   });
 });

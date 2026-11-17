@@ -1,12 +1,12 @@
 // Grades and reports an evaluation run. Reads eval/out/results.json (from
 // run.eval.test.ts) and eval/out/grades.json, a map of case id -> Grade.
 // Grades come from Claude: sub-agents in a Claude Code session (Hugh's
-// allowance, 17 Nov 2026), or, for any id missing from grades.json when
+// allowance, 17 Nov 2026; see GRADING.md), or, for any id missing from grades.json when
 // ANTHROPIC_API_KEY is set, Claude Haiku 5.5 via the API. A deterministic check
 // that no other client's name appears runs regardless. Writes report.json and
 // report.md. Skipped unless KNOWLEDGE_EVAL_REPORT=1.
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
@@ -30,19 +30,37 @@ export const Grade = z.object({
 });
 export type Grade = z.infer<typeof Grade>;
 
-/** The source a grader checks an answer against. */
-export function formSource(client: string, pillar: string | null, v2: boolean): string {
-  if (!pillar) return "(no form: this question is not covered by any session)";
-  const read = (f: string) => readFileSync(join(SPECS, f), "utf8");
-  const v1 = read(`${client}__p${pillar}.content.json`);
-  return v2 ? `EARLIER form (superseded):\n${v1}\n\nCURRENT form:\n${read(`${client}__p${pillar}__v2.content.json`)}` : v1;
+/** The form a question was written from: the v2 form for "latest" cases, else v1. Null when not covered. */
+export function primaryForm(c: Pick<EvalCase, "client" | "pillar" | "kind">, v2: boolean): string | null {
+  if (!c.pillar) return null;
+  return `${c.client}__p${c.pillar}${c.kind === "latest" && v2 ? "__v2" : ""}`;
+}
+
+const ymd = (d: string) => d.split("/").reverse().join("-");
+
+/** All of a client's forms in date order, each labelled by pillar, session and date, with the attendees line. Mirrors build_grade_batches.py. */
+export function formSource(client: string, primary: string | null): string {
+  const forms = readdirSync(SPECS)
+    .filter((f) => f.startsWith(`${client}__p`) && f.endsWith(".content.json"))
+    .map((f) => {
+      const stem = f.slice(0, -".content.json".length);
+      const spec = JSON.parse(readFileSync(join(SPECS, `${stem}.json`), "utf8")) as Record<string, unknown>;
+      const s = (k: string) => (typeof spec[k] === "string" ? (spec[k] as string) : "");
+      const label = `${s("0,0,1")}; ${s("0,3,1")}; ${s("0,2,1")}${stem.endsWith("__v2") ? "; later form (v2)" : ""}`;
+      const head = `Session date: ${s("0,2,1")}\nAttendees: ${s("0,4,1").replace(/\n/g, "; ")}`;
+      return { key: `${ymd(s("0,2,1"))} ${stem}`, text: `=== FORM ${stem} (${label})${stem === primary ? " [PRIMARY]" : ""} ===\n${head}\n${readFileSync(join(SPECS, f), "utf8")}` };
+    })
+    .sort((a, b) => a.key.localeCompare(b.key));
+  return [`Primary form: ${primary ?? "(none: this question is not covered by any session)"}`, ...forms.map((f) => f.text)].join("\n\n");
 }
 
 export const GRADING_RULES = [
   "You grade an AI assistant's answer to a client's question about their consulting sessions. Be strict and literal.",
-  "verdict: correct = every expected fact present (paraphrase fine) and nothing contradicts the source; partial = some expected facts present, none contradicted; incorrect = expected facts missing or contradicted, or an old position given as current; declined = the answer says the topic is not covered.",
-  "presentsOldPositionAsCurrent: true if any 'old position' is given as the current position (mentioning it as earlier or replaced is fine).",
-  "missingFacts: expected facts not in the answer. unsupportedClaims: specific claims (names, numbers, decisions) in the answer that are not in the source form(s). note: one sentence.",
+  "You are given ALL of this client's session forms, in date order, each labelled by pillar, session and date. The expected facts come from the PRIMARY form, the one the question was written from. Use the other forms to check claims and later changes.",
+  "Later sessions: if the answer gives a different position from a LATER-dated form on the same topic and correctly presents it as the current one, count that expected fact as satisfied. Ideally the answer notes the change; when the question asks for a figure that changed, omitting the earlier figure makes it partial, not incorrect. Giving an EARLIER position as current when a later form changed it is wrong.",
+  "verdict: correct = every expected fact present (paraphrase fine, or superseded by a later form as above) and nothing contradicts the forms; partial = some expected facts present, none contradicted; incorrect = expected facts missing or contradicted, or an old or superseded position given as current; declined = the answer says the topic is not covered.",
+  "presentsOldPositionAsCurrent: true if any 'old position', or any position a later form changed, is given as the current position (mentioning it as earlier or replaced is fine).",
+  "missingFacts: expected facts not in the answer and not superseded by a later form the answer uses. unsupportedClaims: specific claims (names, numbers, decisions) that appear in NONE of the client's forms; the session date and attendees lines count as source. Prefix an agreed-status error (an item called agreed, not agreed, pending or rejected when the form says otherwise) with 'STATUS: '. Saying a NOT AGREED item was not agreed or rejected is correct, not an error. note: one sentence.",
 ].join("\n");
 
 function graderPrompt(c: EvalCase, answer: string, source: string): string {
@@ -51,7 +69,7 @@ function graderPrompt(c: EvalCase, answer: string, source: string): string {
     `Question: ${c.question}`,
     `Expected facts: ${c.expectedFacts.length ? JSON.stringify(c.expectedFacts) : "(none: not covered, so the right answer says it has not been covered)"}`,
     `Old positions: ${JSON.stringify(c.forbiddenFacts)}`,
-    `Source form(s):\n${source}`,
+    `Client's forms:\n${source}`,
     `Answer to grade:\n${answer}`,
   ].join("\n\n");
 }
@@ -85,7 +103,7 @@ describe.skipIf(!RUN)("knowledge eval: grade and report", () => {
         const res = await api.messages.parse({
           model: "claude-haiku-5-5",
           max_tokens: 4000,
-          messages: [{ role: "user", content: graderPrompt(r, r.answer, formSource(r.client, r.pillar, r.pillar !== null && v2Pairs.has(`${r.client}__${r.pillar}`))) }],
+          messages: [{ role: "user", content: graderPrompt(r, r.answer, formSource(r.client, primaryForm(r, v2Pairs.has(`${r.client}__${r.pillar}`)))) }],
           output_config: { format: zodOutputFormat(Grade) },
         });
         if (res.stop_reason !== "refusal" && res.parsed_output) g.grade = res.parsed_output;
@@ -114,7 +132,7 @@ describe.skipIf(!RUN)("knowledge eval: grade and report", () => {
     const summary = {
       cases: scored.length,
       excludedSuperseded: all.length - scored.length,
-      passRate: rate(results),
+      passRate: rate(scored),
       byKind: Object.fromEntries(kinds.map((k) => [k, { n: scored.filter((r) => r.kind === k).length, pass: rate(scored.filter((r) => r.kind === k)) }])),
       byPillar: Object.fromEntries(
         Object.keys(PILLAR_NAMES).map((p) => [p, { n: scored.filter((r) => r.pillar === p).length, pass: rate(scored.filter((r) => r.pillar === p)) }]),

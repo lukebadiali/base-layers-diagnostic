@@ -137,13 +137,12 @@ The upload run takes about 10 minutes. The re-ask run (`REUSE=1`) takes about 2.
 
 ### Grading
 
-Grading uses Claude sub-agents.
+Grading uses Claude sub-agents. **Follow `functions/test/knowledge/eval/GRADING.md`**: it has the build command, the batch format, the exact sub-agent prompt, the `grades{k}.json` schema, the merge step and what to review by hand.
 
-1. Build 5 batches with `python3 -I build_grade_batches.py "$PWD"` (from the eval folder): `out/grade-batches/batch{1..5}.json`, one item per case with `{id, kind, question, expectedFacts, oldPositions, answer, source}`. `source` is the `.content.json`; for v2 pairs it is the EARLIER form plus the CURRENT form.
-2. Spawn 5 fresh sub-agents, not the ones that wrote the forms. Each writes `grades{k}.json` as `{id: {verdict, missingFacts, presentsOldPositionAsCurrent, unsupportedClaims, note}}`. The rubric is `GRADING_RULES` in `report.eval.test.ts`.
-3. Merge into `out/grades.json`, then run the report with `KNOWLEDGE_EVAL_REPORT=1`.
-4. The builder adds the session date and attendees line to each source. It was missing in the first 17 Nov run, so job titles were falsely flagged as "unsupported".
-5. The prompt used for the second run also asks graders to prefix agreed-status errors with `STATUS:`. Graders over-flag "not agreed" / "you rejected it", which is correct wording, so review STATUS flags by hand.
+1. `build_grade_batches.py` writes 5 batches grouped by client (2 clients each). Each group is `{client, forms, items}`: `forms` holds ALL of that client's forms (including `__v2`) with session date and attendees, and each item names its `primaryForm`.
+2. Graders check expected facts against the primary form but may accept a position from a LATER-dated form that the answer presents as current. Claims are unsupported only if they appear in none of the client's forms. This fixes answers drawn from later sessions being marked wrong in the 17 Nov runs (for example `meridian-p1-q2`, `brookvale-p3-q2`).
+3. `GRADING_RULES` and `formSource` in `report.eval.test.ts` (the API fallback) use the same rules and all of the client's forms.
+4. Graders over-flag "not agreed" / "you rejected it", which is correct wording, so review `STATUS:` flags by hand.
 
 ### Results, 17 Nov
 
@@ -175,51 +174,89 @@ The headline: **96% pass on 335 scored questions** (was 94%). Fact 96% (was 95%)
 - **Latency:** p50 2.1s, p90 3.6s (was 1.8s / 3.1s), from 12 retrieved chunks instead of 8.
 - **Missed targets:** fact over 97% (got 96%), status errors close to 0 (about 5), p90 under about 3s (3.6s).
 
-## 4. Known weaknesses (from the first 17 Nov eval; fixes 1 to 3 applied since)
+### Results, 17 Nov, after the Pillar 1, grader and wording fixes
 
-1. **Invented "open questions" (25 answers).**
-   - The describer writes `openQuestions` for every record (100 of 100). Many aren't in the form: guesses like "whether the 40% target is realistic in year one", and actions recast as questions.
-   - They go into the overview chunk (`chunker.ts:52`), and the agent repeats them as fact.
-2. **Agreed status blurred (about 10 answers).**
-   - Pending becomes "agreed in principle", and No becomes "no decision yet" or "still open".
-   - The worst case is a negative recommendation plus No: "Do not run paid LinkedIn ads", marked Not agreed, was read as the ban being in force.
-   - The chunk text is `Recommendation on X (Not agreed): …` (`chunker.ts:85`, labels at `chunker.ts:7`).
-3. **Retrieval misses (3 or 4 answers).**
-   - A false "not covered" (e.g. `fernhill-p1-q1`, `calder-p1-q3`), or a same-topic figure taken from another session (`brookvale-p3-q1`).
-   - The retrieval limit is `RETRIEVE_LIMIT = 8` (`ask.ts:44`). With about 80 chunks per client, overview chunks crowd out specific rows.
-4. **Padding.** About a third of answers add accurate points from the client's other sessions. That's fine, but it raises the chance of a wrong claim. Fix 1 removes the invented part.
+This run tested three changes. None is committed or deployed yet.
+
+1. Pillar 1 retrieval re-rank, with the retrieved chunks now recorded per question (`out/p1-diagnosis.md`).
+2. Graders now see all of a client's forms (`GRADING.md`).
+3. New NOT AGREED and attribution wording in `answer.ts` (`out/p3-check/results.md`).
+
+The run was a full re-upload (`KNOWLEDGE_EVAL=1`, no filters), graded by 5 fresh sub-agents. The earlier outputs are archived in `out/before-p123/`.
+
+The headline: **335 of 335 scored questions pass (100%)**, up from 323 of 335 (96.4%).
+
+`passRate` in `report.eval.test.ts` used to divide by all 350 results, including the 15 unscored superseded ones, so the 17 Nov "96%" was 336 of 350. It now divides by the 335 scored questions, like the per-kind and per-pillar figures.
+
+| | 17 Nov baseline | Now |
+|---|---|---|
+| Scored pass | 323/335 (96%) | 335/335 (100%) |
+| Fact (285) | 96% | 100% |
+| Who / latest / out of scope | 100% / 100% / 100% | 100% / 100% / 100% |
+| Pillar 1 (29) | 86% (25) | 100% (29) |
+| Pillars 2, 3, 7, 8 | 93%, 93%, 93%, 97% | 100% each |
+| STATUS flags (raw / real after review) | 15 / about 5 | 2 / 1 |
+| Answers with unsupported claims | 157 | 41 (not comparable: graders now see all forms) |
+| Leaks / errors / uploads | 0 / 0 / 105 of 105 | 0 / 0 / 105 of 105 |
+| Uploads p50 / p90 / max | 15s / 35s / 55s | 15s / 35s / 56s |
+| Answers p50 / p90 / max | 2.1s / 3.6s / n/a | 2.2s / 3.6s / 8.2s |
+
+**The 12 cases that failed on 17 Nov now all pass:**
+
+| Case | Fixed by | Answer now |
+|---|---|---|
+| `fernhill-p1-q1` | retrieval | £3m to £15m revenue, growing 30% or more |
+| `westbourne-p1-q1` | retrieval | £15m to £40m tickets, over £2bn AUM |
+| `calder-p1-q3` | retrieval | 10-week completion commitment, pending, above 7x EBITDA |
+| `larkspur-p2-q1`, `meridian-p7-q1`, `thornbury-p7-q1` | wording | gives the agreed item; no NOT AGREED item is called open |
+| `thornbury-p2-q3` | wording | "BeDeveloped recommended … you decided not to go ahead with it" |
+| `thornbury-p8-q2` | wording | "No. BeDeveloped recommended … at £12k; you decided not to go ahead" |
+| `westbourne-p3-q3` | wording | pending; "in March" stays on the Edinburgh LP day |
+| `meridian-p1-q2` | grader | the £35k base plus success fee from Week 22 is given as current, replacing the £45k fee |
+| `brookvale-p3-q2` | grader | the briefing itself is still pending; the Week 7 campaign plan is built on it |
+| `brookvale-p3-q1` | answer and grader | gives both the Week 3 target (10 relationships) and the Week 8 target (2 to 8 recommenders). It wrongly calls the second "the later figure", as if it replaced the first; a stricter grader would mark it partial. |
+
+**Regressions:** none among scored questions. One unscored superseded question went from correct to partial: `fernhill-p2-q2` leaves out the replaced £4m to £11m figure. `fernhill-p2-q3` (also unscored) says nothing links the point of view to £20m. That is expected: the v2 upload overwrote the v1 Pillar 2 form, so the £20m wording is no longer stored.
+
+**Hand review:**
+- **STATUS flags.**
+  - `brookvale-p8-q3` is real. It invents an agreed action, "keep CDD and FDD offers separate".
+  - `meridian-p10-q1` is unscored, and not a real error. The Week 10 form was overwritten by v2, so the answer can't know Week 10 agreed the fee.
+  - The same kind of invented "you agreed to …" appears, unflagged, in `elmstead-p5-q1` and `elmstead-p5-q3`.
+  - No recommendation's own status was misreported.
+- **Unsupported claims are mostly the describer's text, not the form's.**
+  - About 25 of the 41 are "takeaways", quoted aims or challenges, or reasons ("declined on cost"). The grader prompt mentions none of these, so they very likely come from the overview and discussion chunks. Those chunks embed `keyDecisions`, `keyTakeaways` and `challengesRaised` from the describer (`chunker.ts:56-57`, `:80`). This is the same pattern as the `openQuestions` problem that fix 1 removed.
+  - About 8 are false flags: next-session and check-in dates. These come from the form's next-session date cell (`5,0,1`), which `build_grade_batches.py` doesn't pass to graders.
+- **Grader leniency.** Verdicts were 315 correct and 0 partial, against 303 and 6 on 17 Nov. Part of the gain is the new grading rule (`meridian-p1-q2`, `brookvale-p3-q2`). Unit-level checks in `p1-diagnosis.md` and `p3-check/results.md` back the retrieval and wording fixes independently.
+
+## 4. Known weaknesses (as of the 17 Nov re-run after the Pillar 1, grader and wording fixes)
+
+Fixed since the first 17 Nov eval:
+- Invented open questions: fix 1.
+- Agreed status blurred: fix 2, plus the new `answer.ts` wording. No recommendation's status was misreported in the latest run.
+- Retrieval misses: fix 3 plus the Pillar 1 re-rank. Pillar 1 is now 29 of 29.
+
+Still open:
+
+1. **The describer's interpretations are presented as fact.**
+   - The overview and discussion chunks embed `keyDecisions`, `keyTakeaways`, `commonThemes`, `clientViews` and `challengesRaised` from the describer (`chunker.ts:53-58`, `:79-80`).
+   - About 25 answers repeat these as if the form said them. Examples: "declined on cost" (`thornbury-p8-q2`), and invented agreed actions in `brookvale-p8-q3` and `elmstead-p5-q3`.
+   - No graded answer fails because of it, but it is the main remaining source of wrong claims. It is the same pattern as `openQuestions`.
+2. **Padding.** Many answers add accurate points from the client's other sessions. That's fine, but it gives the item above more chances to show up.
+3. **Grader blind spots.**
+   - `build_grade_batches.py` doesn't pass the form's next-session date cell (`5,0,1`), so correct next-session and check-in dates are flagged as unsupported.
+   - Graders gave 0 partials this run, so treat the 100% as a ceiling. `brookvale-p3-q1` is arguably partial.
+4. **Latency.** p90 is 3.6s against a target of about 3s, unchanged from the 12-chunk retrieval.
 
 ---
 
-## 5. Next task: implement these three fixes, re-run the eval, redeploy
+## 5. Next task: commit, redeploy, then de-risk the describer text
 
-**Fix 1: pending items come from the form, not the AI.**
-- In `chunker.ts`, replace `bullets("Open questions", desc.openQuestions)` with a deterministic list built from `form.recommendations` where `agreed === "pending"` (e.g. "Still pending: <area>: <recommendation>"). Keep `openQuestions` stored on the record as a tag (`store.ts:115`); just stop embedding it into chunk text.
-- Tighten `describer.ts:103` to: "openQuestions: only questions the form itself says are unresolved or undecided; never infer; empty list if none."
-- Update `functions/test/knowledge/*` (chunker expectations, `ingest.unit.test.ts` chunk counts if they change).
-
-**Fix 2: say agreed status unambiguously.**
-- In `chunker.ts`, set `AGREED_LABEL` to:
-  - yes: `AGREED (the client accepted this)`
-  - no: `NOT AGREED (the client rejected this; it is not in force)`
-  - pending: `PENDING (not yet decided)`
-  - unspecified: `status not recorded`
-- Change the chunk line to `Recommendation on ${area}. Status: ${label}.\n${text}`.
-- Add to `answer.ts` `systemPrompt` rules: "Each recommendation has a Status. AGREED means in force. NOT AGREED means the client rejected the recommendation: say it was not agreed, never that it was ruled out, banned or still open. PENDING means not decided yet: never call it agreed, or agreed in principle."
-- Update `answer.unit.test.ts` prompt assertions.
-
-**Fix 3: retrieve more.**
-- `ask.ts:44`: set `RETRIEVE_LIMIT` to 12. Optionally prefer row chunks over overview chunks.
-- Check that answer latency stays under about 3s at p90.
-
-**Then:**
-1. Run the full suite: root `npx vitest run`, typecheck, lint; `functions/` tsc, tests and lint.
-2. Re-run the eval. Re-upload is required, because chunk text changes: `KNOWLEDGE_EVAL=1`, not `REUSE`.
-3. Re-grade with 5 sub-agents, giving them the attendees line.
-4. Compare with 94%. The targets: fact over 97%; open-question flags close to 0; agreed-status errors close to 0.
-5. Commit to `feat/client-knowledge-agent`, push and update the PR #103 body.
-6. Redeploy `knowledgeIngest` and `knowledgeAsk` with the safe procedure (section 6). The deployed `knowledgeAsk` still has the truncation bug.
-7. Note: forms already uploaded in production keep their old chunk text until re-uploaded. Only test data is there so far, if any.
+1. **Commit** the three changes (retrieval re-rank, all-forms grading, answer wording) to `feat/client-knowledge-agent` and update the PR #103 body with the results above. Before merging, fix or waive the 7 pre-existing `npm run lint` errors in non-knowledge files: `auth/deleteClient.ts`, `backup/scheduledFirestoreExport.ts`, `gdpr/gdprEraseUser.ts`, `gdpr/gdprExportUser.ts` and `lifecycle/scheduledPurge.ts`.
+2. **Redeploy** `knowledgeIngest` and `knowledgeAsk` with the safe procedure (section 6). This needs Hugh's approval. Forms already uploaded keep their old chunk text until they are re-uploaded.
+3. **Describer text.** Stop embedding describer-written decisions, takeaways and challenges as statements. Either drop them from chunk text, as was done for `openQuestions`, or label them "BeDeveloped's summary (not recorded in the form)". Then add a prompt rule: say a decision was agreed only if a recommendation's Status says so. Re-run, and count the "takeaway" and invented-decision unsupported claims; the target is close to 0.
+4. **Small eval fixes** (in `report.eval.test.ts` and `build_grade_batches.py`): compute `passRate` over the scored set, and include the next-session date in the grader's form text.
+5. **Optional:** bring p90 under 3s, for example with a smaller answer model or fewer, shorter overview chunks.
 
 ---
 

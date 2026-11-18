@@ -181,6 +181,7 @@ import {
   deleteClient,
   inviteInternal,
   deleteInternal,
+  AccountExistsError,
 } from "./cloud/invite-admin.js";
 import { PassphraseInvalidError, CrossOrgError, PassphraseNotSetError } from "./firebase/auth.js";
 // Phase 4 Wave 2 (D-12): ui/* helpers extracted from app.js IIFE.
@@ -5315,7 +5316,16 @@ Any questions, just let me know.`;
     // + sign-in buttons so the 1–2s inviteInternal round-trip shows progress.
     const createPending = pendingButton(/** @type {HTMLButtonElement} */ (createBtn), "Creating…");
 
-    async function doAdd() {
+    // 2026-10: single submit path, called once on click and again (with
+    // reclaim=true) if the admin opts into reactivation. The server classifies
+    // a pre-existing email rather than blanket-refusing it
+    // (functions/src/auth/account-state.ts): a disabled / GDPR-erased /
+    // profile-orphaned account is revivable in place. We never revive
+    // implicitly — the first call comes back with the diagnosis, we show it,
+    // and the admin confirms. Reviving keeps the original uid so their
+    // authored content, uploads and audit history stay attached.
+    /** @param {boolean} reclaim */
+    async function submit(reclaim) {
       const em = (email.value || "").trim().toLowerCase();
       const nameVal = (name.value || "").trim();
       const roleVal = /** @type {"internal" | "admin"} */ (role.value);
@@ -5332,26 +5342,44 @@ Any questions, just let me know.`;
 
       createPending.start();
       try {
-        const res = await inviteInternal({ email: em, name: nameVal, role: roleVal });
+        const res = await inviteInternal({
+          email: em,
+          name: nameVal,
+          role: roleVal,
+          ...(reclaim ? { reclaim: true } : {}),
+        });
         m.close();
         render();
-        openInternalCredentialsModal({ email: em, name: nameVal }, res.tempPassword);
+        openInternalCredentialsModal(
+          { email: em, name: nameVal, existed: res.existed },
+          res.tempPassword,
+        );
       } catch (err) {
         errBox.replaceChildren();
-        errBox.appendChild(
-          h(
-            "div",
-            { class: "auth-error" },
-            (err && /** @type {*} */ (err).message) || "Something went wrong — try again.",
-          ),
-        );
+        if (err instanceof AccountExistsError && err.reclaimable) {
+          errBox.appendChild(h("div", { class: "auth-error" }, err.message));
+          const reactivate = h("button", { class: "btn secondary sm" }, "Reactivate this account");
+          reactivate.addEventListener("click", () => {
+            errBox.replaceChildren();
+            void submit(true);
+          });
+          errBox.appendChild(h("div", { class: "row" }, [reactivate]));
+        } else {
+          errBox.appendChild(
+            h(
+              "div",
+              { class: "auth-error" },
+              (err && /** @type {*} */ (err).message) || "Something went wrong — try again.",
+            ),
+          );
+        }
       } finally {
         createPending.stop();
       }
     }
 
     createBtn.addEventListener("click", () => {
-      void doAdd();
+      void submit(false);
     });
 
     const m = modal([
@@ -5382,9 +5410,10 @@ Any questions, just let me know.`;
   function openInternalCredentialsModal(member, tempPassword) {
     const signInUrl = "https://baselayers.bedeveloped.com";
     const firstName = (member.name || "").split(" ")[0] || "there";
+    const reactivated = member.existed === true;
     const emailBody = `Hi ${firstName},
 
-You've been set up with internal access to The Base Layers.
+${reactivated ? "Your access to The Base Layers has been reactivated." : "You've been set up with internal access to The Base Layers."}
 
 To sign in:
 1. Go to ${signInUrl}
@@ -5409,7 +5438,7 @@ Any questions, just let me know.`;
     };
 
     const cm = modal([
-      h("h3", {}, "Account created"),
+      h("h3", {}, reactivated ? "Account reactivated" : "Account created"),
       h(
         "p",
         { class: "settings-explainer" },

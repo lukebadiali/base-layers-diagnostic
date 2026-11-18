@@ -47,6 +47,11 @@ interface UpdateUserCall {
 }
 const updateUserCalls: UpdateUserCall[] = [];
 
+// 2026-10: auth.deleteUser tracking. gdprEraseUser now DELETES the identity
+// record rather than disabling it, so an Art. 17 erasure stops leaving the
+// data subject's email claimed in the Auth tier.
+const deleteUserCalls: string[] = [];
+
 // ─── Phase 06.1 Wave 2 (AUTH-16) — Auth user record state ──────────────────
 // Extends the auth mock surface to cover getUserByEmail / createUser /
 // updateUser as a stateful in-memory store. The integration test for
@@ -94,6 +99,7 @@ export function _reset(): void {
   issuedSignedUrls.length = 0;
   exportCalls.length = 0;
   updateUserCalls.length = 0;
+  deleteUserCalls.length = 0;
   // Phase 06.1 Wave 2
   usersByEmail.clear();
   usersByUid.clear();
@@ -206,6 +212,8 @@ export const adminMockState = {
   _allExportCalls,
   // Phase 8 Wave 4 additions
   _allUpdateUserCalls,
+  // 2026-10 addition
+  _allDeleteUserCalls,
   // Phase 06.1 Wave 2 additions
   _seedUser,
   _readUser,
@@ -576,6 +584,10 @@ export function _allUpdateUserCalls(): UpdateUserCall[] {
   return [...updateUserCalls];
 }
 
+export function _allDeleteUserCalls(): string[] {
+  return [...deleteUserCalls];
+}
+
 export function getAuthMock() {
   return {
     async setCustomUserClaims(
@@ -601,6 +613,22 @@ export function getAuthMock() {
       if (u && typeof properties.password === "string") {
         u.password = properties.password;
       }
+    },
+    // 2026-10: Admin SDK deleteUser. Records every call (so a test can assert
+    // the erasure actually reached the Auth tier), removes the record from both
+    // indexes, and throws {code:"auth/user-not-found"} on a miss to mirror the
+    // real contract — that is the branch gdprEraseUser swallows on a retry.
+    async deleteUser(uid: string): Promise<void> {
+      deleteUserCalls.push(uid);
+      const u = usersByUid.get(uid);
+      if (!u) {
+        throw Object.assign(new Error("user not found"), {
+          code: "auth/user-not-found",
+        });
+      }
+      usersByUid.delete(uid);
+      usersByEmail.delete(u.email);
+      customClaims.delete(uid);
     },
     // Phase 06.1 Wave 2 (AUTH-16): Admin SDK getUserByEmail — throws
     // {code:"auth/user-not-found"} on miss to mirror the real Admin SDK

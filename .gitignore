@@ -13,6 +13,7 @@ coverage/
 firestore-debug.log
 firebase-debug.log
 
+.claude/settings.local.json
 
 # Client Knowledge Agent eval output (rebuilt from functions/test/knowledge/eval/data)
 functions/test/knowledge/eval/out/

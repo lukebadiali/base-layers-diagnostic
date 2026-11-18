@@ -55,6 +55,7 @@ export function setRoute(route, deps) {
  *   renderRoadmap: (user: *, org: *) => HTMLElement,
  *   renderFunnel: (user: *, org: *) => HTMLElement,
  *   renderAdmin: (user: *) => HTMLElement,
+ *   renderKnowledge?: (user: *) => HTMLElement,
  *   renderSignIn?: () => HTMLElement,
  *   renderEmailVerificationLanding?: () => HTMLElement,
  *   renderFirstRun?: () => HTMLElement,
@@ -145,6 +146,8 @@ export function renderRoute(main, user, org, deps) {
   else if (route === "roadmap") main.appendChild(deps.renderRoadmap(user, org));
   else if (route === "funnel") main.appendChild(deps.renderFunnel(user, org));
   else if (route === "admin" && !isClient) main.appendChild(deps.renderAdmin(user));
+  else if (route === "knowledge" && !isClient && deps.renderKnowledge)
+    main.appendChild(deps.renderKnowledge(user));
   else {
     state.route = "dashboard";
     main.appendChild(deps.renderDashboard(user, org));

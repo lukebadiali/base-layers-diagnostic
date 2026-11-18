@@ -1117,6 +1117,7 @@ import {
       renderRoadmap,
       renderFunnel,
       renderAdmin,
+      renderKnowledge,
     });
   }
 
@@ -1575,6 +1576,34 @@ import {
     }
     dashTop.appendChild(sumCard);
     frag.appendChild(dashTop);
+
+    // Client Knowledge Agent: "Ask about your sessions", client view only.
+    // The server decides what may be answered: a client gets their own org
+    // only (from their login) and nothing until client access is switched on.
+    // Staff previewing the client view ask for the org on screen.
+    if (import.meta.env.VITE_KNOWLEDGE_CLIENT === "1" && isClientView(user)) {
+      const slot = h("div");
+      frag.appendChild(slot);
+      knowledgeWidgetModules ??= Promise.all([
+        import("./views/knowledge-widget.js"),
+        import("./cloud/knowledge.js"),
+      ]);
+      const forOrg = org.id;
+      const asStaff = isStaff(user);
+      void knowledgeWidgetModules.then(([view, cloud]) => {
+        let w = knowledgeWidgets.get(forOrg);
+        if (!w) {
+          w = view.createKnowledgeWidget({
+            orgName: org.name,
+            ask: (question) =>
+              cloud.knowledgeAsk(asStaff ? { orgId: forOrg, question } : { question }),
+          });
+          knowledgeWidgets.set(forOrg, w);
+        }
+        slot.replaceChildren(w);
+        w.restoreFocus();
+      });
+    }
 
     // Tiles (accordion — click to expand in place)
     const tilesHeader = h("div", { class: "tiles-header-bar" }, [
@@ -2840,8 +2869,51 @@ import {
   // ================================================================
   // ADMIN (internal only)
   // ================================================================
-  /** Client Knowledge Agent staff panel, created on first Admin render (VITE_KNOWLEDGE_ADMIN=1 only). */
+  /** Client Knowledge Agent staff page (the "Agent" tab), created once (VITE_KNOWLEDGE_ADMIN=1 only). */
   let knowledgePanelPromise = null;
+
+  // Client Knowledge Agent staff page. Off unless the build sets
+  // VITE_KNOWLEDGE_ADMIN=1; the check is inline so Vite drops this branch (and
+  // the lazy chunk) from a production build without the flag. The router only
+  // reaches it for staff. The panel is created once and reused: the page
+  // re-renders on unrelated changes, and rebuilding would drop uploads in
+  // progress (they keep running while staff are on other tabs).
+  function renderKnowledge(_user) {
+    const frag = h("div");
+    frag.appendChild(h("h1", { class: "view-title" }, "Client knowledge agent"));
+    if (import.meta.env.VITE_KNOWLEDGE_ADMIN !== "1") return frag;
+    const slot = h("div");
+    frag.appendChild(slot);
+    const next = { orgs: loadOrgMetas(), activeOrgId: state.orgId };
+    knowledgePanelPromise ??= Promise.all([
+      import("./views/knowledge-admin.js"),
+      import("./cloud/knowledge.js"),
+    ]).then(([view, cloud]) =>
+      view.createKnowledgeAdminPanel({
+        ...next,
+        ingest: cloud.knowledgeIngest,
+        ask: cloud.knowledgeAsk,
+        listUploads: cloud.knowledgeUploads,
+        getCoverage: cloud.knowledgeCoverage,
+        setStatus: cloud.knowledgeSetStatus,
+        isAdmin: !!(
+          state.fbUser &&
+          state.fbUser.appClaims &&
+          state.fbUser.appClaims.role === "admin"
+        ),
+      }),
+    );
+    void knowledgePanelPromise.then((panel) => {
+      panel.update(next);
+      slot.replaceChildren(panel);
+      panel.restoreFocus();
+    });
+    return frag;
+  }
+
+  /** Client-facing "Ask about your sessions" boxes, one per org (VITE_KNOWLEDGE_CLIENT=1 only). */
+  let knowledgeWidgetModules = null;
+  const knowledgeWidgets = new Map();
 
   function renderAdmin(user) {
     const frag = h("div");
@@ -3223,40 +3295,6 @@ import {
     );
 
     frag.appendChild(settingsCard);
-
-    // Client Knowledge Agent staff preview. Off unless the build sets
-    // VITE_KNOWLEDGE_ADMIN=1; the check is inline so Vite drops this branch
-    // (and the lazy chunk) from a production build without the flag.
-    // The panel is created once and reused: the Admin page re-renders on
-    // unrelated changes, and rebuilding would drop an upload in progress.
-    if (import.meta.env.VITE_KNOWLEDGE_ADMIN === "1") {
-      const slot = h("div");
-      frag.appendChild(slot);
-      const next = { orgs: loadOrgMetas(), activeOrgId: state.orgId };
-      knowledgePanelPromise ??= Promise.all([
-        import("./views/knowledge-admin.js"),
-        import("./cloud/knowledge.js"),
-      ]).then(([view, cloud]) =>
-        view.createKnowledgeAdminPanel({
-          ...next,
-          ingest: cloud.knowledgeIngest,
-          ask: cloud.knowledgeAsk,
-          listUploads: cloud.knowledgeUploads,
-          getCoverage: cloud.knowledgeCoverage,
-          setStatus: cloud.knowledgeSetStatus,
-          isAdmin: !!(
-            state.fbUser &&
-            state.fbUser.appClaims &&
-            state.fbUser.appClaims.role === "admin"
-          ),
-        }),
-      );
-      void knowledgePanelPromise.then((panel) => {
-        panel.update(next);
-        slot.replaceChildren(panel);
-        panel.restoreFocus();
-      });
-    }
 
     return frag;
   }

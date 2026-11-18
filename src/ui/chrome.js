@@ -99,6 +99,11 @@ export function createChrome(deps) {
       ["roadmap", "Plan"],
       ["funnel", "Funnel"],
     ];
+    // Client Knowledge Agent staff page: staff in the internal view only, and
+    // only when the build sets VITE_KNOWLEDGE_ADMIN=1.
+    if (import.meta.env.VITE_KNOWLEDGE_ADMIN === "1" && !isClientView(user)) {
+      items.push(["knowledge", "Agent"]);
+    }
     // Admin access moved to the user dropdown ("Admin · manage people").
     // The Delivery (engagement) framework now lives at the bottom of the
     // Diagnostic page (renderDiagnosticIndex appends it after the pillar

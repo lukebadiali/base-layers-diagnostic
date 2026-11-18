@@ -1,6 +1,6 @@
 # Handover: Client Knowledge Agent (Base Layers)
 
-**Written:** 17 Nov 2026, end of session. **Branch:** `feat/client-knowledge-agent` (PR #103, ready for review). **Repo:** `base-layers-diagnostic`.
+**Written:** 17 Nov 2026. **Updated:** 18 Nov 2026, after PRs #102–#104 merged to `main`. **Repo:** `base-layers-diagnostic`.
 
 Start here: read this file, then `functions/src/knowledge/` and `functions/test/knowledge/eval/`. Section 5 is the next task.
 
@@ -39,7 +39,7 @@ What they ask for:
 | Answerer | same DeepSeek route as the describer |
 
 - **Evaluation work:** test-data generation and grading use Claude on Hugh's Claude Code allowance (sub-agents), not an API key. There is no `ANTHROPIC_API_KEY`, and Hugh doesn't want one.
-- **No client-facing widget until the agent is good.** The staff panel is the only UI.
+- **Client-facing widget:** originally deferred until the agent was good; built in #104 ("Ask about your sessions"), but clients can only use it once `knowledgeConfig/access { clientAccess: true }` is written, which is still off.
 - **Test clients:** Luke's book is mostly PE houses and consultancies. Keep test clients realistic, nothing whimsical.
 
 ---
@@ -48,7 +48,7 @@ What they ask for:
 
 ### Code
 
-The code is in `functions/src/knowledge/`, on branch `feat/client-knowledge-agent`:
+The code is in `functions/src/knowledge/`, on `main` (merged in #103):
 
 | File | Role |
 |---|---|
@@ -63,17 +63,20 @@ The code is in `functions/src/knowledge/`, on branch `feat/client-knowledge-agen
 | `logs.ts` | `knowledgeUploads` and `knowledgeQueries`. |
 | `callables.ts` | Callables: `knowledgeIngest`, `knowledgeAsk`, `knowledgeUploads`, `knowledgeSetStatus`, `knowledgeCoverage`. Trigger: `knowledgeOnOrgDelete` (archives). All in `europe-west2`, exported from `functions/src/index.ts`. |
 
-### Staff panel
+### Staff page (Agent tab)
 
-The panel is in `src/views/knowledge-admin.js` and `src/cloud/knowledge.js`, wired in `src/main.js` `renderAdmin`. It has:
+Since #104 the panel is its own top-nav tab, **Agent** (route `knowledge`), shown to staff in the internal view when the build sets `VITE_KNOWLEDGE_ADMIN=1`. It is no longer on the Admin page. Code: `src/views/knowledge-admin.js`, `src/cloud/knowledge.js`, `src/main.js` `renderKnowledge`, `src/router.js`, `src/ui/chrome.js`. It has:
 - client picker (follows the top-bar org)
-- upload, in the background: forms queue and run one at a time, staff can switch client or leave the page, and a toast says when each is live or failed. Closing the tab with uploads pending asks first.
+- multi-file upload, processed one at a time in the browser. Uploads survive moving around the app but not closing the tab (the page warns on unload).
+- jobs table: Queued / Processing (with a timer) / Live / Failed, with Cancel, Retry and Clear finished
+- upload history for "This client" or "All clients" (with a Client column), auto-refreshing every 5 seconds while anything is processing. "Replaced" is keyed by `orgId|pillar`.
 - "What the agent knows" (10 pillars)
-- archive / restore (admin only, confirm in place). While archived, a line under Upload says why it is greyed out.
-- upload log (Processing / Live / Replaced / Archived / Failed)
+- archive / restore (admin only, confirm in place)
 - test question (bullets, "Drew on" sources, "Not covered" marker), with an "Ask across all clients" tick box for staff
 
-Visibility: the panel shows only when the build sets `VITE_KNOWLEDGE_ADMIN=1`, which CI now sets in the build, deploy and preview jobs. It is one instance, reused across re-renders, and keeps focus.
+### Client widget
+
+`src/views/knowledge-widget.js`: "Ask about your sessions" on the dashboard, in the client view only (`isClientView`), behind `VITE_KNOWLEDGE_CLIENT=1` (set in all three CI build env blocks). It shows answers only, never sources. Real clients send no `orgId`; the server uses their login. Staff previewing the client view (Internal toggle off) ask with the on-screen `orgId`. No new callable was added for it, because new functions need manual IAM `allUsers` invoker grants that org policy blocks.
 
 ### Production
 
@@ -84,17 +87,19 @@ The project is `bedeveloped-base-layers`:
 - **Deployed 17 Nov (morning):** `knowledgeCoverage` (new) and `knowledgeIngest` again.
 - **Deployed 17 Nov (afternoon), `9dd40a2`:** all five knowledge callables (`knowledgeIngest`, `knowledgeAsk`, `knowledgeUploads`, `knowledgeSetStatus`, `knowledgeCoverage`). This carries the retrieval re-rank, the NOT AGREED and pronoun wording, the stricter caller check, fail-closed retrieval and the all-clients staff mode. Snapshots are in `~/Desktop/knowledge-deploy-snapshot-5` and `-6`.
 - Every deploy passed the IAM / IdP gate, and the diff showed **nothing lost**.
-- **Not live yet:** the hosting rewrites and the staff panel go live only when PR #103 merges. CI deploys hosting from `main`, and `main` needs a reviewer.
+- **Hosting:** CI deployed `main` at `18dbee4` (#104) on 18 Nov; the live bundle contains the Agent tab and the widget.
+- **#102 server half:** `inviteInternal` and `gdprEraseUser` still need a named-functions deploy (§6). The 18 Nov attempt stopped at the pre-deploy gate because the gcloud and firebase-tools logins had expired; nothing changed in production.
 - **Clients:** they cannot ask. `knowledgeConfig/access` does not exist, which means off.
 
 ### PRs
 
 | PR | State |
 |---|---|
-| #103 | Knowledge agent and the eval. CI fully green. **Blocked only on review approval.** Hugh can't approve his own PR and has no admin rights to bypass, so Luke or George must approve. Merging deploys the panel. |
-| #102 | Internal-account reactivation and GDPR erasure deleting the Auth record. Ready, needs review. Its server half needs a functions deploy. |
-| #99 | October handover doc. Open, needs review. |
+| #104 | Agent tab, jobs page, client widget. Merged 18 Nov (`18dbee4`), hosting deployed. |
+| #103 | Knowledge agent and the eval. Merged 18 Nov (`6593a79`). Functions were already live from `9dd40a2`. |
+| #102 | Internal-account reactivation and GDPR erasure deleting the Auth record. Merged 18 Nov (`1f1617c`). **Functions not yet deployed.** |
 | #101 | MFA Verify spinner. Merged. |
+| #99 | October handover doc. Open, needs review. |
 
 ### Access control (all in code; the model decides nothing)
 
@@ -262,7 +267,7 @@ Still open:
 
 ## 5. Next task
 
-1. **Merge PR #103.** Luke or George must approve it. Merging deploys the staff panel and the hosting rewrites. The functions are already live (§2).
+1. **Deploy #102's functions** (`inviteInternal`, `gdprEraseUser`) with the §6 procedure, once the logins are renewed.
 2. **Describer text.** Stop embedding describer-written decisions, takeaways and challenges as statements. Either drop them from chunk text, as was done for `openQuestions`, or label them "BeDeveloped's summary (not recorded in the form)". Then add a prompt rule: say a decision was agreed only if a recommendation's Status says so. Re-run the eval and count the "takeaway" and invented-decision unsupported claims; the target is close to 0. Forms already uploaded keep their old chunk text until they are re-uploaded.
 3. **Small eval fix:** include the next-session date in the grader's form text (`build_grade_batches.py`).
 4. **Optional:** bring p90 under 3s.
@@ -310,7 +315,7 @@ Snapshots so far are in `~/Desktop/knowledge-deploy-snapshot`, `…-2` and `…-
 - **Config:** `firebase.local-test.json` is the repo `firebase.json` plus an auth emulator, with `firestore.host = "::"`. It is git-excluded via `.git/info/exclude`.
 - **Keys:** the functions emulator reads them from `functions/.secret.local`, which is git-excluded. Delete it after use.
 - **Start the emulators:** `--config firebase.local-test.json --only auth,firestore,functions,storage --project bedeveloped-base-layers`, with `CLOUDSDK_CONFIG` set to an empty directory so no production credentials are found.
-- **Start the dev server:** `VITE_USE_EMULATORS=1 VITE_KNOWLEDGE_ADMIN=1 npx vite`.
+- **Start the dev server:** `VITE_USE_EMULATORS=1 VITE_KNOWLEDGE_ADMIN=1 VITE_KNOWLEDGE_CLIENT=1 npx vite`.
 - **Test users:** seed them with the Admin SDK and set claims. The auth emulator **can't do TOTP**, so sign in, then add an SMS factor with the Admin SDK (`enrolledFactors: [{uid, phoneNumber, factorId: "phone"}]`) and reload.
 - **Known issue:** the web app's Firestore stream sometimes won't connect to the emulator. The panel doesn't need it, so seed `orgs/{id}` with the Admin SDK instead.
 
@@ -330,7 +335,6 @@ Snapshots so far are in `~/Desktop/knowledge-deploy-snapshot`, `…-2` and `…-
 
 ### Not built yet
 
-- Client-facing widget (Hugh: not until the agent is good).
 - Weekly usage report email.
 - Admin and client guides.
 - Document types other than the Session Capture Form (review doc, internal delivery framework).

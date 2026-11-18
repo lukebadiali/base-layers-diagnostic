@@ -29,6 +29,7 @@
     "tests/scripts/migrate-subcollections/**",
     "vitest.rules.config.js",
     "scripts/admin-mfa-unenroll/run.js",
+    "scripts/internal-account-status/**",
     "scripts/provision-function-sas/**",
     "scripts/enable-bigquery-audit-sink/**",
     "scripts/strip-legacy-id-fields/**",

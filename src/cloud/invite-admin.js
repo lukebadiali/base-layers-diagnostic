@@ -87,11 +87,39 @@ export async function deleteClient(input) {
 }
 
 /**
+ * Thrown when the email already has an Auth record. `state` carries the
+ * server's classification (see functions/src/auth/account-state.ts) and
+ * `reclaimable` says whether re-calling with `reclaim: true` would revive it.
+ * The modal uses these to offer reactivation instead of dead-ending.
+ */
+export class AccountExistsError extends Error {
+  /**
+   * @param {string} message
+   * @param {{ state: string, reclaimable: boolean, uid?: string, currentRole: string|null }} info
+   * @param {*} cause
+   */
+  constructor(message, info, cause) {
+    super(message);
+    this.name = "AccountExistsError";
+    this.state = info.state;
+    this.reclaimable = info.reclaimable;
+    this.uid = info.uid;
+    this.currentRole = info.currentRole;
+    /** @type {*} */ (this).cause = cause;
+  }
+}
+
+/**
  * Create an internal/admin (staff) account. Admin-only server-side. Returns the
  * server-generated temporary password for the admin to relay out-of-band; the
  * member is forced to set their own password + enrol MFA on first sign-in.
  *
- * @param {{ email: string, name: string, role: "internal" | "admin" }} input
+ * 2026-10: `reclaim: true` revives an existing-but-unusable account in place
+ * (disabled / GDPR-erased / profile-orphaned) rather than refusing. Without it
+ * a pre-existing email throws AccountExistsError carrying the diagnosis, so
+ * the caller can ask the admin before reversing anything.
+ *
+ * @param {{ email: string, name: string, role: "internal" | "admin", reclaim?: boolean }} input
  * @returns {Promise<{ uid: string, tempPassword: string, existed: boolean }>}
  */
 export async function inviteInternal(input) {
@@ -101,7 +129,17 @@ export async function inviteInternal(input) {
     return /** @type {{ uid: string, tempPassword: string, existed: boolean }} */ (res.data);
   } catch (err) {
     if (errCode(err) === "auth/email-already-exists") {
-      throw friendlyError("An account with this email already exists.", err);
+      const d = /** @type {*} */ (err)?.details ?? {};
+      throw new AccountExistsError(
+        /** @type {*} */ (err)?.message || "An account with this email already exists.",
+        {
+          state: d.state ?? "unknown",
+          reclaimable: d.reclaimable === true,
+          uid: d.uid,
+          currentRole: d.currentRole ?? null,
+        },
+        err,
+      );
     }
     throw err;
   }

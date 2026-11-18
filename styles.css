@@ -4881,3 +4881,15 @@ ul.knowledge-answer-text li + li {
   font-size: 12px;
   color: var(--brand-ink);
 }
+
+/* Client Knowledge Agent: client "Ask about your sessions" box and staff page */
+.knowledge-widget {
+  margin-top: 16px;
+}
+.knowledge-log-head {
+  align-items: center;
+  justify-content: space-between;
+}
+.knowledge-log-head h3 {
+  margin: 0;
+}

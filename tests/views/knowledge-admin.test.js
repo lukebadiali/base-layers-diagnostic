@@ -111,8 +111,8 @@ describe("createKnowledgeAdminPanel", () => {
   it("labels itself staff-only and loads the first client's upload log", async () => {
     const { el, deps } = setup();
     await flush();
-    expect(el.textContent).toMatch(/Preview, staff only/);
-    expect(el.textContent).toMatch(/Clients can't see any of this yet/);
+    expect(el.textContent).toMatch(/Staff only/);
+    expect(el.textContent).toMatch(/follow each upload/);
     expect(deps.listUploads).toHaveBeenCalledWith({ orgId: "org-nw" });
     expect(el.querySelector(".knowledge-table")?.textContent).toMatch(
       /p1\.docx.*Failed.*Form is for Bluefin/,
@@ -657,5 +657,116 @@ describe("asking across all clients", () => {
       orgId: "org-nw",
       question: "Who is our ideal customer?",
     });
+  });
+});
+
+describe("upload jobs page", () => {
+  it("queues several forms at once and lists each with its status", async () => {
+    /** @type {Array<(v: *) => void>} */
+    const finishers = [];
+    const { el, deps } = setup({ ingest: vi.fn(() => new Promise((r) => finishers.push(r))) });
+    await flush();
+    const input = /** @type {HTMLInputElement} */ (el.querySelector('input[type="file"]'));
+    Object.defineProperty(input, "files", {
+      value: [
+        new File([new Uint8Array([0x50, 0x4b])], "a.docx"),
+        new File([new Uint8Array([0x50, 0x4b])], "b.docx"),
+        new File(["x"], "notes.txt"),
+      ],
+      configurable: true,
+    });
+    button(el, "Upload form").click();
+    await vi.waitFor(() => expect(deps.ingest).toHaveBeenCalledTimes(1));
+    const rows = () =>
+      [...el.querySelectorAll(".knowledge-jobs tbody tr")].map((r) => r.textContent);
+    expect(rows()).toHaveLength(2);
+    expect(rows()[0]).toMatch(/a\.docx.*Processing/);
+    expect(rows()[1]).toMatch(/b\.docx.*Queued/);
+    expect(el.querySelector(".knowledge-msg")?.textContent).toMatch(
+      /2 forms are uploading.*Skipped: notes\.txt/,
+    );
+    finishers[0]({ pillar: "1", sessionDate: "2026-11-11", chunks: 8, replacedChunks: 0 });
+    await vi.waitFor(() => expect(deps.ingest).toHaveBeenCalledTimes(2));
+    expect(rows()[0]).toMatch(/a\.docx.*Live/);
+    expect(rows()[1]).toMatch(/b\.docx.*Processing/);
+  });
+
+  it("cancels a queued form, retries a failed one and clears finished jobs", async () => {
+    let fail = true;
+    /** @type {Array<(v: *) => void>} */
+    const finishers = [];
+    const ingest = vi.fn(() => {
+      if (fail) {
+        fail = false;
+        return Promise.reject(new Error("Upload stopped."));
+      }
+      return new Promise((r) => finishers.push(r));
+    });
+    const { el, deps } = setup({ ingest });
+    await flush();
+    chooseFile(el, new File([new Uint8Array([0x50, 0x4b])], "a.docx"));
+    button(el, "Upload form").click();
+    await vi.waitFor(() =>
+      expect(el.querySelector(".knowledge-jobs")?.textContent).toMatch(
+        /a\.docx.*Failed.*Upload stopped/,
+      ),
+    );
+    button(el, "Retry").click();
+    await vi.waitFor(() => expect(deps.ingest).toHaveBeenCalledTimes(2));
+    chooseFile(el, new File([new Uint8Array([0x50, 0x4b])], "b.docx"));
+    button(el, "Upload form").click();
+    await vi.waitFor(() => expect(button(el, "Cancel")).toBeTruthy());
+    button(el, "Cancel").click();
+    expect(el.querySelector(".knowledge-jobs")?.textContent).toMatch(/b\.docx.*Cancelled/);
+    finishers[0]({ pillar: "1", sessionDate: "2026-11-11", chunks: 8, replacedChunks: 0 });
+    await vi.waitFor(() => expect(button(el, "Clear finished")).toBeTruthy());
+    await vi.waitFor(() =>
+      expect(el.querySelector(".knowledge-jobs")?.textContent).toMatch(/a\.docx.*Live/),
+    );
+    expect(deps.ingest).toHaveBeenCalledTimes(2); // the cancelled form never went
+    button(el, "Clear finished").click();
+    expect(el.querySelector(".knowledge-jobs")?.textContent).toMatch(/No uploads started/);
+  });
+
+  it("shows the upload history for all clients, with a client column", async () => {
+    const { el, deps } = setup({
+      listUploads: vi.fn(async () => [
+        {
+          id: "u1",
+          orgId: "org-nw",
+          clientName: "Northwind Analytics",
+          fileName: "p1.docx",
+          uploadedBy: "a",
+          status: "succeeded",
+          pillar: "1",
+          sessionDate: "2026-11-11",
+          startedAt: "2026-11-16T10:43:00.000Z",
+        },
+        {
+          id: "u2",
+          orgId: "org-bf",
+          clientName: "Bluefin Legal",
+          fileName: "p1.docx",
+          uploadedBy: "a",
+          status: "succeeded",
+          pillar: "1",
+          sessionDate: "2026-11-10",
+          startedAt: "2026-11-16T10:40:00.000Z",
+        },
+      ]),
+    });
+    await flush();
+    const scope = /** @type {HTMLSelectElement} */ (el.querySelector(".knowledge-log-scope"));
+    scope.value = "all";
+    scope.dispatchEvent(new Event("change"));
+    await vi.waitFor(() => expect(deps.listUploads).toHaveBeenLastCalledWith({}));
+    await vi.waitFor(() =>
+      expect(el.querySelector(".knowledge-log th:nth-child(2)")?.textContent).toBe("Client"),
+    );
+    // Same pillar, different clients: both are live, neither replaces the other.
+    expect(el.querySelector(".knowledge-log")?.textContent).not.toMatch(/Replaced/);
+    expect(el.querySelector(".knowledge-log")?.textContent).toMatch(
+      /Northwind Analytics.*Bluefin Legal/,
+    );
   });
 });

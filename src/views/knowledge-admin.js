@@ -74,7 +74,7 @@ export function uploadStates(rows, archived = false) {
   const seen = new Set();
   return rows.map((r) => {
     if (r.status !== "succeeded") return r.status;
-    const key = r.pillar ?? "";
+    const key = `${r.orgId}|${r.pillar ?? ""}`;
     if (seen.has(key)) return "replaced";
     seen.add(key);
     return archived ? "archived" : "live";
@@ -156,17 +156,10 @@ export function createKnowledgeAdminPanel(deps) {
   const h = deps.h ?? defaultH;
   const root = /** @type {KnowledgeAdminPanel} */ (h("section", { class: "knowledge-admin" }));
   root.appendChild(
-    h("h2", {}, [
-      "Client knowledge agent ",
-      h("span", { class: "badge amber" }, "Preview, staff only"),
+    h("p", { class: "muted-paragraph" }, [
+      h("span", { class: "badge amber" }, "Staff only"),
+      " Upload Session Capture Forms, follow each upload, see what each client's agent knows and test it.",
     ]),
-  );
-  root.appendChild(
-    h(
-      "p",
-      { class: "muted-paragraph" },
-      "Upload a client's Session Capture Forms, see what their agent knows and test it. Clients can't see any of this yet.",
-    ),
   );
 
   const card = h("div", { class: "card" });
@@ -186,15 +179,29 @@ export function createKnowledgeAdminPanel(deps) {
       type: "file",
       class: "knowledge-file",
       accept: ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      multiple: "",
       "aria-label": "Session Capture Form",
     })
   );
   const uploadBtn = /** @type {HTMLButtonElement} */ (h("button", { class: "btn" }, "Upload form"));
+  const jobsBox = h("div", { class: "knowledge-jobs" });
   const uploadMsg = h("div", { class: "knowledge-msg", role: "status" });
   const uploadBlocked = h("div", { class: "knowledge-hint knowledge-blocked" });
 
   // ── Upload log ───────────────────────────────────────────────────────
   const log = h("div", { class: "knowledge-log" });
+  const logScope = /** @type {HTMLSelectElement} */ (
+    h(
+      "select",
+      { class: "knowledge-select knowledge-log-scope", "aria-label": "Upload history for" },
+      [
+        h("option", { value: "client" }, "This client"),
+        h("option", { value: "all" }, "All clients"),
+      ],
+    )
+  );
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let logPoll = null;
 
   // ── What the agent knows ─────────────────────────────────────────────
   const coverageBox = h("div", { class: "knowledge-coverage" });
@@ -378,17 +385,29 @@ export function createKnowledgeAdminPanel(deps) {
   async function refreshLog() {
     const forOrg = orgId();
     if (!forOrg) return;
-    log.replaceChildren(h("p", { class: "muted-paragraph" }, "Loading uploads…"));
+    const all = logScope.value === "all";
+    if (logPoll) clearTimeout(logPoll);
+    logPoll = null;
+    if (!log.querySelector("table")) {
+      log.replaceChildren(h("p", { class: "muted-paragraph" }, "Loading uploads…"));
+    }
     try {
-      const rows = await deps.listUploads({ orgId: forOrg });
-      if (forOrg !== orgId()) return; // the client changed while loading
+      const rows = await deps.listUploads(all ? {} : { orgId: forOrg });
+      if (forOrg !== orgId() || all !== (logScope.value === "all")) return; // changed while loading
       if (!rows.length) {
         log.replaceChildren(
-          h("p", { class: "muted-paragraph" }, "No uploads for this client yet."),
+          h(
+            "p",
+            { class: "muted-paragraph" },
+            all ? "No uploads yet." : "No uploads for this client yet.",
+          ),
         );
         return;
       }
-      const states = uploadStates(rows, coverageStatus === "archived");
+      const states = uploadStates(rows, !all && coverageStatus === "archived");
+      const head = all
+        ? ["File", "Client", "Pillar", "Session date", "Status", "Uploaded"]
+        : ["File", "Pillar", "Session date", "Status", "Uploaded"];
       log.replaceChildren(
         h("table", { class: "knowledge-table" }, [
           h(
@@ -397,7 +416,7 @@ export function createKnowledgeAdminPanel(deps) {
             h(
               "tr",
               {},
-              ["File", "Pillar", "Session date", "Status", "Uploaded"].map((t) => h("th", {}, t)),
+              head.map((t) => h("th", {}, t)),
             ),
           ),
           h(
@@ -406,6 +425,7 @@ export function createKnowledgeAdminPanel(deps) {
             rows.map((r, i) =>
               h("tr", { class: states[i] === "replaced" ? "is-replaced" : "" }, [
                 h("td", {}, r.fileName),
+                all ? h("td", {}, r.clientName || "—") : null,
                 h("td", {}, r.pillar ? pillarLabel(r.pillar) : "—"),
                 h("td", {}, r.sessionDate ?? "—"),
                 h("td", {}, [
@@ -420,30 +440,157 @@ export function createKnowledgeAdminPanel(deps) {
           ),
         ]),
       );
+      // Anything still processing (here or on another staff member's screen):
+      // look again shortly, so the history settles on its own.
+      if (rows.some((r) => r.status === "processing")) {
+        logPoll = setTimeout(() => void refreshLog(), 5000);
+      }
     } catch {
       log.replaceChildren(h("p", { class: "auth-error" }, "Couldn't load the upload log."));
     }
   }
+  logScope.addEventListener("change", () => void refreshLog());
 
+  // ── Upload jobs ──────────────────────────────────────────────────────
   // Uploads run in the background, one at a time, in the order chosen. Staff
-  // can carry on (another client, another page of the app) while a form is
-  // read and tagged; a toast says when each one is live or has failed. Jobs
-  // run one at a time so two forms for the same pillar never race.
-  /** @type {Array<{ orgId: string, name: string, fileName: string, fileBase64: string }>} */
-  const queue = [];
-  /** @type {{ orgId: string, name: string, fileName: string } | null} */
-  let current = null;
+  // can carry on (another client, another tab of the app) while a form is
+  // read and tagged; the jobs list shows each one's progress and a toast says
+  // when each is live or failed. One at a time, so two forms for the same
+  // pillar never race.
+  /**
+   * @typedef {{ id: number, orgId: string, name: string, fileName: string, fileBase64: string,
+   *   status: "queued" | "processing" | "live" | "failed" | "cancelled",
+   *   started?: number, finished?: number, message?: string }} Job
+   */
+  /** @type {Job[]} */
+  const jobs = [];
+  let nextJobId = 1;
+  let draining = false;
+  /** @type {ReturnType<typeof setInterval> | null} */
+  let ticker = null;
   const queueLine = h("div", { class: "knowledge-hint knowledge-queue", role: "status" });
 
+  const JOB_BADGE = {
+    queued: "",
+    processing: "amber",
+    live: "green",
+    failed: "red",
+    cancelled: "",
+  };
+  const JOB_LABEL = {
+    queued: "Queued",
+    processing: "Processing",
+    live: "Live",
+    failed: "Failed",
+    cancelled: "Cancelled",
+  };
+
+  /** @param {number} ms */
+  const secs = (ms) => `${Math.max(0, Math.round(ms / 1000))}s`;
+
   function renderQueue() {
+    const current = jobs.find((j) => j.status === "processing");
+    const waiting = jobs.filter((j) => j.status === "queued").length;
     if (!current) {
       queueLine.replaceChildren();
       return;
     }
-    const waiting = queue.length ? ` ${queue.length} more waiting.` : "";
     queueLine.replaceChildren(
-      `Processing ${current.fileName} for ${current.name} in the background.${waiting}`,
+      `Processing ${current.fileName} for ${current.name} in the background.` +
+        (waiting ? ` ${waiting} more waiting.` : ""),
     );
+  }
+
+  function renderJobs() {
+    renderQueue();
+    if (!jobs.length) {
+      jobsBox.replaceChildren(
+        h("p", { class: "muted-paragraph" }, "No uploads started in this session."),
+      );
+      return;
+    }
+    const now = Date.now();
+    const finished = jobs.some((j) => ["live", "failed", "cancelled"].includes(j.status));
+    const kids = /** @type {Node[]} */ (
+      [
+        h("table", { class: "knowledge-table" }, [
+          h(
+            "thead",
+            {},
+            h(
+              "tr",
+              {},
+              ["File", "Client", "Status", "Time", ""].map((t) => h("th", {}, t)),
+            ),
+          ),
+          h(
+            "tbody",
+            {},
+            jobs.map((j) => {
+              const time =
+                j.status === "processing" && j.started
+                  ? secs(now - j.started)
+                  : j.started && j.finished
+                    ? secs(j.finished - j.started)
+                    : "—";
+              /** @type {HTMLButtonElement | null} */
+              let action = null;
+              if (j.status === "queued") {
+                action = /** @type {HTMLButtonElement} */ (
+                  h("button", { class: "btn ghost sm" }, "Cancel")
+                );
+                action.addEventListener("click", () => {
+                  j.status = "cancelled";
+                  renderJobs();
+                });
+              } else if (j.status === "failed" && j.fileBase64) {
+                action = /** @type {HTMLButtonElement} */ (
+                  h("button", { class: "btn secondary sm" }, "Retry")
+                );
+                action.addEventListener("click", () => {
+                  j.status = "queued";
+                  j.message = undefined;
+                  j.started = j.finished = undefined;
+                  renderJobs();
+                  void drain();
+                });
+              }
+              return h("tr", { "data-job": String(j.id) }, [
+                h("td", {}, j.fileName),
+                h("td", {}, j.name),
+                h("td", {}, [
+                  h("span", { class: `badge ${JOB_BADGE[j.status]}` }, JOB_LABEL[j.status]),
+                  j.message
+                    ? h(
+                        "div",
+                        { class: j.status === "failed" ? "knowledge-error" : "knowledge-hint" },
+                        j.message,
+                      )
+                    : null,
+                ]),
+                h("td", {}, time),
+                h("td", {}, action),
+              ]);
+            }),
+          ),
+        ]),
+        finished
+          ? (() => {
+              const clear = /** @type {HTMLButtonElement} */ (
+                h("button", { class: "btn ghost sm" }, "Clear finished")
+              );
+              clear.addEventListener("click", () => {
+                for (let i = jobs.length - 1; i >= 0; i--) {
+                  if (["live", "failed", "cancelled"].includes(jobs[i].status)) jobs.splice(i, 1);
+                }
+                renderJobs();
+              });
+              return h("div", { class: "row" }, [clear]);
+            })()
+          : null,
+      ].filter(Boolean)
+    );
+    jobsBox.replaceChildren(...kids);
   }
 
   /** @param {string} level @param {string} message */
@@ -451,67 +598,113 @@ export function createKnowledgeAdminPanel(deps) {
     (deps.notify ?? defaultNotify)(/** @type {*} */ (level), message);
 
   async function drain() {
-    if (current) return;
-    while (queue.length) {
-      const job = /** @type {(typeof queue)[number]} */ (queue.shift());
-      current = job;
-      renderQueue();
-      if (job.orgId === orgId()) void refreshLog();
-      try {
-        const r = await deps.ingest({
-          orgId: job.orgId,
-          fileName: job.fileName,
-          fileBase64: job.fileBase64,
-        });
-        const text =
-          `${pillarLabel(r.pillar)} form from ${r.sessionDate} is now live for ${job.name}` +
-          (r.replacedChunks ? " (it replaced the previous one)." : ".");
-        toast("success", text);
-        if (job.orgId === orgId()) {
-          uploadMsg.replaceChildren(h("div", { class: "knowledge-ok" }, text));
+    if (draining) return;
+    draining = true;
+    ticker ??= setInterval(renderJobs, 1000);
+    try {
+      for (;;) {
+        const job = jobs.find((j) => j.status === "queued");
+        if (!job) break;
+        job.status = "processing";
+        job.started = Date.now();
+        renderJobs();
+        if (job.orgId === orgId()) void refreshLog();
+        try {
+          const r = await deps.ingest({
+            orgId: job.orgId,
+            fileName: job.fileName,
+            fileBase64: job.fileBase64,
+          });
+          const text =
+            `${pillarLabel(r.pillar)} form from ${r.sessionDate} is now live for ${job.name}` +
+            (r.replacedChunks ? " (it replaced the previous one)." : ".");
+          job.status = "live";
+          job.message = text;
+          job.fileBase64 = ""; // done with it; frees memory
+          toast("success", text);
+          if (job.orgId === orgId()) {
+            uploadMsg.replaceChildren(h("div", { class: "knowledge-ok" }, text));
+          }
+        } catch (err) {
+          const reason = (err && /** @type {*} */ (err).message) || "Upload failed.";
+          job.status = "failed";
+          job.message = reason;
+          toast("error", `${job.fileName} for ${job.name} didn't upload: ${reason}`);
+          if (job.orgId === orgId()) {
+            uploadMsg.replaceChildren(h("div", { class: "auth-error" }, reason));
+          }
         }
-      } catch (err) {
-        const reason = (err && /** @type {*} */ (err).message) || "Upload failed.";
-        toast("error", `${job.fileName} for ${job.name} didn't upload: ${reason}`);
-        if (job.orgId === orgId()) {
-          uploadMsg.replaceChildren(h("div", { class: "auth-error" }, reason));
-        }
+        job.finished = Date.now();
+        renderJobs();
+        if (job.orgId === orgId()) void refreshAll();
       }
-      current = null;
-      renderQueue();
-      if (job.orgId === orgId()) void refreshAll();
+    } finally {
+      draining = false;
+      if (ticker) clearInterval(ticker);
+      ticker = null;
+      renderJobs();
     }
   }
 
   // Closing the tab drops forms not yet sent, so ask first while any are pending.
   window.addEventListener("beforeunload", (e) => {
-    if (current || queue.length) e.preventDefault();
+    if (jobs.some((j) => j.status === "queued" || j.status === "processing")) e.preventDefault();
   });
 
   uploadBtn.addEventListener("click", async () => {
-    const file = fileInput.files?.[0];
-    const problem = checkFormFile(file);
-    if (problem || !file) {
-      uploadMsg.replaceChildren(h("div", { class: "auth-error" }, problem ?? "Choose a file."));
+    const files = [...(fileInput.files ?? [])];
+    if (!files.length) {
+      uploadMsg.replaceChildren(
+        h("div", { class: "auth-error" }, checkFormFile(undefined) ?? "Choose a file."),
+      );
       return;
     }
-    const job = {
-      orgId: orgId(),
-      name: select.selectedOptions[0]?.textContent ?? "",
-      fileName: file.name,
-      fileBase64: toBase64(await file.arrayBuffer()),
-    };
+    const forOrg = orgId();
+    const name = select.selectedOptions[0]?.textContent ?? "";
+    /** @type {string[]} */
+    const rejected = [];
+    let added = 0;
+    for (const file of files) {
+      const problem = checkFormFile(file);
+      if (problem) {
+        rejected.push(`${file.name}: ${problem}`);
+        continue;
+      }
+      jobs.push({
+        id: nextJobId++,
+        orgId: forOrg,
+        name,
+        fileName: file.name,
+        fileBase64: toBase64(await file.arrayBuffer()),
+        status: "queued",
+      });
+      added++;
+    }
     fileInput.value = "";
-    queue.push(job);
+    if (rejected.length && !added) {
+      uploadMsg.replaceChildren(
+        h(
+          "div",
+          { class: "auth-error" },
+          files.length === 1 ? (checkFormFile(files[0]) ?? "") : rejected.join(" "),
+        ),
+      );
+      return;
+    }
+    const what =
+      added === 1
+        ? `${jobs[jobs.length - 1].fileName} is uploading`
+        : `${added} forms are uploading`;
     uploadMsg.replaceChildren(
       h(
         "div",
         { class: "knowledge-hint" },
-        `${job.fileName} is uploading for ${job.name}. It takes up to a minute; you can carry on and you'll get a notification when it's live.`,
+        `${what} for ${name}. Each takes up to a minute; you can carry on and you'll get a notification when it's live.` +
+          (rejected.length ? ` Skipped: ${rejected.join(" ")}` : ""),
       ),
     );
+    renderJobs();
     void drain();
-    renderQueue();
   });
 
   // ── Test question ────────────────────────────────────────────────────
@@ -618,15 +811,17 @@ export function createKnowledgeAdminPanel(deps) {
       h("label", { class: "settings-form-label", for: "knowledge-client" }, "Client"),
       select,
     ]),
-    h("h3", {}, "Upload a Session Capture Form"),
+    h("h3", {}, "Upload Session Capture Forms"),
     h("div", { class: "row" }, [fileInput, uploadBtn]),
     uploadBlocked,
     queueLine,
     uploadMsg,
+    h("h3", {}, "Upload jobs"),
+    jobsBox,
     h("h3", {}, "What the agent knows"),
     coverageBox,
     statusBox,
-    h("h3", {}, "Uploads"),
+    h("div", { class: "row knowledge-log-head" }, [h("h3", {}, "Upload history"), logScope]),
     log,
     h("h3", {}, "Test the agent"),
     h("div", { class: "row" }, [question, askBtn]),
@@ -693,6 +888,7 @@ export function createKnowledgeAdminPanel(deps) {
     }
   };
 
+  renderJobs();
   root.update({ orgs: deps.orgs, activeOrgId: deps.activeOrgId });
   return root;
 }

@@ -115,4 +115,50 @@ describe("src/router.js — setRoute + dispatcher shape", () => {
     expect(renderAdmin).not.toHaveBeenCalled();
     expect(renderDashboard).toHaveBeenCalled();
   });
+
+  it("renderRoute shows the knowledge agent page to staff and never to the client view", () => {
+    const mk = (/** @type {boolean} */ client) => {
+      const renderKnowledge = vi.fn(() => document.createElement("div"));
+      const renderDashboard = vi.fn(() => document.createElement("div"));
+      return {
+        renderKnowledge,
+        renderDashboard,
+        deps: {
+          isClientView: () => client,
+          renderDashboard,
+          renderDiagnosticIndex: vi.fn(),
+          renderPillar: vi.fn(),
+          renderActions: vi.fn(),
+          renderEngagement: vi.fn(),
+          renderReport: vi.fn(),
+          renderDocuments: vi.fn(),
+          renderChat: vi.fn(),
+          renderRoadmap: vi.fn(),
+          renderFunnel: vi.fn(),
+          renderAdmin: vi.fn(),
+          renderKnowledge,
+        },
+      };
+    };
+    const staff = mk(false);
+    state.route = "knowledge";
+    renderRoute(
+      document.createElement("main"),
+      /** @type {*} */ ({ id: "u1" }),
+      /** @type {*} */ ({ id: "o1" }),
+      staff.deps,
+    );
+    expect(staff.renderKnowledge).toHaveBeenCalled();
+
+    const client = mk(true);
+    state.route = "knowledge";
+    renderRoute(
+      document.createElement("main"),
+      /** @type {*} */ ({ id: "u2" }),
+      /** @type {*} */ ({ id: "o1" }),
+      client.deps,
+    );
+    expect(client.renderKnowledge).not.toHaveBeenCalled();
+    expect(client.renderDashboard).toHaveBeenCalled();
+  });
 });

@@ -221,6 +221,9 @@ jobs:
           # Client Knowledge Agent staff panel on the Admin page (staff only;
           # clients are refused server-side until knowledgeConfig/access is set).
           VITE_KNOWLEDGE_ADMIN: "1"
+          # Client-facing "Ask about your sessions" box (client view only;
+          # clients are refused server-side until knowledgeConfig/access is set).
+          VITE_KNOWLEDGE_CLIENT: "1"
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           GITHUB_SHA: ${{ github.sha }}
         run: npm run build
@@ -261,6 +264,9 @@ jobs:
           # Client Knowledge Agent staff panel on the Admin page (staff only;
           # clients are refused server-side until knowledgeConfig/access is set).
           VITE_KNOWLEDGE_ADMIN: "1"
+          # Client-facing "Ask about your sessions" box (client view only;
+          # clients are refused server-side until knowledgeConfig/access is set).
+          VITE_KNOWLEDGE_CLIENT: "1"
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           GITHUB_SHA: ${{ github.sha }}
         run: npm run build
@@ -385,6 +391,9 @@ jobs:
           # Client Knowledge Agent staff panel on the Admin page (staff only;
           # clients are refused server-side until knowledgeConfig/access is set).
           VITE_KNOWLEDGE_ADMIN: "1"
+          # Client-facing "Ask about your sessions" box (client view only;
+          # clients are refused server-side until knowledgeConfig/access is set).
+          VITE_KNOWLEDGE_CLIENT: "1"
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           GITHUB_SHA: ${{ github.sha }}
         run: npm run build

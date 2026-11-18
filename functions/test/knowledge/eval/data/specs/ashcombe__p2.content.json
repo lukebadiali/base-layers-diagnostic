@@ -1,0 +1,74 @@
+{
+  "sessionName": "Week 2 - Founder value proposition",
+  "summary": "Luke Badiali worked with James Whitlow and Sophie Archer on the value proposition Ashcombe takes directly to founders. We agreed the message should centre on what happens to the founder's business and team after a deal, not on Ashcombe's fund. A short founder narrative and proof points were drafted.",
+  "discussion": [
+    {
+      "topic": "What founders hear today",
+      "keyPoints": "Sophie read out the current intro email; it opens with fund size and sector experience. James agreed it reads like every other PE house."
+    },
+    {
+      "topic": "What founders care about",
+      "keyPoints": "From past deals, founders cared most about keeping their team, a partial exit with a second bite, and not being flipped within 2 years. Sophie said the second bite story is the strongest hook."
+    },
+    {
+      "topic": "Concerns",
+      "keyPoints": "James worried about promising too much on management continuity in case a CEO change is needed post-deal."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Value proposition",
+      "recommendation": "Lead with: sell up to 70% now, keep a stake and grow it through bolt-ons, with a second liquidity event in 4 to 6 years.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Commercial narrative",
+      "recommendation": "Use a three-part founder story: why now, why a buy-and-build, why Ashcombe; maximum 150 words in first-touch emails.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Proof and outcomes",
+      "recommendation": "Feature the facilities platform exit where the founder's retained 30% returned 3.1x at the second sale.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Cost of inaction",
+      "recommendation": "Frame the cost of waiting around succession risk: founders over 60 selling without a plan typically accept trade-buyer terms.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Rewrite the first-touch founder email using the three-part story",
+      "owner": "Luke Badiali"
+    },
+    {
+      "action": "Ask the facilities founder for permission to use the 3.1x outcome",
+      "owner": "James Whitlow"
+    }
+  ],
+  "nextFocus": "Decide which channels Ashcombe will use to reach founders directly.",
+  "nextPreparation": "Sophie to bring current outreach volumes and response rates by channel.",
+  "tests": [
+    {
+      "question": "What stake did we say founders could sell in the first deal?",
+      "expectedFacts": [
+        "up to 70%",
+        "second liquidity event"
+      ]
+    },
+    {
+      "question": "Are we allowed to use the 3.1x facilities exit as proof yet?",
+      "expectedFacts": [
+        "pending",
+        "3.1x"
+      ]
+    },
+    {
+      "question": "How long should first-touch emails be?",
+      "expectedFacts": [
+        "150 words"
+      ]
+    }
+  ]
+}

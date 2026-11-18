@@ -1,0 +1,71 @@
+{
+  "sessionName": "Week 6 - CRM, forecasting and gain-share tracking",
+  "summary": "George Berrington reviewed systems with Paul and Rebecca. Pipeline sits in a shared spreadsheet and gain-share income is forecast by hand. We agreed to move to a CRM and to forecast gain-share separately from fixed-fee work.",
+  "discussion": [
+    {
+      "topic": "Current tools",
+      "keyPoints": "Pipeline is tracked in a shared Excel file; Rebecca maintains it. There is no CRM."
+    },
+    {
+      "topic": "Gain-share forecasting",
+      "keyPoints": "Paul said gain-share income is hard to predict because savings are verified quarterly. Last year actual gain-share income was 22% below forecast."
+    },
+    {
+      "topic": "Data",
+      "keyPoints": "Contact data is spread across Outlook address books; no record of which PE house owns each client."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "CRM",
+      "recommendation": "Implement Pipedrive for 8 users with the five agreed stages by the end of next month.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Forecasting",
+      "recommendation": "Forecast gain-share income separately, at 70% of client-verified savings, on a quarterly cycle.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Data quality",
+      "recommendation": "Record the PE owner and annual third-party spend on every company record.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Reporting and dashboards",
+      "recommendation": "Build a monthly board dashboard of fees, gain-share receivables and pipeline.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Set up the Pipedrive account and import the pipeline",
+      "owner": "Rebecca Shaw"
+    }
+  ],
+  "nextFocus": "Align marketing campaigns to the CFO proposition.",
+  "nextPreparation": "Rebecca to gather existing marketing content and web analytics.",
+  "tests": [
+    {
+      "question": "Which CRM did we choose?",
+      "expectedFacts": [
+        "Pipedrive",
+        "8 users"
+      ]
+    },
+    {
+      "question": "How will we forecast gain-share income?",
+      "expectedFacts": [
+        "70% of client-verified savings",
+        "quarterly"
+      ]
+    },
+    {
+      "question": "Is the board dashboard agreed?",
+      "expectedFacts": [
+        "No",
+        "gain-share receivables"
+      ]
+    }
+  ]
+}

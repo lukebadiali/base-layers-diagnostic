@@ -1,0 +1,79 @@
+{
+  "sessionName": "Week 3 - Reaching founders early",
+  "summary": "Luke Badiali reviewed deal sourcing with Daniel Reese and Amira Khan. Most of Fernhill's deal flow arrives once a founder has already appointed an adviser. We agreed a channel mix to reach founders 12 to 18 months before a raise.",
+  "discussion": [
+    {
+      "topic": "Current sources",
+      "keyPoints": "Amira said 70% of deals seen came from advisers, 20% from network and 10% direct."
+    },
+    {
+      "topic": "Signals",
+      "keyPoints": "Daniel noted hiring of senior sales roles and new office moves often come a year before a raise."
+    },
+    {
+      "topic": "Capacity",
+      "keyPoints": "Amira can give one day a week to outbound; Daniel prefers events over cold email."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Channel mix",
+      "recommendation": "Shift to 40% of first meetings coming from direct and network sources within 12 months, from 30% today.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Outbound",
+      "recommendation": "Run outbound to 80 founders a month in target regions using hiring signals as the trigger.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Events",
+      "recommendation": "Host a quarterly Manchester founder breakfast for 20 software CEOs.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Lead quality and volume",
+      "recommendation": "Track founders by revenue band and only count those over £3m revenue as qualified leads.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Inbound",
+      "recommendation": "Do not run paid LinkedIn ads this year.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Set up hiring signal alerts for target regions",
+      "owner": "Amira Khan"
+    },
+    {
+      "action": "Book the first founder breakfast venue",
+      "owner": "Daniel Reese"
+    }
+  ],
+  "nextFocus": "Improve how Fernhill runs founder meetings and term sheets.",
+  "nextPreparation": "Daniel to bring two recent investment committee papers.",
+  "tests": [
+    {
+      "question": "How often is the founder breakfast and for how many?",
+      "expectedFacts": [
+        "quarterly",
+        "20 software CEOs"
+      ]
+    },
+    {
+      "question": "Is the 80 founders a month outbound agreed?",
+      "expectedFacts": [
+        "pending",
+        "80 founders a month"
+      ]
+    },
+    {
+      "question": "What trigger are we using for outbound?",
+      "expectedFacts": [
+        "hiring signals"
+      ]
+    }
+  ]
+}

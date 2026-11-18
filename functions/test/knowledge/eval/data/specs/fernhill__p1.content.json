@@ -1,0 +1,81 @@
+{
+  "sessionName": "Week 1 - Where Fernhill wins",
+  "summary": "Luke Badiali ran the opening session with Daniel Reese and Amira Khan. Fernhill keeps losing founder-led software deals to larger growth funds offering bigger cheques. We agreed to focus on Northern founders who want a minority partner and do not want to give up control.",
+  "discussion": [
+    {
+      "topic": "Lost deals",
+      "keyPoints": "Amira listed 9 lost deals in 18 months; 6 went to London funds writing £25m-plus cheques. Daniel said Fernhill was often liked but outbid."
+    },
+    {
+      "topic": "Where Fernhill wins",
+      "keyPoints": "Wins came from founders outside London who valued a local, hands-on minority investor and a small board seat rather than control."
+    },
+    {
+      "topic": "Concerns",
+      "keyPoints": "Daniel worried that narrowing geography would cut the deal pool too far."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Ideal Customer Profile",
+      "recommendation": "Target founder-led software and tech-enabled services businesses with £3m to £15m revenue, growing 30% or more, and no prior institutional money.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Market segmentation",
+      "recommendation": "Prioritise founders in the North West, Yorkshire and the Midlands, with up to 25% of deals elsewhere in the UK.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Positioning and differentiation",
+      "recommendation": "Position as the minority-only growth partner that never takes control, against majority-seeking PE.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Competitive landscape",
+      "recommendation": "Avoid competitive processes run by London advisers with more than 4 bidders.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Pricing and value",
+      "recommendation": "Do not match larger funds on valuation; offer a cheque of £5m to £20m with a lighter term sheet instead.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Pull the list of 9 lost deals with winning bidder and valuation",
+      "owner": "Amira Khan"
+    },
+    {
+      "action": "Draft a one-page target profile",
+      "owner": "Luke Badiali"
+    }
+  ],
+  "nextFocus": "Build the founder value proposition around minority-only investment.",
+  "nextPreparation": "Amira to bring feedback quotes from founders in recent wins and losses.",
+  "tests": [
+    {
+      "question": "What revenue range did we agree for target companies?",
+      "expectedFacts": [
+        "£3m to £15m revenue",
+        "growing 30%"
+      ]
+    },
+    {
+      "question": "Which regions are we prioritising?",
+      "expectedFacts": [
+        "North West",
+        "Yorkshire",
+        "Midlands"
+      ]
+    },
+    {
+      "question": "Did we agree to avoid processes with more than 4 bidders?",
+      "expectedFacts": [
+        "pending",
+        "more than 4 bidders"
+      ]
+    }
+  ]
+}

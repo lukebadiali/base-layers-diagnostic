@@ -1,0 +1,81 @@
+{
+  "sessionName": "Week 4 - Bid/no-bid and discovery",
+  "summary": "Luke Badiali reviewed sales execution with Andrew Fenwick and Kate Rowley, starting from the bid/no-bid checklist and two recent proposals. Elmstead bids on too much and qualifies too little, and discovery is often skipped when a tender lands. We agreed a scored bid/no-bid gate and a discovery call standard for every pre-tender conversation.",
+  "discussion": [
+    {
+      "topic": "Bid volumes",
+      "keyPoints": "Kate said the firm submitted 46 bids last year and won 10. The bid/no-bid checklist exists but is ignored when partners feel a bid is close to their expertise."
+    },
+    {
+      "topic": "Discovery quality",
+      "keyPoints": "Luke reviewed two proposals and found neither named the buyer's regulatory deadline, which conflicts with the narrative agreed in week 2. Andrew agreed discovery is the weak link."
+    },
+    {
+      "topic": "Proposal effort",
+      "keyPoints": "Each bid costs around 12 consultant days. Andrew raised concern that cutting bids will look like less ambition to the board."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Qualification",
+      "recommendation": "Introduce a scored bid/no-bid gate out of 20 points; only bid above 14 unless the Managing Director overrides in writing.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Discovery",
+      "recommendation": "Every pre-tender conversation to capture the buyer's regulatory deadline, budget holder and current supplier on a one-page discovery note.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Proposals and procurement",
+      "recommendation": "Cut bid volume from 46 to around 25 a year and reinvest the saved consultant days into pre-tender shaping.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Enablement and coaching",
+      "recommendation": "Run a monthly bid review clinic led by Kate, reviewing one live bid and one loss each time.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Objection handling",
+      "recommendation": "Build a response sheet for the 'you are too small for this' objection, citing the 40 consultant bench and associate network.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Rewrite the bid/no-bid checklist into the 20-point scored gate",
+      "owner": "Kate Rowley"
+    },
+    {
+      "action": "Brief the board on the plan to reduce bid volume",
+      "owner": "Andrew Fenwick"
+    }
+  ],
+  "nextFocus": "Design pipeline stages that reflect pre-tender shaping as well as formal bids.",
+  "nextPreparation": "Kate to export all open opportunities with their current stage and value.",
+  "tests": [
+    {
+      "question": "What is the threshold on the bid/no-bid gate?",
+      "expectedFacts": [
+        "20 points",
+        "above 14"
+      ]
+    },
+    {
+      "question": "Have we agreed to cut the number of bids we submit?",
+      "expectedFacts": [
+        "Pending",
+        "46 to around 25"
+      ]
+    },
+    {
+      "question": "What goes on the one-page discovery note?",
+      "expectedFacts": [
+        "regulatory deadline",
+        "budget holder",
+        "current supplier"
+      ]
+    }
+  ]
+}

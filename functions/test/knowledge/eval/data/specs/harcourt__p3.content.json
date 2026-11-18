@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 3 - Demand generation and fund panels",
+  "summary": "Luke Badiali ran a demand generation session with Simon Clarke and Priya Natarajan. Harcourt's DD work comes mainly from fund panels and repeat deal partners, with almost no outbound. We agreed to target panel places at named funds and to use deal announcements as outreach triggers.",
+  "discussion": [
+    {
+      "topic": "Current sources",
+      "keyPoints": "Priya said Harcourt sits on 7 fund panels and roughly 70% of DD instructions come from them. Simon said panel reviews happen annually and Harcourt has not actively pursued new ones."
+    },
+    {
+      "topic": "Outbound",
+      "keyPoints": "Priya was wary of cold outreach to deal partners. Luke suggested targeting operating partners at funds where a portfolio company has just been acquired, offering a 100-day plan review."
+    },
+    {
+      "topic": "Lead volume",
+      "keyPoints": "Simon said DD instructions are lumpy and the team is often idle for two weeks then overloaded."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Channel mix",
+      "recommendation": "Win 4 new fund panel places in the next 12 months, prioritising funds with 3 or more deals a year in the target range.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Outbound",
+      "recommendation": "Contact operating partners within 30 days of an announced acquisition, offering a free 100-day plan health check.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Events",
+      "recommendation": "Host a twice-yearly breakfast briefing for deal partners on tech risk in recent deals.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Inbound",
+      "recommendation": "Launch a gated tech DD checklist on the website for lead capture.",
+      "agreed": "No"
+    },
+    {
+      "area": "Lead quality and volume",
+      "recommendation": "Track DD instructions per month by fund, targeting 9 per month on average.",
+      "agreed": "Yes"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Identify the 12 funds without a Harcourt panel place that most fit the ICP",
+      "owner": "Priya Natarajan"
+    }
+  ],
+  "nextFocus": "Strengthen the sales process from instruction to proposal for both DD and 100-day plans.",
+  "nextPreparation": "Simon to bring the last six DD engagement letters and two 100-day plan proposals.",
+  "tests": [
+    {
+      "question": "How many new fund panel places are we aiming for?",
+      "expectedFacts": [
+        "4 new fund panel places",
+        "12 months"
+      ]
+    },
+    {
+      "question": "What did we agree on outbound to operating partners?",
+      "expectedFacts": [
+        "within 30 days",
+        "100-day plan health check"
+      ]
+    },
+    {
+      "question": "Is the breakfast briefing agreed?",
+      "expectedFacts": [
+        "twice-yearly breakfast briefing",
+        "Pending"
+      ]
+    }
+  ]
+}

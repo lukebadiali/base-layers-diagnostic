@@ -1,0 +1,70 @@
+{
+  "sessionName": "Week 7 - Marketing campaigns and thought leadership",
+  "summary": "George Berrington reviewed Meridian's marketing output with Chris and Leanne. Content has been generic lean material that does not speak to operating partners. We agreed a single quarterly campaign around the first 100 days after acquisition, led by Chris as the visible voice.",
+  "discussion": [
+    {
+      "topic": "Existing content",
+      "keyPoints": "Leanne found 22 blog posts in the last year, mostly on lean tools, with negligible traffic. None mention PE or value creation."
+    },
+    {
+      "topic": "Founder brand",
+      "keyPoints": "Chris is well known among the three core PE houses but has almost no LinkedIn presence. He is willing to post if someone drafts for him."
+    },
+    {
+      "topic": "Case studies",
+      "keyPoints": "Consent issue from week 2 still open; one client has agreed to an anonymised case study."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Campaign planning",
+      "recommendation": "Run one campaign per quarter, starting with 'The first 100 days on the shop floor' aimed at operating partners.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Founder brand",
+      "recommendation": "Chris posts on LinkedIn twice a week, drafted by Leanne, focused on value-creation plan delivery.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Brand and thought leadership",
+      "recommendation": "Publish an annual benchmark report on operational performance in PE-backed manufacturers, surveying 50 portfolio companies.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Campaign measurement",
+      "recommendation": "Measure campaigns only on operating partner meetings booked, with a target of 6 per quarter.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Draft the first four LinkedIn posts for Chris",
+      "owner": "Leanne Morris"
+    }
+  ],
+  "nextFocus": "Look at partnerships and referral routes beyond the three PE houses.",
+  "nextPreparation": "Chris to list firms that have referred work in the last three years.",
+  "tests": [
+    {
+      "question": "What is the first campaign we agreed?",
+      "expectedFacts": [
+        "The first 100 days on the shop floor"
+      ]
+    },
+    {
+      "question": "How often will Chris post on LinkedIn?",
+      "expectedFacts": [
+        "twice a week",
+        "drafted by Leanne"
+      ]
+    },
+    {
+      "question": "Is the annual benchmark report agreed?",
+      "expectedFacts": [
+        "Pending",
+        "50 portfolio companies"
+      ]
+    }
+  ]
+}

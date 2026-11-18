@@ -1,0 +1,73 @@
+{
+  "sessionName": "Week 10 - Fund and deal team economics",
+  "summary": "George Berrington modelled Fernhill's economics with Daniel Reese and Amira Khan. The changes from earlier sessions cost about £95,000 a year. We agreed how to measure return on that spend and three deployment scenarios.",
+  "discussion": [
+    {
+      "topic": "Costs",
+      "keyPoints": "CRM £7,500, benchmark report £20,000, breakfasts £12,000, and about £55,000 of team time."
+    },
+    {
+      "topic": "Fee income",
+      "keyPoints": "Management fee is 2% on a £150m fund, around £3m a year."
+    },
+    {
+      "topic": "Concern",
+      "keyPoints": "Daniel asked how to tell if the origination spend is working within the investment period."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Cost of acquisition",
+      "recommendation": "Track cost per completed investment, with a target under £40,000.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Sales and marketing ROI",
+      "recommendation": "Approve £95,000 a year for origination, reviewed after 12 months.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Revenue scenarios",
+      "recommendation": "Model deployment at 3, 4 and 5 investments a year over the remaining investment period.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pricing strategy",
+      "recommendation": "Introduce a monitoring fee to portfolio companies.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Build the three deployment scenarios",
+      "owner": "George Berrington"
+    },
+    {
+      "action": "Take the £95,000 budget to the partners",
+      "owner": "Daniel Reese"
+    }
+  ],
+  "nextFocus": "Revisit the founder value proposition after testing it in the market.",
+  "nextPreparation": "Amira to collect founder feedback on the proposition from meetings.",
+  "tests": [
+    {
+      "question": "What is the target cost per completed investment?",
+      "expectedFacts": [
+        "under £40,000"
+      ]
+    },
+    {
+      "question": "Is the £95,000 origination budget approved?",
+      "expectedFacts": [
+        "pending",
+        "£95,000 a year"
+      ]
+    },
+    {
+      "question": "What deployment scenarios are we modelling?",
+      "expectedFacts": [
+        "3, 4 and 5 investments"
+      ]
+    }
+  ]
+}

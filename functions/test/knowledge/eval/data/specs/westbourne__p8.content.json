@@ -1,0 +1,78 @@
+{
+  "sessionName": "Week 8 - Placement agents and intermediaries",
+  "summary": "Reviewed intermediaries for Fund III. Agreed a briefing programme for six investment consultants, an LP co-invest offer and an agent pack by end of January. The placement agent terms are pending and the Edinburgh pensions roundtable was declined.",
+  "discussion": [
+    {
+      "topic": "Placement agent",
+      "keyPoints": "The week 3 plan needs an agent for continental Europe and the Nordics. Two proposals came in at around 2% of capital raised. Richard wants the fee capped."
+    },
+    {
+      "topic": "Investment consultants",
+      "keyPoints": "Natalie said six consultants act as gatekeepers for most UK pension LPs. Westbourne is not rated by any of them."
+    },
+    {
+      "topic": "Co-investment",
+      "keyPoints": "Several Fund II LPs asked for co-invest. Richard is open to it on larger deals."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Channel partners",
+      "recommendation": "Appoint one placement agent for continental Europe and the Nordics only, at 2% of capital raised with a cap.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Referral networks",
+      "recommendation": "Brief the 6 investment consultants that gatekeep UK pension LPs, aiming for a buy rating on Fund III.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Alliances and joint ventures",
+      "recommendation": "Offer Fund III LPs co-invest of up to 20% of equity on deals over £60m EV, with no fee and no carry.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Partner enablement",
+      "recommendation": "Give the placement agent a pack with the deck, DDQ answers and case studies by end of January.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Industry presence",
+      "recommendation": "Host a roundtable for Scottish pension funds at the Edinburgh office.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Negotiate the fee cap with the preferred placement agent",
+      "owner": "Richard Hale"
+    }
+  ],
+  "nextFocus": "Plan LP retention and re-ups from Fund II.",
+  "nextPreparation": "Bring the Fund II LP list with commitment sizes and last contact dates.",
+  "tests": [
+    {
+      "question": "What co-invest offer did we agree?",
+      "expectedFacts": [
+        "20% of equity",
+        "over £60m EV",
+        "no fee and no carry"
+      ]
+    },
+    {
+      "question": "How many investment consultants are we briefing?",
+      "expectedFacts": [
+        "6 investment consultants",
+        "buy rating"
+      ]
+    },
+    {
+      "question": "Is the placement agent appointment agreed?",
+      "expectedFacts": [
+        "Pending",
+        "continental Europe and the Nordics",
+        "2% of capital raised"
+      ]
+    }
+  ]
+}

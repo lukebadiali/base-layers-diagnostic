@@ -1,0 +1,82 @@
+{
+  "sessionName": "Week 1 - Target deal profile and positioning",
+  "summary": "First session with Helen and Mark to define the deals Calder Bridge should be chasing and how the firm stands apart from national mid-market funds. We agreed a tighter target deal profile around £1.5m to £5m EBITDA in the North and three priority sectors. Positioning will lead with the in-house operating team. The question of walking away from high headline multiples is still open.",
+  "discussion": [
+    {
+      "topic": "Where deals come from today",
+      "keyPoints": "Helen said 6 of the last 8 completed deals came through corporate finance advisers in Leeds and Manchester. Very little is proprietary. Mark worried the £10m EV floor pulls in too many lifestyle businesses with no second tier of management."
+    },
+    {
+      "topic": "Competition in Northern processes",
+      "keyPoints": "Calder mostly meets national mid-market funds and regional debt funds. Helen estimated they lose on headline price in roughly two of every five processes they reach second round in."
+    },
+    {
+      "topic": "What the portfolio team wants",
+      "keyPoints": "Helen wants whatever we build for origination to double as a commercial playbook the portfolio companies can reuse. Mark asked that we keep the fund's own deal flow as the priority."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Ideal Customer Profile",
+      "recommendation": "Define the target as founder or family-owned businesses in Yorkshire, the North East and the North West with £1.5m to £5m EBITDA and a second-tier management team ready to step up.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Market segmentation",
+      "recommendation": "Prioritise three sectors: industrial services, B2B software and specialist distribution. Deprioritise consumer retail and hospitality.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Positioning and differentiation",
+      "recommendation": "Position Calder as the operator-led Northern buy-out partner, leading with the four operating partners rather than the size of the fund.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pricing and value",
+      "recommendation": "Stop chasing headline multiples above 7x EBITDA and compete instead on certainty, backed by a 10-week completion commitment from heads of terms.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Competitive landscape",
+      "recommendation": "Build a separate tracker of the 12 funds Calder meets most often in Northern processes.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Pull source, sector and outcome data for the last 20 deals reviewed at IC",
+      "owner": "Helen Brooks"
+    },
+    {
+      "action": "Draft one-page sector notes for the three priority sectors",
+      "owner": "Mark Lyons"
+    }
+  ],
+  "nextFocus": "Turn the operator-led positioning into a value proposition for founders and a separate message for corporate finance advisers.",
+  "nextPreparation": "Bring two recent founder pitch decks and any feedback from advisers on lost processes.",
+  "tests": [
+    {
+      "question": "What EBITDA range did we agree for our target deal profile?",
+      "expectedFacts": [
+        "£1.5m to £5m EBITDA",
+        "Yorkshire, the North East and the North West"
+      ]
+    },
+    {
+      "question": "Which sectors did we decide to prioritise?",
+      "expectedFacts": [
+        "industrial services",
+        "B2B software",
+        "specialist distribution"
+      ]
+    },
+    {
+      "question": "Is the 10-week completion commitment agreed yet?",
+      "expectedFacts": [
+        "Pending",
+        "10-week completion commitment",
+        "above 7x EBITDA"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "sessionName": "Week 4 - Sales process and proposals",
+  "summary": "Luke Badiali reviewed five recent proposals with Chris and Leanne. Discovery is thin, qualification is informal and proposals are long and methodology heavy. We agreed a structured discovery call with the operating partner and a shorter proposal format.",
+  "discussion": [
+    {
+      "topic": "Proposal review",
+      "keyPoints": "Two of the five losses came after 30-page proposals that never mentioned the investment case. Chris accepted the proposals were written for plant managers, not operating partners."
+    },
+    {
+      "topic": "Discovery",
+      "keyPoints": "Discovery calls are usually with the plant manager. Leanne said they rarely ask about the hold period or the exit plan."
+    },
+    {
+      "topic": "Qualification",
+      "keyPoints": "There is no shared definition of a qualified opportunity, so partners spend time on proposals that were never likely to close."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Discovery",
+      "recommendation": "Every discovery includes the operating partner and covers 6 set questions, including hold period, EBITDA target and exit timing.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Proposals and procurement",
+      "recommendation": "Cap proposals at 8 pages, opening with the EBITDA bridge from the investment case.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Qualification",
+      "recommendation": "Adopt a simple scoring of budget owner, value-creation plan link and start date; do not write a proposal below 2 out of 3.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Enablement and coaching",
+      "recommendation": "Run a monthly pitch review where Leanne coaches partners on two live opportunities.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Write the 6-question discovery guide",
+      "owner": "Leanne Morris"
+    },
+    {
+      "action": "Rewrite the proposal template to the 8-page format",
+      "owner": "Chris Barlow"
+    }
+  ],
+  "nextFocus": "Define pipeline stages and exit criteria to match the new process.",
+  "nextPreparation": "Leanne to export all open opportunities with stage and value.",
+  "tests": [
+    {
+      "question": "What did we agree about proposal length?",
+      "expectedFacts": [
+        "8 pages",
+        "EBITDA bridge"
+      ]
+    },
+    {
+      "question": "Is the qualification scoring agreed yet?",
+      "expectedFacts": [
+        "Pending",
+        "2 out of 3"
+      ]
+    },
+    {
+      "question": "Who needs to be on discovery calls?",
+      "expectedFacts": [
+        "operating partner",
+        "6 set questions"
+      ]
+    }
+  ]
+}

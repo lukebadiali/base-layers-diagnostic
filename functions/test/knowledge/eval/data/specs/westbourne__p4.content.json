@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 4 - LP meetings and due diligence",
+  "summary": "Worked through how Westbourne runs LP meetings from first meeting to commitment. Agreed a first meeting agenda, a qualification rule on allocation timing and a 10 working day DDQ turnaround. The answer on concentration and key person risk needs more work and an MFN side letter policy was rejected.",
+  "discussion": [
+    {
+      "topic": "First meetings",
+      "keyPoints": "Richard tends to spend the full hour on track record. Natalie said LPs often leave without Westbourne learning anything about their allocation plans."
+    },
+    {
+      "topic": "Objections",
+      "keyPoints": "The two objections raised most are concentration in two sectors and key person risk around Richard."
+    },
+    {
+      "topic": "Side letters",
+      "keyPoints": "Natalie asked whether to offer most favoured nation terms to larger LPs. Richard does not want to set a precedent."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Discovery",
+      "recommendation": "Split first meetings into 20 minutes on track record and 20 minutes on the LP's allocation plans and process.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Qualification",
+      "recommendation": "Only LPs with a 2026 or 2027 commitment budget for mid-market buy-out move on to the data room.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Objection handling",
+      "recommendation": "Prepare a written answer on concentration showing 14 sub-sectors across Fund II, and on key person risk naming the two partners who would step up.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Proposals and procurement",
+      "recommendation": "Answer DDQs on the ILPA template within 10 working days.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Negotiation and closing",
+      "recommendation": "Offer MFN side letter rights to LPs committing £30m or more.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Draft the concentration and key person answers",
+      "owner": "Richard Hale"
+    }
+  ],
+  "nextFocus": "Set up the fundraising pipeline stages and coverage targets.",
+  "nextPreparation": "Bring the LP tracker spreadsheet with dates of each meeting.",
+  "tests": [
+    {
+      "question": "How long should DDQ answers take?",
+      "expectedFacts": [
+        "10 working days",
+        "ILPA template"
+      ]
+    },
+    {
+      "question": "Which LPs get data room access?",
+      "expectedFacts": [
+        "2026 or 2027 commitment budget",
+        "data room"
+      ]
+    },
+    {
+      "question": "Did we agree MFN side letters?",
+      "expectedFacts": [
+        "No",
+        "£30m or more"
+      ]
+    }
+  ]
+}

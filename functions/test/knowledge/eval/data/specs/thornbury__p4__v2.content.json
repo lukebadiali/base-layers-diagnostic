@@ -1,0 +1,94 @@
+{
+  "sessionName": "Week 16 - Sales process and proposals revisited",
+  "summary": "George Berrington revisited the sales process with Paul and Rebecca twelve weeks on. CFOs pushed back on gain-share as the only recommended option because of savings baseline disputes. We changed the recommended fee to a fixed fee with a performance bonus, and replaced the no-discount rule with a 5% early-signing discount.",
+  "discussion": [
+    {
+      "topic": "Gain-share pushback",
+      "keyPoints": "Three of five proposals since week 4 stalled on how the savings baseline would be calculated. Two CFOs said their auditors would not accept a 25% share without a cap."
+    },
+    {
+      "topic": "Closing",
+      "keyPoints": "Paul held the no-discount line but lost one deal to a competitor offering 8% off. Rebecca suggested a small, time-limited incentive instead."
+    },
+    {
+      "topic": "Qualification",
+      "keyPoints": "Written CFO sponsorship has been used on four deals and helped each time."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Proposals and procurement",
+      "recommendation": "Recommend a fixed fee plus a performance bonus of 10% of verified savings above target, capped at £50k. This replaces the earlier single gain-share option at 25% of first-year savings.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Negotiation and closing",
+      "recommendation": "Offer a 5% discount for signing within 14 days of proposal. This replaces the earlier no-discounting rule.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Qualification",
+      "recommendation": "Confirm CFO sponsorship in writing before any scoping work starts.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Objection handling",
+      "recommendation": "Prepare a one-page answer to the 'we already have a procurement team' objection.",
+      "agreed": "Pending"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Update the proposal template to the fixed fee plus bonus model",
+      "owner": "Rebecca Shaw"
+    }
+  ],
+  "nextFocus": "Check conversion on the new fee model over the next six proposals.",
+  "nextPreparation": "Rebecca to track proposal outcomes and signing times under the new terms.",
+  "tests": [
+    {
+      "question": "Is written CFO sponsorship agreed now?",
+      "expectedFacts": [
+        "Yes",
+        "before any scoping work"
+      ]
+    },
+    {
+      "question": "Is the objection handling one-pager agreed?",
+      "expectedFacts": [
+        "Pending",
+        "already have a procurement team"
+      ]
+    },
+    {
+      "question": "Why did we revisit the gain-share recommendation?",
+      "expectedFacts": [
+        "savings baseline",
+        "three of five proposals"
+      ]
+    }
+  ],
+  "changeTests": [
+    {
+      "question": "What fee option do our proposals recommend now?",
+      "expectedFacts": [
+        "fixed fee plus a performance bonus",
+        "10% of verified savings",
+        "capped at £50k"
+      ],
+      "forbiddenFacts": [
+        "gain-share at 25%"
+      ]
+    },
+    {
+      "question": "What is our current position on discounting?",
+      "expectedFacts": [
+        "5% discount",
+        "within 14 days"
+      ],
+      "forbiddenFacts": [
+        "No discounting on fixed fees"
+      ]
+    }
+  ]
+}

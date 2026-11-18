@@ -1,0 +1,75 @@
+{
+  "sessionName": "Week 7 - Founder campaigns and thought leadership",
+  "summary": "George Berrington ran the marketing session with James Whitlow and Sophie Archer. Ashcombe has almost no visible content and founders rarely recognise the name. We agreed a sector-led content plan and a quarterly founder report to back outbound.",
+  "discussion": [
+    {
+      "topic": "Brand awareness",
+      "keyPoints": "Sophie said fewer than 1 in 10 founders contacted had heard of Ashcombe. James is reluctant to be personally visible on LinkedIn."
+    },
+    {
+      "topic": "Content ideas",
+      "keyPoints": "The team has proprietary data from 4 platforms on pricing and labour costs in facilities and compliance services."
+    },
+    {
+      "topic": "Case studies",
+      "keyPoints": "Two former founders are happy to speak on record."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Content strategy",
+      "recommendation": "Publish a quarterly UK Business Services Founder Report using anonymised portfolio data, first edition in April.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Founder brand",
+      "recommendation": "James to post on LinkedIn twice a month about buy-and-build lessons.",
+      "agreed": "No"
+    },
+    {
+      "area": "Case studies and social proof",
+      "recommendation": "Produce two founder video case studies, starting with the compliance testing platform founder.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Campaign measurement",
+      "recommendation": "Track report downloads that turn into a first meeting within 90 days.",
+      "agreed": "Pending"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Scope the first Founder Report and data sources",
+      "owner": "Sophie Archer"
+    },
+    {
+      "action": "Contact the two former founders to schedule filming",
+      "owner": "James Whitlow"
+    }
+  ],
+  "nextFocus": "Review intermediary and adviser relationships as a channel.",
+  "nextPreparation": "Sophie to list the top 20 intermediaries by deals shown in the last 3 years.",
+  "tests": [
+    {
+      "question": "When is the first Founder Report due?",
+      "expectedFacts": [
+        "April",
+        "quarterly"
+      ]
+    },
+    {
+      "question": "Did James agree to post on LinkedIn?",
+      "expectedFacts": [
+        "not agreed",
+        "twice a month"
+      ]
+    },
+    {
+      "question": "Which case study are we doing first?",
+      "expectedFacts": [
+        "compliance testing platform founder",
+        "video"
+      ]
+    }
+  ]
+}

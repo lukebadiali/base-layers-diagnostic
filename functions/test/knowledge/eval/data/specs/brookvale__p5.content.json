@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 5 - Pipeline for short-cycle mandates",
+  "summary": "Luke Badiali worked on pipeline architecture with Thomas Avery and Grace Lindqvist. CDD mandates move from RFP to decision in days, so a classic long pipeline does not fit. We agreed a pipeline that tracks live deal processes the funds are in, with stages that start before an RFP and clear rules for deals that pause.",
+  "discussion": [
+    {
+      "topic": "Pitch data",
+      "keyPoints": "Grace's export showed 84 pitches, 20 won, and a median of 6 days from RFP to decision. Many losses came from deals where the fund dropped out of the auction."
+    },
+    {
+      "topic": "Earlier visibility",
+      "keyPoints": "Luke suggested tracking which live processes each fund is in so Brookvale can prepare before the RFP. Thomas said deal partners share this informally over breakfast."
+    },
+    {
+      "topic": "Paused deals",
+      "keyPoints": "Several mandates were put on hold after phase one red flag work. Grace asked how to treat broken deals in reporting."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Stages and exit criteria",
+      "recommendation": "Use five stages: Process watch, Scoping, Pitched, Mandated, Completed, with a scoping call as the exit criterion from Process watch.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Conversion rates",
+      "recommendation": "Report win rate separately for pitches with and without a scoping call, aiming to restore 35 percent overall.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pipeline coverage",
+      "recommendation": "Hold at least 15 live processes in Process watch at any time across the three sectors.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Stalled deals",
+      "recommendation": "Close any pitched opportunity with no decision after 21 days as lost, and move broken deals to a separate list.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Velocity and cycle time",
+      "recommendation": "Measure hours from RFP to pitch submission.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Set up the five-stage pipeline and backfill current live processes",
+      "owner": "Grace Lindqvist"
+    }
+  ],
+  "nextFocus": "Get CRM, data and reporting to support the new pipeline.",
+  "nextPreparation": "Thomas to confirm which systems hold deal partner contacts today.",
+  "tests": [
+    {
+      "question": "What are the five pipeline stages?",
+      "expectedFacts": [
+        "Process watch",
+        "Scoping",
+        "Mandated"
+      ]
+    },
+    {
+      "question": "Is the 15 live processes coverage target agreed?",
+      "expectedFacts": [
+        "Pending",
+        "15 live processes"
+      ]
+    },
+    {
+      "question": "When do we close a pitched opportunity as lost?",
+      "expectedFacts": [
+        "21 days"
+      ]
+    }
+  ]
+}

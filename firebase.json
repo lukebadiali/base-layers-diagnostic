@@ -96,6 +96,26 @@
         "source": "/deleteInternal",
         "function": { "functionId": "deleteInternal", "region": "europe-west2" }
       },
+      {
+        "source": "/knowledgeIngest",
+        "function": { "functionId": "knowledgeIngest", "region": "europe-west2" }
+      },
+      {
+        "source": "/knowledgeAsk",
+        "function": { "functionId": "knowledgeAsk", "region": "europe-west2" }
+      },
+      {
+        "source": "/knowledgeUploads",
+        "function": { "functionId": "knowledgeUploads", "region": "europe-west2" }
+      },
+      {
+        "source": "/knowledgeSetStatus",
+        "function": { "functionId": "knowledgeSetStatus", "region": "europe-west2" }
+      },
+      {
+        "source": "/knowledgeCoverage",
+        "function": { "functionId": "knowledgeCoverage", "region": "europe-west2" }
+      },
       { "source": "**", "destination": "/index.html" }
     ]
   },

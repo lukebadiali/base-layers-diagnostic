@@ -1,0 +1,75 @@
+{
+  "sessionName": "Week 9 - Expanding inside existing clients",
+  "summary": "George Berrington led the retention and expansion session with Andrew Fenwick and Kate Rowley. Elmstead's client list shows 31 clients in three years but only 6 bought a second programme. We agreed to name six key accounts, introduce a close-out review on every programme and pursue follow-on phases before the first phase ends.",
+  "discussion": [
+    {
+      "topic": "Repeat business",
+      "keyPoints": "Kate's list showed 31 clients and 6 repeat buyers. Andrew said the firm tends to finish a programme and walk away because consultants move straight to the next bid."
+    },
+    {
+      "topic": "Key accounts",
+      "keyPoints": "George asked which clients could realistically spend over 500k in two years. Kate named four water utilities and two integrated care boards."
+    },
+    {
+      "topic": "Satisfaction",
+      "keyPoints": "There is no formal feedback. Andrew worried that asking for scores in the public sector could be awkward."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Key accounts",
+      "recommendation": "Name six key accounts, four water utilities and two integrated care boards, each with a partner owner and an account plan.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Upsell and cross-sell",
+      "recommendation": "Propose a follow-on phase at least eight weeks before every programme ends.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Customer satisfaction",
+      "recommendation": "Run a close-out review with the senior responsible owner on every programme, with a simple 1 to 10 score.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Advocacy",
+      "recommendation": "Ask every satisfied client for a reference call agreement rather than a named case study.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Retention and churn",
+      "recommendation": "Set a repeat-client target of 40 percent of revenue.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Write account plans for the six key accounts",
+      "owner": "Kate Rowley"
+    }
+  ],
+  "nextFocus": "Build the financial model behind fixed fees, bid costs and the shift away from tenders.",
+  "nextPreparation": "Andrew to bring utilisation, day rates and bid cost data for the last 12 months.",
+  "tests": [
+    {
+      "question": "Which clients are our key accounts?",
+      "expectedFacts": [
+        "four water utilities",
+        "two integrated care boards"
+      ]
+    },
+    {
+      "question": "Is the close-out review with a satisfaction score agreed?",
+      "expectedFacts": [
+        "Pending",
+        "1 to 10 score"
+      ]
+    },
+    {
+      "question": "When should we propose a follow-on phase?",
+      "expectedFacts": [
+        "eight weeks before"
+      ]
+    }
+  ]
+}

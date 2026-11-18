@@ -1,0 +1,80 @@
+{
+  "sessionName": "Week 9 - Keeping and growing PE relationships",
+  "summary": "Luke Badiali led the retention and expansion session with Thomas Avery and Grace Lindqvist. Brookvale has worked for 26 PE houses in three years, but 8 of them account for most fees and two of those have gone quiet. We agreed to name key accounts, introduce a post-deal debrief and offer portfolio support work after completion.",
+  "discussion": [
+    {
+      "topic": "Client concentration",
+      "keyPoints": "Grace's list showed 26 PE houses and 8 giving 75 percent of fees. Two of the eight have not mandated Brookvale in 9 months, both after larger firms discounted."
+    },
+    {
+      "topic": "After the deal",
+      "keyPoints": "Brookvale walks away once the CDD report is delivered. Luke noted the sponsor's 100-day plan often needs the same market work. Thomas thought portfolio work could smooth revenue."
+    },
+    {
+      "topic": "Feedback",
+      "keyPoints": "No feedback is collected. Grace said deal partners prefer a short call to a survey."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Key accounts",
+      "recommendation": "Name all 8 top PE houses as key accounts, each owned by Thomas or a director, with a quarterly relationship review.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Upsell and cross-sell",
+      "recommendation": "Offer a 100-day value creation market sprint to every sponsor that completes a deal, priced at 60k.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Customer satisfaction",
+      "recommendation": "Hold a 20-minute debrief call with the deal partner within two weeks of every report.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Retention and churn",
+      "recommendation": "Win back the two quiet key accounts with a free sector briefing session for their deal teams.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Advocacy",
+      "recommendation": "Ask satisfied deal partners for introductions to their portfolio company CEOs.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Set up quarterly relationship reviews for the 8 key accounts",
+      "owner": "Grace Lindqvist"
+    },
+    {
+      "action": "Book the free sector briefings with the two quiet key accounts",
+      "owner": "Thomas Avery"
+    }
+  ],
+  "nextFocus": "Build the financial model behind fees, pitch costs and the portfolio offer.",
+  "nextPreparation": "Thomas to bring fee, utilisation and pitch time data for the last 12 months.",
+  "tests": [
+    {
+      "question": "How many key accounts did we name?",
+      "expectedFacts": [
+        "8",
+        "quarterly relationship review"
+      ]
+    },
+    {
+      "question": "What is the price of the 100-day value creation market sprint?",
+      "expectedFacts": [
+        "60k",
+        "100-day value creation"
+      ]
+    },
+    {
+      "question": "Is the plan to win back the two quiet accounts agreed?",
+      "expectedFacts": [
+        "Pending",
+        "free sector briefing"
+      ]
+    }
+  ]
+}

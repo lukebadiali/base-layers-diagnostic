@@ -1,0 +1,4170 @@
+[
+  {
+    "id": "ashcombe-p1-q1",
+    "client": "ashcombe",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "What EBITDA range did we agree for our ideal target?",
+    "expectedFacts": [
+      "£2m to £8m EBITDA",
+      "founder over 55"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p1-q2",
+    "client": "ashcombe",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Which sub-sectors are we focusing proprietary origination on?",
+    "expectedFacts": [
+      "compliance and testing services",
+      "facilities maintenance",
+      "payroll and HR bureaux"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p1-q3",
+    "client": "ashcombe",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Did we agree to pay a premium price for proprietary deals?",
+    "expectedFacts": [
+      "not agreed",
+      "6x to 7x EBITDA"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p2-q1",
+    "client": "ashcombe",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "What stake did we say founders could sell in the first deal?",
+    "expectedFacts": [
+      "up to 70%",
+      "second liquidity event"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p2-q2",
+    "client": "ashcombe",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "Are we allowed to use the 3.1x facilities exit as proof yet?",
+    "expectedFacts": [
+      "pending",
+      "3.1x"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p2-q3",
+    "client": "ashcombe",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "How long should first-touch emails be?",
+    "expectedFacts": [
+      "150 words"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p3-q1",
+    "client": "ashcombe",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "What sequence did we agree for founder outreach?",
+    "expectedFacts": [
+      "5-touch sequence",
+      "over 4 weeks"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p3-q2",
+    "client": "ashcombe",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "Is the origination analyst hire agreed?",
+    "expectedFacts": [
+      "pending",
+      "120 founder touches per month"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p3-q3",
+    "client": "ashcombe",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "When is the first founder dinner?",
+    "expectedFacts": [
+      "March",
+      "compliance and testing founders"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p4-q1",
+    "client": "ashcombe",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "What are the four qualification points before a second meeting?",
+    "expectedFacts": [
+      "timing within 18 months",
+      "sell a majority",
+      "management depth"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p4-q2",
+    "client": "ashcombe",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "Did we agree the 10 working day indicative offer letter?",
+    "expectedFacts": [
+      "pending",
+      "10 working days"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p4-q3",
+    "client": "ashcombe",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "Are partner role-play sessions agreed?",
+    "expectedFacts": [
+      "not agreed",
+      "quarterly role-play"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p5-q1",
+    "client": "ashcombe",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "How many qualified founders do we need in the pipeline?",
+    "expectedFacts": [
+      "25 qualified founders",
+      "4 platform deals a year"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p5-q2",
+    "client": "ashcombe",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "Did we agree to cut the cycle to 12 weeks?",
+    "expectedFacts": [
+      "not agreed",
+      "19 weeks to 12 weeks"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p5-q3",
+    "client": "ashcombe",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What happens to targets with no contact?",
+    "expectedFacts": [
+      "120 days",
+      "nurture list"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p6-q1",
+    "client": "ashcombe",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Is the new CRM agreed?",
+    "expectedFacts": [
+      "pending",
+      "£18,000 a year"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p6-q2",
+    "client": "ashcombe",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "What does the Monday dashboard show?",
+    "expectedFacts": [
+      "new contacts",
+      "first meetings",
+      "qualified founders"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p6-q3",
+    "client": "ashcombe",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Which fields must be filled before migration?",
+    "expectedFacts": [
+      "founder age",
+      "EBITDA band",
+      "sub-sector"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p7-q1",
+    "client": "ashcombe",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "When is the first Founder Report due?",
+    "expectedFacts": [
+      "April",
+      "quarterly"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p7-q2",
+    "client": "ashcombe",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Did James agree to post on LinkedIn?",
+    "expectedFacts": [
+      "not agreed",
+      "twice a month"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p7-q3",
+    "client": "ashcombe",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Which case study are we doing first?",
+    "expectedFacts": [
+      "compliance testing platform founder",
+      "video"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p8-q1",
+    "client": "ashcombe",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "How many intermediaries are in tier one?",
+    "expectedFacts": [
+      "top 8",
+      "quarterly meeting"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p8-q2",
+    "client": "ashcombe",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Where is the referral panel based?",
+    "expectedFacts": [
+      "15 regional",
+      "Midlands and North"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p8-q3",
+    "client": "ashcombe",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Is the family office co-investment idea agreed?",
+    "expectedFacts": [
+      "pending",
+      "two family offices"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p9-q1",
+    "client": "ashcombe",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "How many introductions are we asking portfolio founders for?",
+    "expectedFacts": [
+      "two introductions",
+      "each year"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p9-q2",
+    "client": "ashcombe",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "Is the top 6 LP update agreed?",
+    "expectedFacts": [
+      "pending",
+      "twice-yearly origination update"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p9-q3",
+    "client": "ashcombe",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "What template did we agree for new platforms?",
+    "expectedFacts": [
+      "100-day plan",
+      "single reporting pack"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p10-q1",
+    "client": "ashcombe",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What is the target cost per heads of terms?",
+    "expectedFacts": [
+      "below £70,000"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p10-q2",
+    "client": "ashcombe",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "Has the £210,000 budget been approved?",
+    "expectedFacts": [
+      "pending",
+      "£210,000 a year"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p10-q3",
+    "client": "ashcombe",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "How many proprietary platforms are in the scenarios?",
+    "expectedFacts": [
+      "1, 2 or 3"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p3-who",
+    "client": "ashcombe",
+    "pillar": "3",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our demand generation session?",
+    "expectedFacts": [
+      "George Berrington"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p6-who",
+    "client": "ashcombe",
+    "pillar": "6",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our revenue operations session?",
+    "expectedFacts": [
+      "Luke Badiali"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-oos-1",
+    "client": "ashcombe",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What should our TikTok advertising budget be next year?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-oos-2",
+    "client": "ashcombe",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What did we decide about moving to a four-day working week?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p1-q1",
+    "client": "fernhill",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "What revenue range did we agree for target companies?",
+    "expectedFacts": [
+      "£3m to £15m revenue",
+      "growing 30%"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p1-q2",
+    "client": "fernhill",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Which regions are we prioritising?",
+    "expectedFacts": [
+      "North West",
+      "Yorkshire",
+      "Midlands"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p1-q3",
+    "client": "fernhill",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Did we agree to avoid processes with more than 4 bidders?",
+    "expectedFacts": [
+      "pending",
+      "more than 4 bidders"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p2-q1",
+    "client": "fernhill",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "What are the three messaging pillars?",
+    "expectedFacts": [
+      "minority-only",
+      "Northern presence",
+      "100-day operating plan"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p2-q2",
+    "client": "fernhill",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "Which investment is our lead case study?",
+    "expectedFacts": [
+      "payroll software",
+      "£4m to £11m"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p2-q3",
+    "client": "fernhill",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "Did we agree the point of view about selling control before £20m revenue?",
+    "expectedFacts": [
+      "not agreed",
+      "£20m revenue"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p3-q1",
+    "client": "fernhill",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "How often is the founder breakfast and for how many?",
+    "expectedFacts": [
+      "quarterly",
+      "20 software CEOs"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p3-q2",
+    "client": "fernhill",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "Is the 80 founders a month outbound agreed?",
+    "expectedFacts": [
+      "pending",
+      "80 founders a month"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p3-q3",
+    "client": "fernhill",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "What trigger are we using for outbound?",
+    "expectedFacts": [
+      "hiring signals"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p4-q1",
+    "client": "fernhill",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "What is our target time to issue term sheets?",
+    "expectedFacts": [
+      "5 weeks",
+      "from 9 weeks"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p4-q2",
+    "client": "fernhill",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "Did we agree a standard 1x liquidation preference?",
+    "expectedFacts": [
+      "not agreed",
+      "1x non-participating"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p4-q3",
+    "client": "fernhill",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "When do we take a deal to the pre-screen?",
+    "expectedFacts": [
+      "raise within 6 months"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p5-q1",
+    "client": "fernhill",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "How many opportunities did we see last year and how many completed?",
+    "expectedFacts": [
+      "210 opportunities",
+      "3 completed"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p5-q2",
+    "client": "fernhill",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "Is the 12 live pre-screened deals coverage agreed?",
+    "expectedFacts": [
+      "pending",
+      "12 live pre-screened deals"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p5-q3",
+    "client": "fernhill",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What conversion target did we set to term sheet?",
+    "expectedFacts": [
+      "30%",
+      "from 23%"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p6-q1",
+    "client": "fernhill",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "What will the CRM cost?",
+    "expectedFacts": [
+      "£7,500 a year"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p6-q2",
+    "client": "fernhill",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Is the fortnightly pipeline report agreed?",
+    "expectedFacts": [
+      "pending",
+      "fortnightly"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p6-q3",
+    "client": "fernhill",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "What fields are required on every record?",
+    "expectedFacts": [
+      "revenue band",
+      "region"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p7-q1",
+    "client": "fernhill",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "When is the first benchmark report?",
+    "expectedFacts": [
+      "Northern SaaS Benchmark",
+      "September"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p7-q2",
+    "client": "fernhill",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Did we agree to launch a podcast?",
+    "expectedFacts": [
+      "not agreed",
+      "podcast"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p7-q3",
+    "client": "fernhill",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "How often is Daniel posting on LinkedIn?",
+    "expectedFacts": [
+      "weekly"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p8-q1",
+    "client": "fernhill",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "How many tier one advisers do we have?",
+    "expectedFacts": [
+      "top 5 advisers",
+      "quarterly pipeline call"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p8-q2",
+    "client": "fernhill",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Is the co-investment arrangement agreed?",
+    "expectedFacts": [
+      "pending",
+      "over £20m"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p8-q3",
+    "client": "fernhill",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Did we agree to sponsor the tech awards?",
+    "expectedFacts": [
+      "not agreed",
+      "£15,000"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p9-q1",
+    "client": "fernhill",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "How much of the follow-on reserve have we used?",
+    "expectedFacts": [
+      "12%",
+      "30% of the fund"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p9-q2",
+    "client": "fernhill",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "Is offering follow-ons to the top 4 companies agreed?",
+    "expectedFacts": [
+      "pending",
+      "top 4"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p9-q3",
+    "client": "fernhill",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "What are we asking portfolio founders to do?",
+    "expectedFacts": [
+      "host one founder breakfast table"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p10-q1",
+    "client": "fernhill",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What is the target cost per completed investment?",
+    "expectedFacts": [
+      "under £40,000"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p10-q2",
+    "client": "fernhill",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "Is the £95,000 origination budget approved?",
+    "expectedFacts": [
+      "pending",
+      "£95,000 a year"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p10-q3",
+    "client": "fernhill",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What deployment scenarios are we modelling?",
+    "expectedFacts": [
+      "3, 4 and 5 investments"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p3-who",
+    "client": "fernhill",
+    "pillar": "3",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our demand generation session?",
+    "expectedFacts": [
+      "Luke Badiali"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-p6-who",
+    "client": "fernhill",
+    "pillar": "6",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our revenue operations session?",
+    "expectedFacts": [
+      "George Berrington"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-oos-1",
+    "client": "fernhill",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What should our TikTok advertising budget be next year?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "fernhill-oos-2",
+    "client": "fernhill",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What did we decide about moving to a four-day working week?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p1-q1",
+    "client": "calder",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "What EBITDA range did we agree for our target deal profile?",
+    "expectedFacts": [
+      "£1.5m to £5m EBITDA",
+      "Yorkshire, the North East and the North West"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p1-q2",
+    "client": "calder",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Which sectors did we decide to prioritise?",
+    "expectedFacts": [
+      "industrial services",
+      "B2B software",
+      "specialist distribution"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p1-q3",
+    "client": "calder",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Is the 10-week completion commitment agreed yet?",
+    "expectedFacts": [
+      "Pending",
+      "10-week completion commitment",
+      "above 7x EBITDA"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p2-q1",
+    "client": "calder",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "What did we agree is the core promise to founders?",
+    "expectedFacts": [
+      "named operating partner",
+      "100-day plan"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p2-q2",
+    "client": "calder",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "What is the lead message for corporate finance advisers?",
+    "expectedFacts": [
+      "3 of the last 4 deals",
+      "closing on agreed terms"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p2-q3",
+    "client": "calder",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "Did we agree to use the cost of delaying succession in founder conversations?",
+    "expectedFacts": [
+      "No",
+      "cost of delaying succession planning"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p3-q1",
+    "client": "calder",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "What origination mix are we aiming for?",
+    "expectedFacts": [
+      "60% adviser-led",
+      "40% proprietary",
+      "18 months"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p3-q2",
+    "client": "calder",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "How many founders are in the direct approach programme?",
+    "expectedFacts": [
+      "150 named founders",
+      "10 new approaches a week"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p3-q3",
+    "client": "calder",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "Are the founder dinners agreed?",
+    "expectedFacts": [
+      "Pending",
+      "one in Newcastle",
+      "12 founders"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p4-q1",
+    "client": "calder",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "What score does a deal need to go to IC?",
+    "expectedFacts": [
+      "five criteria",
+      "below 3"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p4-q2",
+    "client": "calder",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "How quickly should we issue indicative offer letters?",
+    "expectedFacts": [
+      "10 working days",
+      "management meeting"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p4-q3",
+    "client": "calder",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "Did we agree the monthly sales clinic for portfolio companies?",
+    "expectedFacts": [
+      "No",
+      "7 portfolio companies"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p5-q1",
+    "client": "calder",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "How many qualified opportunities should we hold in the pipeline?",
+    "expectedFacts": [
+      "24 qualified opportunities",
+      "4 platform deals a year"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p5-q2",
+    "client": "calder",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What did we agree about deals that stall?",
+    "expectedFacts": [
+      "45 days",
+      "Monday pipeline meeting"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p5-q3",
+    "client": "calder",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "Is the 16-week cycle time target agreed?",
+    "expectedFacts": [
+      "Pending",
+      "26 weeks to 16 weeks"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p6-q1",
+    "client": "calder",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "What did we agree about mandatory fields in the CRM?",
+    "expectedFacts": [
+      "sector, EBITDA band and source",
+      "named owner"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p6-q2",
+    "client": "calder",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "What is the forecast reported against?",
+    "expectedFacts": [
+      "quarterly deployment forecast",
+      "£180m Fund II"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p6-q3",
+    "client": "calder",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Have we approved the new CRM?",
+    "expectedFacts": [
+      "Pending",
+      "£18k a year"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p7-q1",
+    "client": "calder",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "What is the main content piece we agreed?",
+    "expectedFacts": [
+      "Northern Founder Succession report",
+      "200 owner-managers"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p7-q2",
+    "client": "calder",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "How will we measure marketing?",
+    "expectedFacts": [
+      "proprietary first meetings",
+      "30 a year"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p7-q3",
+    "client": "calder",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Is Helen's LinkedIn article plan agreed?",
+    "expectedFacts": [
+      "Pending",
+      "fortnightly operator article"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p8-q1",
+    "client": "calder",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "How did we tier the advisers?",
+    "expectedFacts": [
+      "A (10), B (15) and C",
+      "quarterly lunch"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p8-q2",
+    "client": "calder",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "What did we decide about deals above £50m EV?",
+    "expectedFacts": [
+      "No",
+      "co-invest",
+      "larger fund"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p8-q3",
+    "client": "calder",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "What are we sending to A-tier advisers?",
+    "expectedFacts": [
+      "one-page deal criteria card",
+      "every quarter"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p9-q1",
+    "client": "calder",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "When does the 100-day plan start?",
+    "expectedFacts": [
+      "within 2 weeks of completion",
+      "named operating partner"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p9-q2",
+    "client": "calder",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "Is the add-on acquisition target agreed?",
+    "expectedFacts": [
+      "Pending",
+      "one add-on acquisition per platform",
+      "24 months"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p9-q3",
+    "client": "calder",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "How many exited CEOs are on the reference panel?",
+    "expectedFacts": [
+      "5 exited CEOs",
+      "reference calls"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p10-q1",
+    "client": "calder",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What cost per completed deal are we targeting?",
+    "expectedFacts": [
+      "£420k to £300k",
+      "abort costs"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p10-q2",
+    "client": "calder",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "How will we judge the proprietary programme?",
+    "expectedFacts": [
+      "£95k a year",
+      "2 proprietary completions",
+      "end of 2027"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p10-q3",
+    "client": "calder",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "Did we agree to raise the monitoring fee?",
+    "expectedFacts": [
+      "No",
+      "£60k to £80k"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p3-who",
+    "client": "calder",
+    "pillar": "3",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our demand generation session?",
+    "expectedFacts": [
+      "George Berrington"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-p6-who",
+    "client": "calder",
+    "pillar": "6",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our revenue operations session?",
+    "expectedFacts": [
+      "Luke Badiali"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-oos-1",
+    "client": "calder",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What should our TikTok advertising budget be next year?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "calder-oos-2",
+    "client": "calder",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What did we decide about moving to a four-day working week?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p1-q1",
+    "client": "westbourne",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "What ticket size did we agree for target LPs?",
+    "expectedFacts": [
+      "£15m to £40m",
+      "over £2bn AUM"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p1-q2",
+    "client": "westbourne",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "What share of Fund III should come from re-ups?",
+    "expectedFacts": [
+      "60% of the raise",
+      "Fund II re-ups"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p1-q3",
+    "client": "westbourne",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Did we agree a first close fee discount?",
+    "expectedFacts": [
+      "No",
+      "25bps"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p2-q1",
+    "client": "westbourne",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "What is the lead sourcing proof point?",
+    "expectedFacts": [
+      "9 of 11 Fund II deals",
+      "off-market"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p2-q2",
+    "client": "westbourne",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "Which Fund II numbers do we open the track record with?",
+    "expectedFacts": [
+      "2.1x gross MOIC",
+      "24% gross IRR",
+      "three realised exits"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p2-q3",
+    "client": "westbourne",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "Is the special educational needs paper agreed?",
+    "expectedFacts": [
+      "Pending",
+      "special educational needs"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p3-q1",
+    "client": "westbourne",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "What channel split did we agree for the raise?",
+    "expectedFacts": [
+      "50% through direct re-ups",
+      "30% through a placement agent",
+      "20% through direct new"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p3-q2",
+    "client": "westbourne",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "How many new LPs are we approaching?",
+    "expectedFacts": [
+      "80 new LP targets",
+      "25 first meetings"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p3-q3",
+    "client": "westbourne",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "Is the Edinburgh LP day agreed?",
+    "expectedFacts": [
+      "Pending",
+      "Edinburgh in March"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p4-q1",
+    "client": "westbourne",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "How long should DDQ answers take?",
+    "expectedFacts": [
+      "10 working days",
+      "ILPA template"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p4-q2",
+    "client": "westbourne",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "Which LPs get data room access?",
+    "expectedFacts": [
+      "2026 or 2027 commitment budget",
+      "data room"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p4-q3",
+    "client": "westbourne",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "Did we agree MFN side letters?",
+    "expectedFacts": [
+      "No",
+      "£30m or more"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p5-q1",
+    "client": "westbourne",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What coverage do we need before launch?",
+    "expectedFacts": [
+      "2.5x the target",
+      "£1.1bn"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p5-q2",
+    "client": "westbourne",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What happens to LPs that go quiet?",
+    "expectedFacts": [
+      "silent for 8 weeks",
+      "nurture list"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p5-q3",
+    "client": "westbourne",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "Is the June 2027 first close agreed?",
+    "expectedFacts": [
+      "Pending",
+      "June 2027",
+      "9-month"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p6-q1",
+    "client": "westbourne",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Are we buying a specialist IR platform?",
+    "expectedFacts": [
+      "existing deal CRM",
+      "£25k a year"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p6-q2",
+    "client": "westbourne",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "What weightings are in the commitment forecast?",
+    "expectedFacts": [
+      "90% at Investment committee",
+      "50% at Due diligence",
+      "20% at Data room"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p6-q3",
+    "client": "westbourne",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Is the DDQ answer library agreed?",
+    "expectedFacts": [
+      "Pending",
+      "300 approved answers"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p7-q1",
+    "client": "westbourne",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Which case studies did we pick?",
+    "expectedFacts": [
+      "domiciliary care platform",
+      "nursery group",
+      "specialist schools"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p7-q2",
+    "client": "westbourne",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "What outlooks are we publishing?",
+    "expectedFacts": [
+      "healthcare services",
+      "education",
+      "two annual outlooks"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p7-q3",
+    "client": "westbourne",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Is Richard's speaking plan agreed?",
+    "expectedFacts": [
+      "Pending",
+      "3 healthcare or education industry events"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p8-q1",
+    "client": "westbourne",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "What co-invest offer did we agree?",
+    "expectedFacts": [
+      "20% of equity",
+      "over £60m EV",
+      "no fee and no carry"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p8-q2",
+    "client": "westbourne",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "How many investment consultants are we briefing?",
+    "expectedFacts": [
+      "6 investment consultants",
+      "buy rating"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p8-q3",
+    "client": "westbourne",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Is the placement agent appointment agreed?",
+    "expectedFacts": [
+      "Pending",
+      "continental Europe and the Nordics",
+      "2% of capital raised"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p9-q1",
+    "client": "westbourne",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "What re-up rate are we targeting?",
+    "expectedFacts": [
+      "75% re-up rate",
+      "by commitment value"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p9-q2",
+    "client": "westbourne",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "How often will Richard meet the top LPs?",
+    "expectedFacts": [
+      "top 8 LPs",
+      "twice a year"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p9-q3",
+    "client": "westbourne",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "Is the 25% ticket increase ask agreed?",
+    "expectedFacts": [
+      "Pending",
+      "25% on average"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p10-q1",
+    "client": "westbourne",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What fee terms did we agree for Fund III?",
+    "expectedFacts": [
+      "1.75% management fee",
+      "20% carry",
+      "8% hurdle"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p10-q2",
+    "client": "westbourne",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "At what fund size does the management company break even?",
+    "expectedFacts": [
+      "£380m fund size",
+      "break even"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p10-q3",
+    "client": "westbourne",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "Did we agree a minimum raise for the placement agent?",
+    "expectedFacts": [
+      "No",
+      "at least £60m"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p3-who",
+    "client": "westbourne",
+    "pillar": "3",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our demand generation session?",
+    "expectedFacts": [
+      "Luke Badiali"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-p6-who",
+    "client": "westbourne",
+    "pillar": "6",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our revenue operations session?",
+    "expectedFacts": [
+      "George Berrington"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-oos-1",
+    "client": "westbourne",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What should our TikTok advertising budget be next year?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "westbourne-oos-2",
+    "client": "westbourne",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What did we decide about moving to a four-day working week?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p1-q1",
+    "client": "meridian",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "What did we agree our ICP is?",
+    "expectedFacts": [
+      "PE-backed UK manufacturers",
+      "£20m to £150m revenue",
+      "18 months of acquisition"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p1-q2",
+    "client": "meridian",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Is the fixed-fee pricing for 100-day plans agreed yet?",
+    "expectedFacts": [
+      "Pending",
+      "£45k per workstream"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p1-q3",
+    "client": "meridian",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "What was the recommendation on market segmentation?",
+    "expectedFacts": [
+      "mid-market PE houses",
+      "5 new PE relationships"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p2-q1",
+    "client": "meridian",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "What value proposition did we agree to lead with?",
+    "expectedFacts": [
+      "operational EBITDA",
+      "£1m to £3m within 12 months"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p2-q2",
+    "client": "meridian",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "Did we agree to use the cost of inaction calculation?",
+    "expectedFacts": [
+      "No",
+      "exit multiple"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p2-q3",
+    "client": "meridian",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "What was the plan for proof points?",
+    "expectedFacts": [
+      "4 anonymised proof cards",
+      "OEE gain of 14 points"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p3-q1",
+    "client": "meridian",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "What did we agree on outbound?",
+    "expectedFacts": [
+      "10 operating partners per month",
+      "mid-market PE houses"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p3-q2",
+    "client": "meridian",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "What are we doing instead of the awards sponsorship?",
+    "expectedFacts": [
+      "two operating partner roundtables",
+      "capped at 12 guests"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p3-q3",
+    "client": "meridian",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "Is the website rebuild agreed?",
+    "expectedFacts": [
+      "No",
+      "before spending on paid search"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p4-q1",
+    "client": "meridian",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "What did we agree about proposal length?",
+    "expectedFacts": [
+      "8 pages",
+      "EBITDA bridge"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p4-q2",
+    "client": "meridian",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "Is the qualification scoring agreed yet?",
+    "expectedFacts": [
+      "Pending",
+      "2 out of 3"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p4-q3",
+    "client": "meridian",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "Who needs to be on discovery calls?",
+    "expectedFacts": [
+      "operating partner",
+      "6 set questions"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p5-q1",
+    "client": "meridian",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What pipeline stages did we agree?",
+    "expectedFacts": [
+      "Conversation, Qualified, Proposal, Verbal, Signed"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p5-q2",
+    "client": "meridian",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What do we do with stalled deals?",
+    "expectedFacts": [
+      "45 days",
+      "closed-dormant"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p5-q3",
+    "client": "meridian",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "Is the 3x pipeline coverage target agreed?",
+    "expectedFacts": [
+      "Pending",
+      "3x coverage"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p6-q1",
+    "client": "meridian",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Is the HubSpot upgrade agreed?",
+    "expectedFacts": [
+      "Pending",
+      "HubSpot Sales Professional",
+      "6 seats"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p6-q2",
+    "client": "meridian",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "What did we agree about forecasting?",
+    "expectedFacts": [
+      "weekly 30-minute forecast call",
+      "Mondays"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p6-q3",
+    "client": "meridian",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "What field did we agree to make mandatory?",
+    "expectedFacts": [
+      "PE owner field"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p7-q1",
+    "client": "meridian",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "What is the first campaign we agreed?",
+    "expectedFacts": [
+      "The first 100 days on the shop floor"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p7-q2",
+    "client": "meridian",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "How often will Chris post on LinkedIn?",
+    "expectedFacts": [
+      "twice a week",
+      "drafted by Leanne"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p7-q3",
+    "client": "meridian",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Is the annual benchmark report agreed?",
+    "expectedFacts": [
+      "Pending",
+      "50 portfolio companies"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p8-q1",
+    "client": "meridian",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "What introducer fee did we agree for referral partners?",
+    "expectedFacts": [
+      "10% introducer fee",
+      "first-year fees"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p8-q2",
+    "client": "meridian",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Are we joining the regional PE network?",
+    "expectedFacts": [
+      "No",
+      "£4,500 a year"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p8-q3",
+    "client": "meridian",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Is the due diligence alliance agreed?",
+    "expectedFacts": [
+      "Pending",
+      "2 deals"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p9-q1",
+    "client": "meridian",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "What did we agree for key accounts?",
+    "expectedFacts": [
+      "account plan for each",
+      "2 new portfolio companies each"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p9-q2",
+    "client": "meridian",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "Is the sustainment retainer agreed?",
+    "expectedFacts": [
+      "Pending",
+      "£8k a month"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p9-q3",
+    "client": "meridian",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "What happens at the end of every engagement?",
+    "expectedFacts": [
+      "close-out review",
+      "EBITDA bridge"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p10-q1",
+    "client": "meridian",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What pricing model did we agree?",
+    "expectedFacts": [
+      "fixed-fee workstreams from £45k",
+      "phase out day rates"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p10-q2",
+    "client": "meridian",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What minimum margin did we agree?",
+    "expectedFacts": [
+      "42%"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p10-q3",
+    "client": "meridian",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "Is the cost of acquisition cap agreed?",
+    "expectedFacts": [
+      "Pending",
+      "£15k per new client"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p3-who",
+    "client": "meridian",
+    "pillar": "3",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our demand generation session?",
+    "expectedFacts": [
+      "George Berrington"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-p6-who",
+    "client": "meridian",
+    "pillar": "6",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our revenue operations session?",
+    "expectedFacts": [
+      "Luke Badiali"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-oos-1",
+    "client": "meridian",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What should our TikTok advertising budget be next year?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "meridian-oos-2",
+    "client": "meridian",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What did we decide about moving to a four-day working week?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p1-q1",
+    "client": "thornbury",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Who did we agree is our ideal customer?",
+    "expectedFacts": [
+      "PE portfolio companies",
+      "£50m to £300m revenue",
+      "spend over £20m"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p1-q2",
+    "client": "thornbury",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Is narrowing to four sectors agreed?",
+    "expectedFacts": [
+      "Pending",
+      "food manufacturing, logistics"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p1-q3",
+    "client": "thornbury",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "What positioning did we agree?",
+    "expectedFacts": [
+      "bankable savings in 12 weeks",
+      "lender covenant test"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p2-q1",
+    "client": "thornbury",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "What savings range do we promise in our value proposition?",
+    "expectedFacts": [
+      "6% to 9%",
+      "within 12 weeks"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p2-q2",
+    "client": "thornbury",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "Which case study figures can we use?",
+    "expectedFacts": [
+      "£2.4m",
+      "£31m spend",
+      "verified by the client finance team"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p2-q3",
+    "client": "thornbury",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "Is the point of view piece on unverified savings agreed?",
+    "expectedFacts": [
+      "No"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p3-q1",
+    "client": "thornbury",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "What outbound offer did we agree?",
+    "expectedFacts": [
+      "two-category spend snapshot",
+      "4 snapshots a month"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p3-q2",
+    "client": "thornbury",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "Are the CFO breakfasts agreed?",
+    "expectedFacts": [
+      "Pending",
+      "three CFO breakfasts"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p3-q3",
+    "client": "thornbury",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "What did we agree about Paul's share of new leads?",
+    "expectedFacts": [
+      "below 50%",
+      "within 12 months"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p4-q1",
+    "client": "thornbury",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "What fee option do our proposals recommend?",
+    "expectedFacts": [
+      "gain-share at 25%",
+      "verified first-year savings"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p4-q2",
+    "client": "thornbury",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "Is written CFO sponsorship before scoping agreed?",
+    "expectedFacts": [
+      "Pending",
+      "CFO sponsorship in writing"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p4-q3",
+    "client": "thornbury",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "What did we agree about discounting?",
+    "expectedFacts": [
+      "No discounting on fixed fees",
+      "trade scope instead"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p5-q1",
+    "client": "thornbury",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What pipeline stages did we agree?",
+    "expectedFacts": [
+      "Lead, Snapshot, Scoped, Proposal, Contract"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p5-q2",
+    "client": "thornbury",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What happens to deals stuck at proposal?",
+    "expectedFacts": [
+      "60 days",
+      "closing call from Paul"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p5-q3",
+    "client": "thornbury",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "Is the 40% conversion target agreed?",
+    "expectedFacts": [
+      "Pending",
+      "40% proposal to win"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p6-q1",
+    "client": "thornbury",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Which CRM did we choose?",
+    "expectedFacts": [
+      "Pipedrive",
+      "8 users"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p6-q2",
+    "client": "thornbury",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "How will we forecast gain-share income?",
+    "expectedFacts": [
+      "70% of client-verified savings",
+      "quarterly"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p6-q3",
+    "client": "thornbury",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Is the board dashboard agreed?",
+    "expectedFacts": [
+      "No",
+      "gain-share receivables"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p7-q1",
+    "client": "thornbury",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "What campaign did we agree?",
+    "expectedFacts": [
+      "Supplier inflation index",
+      "300 PE portfolio CFOs"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p7-q2",
+    "client": "thornbury",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Are the case studies agreed?",
+    "expectedFacts": [
+      "Pending",
+      "3 finance-verified case studies"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p7-q3",
+    "client": "thornbury",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "How often will Paul publish on LinkedIn?",
+    "expectedFacts": [
+      "one LinkedIn article a month"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p8-q1",
+    "client": "thornbury",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Which panels are we applying to?",
+    "expectedFacts": [
+      "portfolio adviser panels",
+      "3 named PE houses"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p8-q2",
+    "client": "thornbury",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Are we sponsoring the operating partners conference?",
+    "expectedFacts": [
+      "No",
+      "£12k"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p8-q3",
+    "client": "thornbury",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "What did we agree on referral fees with transaction advisers?",
+    "expectedFacts": [
+      "reciprocal referrals",
+      "no fee paid"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p9-q1",
+    "client": "thornbury",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "What retainer did we agree to offer after projects?",
+    "expectedFacts": [
+      "savings assurance retainer",
+      "£3,500 a month"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p9-q2",
+    "client": "thornbury",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "Is the month 9 renewal conversation agreed?",
+    "expectedFacts": [
+      "Pending",
+      "month 9"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p9-q3",
+    "client": "thornbury",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "What did we agree for our top clients?",
+    "expectedFacts": [
+      "top 6 clients",
+      "quarterly business review"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p10-q1",
+    "client": "thornbury",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What minimum margins did we agree?",
+    "expectedFacts": [
+      "40% on fixed-fee",
+      "50% on gain-share"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p10-q2",
+    "client": "thornbury",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "Is the hybrid fee with an upfront diagnostic agreed?",
+    "expectedFacts": [
+      "Pending",
+      "£20k upfront diagnostic"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p10-q3",
+    "client": "thornbury",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What revenue scenarios are we modelling?",
+    "expectedFacts": [
+      "£3.4m, £4.0m and £4.6m"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p3-who",
+    "client": "thornbury",
+    "pillar": "3",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our demand generation session?",
+    "expectedFacts": [
+      "Luke Badiali"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-p6-who",
+    "client": "thornbury",
+    "pillar": "6",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our revenue operations session?",
+    "expectedFacts": [
+      "George Berrington"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-oos-1",
+    "client": "thornbury",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What should our TikTok advertising budget be next year?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "thornbury-oos-2",
+    "client": "thornbury",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What did we decide about moving to a four-day working week?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p1-q1",
+    "client": "larkspur",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "What did we agree as our primary ICP in the first session?",
+    "expectedFacts": [
+      "PE-backed businesses",
+      "150 to 1,500 employees",
+      "buy-and-build"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p1-q2",
+    "client": "larkspur",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Is the portfolio people retainer price agreed yet?",
+    "expectedFacts": [
+      "6,500 GBP per month",
+      "up to 4 portfolio companies",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p1-q3",
+    "client": "larkspur",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "How did we decide to split the market into segments?",
+    "expectedFacts": [
+      "three segments",
+      "standalone corporates",
+      "secondary segment"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p2-q1",
+    "client": "larkspur",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "What value proposition did we agree for operating partners?",
+    "expectedFacts": [
+      "protect the deal thesis",
+      "within 100 days"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p2-q2",
+    "client": "larkspur",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "What figure did we agree to use for the cost of losing a key manager?",
+    "expectedFacts": [
+      "1.5 times salary"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p2-q3",
+    "client": "larkspur",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "Is the pitch deck rewrite into three layers agreed?",
+    "expectedFacts": [
+      "three layers",
+      "No"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p3-q1",
+    "client": "larkspur",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "How many operating partners did we agree to target with outbound?",
+    "expectedFacts": [
+      "40 named operating partners",
+      "partner-signed"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p3-q2",
+    "client": "larkspur",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "What did we agree about the roundtable events?",
+    "expectedFacts": [
+      "People in Deals roundtable",
+      "quarterly",
+      "12 to 15"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p3-q3",
+    "client": "larkspur",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "Is the four-touch outreach sequence agreed?",
+    "expectedFacts": [
+      "four-touch sequence",
+      "21 days",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p4-q1",
+    "client": "larkspur",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "What did we agree about the format of our proposals?",
+    "expectedFacts": [
+      "two-option proposals",
+      "12-month retainer option",
+      "6 pages"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p4-q2",
+    "client": "larkspur",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "Is the rule about needing the operating partner in a meeting before a proposal agreed?",
+    "expectedFacts": [
+      "operating partner or portfolio CEO",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p4-q3",
+    "client": "larkspur",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "What should the discovery call cover?",
+    "expectedFacts": [
+      "45-minute discovery",
+      "top 10 critical roles"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p5-q1",
+    "client": "larkspur",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What pipeline stages did we agree?",
+    "expectedFacts": [
+      "five stages",
+      "Discovery held",
+      "Verbal yes"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p5-q2",
+    "client": "larkspur",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What is our rule for stalled deals?",
+    "expectedFacts": [
+      "45 days",
+      "nurture list"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p5-q3",
+    "client": "larkspur",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "Is the pipeline coverage target agreed?",
+    "expectedFacts": [
+      "3 times quarterly fee target",
+      "540k GBP",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p6-q1",
+    "client": "larkspur",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Which CRM did we agree to move to and how many seats?",
+    "expectedFacts": [
+      "HubSpot Sales Professional",
+      "6 paid seats"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p6-q2",
+    "client": "larkspur",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Is forecasting retainers separately agreed?",
+    "expectedFacts": [
+      "monthly recurring revenue",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p6-q3",
+    "client": "larkspur",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "When will the partners review the dashboard?",
+    "expectedFacts": [
+      "first Monday of each month",
+      "one-page partner dashboard"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p7-q1",
+    "client": "larkspur",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "What did we agree about the annual research report?",
+    "expectedFacts": [
+      "People Risk in Buy-and-Build",
+      "50 operating partners"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p7-q2",
+    "client": "larkspur",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Is Joanna posting on LinkedIn twice a week agreed?",
+    "expectedFacts": [
+      "twice a week",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p7-q3",
+    "client": "larkspur",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "How are we measuring campaign success?",
+    "expectedFacts": [
+      "operating partner meetings booked",
+      "4 meetings per campaign"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p8-q1",
+    "client": "larkspur",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Which firms did we agree to partner with?",
+    "expectedFacts": [
+      "3 strategic partners",
+      "two executive search firms",
+      "financial DD"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p8-q2",
+    "client": "larkspur",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "What did we decide about paying referral fees?",
+    "expectedFacts": [
+      "10% referral fee",
+      "No"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p8-q3",
+    "client": "larkspur",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Is the joint people DD module agreed and what would it cost?",
+    "expectedFacts": [
+      "12,000 GBP per deal",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p9-q1",
+    "client": "larkspur",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "When did we agree to have the retainer conversation with project clients?",
+    "expectedFacts": [
+      "day 75",
+      "100-day integration"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p9-q2",
+    "client": "larkspur",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "What did we agree about key accounts?",
+    "expectedFacts": [
+      "3 PE houses",
+      "quarterly portfolio review"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p9-q3",
+    "client": "larkspur",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "Is the NPS survey at project close agreed?",
+    "expectedFacts": [
+      "Net Promoter Score",
+      "50 or above",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p10-q1",
+    "client": "larkspur",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What revenue mix target did we agree for retainers?",
+    "expectedFacts": [
+      "30% of fee income",
+      "24 months",
+      "8 active retainers"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p10-q2",
+    "client": "larkspur",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What margin floor did we set for retainers?",
+    "expectedFacts": [
+      "55% gross margin floor",
+      "3 consultant days per month"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p10-q3",
+    "client": "larkspur",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "Is the tiered retainer pricing agreed?",
+    "expectedFacts": [
+      "4,500, 6,500 and 9,500 GBP",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p3-who",
+    "client": "larkspur",
+    "pillar": "3",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our demand generation session?",
+    "expectedFacts": [
+      "George Berrington"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-p6-who",
+    "client": "larkspur",
+    "pillar": "6",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our revenue operations session?",
+    "expectedFacts": [
+      "Luke Badiali"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-oos-1",
+    "client": "larkspur",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What should our TikTok advertising budget be next year?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "larkspur-oos-2",
+    "client": "larkspur",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What did we decide about moving to a four-day working week?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p1-q1",
+    "client": "harcourt",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "What deal size range did we agree for our ICP?",
+    "expectedFacts": [
+      "50m to 400m GBP",
+      "mid-market buyout funds"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p1-q2",
+    "client": "harcourt",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Is the new category framing agreed yet?",
+    "expectedFacts": [
+      "technology value creation for private equity",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p1-q3",
+    "client": "harcourt",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "What revenue mix target did we set for post-deal work?",
+    "expectedFacts": [
+      "50% of revenue from post-deal",
+      "within two years"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p2-q1",
+    "client": "harcourt",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "What value proposition did we agree?",
+    "expectedFacts": [
+      "costed 100-day plan",
+      "before you sign"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p2-q2",
+    "client": "harcourt",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "What proof point did we agree to lead with?",
+    "expectedFacts": [
+      "2.1m GBP",
+      "purchase price reduction"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p2-q3",
+    "client": "harcourt",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "Is the 'risk register nobody acts on' point of view agreed?",
+    "expectedFacts": [
+      "risk register nobody acts on",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p3-q1",
+    "client": "harcourt",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "How many new fund panel places are we aiming for?",
+    "expectedFacts": [
+      "4 new fund panel places",
+      "12 months"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p3-q2",
+    "client": "harcourt",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "What did we agree on outbound to operating partners?",
+    "expectedFacts": [
+      "within 30 days",
+      "100-day plan health check"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p3-q3",
+    "client": "harcourt",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "Is the breakfast briefing agreed?",
+    "expectedFacts": [
+      "twice-yearly breakfast briefing",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p4-q1",
+    "client": "harcourt",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "What did we agree to include in every DD engagement letter?",
+    "expectedFacts": [
+      "100-day plan option",
+      "45,000 GBP"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p4-q2",
+    "client": "harcourt",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "Is the DD discount cap agreed?",
+    "expectedFacts": [
+      "10%",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p4-q3",
+    "client": "harcourt",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "Who did we agree to train to present the 100-day plan?",
+    "expectedFacts": [
+      "6 DD leads",
+      "at the readout"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p5-q1",
+    "client": "harcourt",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What pipelines did we agree to run?",
+    "expectedFacts": [
+      "two pipelines",
+      "Readout briefing"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p5-q2",
+    "client": "harcourt",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What conversion target did we set from DD to 100-day plans?",
+    "expectedFacts": [
+      "1 in 5 to 2 in 5"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p5-q3",
+    "client": "harcourt",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "Is the weekly review of stalled 100-day plan deals agreed?",
+    "expectedFacts": [
+      "21 days",
+      "Monday pipeline call",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p6-q1",
+    "client": "harcourt",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Which CRM did we agree to adopt?",
+    "expectedFacts": [
+      "Affinity",
+      "9 partners and directors"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p6-q2",
+    "client": "harcourt",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Is the forecasting approach agreed?",
+    "expectedFacts": [
+      "4-week rolling",
+      "2-quarter",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p6-q3",
+    "client": "harcourt",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "What did we agree about tracking deal partners?",
+    "expectedFacts": [
+      "individuals linked to their current fund",
+      "within 2 weeks"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p7-q1",
+    "client": "harcourt",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "What did we agree about the Tech Risk Index?",
+    "expectedFacts": [
+      "quarterly",
+      "120 DD engagements",
+      "first issue in Q1"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p7-q2",
+    "client": "harcourt",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Is the named 100-day plan case study agreed?",
+    "expectedFacts": [
+      "portfolio CEO",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p7-q3",
+    "client": "harcourt",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Who is the public face to PE audiences?",
+    "expectedFacts": [
+      "Priya",
+      "one LinkedIn post a week"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p8-q1",
+    "client": "harcourt",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Which referral partners did we agree to formalise?",
+    "expectedFacts": [
+      "3 referral partners",
+      "commercial DD boutique"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p8-q2",
+    "client": "harcourt",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Is the combined commercial and tech DD pilot agreed?",
+    "expectedFacts": [
+      "software deals",
+      "3 deals",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p8-q3",
+    "client": "harcourt",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Did we agree to pay an introducer fee to systems integrators?",
+    "expectedFacts": [
+      "5% introducer fee",
+      "No"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p9-q1",
+    "client": "harcourt",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "What did we agree to offer after the 100-day plan?",
+    "expectedFacts": [
+      "9-month delivery assurance retainer",
+      "8,000 GBP per month",
+      "day 80"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p9-q2",
+    "client": "harcourt",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "What did we agree about key account funds?",
+    "expectedFacts": [
+      "4 funds",
+      "55% of revenue",
+      "quarterly review"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p9-q3",
+    "client": "harcourt",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "Is the rating after each DD readout agreed?",
+    "expectedFacts": [
+      "3-question rating",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p10-q1",
+    "client": "harcourt",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What DD margin target did we agree?",
+    "expectedFacts": [
+      "38% to 45%",
+      "peak contractor days"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p10-q2",
+    "client": "harcourt",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "Is the DD fee increase agreed?",
+    "expectedFacts": [
+      "35,000 GBP to 40,000 GBP",
+      "Pending"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p10-q3",
+    "client": "harcourt",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What revenue scenario did we agree for next year?",
+    "expectedFacts": [
+      "18 delivery assurance retainers",
+      "25 100-day plans"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p3-who",
+    "client": "harcourt",
+    "pillar": "3",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our demand generation session?",
+    "expectedFacts": [
+      "Luke Badiali"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-p6-who",
+    "client": "harcourt",
+    "pillar": "6",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our revenue operations session?",
+    "expectedFacts": [
+      "George Berrington"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-oos-1",
+    "client": "harcourt",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What should our TikTok advertising budget be next year?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "harcourt-oos-2",
+    "client": "harcourt",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What did we decide about moving to a four-day working week?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p1-q1",
+    "client": "elmstead",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "What share of our revenue did we say came from open tenders?",
+    "expectedFacts": [
+      "71 percent",
+      "open tenders"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p1-q2",
+    "client": "elmstead",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Is the decision on central government as a segment agreed yet?",
+    "expectedFacts": [
+      "Pending",
+      "prior relationship with the senior responsible owner"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p1-q3",
+    "client": "elmstead",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Did we agree the fixed-fee discovery phase for water utilities?",
+    "expectedFacts": [
+      "35k",
+      "not agreed"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p2-q1",
+    "client": "elmstead",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "What core message did we agree?",
+    "expectedFacts": [
+      "change that survives the regulator"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p2-q2",
+    "client": "elmstead",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "Is the cost of inaction approach using regulatory penalties agreed?",
+    "expectedFacts": [
+      "Pending",
+      "2 to 3 percent of turnover"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p2-q3",
+    "client": "elmstead",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "Which case study are we starting with?",
+    "expectedFacts": [
+      "water utility programme",
+      "40 percent"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p3-q1",
+    "client": "elmstead",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "What channel mix split did we agree?",
+    "expectedFacts": [
+      "50 percent outbound",
+      "30 percent frameworks",
+      "20 percent open tenders"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p3-q2",
+    "client": "elmstead",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "Is the Leeds roundtable for water utility change directors agreed?",
+    "expectedFacts": [
+      "Pending",
+      "12 attendees"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p3-q3",
+    "client": "elmstead",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "How many change directors is each partner targeting?",
+    "expectedFacts": [
+      "25 change directors",
+      "half a day a week"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p4-q1",
+    "client": "elmstead",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "What is the threshold on the bid/no-bid gate?",
+    "expectedFacts": [
+      "20 points",
+      "above 14"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p4-q2",
+    "client": "elmstead",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "Have we agreed to cut the number of bids we submit?",
+    "expectedFacts": [
+      "Pending",
+      "46 to around 25"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p4-q3",
+    "client": "elmstead",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "What goes on the one-page discovery note?",
+    "expectedFacts": [
+      "regulatory deadline",
+      "budget holder",
+      "current supplier"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p5-q1",
+    "client": "elmstead",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What pipeline stages did we agree?",
+    "expectedFacts": [
+      "Pre-tender shaping",
+      "Preferred bidder",
+      "six stages"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p5-q2",
+    "client": "elmstead",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "Is the 90-day dormant list rule agreed?",
+    "expectedFacts": [
+      "Pending",
+      "90 days"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p5-q3",
+    "client": "elmstead",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What was the real pipeline value once tender alerts were removed?",
+    "expectedFacts": [
+      "3.1m",
+      "38 of them were tender alerts"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p6-q1",
+    "client": "elmstead",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "How many CRM licences are we moving to?",
+    "expectedFacts": [
+      "8 to 15"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p6-q2",
+    "client": "elmstead",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Is the mandatory regulator field agreed?",
+    "expectedFacts": [
+      "Pending",
+      "regulator field"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p6-q3",
+    "client": "elmstead",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Which stage counts towards commit in the forecast?",
+    "expectedFacts": [
+      "Preferred bidder",
+      "commit, best case and pipeline"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p7-q1",
+    "client": "elmstead",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Is Andrew posting on LinkedIn agreed?",
+    "expectedFacts": [
+      "Pending",
+      "twice a week"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p7-q2",
+    "client": "elmstead",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Are we renewing the conference sponsorship?",
+    "expectedFacts": [
+      "15k",
+      "not to renew"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p7-q3",
+    "client": "elmstead",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "What is the campaign calendar anchored on?",
+    "expectedFacts": [
+      "water price review",
+      "NHS planning guidance"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p8-q1",
+    "client": "elmstead",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Is the prime contractor alliance agreed?",
+    "expectedFacts": [
+      "Pending",
+      "25 percent margin floor"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p8-q2",
+    "client": "elmstead",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "What did we say about frameworks?",
+    "expectedFacts": [
+      "health-focused framework",
+      "dormant framework"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p8-q3",
+    "client": "elmstead",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "How often should we contact former client change directors?",
+    "expectedFacts": [
+      "once a quarter"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p9-q1",
+    "client": "elmstead",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "Which clients are our key accounts?",
+    "expectedFacts": [
+      "four water utilities",
+      "two integrated care boards"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p9-q2",
+    "client": "elmstead",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "Is the close-out review with a satisfaction score agreed?",
+    "expectedFacts": [
+      "Pending",
+      "1 to 10 score"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p9-q3",
+    "client": "elmstead",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "When should we propose a follow-on phase?",
+    "expectedFacts": [
+      "eight weeks before"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p10-q1",
+    "client": "elmstead",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "How many bid days does each win cost us today?",
+    "expectedFacts": [
+      "55",
+      "bid days per win"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p10-q2",
+    "client": "elmstead",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "Is the day rate increase agreed?",
+    "expectedFacts": [
+      "Pending",
+      "1,050 to 1,150"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p10-q3",
+    "client": "elmstead",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What were the three revenue scenarios?",
+    "expectedFacts": [
+      "5.2m",
+      "5.9m",
+      "6.6m"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p3-who",
+    "client": "elmstead",
+    "pillar": "3",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our demand generation session?",
+    "expectedFacts": [
+      "George Berrington"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-p6-who",
+    "client": "elmstead",
+    "pillar": "6",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our revenue operations session?",
+    "expectedFacts": [
+      "Luke Badiali"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-oos-1",
+    "client": "elmstead",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What should our TikTok advertising budget be next year?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "elmstead-oos-2",
+    "client": "elmstead",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What did we decide about moving to a four-day working week?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p1-q1",
+    "client": "brookvale",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "What has happened to our win rate?",
+    "expectedFacts": [
+      "38 percent to 24 percent"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p1-q2",
+    "client": "brookvale",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Which three sectors are we focusing on?",
+    "expectedFacts": [
+      "healthcare services",
+      "B2B software",
+      "testing, inspection and certification"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p1-q3",
+    "client": "brookvale",
+    "pillar": "1",
+    "kind": "fact",
+    "question": "Did we agree to stop pitching against large firms on bigger deals?",
+    "expectedFacts": [
+      "Pending",
+      "above 300m enterprise value"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p2-q1",
+    "client": "brookvale",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "What should be on page one of our pitch decks?",
+    "expectedFacts": [
+      "investment thesis risks",
+      "methodology to an appendix"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p2-q2",
+    "client": "brookvale",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "Is the cost of inaction framing agreed?",
+    "expectedFacts": [
+      "Pending",
+      "1 to 2 turns of EBITDA"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p2-q3",
+    "client": "brookvale",
+    "pillar": "2",
+    "kind": "fact",
+    "question": "How many projects go in the deal library?",
+    "expectedFacts": [
+      "15 projects"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p3-q1",
+    "client": "brookvale",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "How many sell-side adviser relationships are we targeting?",
+    "expectedFacts": [
+      "10 relationships",
+      "corporate finance advisers"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p3-q2",
+    "client": "brookvale",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "Is the quarterly sector briefing agreed?",
+    "expectedFacts": [
+      "Pending",
+      "quarterly sector briefing"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p3-q3",
+    "client": "brookvale",
+    "pillar": "3",
+    "kind": "fact",
+    "question": "How concentrated is our deal partner base?",
+    "expectedFacts": [
+      "9 of them",
+      "70 percent"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p4-q1",
+    "client": "brookvale",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "What discount needs Thomas's approval?",
+    "expectedFacts": [
+      "above 5 percent",
+      "scope reductions"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p4-q2",
+    "client": "brookvale",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "Is the rule on declining crowded auctions agreed?",
+    "expectedFacts": [
+      "Pending",
+      "more than six bidders"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p4-q3",
+    "client": "brookvale",
+    "pillar": "4",
+    "kind": "fact",
+    "question": "What does the new proposal look like?",
+    "expectedFacts": [
+      "two-page",
+      "three scope options"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p5-q1",
+    "client": "brookvale",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "What are the five pipeline stages?",
+    "expectedFacts": [
+      "Process watch",
+      "Scoping",
+      "Mandated"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p5-q2",
+    "client": "brookvale",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "Is the 15 live processes coverage target agreed?",
+    "expectedFacts": [
+      "Pending",
+      "15 live processes"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p5-q3",
+    "client": "brookvale",
+    "pillar": "5",
+    "kind": "fact",
+    "question": "When do we close a pitched opportunity as lost?",
+    "expectedFacts": [
+      "21 days"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p6-q1",
+    "client": "brookvale",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "Is the CRM decision agreed?",
+    "expectedFacts": [
+      "Pending",
+      "relationship-intelligence CRM"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p6-q2",
+    "client": "brookvale",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "What four funnel metrics are we tracking?",
+    "expectedFacts": [
+      "scoping call rate",
+      "win rate by sector",
+      "average fee"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p6-q3",
+    "client": "brookvale",
+    "pillar": "6",
+    "kind": "fact",
+    "question": "When do we review the pipeline dashboard?",
+    "expectedFacts": [
+      "fortnightly",
+      "Monday partners meeting"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p7-q1",
+    "client": "brookvale",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Is hiring a sector writer agreed?",
+    "expectedFacts": [
+      "Pending",
+      "3k a month"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p7-q2",
+    "client": "brookvale",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "Which sector campaign comes first?",
+    "expectedFacts": [
+      "healthcare services",
+      "Q1"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p7-q3",
+    "client": "brookvale",
+    "pillar": "7",
+    "kind": "fact",
+    "question": "What is Thomas publishing?",
+    "expectedFacts": [
+      "monthly",
+      "what ICs are asking"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p8-q1",
+    "client": "brookvale",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "How many VDD recommenders are we aiming for?",
+    "expectedFacts": [
+      "2 to 8",
+      "12 months"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p8-q2",
+    "client": "brookvale",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Is the referral arrangement with the FDD firm agreed?",
+    "expectedFacts": [
+      "Pending",
+      "no fees exchanged"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p8-q3",
+    "client": "brookvale",
+    "pillar": "8",
+    "kind": "fact",
+    "question": "Did we agree to offer a joint CDD and FDD package?",
+    "expectedFacts": [
+      "ruled out",
+      "conflict"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p9-q1",
+    "client": "brookvale",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "How many key accounts did we name?",
+    "expectedFacts": [
+      "8",
+      "quarterly relationship review"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p9-q2",
+    "client": "brookvale",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "What is the price of the 100-day value creation market sprint?",
+    "expectedFacts": [
+      "60k",
+      "100-day value creation"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p9-q3",
+    "client": "brookvale",
+    "pillar": "9",
+    "kind": "fact",
+    "question": "Is the plan to win back the two quiet accounts agreed?",
+    "expectedFacts": [
+      "Pending",
+      "free sector briefing"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p10-q1",
+    "client": "brookvale",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What are the fee card tiers?",
+    "expectedFacts": [
+      "red flag at 45k",
+      "full CDD at 120k",
+      "VDD at 150k"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p10-q2",
+    "client": "brookvale",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "Is the target to cut pitch time agreed?",
+    "expectedFacts": [
+      "Pending",
+      "9 percent to 6 percent"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p10-q3",
+    "client": "brookvale",
+    "pillar": "10",
+    "kind": "fact",
+    "question": "What were the revenue scenarios?",
+    "expectedFacts": [
+      "4.1m",
+      "4.6m",
+      "5.3m"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p3-who",
+    "client": "brookvale",
+    "pillar": "3",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our demand generation session?",
+    "expectedFacts": [
+      "Luke Badiali"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-p6-who",
+    "client": "brookvale",
+    "pillar": "6",
+    "kind": "who",
+    "question": "Who at BeDeveloped ran our revenue operations session?",
+    "expectedFacts": [
+      "George Berrington"
+    ],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-oos-1",
+    "client": "brookvale",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What should our TikTok advertising budget be next year?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "brookvale-oos-2",
+    "client": "brookvale",
+    "pillar": null,
+    "kind": "out_of_scope",
+    "question": "What did we decide about moving to a four-day working week?",
+    "expectedFacts": [],
+    "forbiddenFacts": []
+  },
+  {
+    "id": "ashcombe-p1-latest1",
+    "client": "ashcombe",
+    "pillar": "1",
+    "kind": "latest",
+    "question": "What EBITDA range are we targeting now?",
+    "expectedFacts": [
+      "£3m to £8m EBITDA"
+    ],
+    "forbiddenFacts": [
+      "£2m to £8m"
+    ]
+  },
+  {
+    "id": "ashcombe-p1-latest2",
+    "client": "ashcombe",
+    "pillar": "1",
+    "kind": "latest",
+    "question": "What is our third focus sub-sector now?",
+    "expectedFacts": [
+      "IT managed services"
+    ],
+    "forbiddenFacts": [
+      "payroll and HR bureaux"
+    ]
+  },
+  {
+    "id": "fernhill-p2-latest1",
+    "client": "fernhill",
+    "pillar": "2",
+    "kind": "latest",
+    "question": "What is our lead message to founders now?",
+    "expectedFacts": [
+      "named operating partner",
+      "100-day plan"
+    ],
+    "forbiddenFacts": [
+      "growth capital without giving up control"
+    ]
+  },
+  {
+    "id": "fernhill-p2-latest2",
+    "client": "fernhill",
+    "pillar": "2",
+    "kind": "latest",
+    "question": "Which case study are we leading with now?",
+    "expectedFacts": [
+      "field service software",
+      "£2.5m to £7m"
+    ],
+    "forbiddenFacts": [
+      "payroll software",
+      "£4m to £11m"
+    ]
+  },
+  {
+    "id": "meridian-p10-latest1",
+    "client": "meridian",
+    "pillar": "10",
+    "kind": "latest",
+    "question": "What is our current pricing model for 100-day plans?",
+    "expectedFacts": [
+      "£35k base fee",
+      "10% of EBITDA uplift",
+      "capped at £60k"
+    ],
+    "forbiddenFacts": [
+      "fixed fee from £45k"
+    ]
+  },
+  {
+    "id": "meridian-p10-latest2",
+    "client": "meridian",
+    "pillar": "10",
+    "kind": "latest",
+    "question": "What minimum gross margin do we require now?",
+    "expectedFacts": [
+      "45%"
+    ],
+    "forbiddenFacts": [
+      "42% floor",
+      "minimum gross margin of 42%"
+    ]
+  },
+  {
+    "id": "thornbury-p4-latest1",
+    "client": "thornbury",
+    "pillar": "4",
+    "kind": "latest",
+    "question": "What fee option do our proposals recommend now?",
+    "expectedFacts": [
+      "fixed fee plus a performance bonus",
+      "10% of verified savings",
+      "capped at £50k"
+    ],
+    "forbiddenFacts": [
+      "gain-share at 25%"
+    ]
+  },
+  {
+    "id": "thornbury-p4-latest2",
+    "client": "thornbury",
+    "pillar": "4",
+    "kind": "latest",
+    "question": "What is our current position on discounting?",
+    "expectedFacts": [
+      "5% discount",
+      "within 14 days"
+    ],
+    "forbiddenFacts": [
+      "No discounting on fixed fees"
+    ]
+  },
+  {
+    "id": "brookvale-p9-latest1",
+    "client": "brookvale",
+    "pillar": "9",
+    "kind": "latest",
+    "question": "What is our current approach to key accounts?",
+    "expectedFacts": [
+      "5 PE houses",
+      "partner and a director pairing",
+      "monthly touchpoint"
+    ],
+    "forbiddenFacts": [
+      "all 8 top PE houses",
+      "quarterly relationship review"
+    ]
+  },
+  {
+    "id": "brookvale-p9-latest2",
+    "client": "brookvale",
+    "pillar": "9",
+    "kind": "latest",
+    "question": "What post-deal offer are we selling to sponsors now?",
+    "expectedFacts": [
+      "exit readiness review",
+      "75k"
+    ],
+    "forbiddenFacts": [
+      "100-day value creation market sprint at 60k"
+    ]
+  }
+]

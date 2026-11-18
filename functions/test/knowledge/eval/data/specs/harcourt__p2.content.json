@@ -1,0 +1,80 @@
+{
+  "sessionName": "Week 2 - Deal-to-value narrative",
+  "summary": "George Berrington worked with Simon Clarke and Priya Natarajan on the commercial narrative behind the deal-to-value positioning from Week 1. We agreed a proposition built around turning DD red flags into a costed 100-day plan before signing. Proof points exist but are buried in confidential reports.",
+  "discussion": [
+    {
+      "topic": "What deal teams value",
+      "keyPoints": "Priya said deal partners care about two things: will the tech hold up the value creation plan, and what will it cost to fix. Most DD reports answer the first but not the second."
+    },
+    {
+      "topic": "Proof",
+      "keyPoints": "Simon brought three DD reports. In one, Harcourt's costing of a platform rebuild cut 2.1m GBP off the purchase price. Client names cannot be used."
+    },
+    {
+      "topic": "Point of view",
+      "keyPoints": "George pushed for a clear view the team will defend. Simon suggested 'most tech DD is a risk register nobody acts on'."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Value proposition",
+      "recommendation": "Lead with: we turn tech DD findings into a costed 100-day plan before you sign.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Proof and outcomes",
+      "recommendation": "Use anonymised outcome stats, starting with the 2.1m GBP purchase price reduction from a costed platform rebuild.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Differentiation and point of view",
+      "recommendation": "Adopt the point of view that most tech DD is a risk register nobody acts on, and use it in pitches and content.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Commercial narrative",
+      "recommendation": "Restructure pitches into three acts: risk to the deal thesis, cost to fix, and the 100-day plan to deliver it.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Messaging architecture",
+      "recommendation": "Create separate messaging for deal partners and portfolio CEOs.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Write up three anonymised proof stats from past DD reports",
+      "owner": "Priya Natarajan"
+    },
+    {
+      "action": "Draft the three-act pitch outline",
+      "owner": "George Berrington"
+    }
+  ],
+  "nextFocus": "Design demand generation into mid-market fund deal teams.",
+  "nextPreparation": "Priya to share the current list of fund panels Harcourt sits on.",
+  "tests": [
+    {
+      "question": "What value proposition did we agree?",
+      "expectedFacts": [
+        "costed 100-day plan",
+        "before you sign"
+      ]
+    },
+    {
+      "question": "What proof point did we agree to lead with?",
+      "expectedFacts": [
+        "2.1m GBP",
+        "purchase price reduction"
+      ]
+    },
+    {
+      "question": "Is the 'risk register nobody acts on' point of view agreed?",
+      "expectedFacts": [
+        "risk register nobody acts on",
+        "Pending"
+      ]
+    }
+  ]
+}

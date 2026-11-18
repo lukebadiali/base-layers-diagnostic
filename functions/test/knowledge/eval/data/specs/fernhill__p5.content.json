@@ -1,0 +1,71 @@
+{
+  "sessionName": "Week 5 - Deal pipeline and conversion",
+  "summary": "Luke Badiali reviewed Fernhill's deal pipeline with Daniel Reese and Amira Khan. Fernhill saw 210 opportunities last year and completed 3. We agreed stages, coverage and how to handle stalled founders.",
+  "discussion": [
+    {
+      "topic": "Funnel",
+      "keyPoints": "Of 210 opportunities, 48 got a first meeting, 11 reached term sheet and 3 completed."
+    },
+    {
+      "topic": "Stalled deals",
+      "keyPoints": "Daniel noted 15 founders who said 'not yet' are never followed up."
+    },
+    {
+      "topic": "Concerns",
+      "keyPoints": "Amira felt the team spends too long on deals that were never going to fit the cheque size."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Stages and exit criteria",
+      "recommendation": "Use five stages: sourced, first meeting, pre-screen, term sheet, completion, each with written exit criteria.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Conversion rates",
+      "recommendation": "Target first meeting to term sheet conversion of 30%, from 23% today.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pipeline coverage",
+      "recommendation": "Keep 12 live pre-screened deals to complete 4 investments a year.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Stalled deals",
+      "recommendation": "Put 'not yet' founders into a 6-monthly check-in owned by Amira.",
+      "agreed": "Yes"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Re-stage the current tracker into the five stages",
+      "owner": "Amira Khan"
+    }
+  ],
+  "nextFocus": "Choose a CRM and reporting for the deal team.",
+  "nextPreparation": "Amira to list current tools and licence costs.",
+  "tests": [
+    {
+      "question": "How many opportunities did we see last year and how many completed?",
+      "expectedFacts": [
+        "210 opportunities",
+        "3 completed"
+      ]
+    },
+    {
+      "question": "Is the 12 live pre-screened deals coverage agreed?",
+      "expectedFacts": [
+        "pending",
+        "12 live pre-screened deals"
+      ]
+    },
+    {
+      "question": "What conversion target did we set to term sheet?",
+      "expectedFacts": [
+        "30%",
+        "from 23%"
+      ]
+    }
+  ]
+}

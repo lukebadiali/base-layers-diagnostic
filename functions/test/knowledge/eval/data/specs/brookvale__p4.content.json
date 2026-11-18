@@ -1,0 +1,80 @@
+{
+  "sessionName": "Week 4 - Scoping calls and pitch discipline",
+  "summary": "George Berrington reviewed sales execution with Thomas Avery and Grace Lindqvist. Pitches are written within 48 hours with little scoping, and fee negotiations usually end in a discount. We agreed a standard 30-minute scoping call before every pitch, a qualification check and rules for fee negotiation.",
+  "discussion": [
+    {
+      "topic": "Scoping",
+      "keyPoints": "Grace's notes showed the scoping call often did not happen because the deal team was too busy. Thomas said the pitch then guesses at the IC questions."
+    },
+    {
+      "topic": "Negotiation",
+      "keyPoints": "Brookvale discounted on 14 of its last 20 wins, by 15 percent on average. George pointed out this contradicts the week 1 decision not to match discounts."
+    },
+    {
+      "topic": "Qualification",
+      "keyPoints": "Thomas admitted Brookvale pitches on nearly every RFP, including auctions where the fund is unlikely to win the asset."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Discovery",
+      "recommendation": "Hold a 30-minute scoping call with the deal partner before every pitch, covering the thesis, IC date and competing bidders.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Qualification",
+      "recommendation": "Decline pitches where the fund is one of more than six bidders in a first-round auction and Brookvale has no prior relationship.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Negotiation and closing",
+      "recommendation": "Offer scope reductions rather than discounts, with any discount above 5 percent approved by Thomas.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Proposals and procurement",
+      "recommendation": "Use a two-page proposal with three scope options instead of the current 12-page document.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Enablement and coaching",
+      "recommendation": "Have every director shadow two partner-led pitches a quarter.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Draft the two-page, three-option proposal template",
+      "owner": "Grace Lindqvist"
+    },
+    {
+      "action": "Write the discount approval rule into the engagement process",
+      "owner": "Thomas Avery"
+    }
+  ],
+  "nextFocus": "Restructure the pipeline to track pitch stages and conversion properly.",
+  "nextPreparation": "Grace to export all pitches from the last 12 months with dates and outcomes.",
+  "tests": [
+    {
+      "question": "What discount needs Thomas's approval?",
+      "expectedFacts": [
+        "above 5 percent",
+        "scope reductions"
+      ]
+    },
+    {
+      "question": "Is the rule on declining crowded auctions agreed?",
+      "expectedFacts": [
+        "Pending",
+        "more than six bidders"
+      ]
+    },
+    {
+      "question": "What does the new proposal look like?",
+      "expectedFacts": [
+        "two-page",
+        "three scope options"
+      ]
+    }
+  ]
+}

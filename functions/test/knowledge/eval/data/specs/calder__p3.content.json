@@ -1,0 +1,78 @@
+{
+  "sessionName": "Week 3 - Origination channel mix",
+  "summary": "Reviewed where Calder's deal flow comes from and agreed to shift the mix toward proprietary origination over 18 months. Agreed a direct approach programme to founders aged 55 and over in the three priority sectors from week 1. Founder dinners depend on budget and the website was parked.",
+  "discussion": [
+    {
+      "topic": "Current mix",
+      "keyPoints": "Helen's data from week 1 showed about 85% of qualified opportunities come from advisers and 15% are proprietary. Mark said the team screens around 300 teasers a year and most are a poor fit."
+    },
+    {
+      "topic": "Direct approach to founders",
+      "keyPoints": "Mark is willing to give one associate time to run founder outreach. Helen was concerned about cutting across advisers who might feel Calder is going around them."
+    },
+    {
+      "topic": "Events",
+      "keyPoints": "Helen likes the idea of small founder dinners but has no events budget signed off for next year."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Channel mix",
+      "recommendation": "Move from 85/15 to 60% adviser-led and 40% proprietary origination over the next 18 months.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Outbound",
+      "recommendation": "Run a direct approach programme to 150 named founders aged 55 and over in the priority sectors, at 10 new approaches a week, run by a Calder associate.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Events",
+      "recommendation": "Host two founder dinners a year, one in Leeds and one in Newcastle, with 12 founders at each.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Lead quality and volume",
+      "recommendation": "Screen fewer but better opportunities: target 120 qualified opportunities a year rather than reading 300 unqualified teasers.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Inbound",
+      "recommendation": "Rebuild the website with a dedicated page for founders thinking about a sale.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Build the list of 150 founders aged 55 and over from Companies House and sector data",
+      "owner": "Mark Lyons"
+    }
+  ],
+  "nextFocus": "Tighten how the deal team runs first meetings and qualifies opportunities.",
+  "nextPreparation": "Bring the current first meeting notes template and the IC screening paper.",
+  "tests": [
+    {
+      "question": "What origination mix are we aiming for?",
+      "expectedFacts": [
+        "60% adviser-led",
+        "40% proprietary",
+        "18 months"
+      ]
+    },
+    {
+      "question": "How many founders are in the direct approach programme?",
+      "expectedFacts": [
+        "150 named founders",
+        "10 new approaches a week"
+      ]
+    },
+    {
+      "question": "Are the founder dinners agreed?",
+      "expectedFacts": [
+        "Pending",
+        "one in Newcastle",
+        "12 founders"
+      ]
+    }
+  ]
+}

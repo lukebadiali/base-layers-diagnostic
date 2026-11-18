@@ -1,0 +1,102 @@
+{
+  "sessionName": "Week 14 - Founder value proposition revisited",
+  "summary": "George Berrington revisited the founder proposition with Daniel Reese and Amira Khan 12 weeks after the original session. Founders told us 'growth capital without giving up control' sounded like every minority fund. It has been replaced by a lead message on the 100-day operating plan, and the lead case study has changed from the payroll software investment to the field service software business.",
+  "discussion": [
+    {
+      "topic": "Founder response",
+      "keyPoints": "Amira tested the proposition in 31 founder meetings. Founders assumed all growth equity was minority, so the control message did not stand out."
+    },
+    {
+      "topic": "What landed",
+      "keyPoints": "The 100-day operating plan and named operating partners got the strongest reaction. Daniel said three founders asked for it in writing."
+    },
+    {
+      "topic": "Case study",
+      "keyPoints": "The payroll software founder has started a sale process and asked not to be named publicly."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Value proposition",
+      "recommendation": "Lead with 'a named operating partner and a 100-day plan from day one', replacing the earlier 'growth capital without giving up control' message.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Messaging architecture",
+      "recommendation": "Keep three pillars but reorder: 100-day operating plan first, then Northern presence, then minority-only.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Proof and outcomes",
+      "recommendation": "Make the field service software business, where ARR grew from £2.5m to £7m in 30 months, the lead case, replacing the payroll software case.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Cost of inaction",
+      "recommendation": "Keep framing the cost of waiting as losing a funding window; still no hard numbers.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Differentiation and point of view",
+      "recommendation": "Still no published point of view on selling control.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Rewrite the founder one-pager with the new lead message",
+      "owner": "George Berrington"
+    },
+    {
+      "action": "Get written approval from the field service software founder",
+      "owner": "Amira Khan"
+    }
+  ],
+  "nextFocus": "Update outreach templates to the new lead message.",
+  "nextPreparation": "Amira to bring the reply rates from the last 12 weeks of outreach.",
+  "tests": [
+    {
+      "question": "How many founder meetings tested the proposition?",
+      "expectedFacts": [
+        "31 founder meetings"
+      ]
+    },
+    {
+      "question": "Is the cost of inaction framing agreed?",
+      "expectedFacts": [
+        "pending",
+        "funding window"
+      ]
+    },
+    {
+      "question": "What order are the messaging pillars in now?",
+      "expectedFacts": [
+        "100-day operating plan first",
+        "minority-only"
+      ]
+    }
+  ],
+  "changeTests": [
+    {
+      "question": "What is our lead message to founders now?",
+      "expectedFacts": [
+        "named operating partner",
+        "100-day plan"
+      ],
+      "forbiddenFacts": [
+        "growth capital without giving up control"
+      ]
+    },
+    {
+      "question": "Which case study are we leading with now?",
+      "expectedFacts": [
+        "field service software",
+        "£2.5m to £7m"
+      ],
+      "forbiddenFacts": [
+        "payroll software",
+        "£4m to £11m"
+      ]
+    }
+  ]
+}

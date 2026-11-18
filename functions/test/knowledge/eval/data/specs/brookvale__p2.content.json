@@ -1,0 +1,79 @@
+{
+  "sessionName": "Week 2 - Why a specialist beats a discount",
+  "summary": "George Berrington worked with Thomas Avery and Grace Lindqvist on the value proposition and narrative. Reviewing three lost pitch decks showed Brookvale led with methodology rather than the investment question. We agreed a narrative built around answering the investment committee's three hardest questions, backed by sector proof.",
+  "discussion": [
+    {
+      "topic": "Lost pitch decks",
+      "keyPoints": "All three decks opened with team and methodology pages. Grace admitted the sector insight only appeared on page 14. Thomas said deal partners skim the first three pages."
+    },
+    {
+      "topic": "Discount argument",
+      "keyPoints": "George asked what a deal partner loses by choosing a cheaper generalist. Thomas said generalists miss sector-specific risks, citing a healthcare deal where reimbursement changes were missed by a competitor."
+    },
+    {
+      "topic": "Proof",
+      "keyPoints": "Brookvale has strong outcomes but rarely tells them. Grace raised confidentiality concerns about naming deals."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Value proposition",
+      "recommendation": "Lead with 'the three questions your IC will ask, answered by people who have seen 40 deals in your sector'.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Commercial narrative",
+      "recommendation": "Open every pitch deck with the investment thesis risks on page one and move methodology to an appendix.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Cost of inaction",
+      "recommendation": "Frame the cost of a missed sector risk using a price chip example of 1 to 2 turns of EBITDA.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Proof and outcomes",
+      "recommendation": "Build a sanitised deal library of 15 projects showing the issue found and the outcome for the sponsor.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Messaging architecture",
+      "recommendation": "Create separate messaging for buy-side and vendor due diligence.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Rewrite the pitch deck template with the thesis risks on page one",
+      "owner": "Grace Lindqvist"
+    },
+    {
+      "action": "Select the first 15 projects for the sanitised deal library",
+      "owner": "Thomas Avery"
+    }
+  ],
+  "nextFocus": "Turn the narrative into demand generation with deal partners and intermediaries.",
+  "nextPreparation": "Thomas to list the deal partners who gave Brookvale work in the last three years.",
+  "tests": [
+    {
+      "question": "What should be on page one of our pitch decks?",
+      "expectedFacts": [
+        "investment thesis risks",
+        "methodology to an appendix"
+      ]
+    },
+    {
+      "question": "Is the cost of inaction framing agreed?",
+      "expectedFacts": [
+        "Pending",
+        "1 to 2 turns of EBITDA"
+      ]
+    },
+    {
+      "question": "How many projects go in the deal library?",
+      "expectedFacts": [
+        "15 projects"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "sessionName": "Week 8 - Partnerships with PE houses and advisers",
+  "summary": "George Berrington reviewed partnership options with Paul and Rebecca. Introductions come informally from two PE houses and an accountancy firm. We agreed to pursue preferred supplier status with PE houses and a referral arrangement with transaction advisers.",
+  "discussion": [
+    {
+      "topic": "Existing relationships",
+      "keyPoints": "Paul named two PE houses whose operating partners have each introduced 3 or more clients, plus a mid-tier accountancy firm's restructuring team."
+    },
+    {
+      "topic": "Preferred supplier",
+      "keyPoints": "Rebecca noted some PE houses run approved adviser panels for portfolio companies; Thornbury is on none."
+    },
+    {
+      "topic": "Referral fees",
+      "keyPoints": "Paul is uneasy about paying referral fees to accountants because of independence rules on their side."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Partner strategy",
+      "recommendation": "Apply for portfolio adviser panels at 3 named PE houses within 6 months.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Referral networks",
+      "recommendation": "Set up reciprocal referrals with two transaction advisory firms, with no fee paid either way.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Alliances and joint ventures",
+      "recommendation": "Form a joint offer with a working capital consultancy for 100-day cash programmes.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Industry presence",
+      "recommendation": "Sponsor a national PE operating partners conference at £12k.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Prepare the panel application pack",
+      "owner": "Rebecca Shaw"
+    },
+    {
+      "action": "Approach the two transaction advisory firms",
+      "owner": "Paul Ingram"
+    }
+  ],
+  "nextFocus": "Retention and expansion with existing clients.",
+  "nextPreparation": "Rebecca to list all clients from the last three years with fees and outcome.",
+  "tests": [
+    {
+      "question": "Which panels are we applying to?",
+      "expectedFacts": [
+        "portfolio adviser panels",
+        "3 named PE houses"
+      ]
+    },
+    {
+      "question": "Are we sponsoring the operating partners conference?",
+      "expectedFacts": [
+        "No",
+        "£12k"
+      ]
+    },
+    {
+      "question": "What did we agree on referral fees with transaction advisers?",
+      "expectedFacts": [
+        "reciprocal referrals",
+        "no fee paid"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "sessionName": "Week 4 - Founder meetings and term sheets",
+  "summary": "George Berrington worked through Fernhill's deal process with Daniel Reese and Amira Khan. Founders say Fernhill is slower than larger funds to get to a term sheet. We agreed a tighter discovery approach and a term sheet target.",
+  "discussion": [
+    {
+      "topic": "Speed",
+      "keyPoints": "Average time from first meeting to term sheet is 9 weeks; Amira said a lost deal went to a fund that issued in 4 weeks."
+    },
+    {
+      "topic": "Discovery",
+      "keyPoints": "Daniel admitted the team rarely asks founders what else they are considering."
+    },
+    {
+      "topic": "Objections",
+      "keyPoints": "Founders most often push back on board seat rights and liquidation preference."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Discovery",
+      "recommendation": "Ask every founder in the first meeting about other funds in conversation and their timeline for a decision.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Qualification",
+      "recommendation": "Only take a deal to investment committee pre-screen if the founder confirms a raise within 6 months.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Negotiation and closing",
+      "recommendation": "Issue term sheets within 5 weeks of first meeting, from 9 weeks today.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Objection handling",
+      "recommendation": "Offer a 1x non-participating liquidation preference as standard to remove that objection.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Redesign the investment committee pre-screen paper to 2 pages",
+      "owner": "Amira Khan"
+    }
+  ],
+  "nextFocus": "Set up the deal pipeline stages and conversion tracking.",
+  "nextPreparation": "Amira to export the deal tracker from the last 2 years.",
+  "tests": [
+    {
+      "question": "What is our target time to issue term sheets?",
+      "expectedFacts": [
+        "5 weeks",
+        "from 9 weeks"
+      ]
+    },
+    {
+      "question": "Did we agree a standard 1x liquidation preference?",
+      "expectedFacts": [
+        "not agreed",
+        "1x non-participating"
+      ]
+    },
+    {
+      "question": "When do we take a deal to the pre-screen?",
+      "expectedFacts": [
+        "raise within 6 months"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "sessionName": "Week 2 - Founder value proposition",
+  "summary": "George Berrington worked with Daniel Reese and Amira Khan on the proposition Fernhill takes to founders. Founders hear the same growth equity pitch from every fund, so the message needs to say what Fernhill does after the cheque. We agreed a proposition built on minority-only investment and a 100-day operating support package.",
+  "discussion": [
+    {
+      "topic": "Founder feedback",
+      "keyPoints": "Amira's quotes showed founders liked Fernhill's people but could not say how it differed from other funds."
+    },
+    {
+      "topic": "Operating support",
+      "keyPoints": "Daniel described the informal help Fernhill gives on hiring a CFO and pricing. Nobody had packaged it."
+    },
+    {
+      "topic": "Concerns",
+      "keyPoints": "Amira was concerned about overpromising support with only 12 staff."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Value proposition",
+      "recommendation": "Lead with 'growth capital without giving up control': minority stakes only, founder keeps the chair.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Messaging architecture",
+      "recommendation": "Three pillars: minority-only, Northern presence, and a 100-day operating plan covering CFO hire, pricing and board set-up.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Proof and outcomes",
+      "recommendation": "Use the payroll software investment where revenue grew from £4m to £11m in 3 years as the lead case.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Cost of inaction",
+      "recommendation": "Frame the cost of waiting as losing a funding window while competitors raise, with no specific numbers.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Differentiation and point of view",
+      "recommendation": "Publish a point of view that founders should never sell control before £20m revenue.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Write the founder proposition one-pager",
+      "owner": "George Berrington"
+    },
+    {
+      "action": "Confirm the payroll software founder is happy to be named",
+      "owner": "Daniel Reese"
+    }
+  ],
+  "nextFocus": "Decide how Fernhill reaches founders before they appoint advisers.",
+  "nextPreparation": "Amira to bring current outreach numbers and sources of deals seen.",
+  "tests": [
+    {
+      "question": "What are the three messaging pillars?",
+      "expectedFacts": [
+        "minority-only",
+        "Northern presence",
+        "100-day operating plan"
+      ]
+    },
+    {
+      "question": "Which investment is our lead case study?",
+      "expectedFacts": [
+        "payroll software",
+        "£4m to £11m"
+      ]
+    },
+    {
+      "question": "Did we agree the point of view about selling control before £20m revenue?",
+      "expectedFacts": [
+        "not agreed",
+        "£20m revenue"
+      ]
+    }
+  ]
+}

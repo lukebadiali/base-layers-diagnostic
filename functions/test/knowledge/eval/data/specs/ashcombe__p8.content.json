@@ -1,0 +1,80 @@
+{
+  "sessionName": "Week 8 - Intermediaries and referral partners",
+  "summary": "Luke Badiali reviewed Ashcombe's partner and intermediary relationships with James Whitlow and Sophie Archer. Even with a proprietary engine, advisers will still bring most deals, so the aim is to get earlier, off-market looks. We agreed a tiered intermediary programme and a referral network with accountants and lawyers.",
+  "discussion": [
+    {
+      "topic": "Intermediary coverage",
+      "keyPoints": "Ashcombe sees deals from around 60 corporate finance boutiques, but 8 account for most of the volume."
+    },
+    {
+      "topic": "Referral sources",
+      "keyPoints": "James noted that regional accountants and solicitors know about succession issues years before a sale."
+    },
+    {
+      "topic": "Concerns",
+      "keyPoints": "Sophie raised the risk of upsetting advisers if Ashcombe is seen to bypass them."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Partner strategy",
+      "recommendation": "Tier intermediaries: top 8 get a named partner and quarterly meeting; the rest get the Founder Report and an annual catch-up.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Referral networks",
+      "recommendation": "Build a referral panel of 15 regional accountancy and law firms in the Midlands and North.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Partner enablement",
+      "recommendation": "Give tier one intermediaries a one-page Ashcombe deal criteria sheet updated every 6 months.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Alliances and joint ventures",
+      "recommendation": "Explore co-investment alliances with two family offices for larger platforms above £8m EBITDA.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Industry presence",
+      "recommendation": "Sponsor one sector trade association conference in facilities maintenance.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Assign a named partner to each of the top 8 intermediaries",
+      "owner": "James Whitlow"
+    },
+    {
+      "action": "Shortlist 15 referral firms",
+      "owner": "Sophie Archer"
+    }
+  ],
+  "nextFocus": "Look at portfolio company management, retention and add-on growth.",
+  "nextPreparation": "James to bring the portfolio value creation plans for the current platforms.",
+  "tests": [
+    {
+      "question": "How many intermediaries are in tier one?",
+      "expectedFacts": [
+        "top 8",
+        "quarterly meeting"
+      ]
+    },
+    {
+      "question": "Where is the referral panel based?",
+      "expectedFacts": [
+        "15 regional",
+        "Midlands and North"
+      ]
+    },
+    {
+      "question": "Is the family office co-investment idea agreed?",
+      "expectedFacts": [
+        "pending",
+        "two family offices"
+      ]
+    }
+  ]
+}

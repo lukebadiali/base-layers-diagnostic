@@ -1,0 +1,79 @@
+{
+  "sessionName": "Week 2 - Narrative for regulated buyers",
+  "summary": "Luke Badiali worked with Andrew Fenwick and Kate Rowley to build the commercial narrative behind the regulatory-pressure positioning agreed in week 1. We tested three win stories and three losses and found the wins all started with a regulatory deadline. The session settled a core narrative built around 'change that survives the regulator' and a cost-of-inaction angle tied to enforcement and special measures.",
+  "discussion": [
+    {
+      "topic": "Win and loss stories",
+      "keyPoints": "Kate walked through three wins and three losses. All three wins began with a regulator deadline, such as a price review submission or a CQC rating. Losses were bids where Elmstead had no contact before the tender dropped."
+    },
+    {
+      "topic": "Core message",
+      "keyPoints": "Andrew liked 'change that survives the regulator' but worried it sounded defensive. Luke suggested pairing it with outcomes data from the water utility programmes."
+    },
+    {
+      "topic": "Proof gaps",
+      "keyPoints": "There are no written case studies with numbers. Kate said most clients will not allow their names to be used, so anonymised proof is needed."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Commercial narrative",
+      "recommendation": "Lead every conversation with the regulatory deadline the buyer faces, then show how Elmstead lands change before that deadline.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Messaging architecture",
+      "recommendation": "Use one core message, 'change that survives the regulator', with two sector pillars: water utilities and NHS integrated care boards.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Cost of inaction",
+      "recommendation": "Quantify cost of inaction using regulatory penalties, citing the 2 to 3 percent of turnover range for water utility enforcement cases.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Proof and outcomes",
+      "recommendation": "Produce four anonymised case studies with hard numbers, starting with the water utility programme that cut programme slippage by 40 percent.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Differentiation and point of view",
+      "recommendation": "Publish a point of view paper on why integrated care board mergers fail in year one.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Draft the first two anonymised case studies",
+      "owner": "Kate Rowley"
+    },
+    {
+      "action": "Get sign-off from the water utility client to quote the 40 percent slippage figure",
+      "owner": "Andrew Fenwick"
+    }
+  ],
+  "nextFocus": "Translate the narrative into a demand generation plan that reaches buyers before tenders are published.",
+  "nextPreparation": "Andrew to list every framework Elmstead sits on and the contacts behind each.",
+  "tests": [
+    {
+      "question": "What core message did we agree?",
+      "expectedFacts": [
+        "change that survives the regulator"
+      ]
+    },
+    {
+      "question": "Is the cost of inaction approach using regulatory penalties agreed?",
+      "expectedFacts": [
+        "Pending",
+        "2 to 3 percent of turnover"
+      ]
+    },
+    {
+      "question": "Which case study are we starting with?",
+      "expectedFacts": [
+        "water utility programme",
+        "40 percent"
+      ]
+    }
+  ]
+}

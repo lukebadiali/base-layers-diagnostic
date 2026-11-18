@@ -1,0 +1,81 @@
+{
+  "sessionName": "Week 4 - Sales process and proposals",
+  "summary": "Luke Badiali reviewed Larkspur's last five proposals with Joanna Pike and Oliver Grant. Proposals were long, methodology-led and priced as one-off projects, with no route into the retained model agreed in Week 1. We agreed a structured discovery with the operating partner and a two-option proposal that always includes a retainer.",
+  "discussion": [
+    {
+      "topic": "Proposal review",
+      "keyPoints": "Of five proposals, two were won. Both wins had a call with the operating partner before the proposal went out; the three losses went only to the portfolio HR director."
+    },
+    {
+      "topic": "Discovery quality",
+      "keyPoints": "Oliver admitted discovery was usually a single call about the assessment scope. Luke suggested asking about the value creation plan and the people risks to it."
+    },
+    {
+      "topic": "Objections",
+      "keyPoints": "Joanna said the common pushback is that the portfolio company should fund it from its own HR budget. Oliver felt the answer is to tie the work to the deal thesis."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Discovery",
+      "recommendation": "Use a standard 45-minute discovery covering the value creation plan, top 10 critical roles and integration timetable before any proposal.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Proposals and procurement",
+      "recommendation": "Send two-option proposals: a fixed-fee 100-day integration project plus a 12-month retainer option, kept to 6 pages.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Qualification",
+      "recommendation": "Do not write a proposal unless the operating partner or portfolio CEO has been in at least one meeting.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Objection handling",
+      "recommendation": "Prepare a response to the 'fund it from portfolio HR budget' objection that links the fee to deal value at risk.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Enablement and coaching",
+      "recommendation": "Have Oliver coach the four senior consultants on discovery with monthly call reviews.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Create the 6-page two-option proposal template",
+      "owner": "Luke Badiali"
+    },
+    {
+      "action": "Write the 45-minute discovery guide",
+      "owner": "Oliver Grant"
+    }
+  ],
+  "nextFocus": "Set up pipeline stages and exit criteria that reflect the new process.",
+  "nextPreparation": "Oliver to export all open opportunities from the current spreadsheet tracker.",
+  "tests": [
+    {
+      "question": "What did we agree about the format of our proposals?",
+      "expectedFacts": [
+        "two-option proposals",
+        "12-month retainer option",
+        "6 pages"
+      ]
+    },
+    {
+      "question": "Is the rule about needing the operating partner in a meeting before a proposal agreed?",
+      "expectedFacts": [
+        "operating partner or portfolio CEO",
+        "Pending"
+      ]
+    },
+    {
+      "question": "What should the discovery call cover?",
+      "expectedFacts": [
+        "45-minute discovery",
+        "top 10 critical roles"
+      ]
+    }
+  ]
+}

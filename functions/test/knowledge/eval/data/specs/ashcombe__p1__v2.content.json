@@ -1,0 +1,98 @@
+{
+  "sessionName": "Week 13 - Origination strategy and target profile revisited",
+  "summary": "Follow-up session with James Whitlow and Sophie Archer, run by George Berrington, to revisit the target profile set in week 1. After 12 weeks of outreach, payroll and HR bureaux produced almost no conversations, so it has been replaced by IT managed services as the third sub-sector. The EBITDA floor has also been raised from £2m to £3m, replacing the earlier £2m to £8m range.",
+  "discussion": [
+    {
+      "topic": "Results from the first 12 weeks",
+      "keyPoints": "Sophie reported 46 founder conversations: 21 in compliance and testing, 19 in facilities maintenance and only 6 in payroll and HR bureaux. Most payroll bureaux were too small or already in talks with trade buyers."
+    },
+    {
+      "topic": "Deal size",
+      "keyPoints": "James said businesses under £3m EBITDA struggled to support a platform management team and the first two bolt-ons. The investment committee rejected two £2m targets on that basis."
+    },
+    {
+      "topic": "IT managed services",
+      "keyPoints": "Sophie has 9 warm IT managed services founders from her previous role and sees strong buy-and-build logic in regional MSPs."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Ideal Customer Profile",
+      "recommendation": "Raise the target range to £3m to £8m EBITDA, replacing the earlier £2m to £8m range; keep the founder over 55 with no succession plan.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Market segmentation",
+      "recommendation": "Replace payroll and HR bureaux with IT managed services as the third sub-sector, alongside compliance and testing services and facilities maintenance.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Positioning and differentiation",
+      "recommendation": "Keep the buy-and-build partner for first-time sellers positioning, leading with the 4 platform exits since 2016.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Commercial strategy",
+      "recommendation": "Keep the target of 40% proprietary platform deals within 24 months; currently 2 of 5 live processes are proprietary.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pricing and value",
+      "recommendation": "Still no premium for proprietary deals; hold entry at 6x to 7x EBITDA, but review if a strong IT managed services target needs 7.5x.",
+      "agreed": "Pending"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Build a long list of 60 regional IT managed services businesses",
+      "owner": "Sophie Archer"
+    },
+    {
+      "action": "Update the one-page target profile to the £3m floor and new sub-sector",
+      "owner": "George Berrington"
+    }
+  ],
+  "nextFocus": "Refresh the founder messaging for IT managed services owners.",
+  "nextPreparation": "Sophie to share notes from her 9 warm IT managed services conversations.",
+  "tests": [
+    {
+      "question": "How many founder conversations did we have in the first 12 weeks?",
+      "expectedFacts": [
+        "46 founder conversations"
+      ]
+    },
+    {
+      "question": "Is the 7.5x multiple for an IT managed services target agreed?",
+      "expectedFacts": [
+        "pending",
+        "7.5x"
+      ]
+    },
+    {
+      "question": "How many of our live processes are proprietary?",
+      "expectedFacts": [
+        "2 of 5"
+      ]
+    }
+  ],
+  "changeTests": [
+    {
+      "question": "What EBITDA range are we targeting now?",
+      "expectedFacts": [
+        "£3m to £8m EBITDA"
+      ],
+      "forbiddenFacts": [
+        "£2m to £8m"
+      ]
+    },
+    {
+      "question": "What is our third focus sub-sector now?",
+      "expectedFacts": [
+        "IT managed services"
+      ],
+      "forbiddenFacts": [
+        "payroll and HR bureaux"
+      ]
+    }
+  ]
+}

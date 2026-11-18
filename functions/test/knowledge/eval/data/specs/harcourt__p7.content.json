@@ -1,0 +1,77 @@
+{
+  "sessionName": "Week 7 - Marketing and thought leadership",
+  "summary": "Luke Badiali ran a marketing session with Simon Clarke and Priya Natarajan to support the deal-to-value positioning. Harcourt publishes very little and the partners are not visible to deal teams outside existing relationships. We agreed a quarterly tech risk index and a Priya-led content programme aimed at deal partners.",
+  "discussion": [
+    {
+      "topic": "Visibility",
+      "keyPoints": "Priya said deal partners at funds without a panel place have rarely heard of Harcourt. Simon has written two articles in the last year, both on IT strategy for corporates."
+    },
+    {
+      "topic": "Data asset",
+      "keyPoints": "Harcourt has findings from over 120 DD engagements. Luke suggested an anonymised index of common tech risks by sector."
+    },
+    {
+      "topic": "Case studies",
+      "keyPoints": "Confidentiality limits named case studies. Simon thinks one portfolio CEO might agree to a named 100-day plan story."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Brand and thought leadership",
+      "recommendation": "Publish a quarterly Harcourt Tech Risk Index from anonymised data across 120 DD engagements, first issue in Q1.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Founder brand",
+      "recommendation": "Make Priya the public face to PE audiences, with one LinkedIn post a week on recent deal tech themes.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Case studies and social proof",
+      "recommendation": "Secure one named 100-day plan case study from a portfolio CEO.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Campaign measurement",
+      "recommendation": "Measure the Tech Risk Index by new deal partner meetings, targeting 10 per issue.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Content strategy",
+      "recommendation": "Run a podcast series with portfolio CTOs.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Pull anonymised risk data for the first Tech Risk Index",
+      "owner": "Simon Clarke"
+    }
+  ],
+  "nextFocus": "Develop partnerships with firms around the deal, such as financial DD and legal.",
+  "nextPreparation": "Priya to list advisers Harcourt regularly works alongside on deals.",
+  "tests": [
+    {
+      "question": "What did we agree about the Tech Risk Index?",
+      "expectedFacts": [
+        "quarterly",
+        "120 DD engagements",
+        "first issue in Q1"
+      ]
+    },
+    {
+      "question": "Is the named 100-day plan case study agreed?",
+      "expectedFacts": [
+        "portfolio CEO",
+        "Pending"
+      ]
+    },
+    {
+      "question": "Who is the public face to PE audiences?",
+      "expectedFacts": [
+        "Priya",
+        "one LinkedIn post a week"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 9 - LP retention and re-ups",
+  "summary": "Applied the retention lens to Fund II LPs, who are meant to provide 60% of Fund III. Agreed a re-up target, partner meetings for the top 8 LPs and a 30-day onboarding pack for new LPs. Asking LPs to increase tickets is pending and an annual LP survey was declined.",
+  "discussion": [
+    {
+      "topic": "Re-up risk",
+      "keyPoints": "Natalie flagged 3 Fund II LPs at risk of not re-upping because of allocation changes on their side."
+    },
+    {
+      "topic": "Top LPs",
+      "keyPoints": "The top 8 LPs make up most of Fund II. Richard sees some of them only at the annual meeting."
+    },
+    {
+      "topic": "Ticket sizes",
+      "keyPoints": "Richard wants Fund II LPs to increase their tickets. Natalie thought it should depend on each LP's allocation."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Retention and churn",
+      "recommendation": "Target a 75% re-up rate by commitment value from Fund II LPs, with a named plan for each of the 3 at-risk LPs.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Key accounts",
+      "recommendation": "Richard to meet each of the top 8 LPs by commitment twice a year.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Onboarding",
+      "recommendation": "Send new LPs an onboarding pack within 30 days of close with a named IR contact.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Upsell and cross-sell",
+      "recommendation": "Ask Fund II LPs to increase their Fund III ticket by 25% on average.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Customer satisfaction",
+      "recommendation": "Run an annual LP satisfaction survey.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Write retention plans for the 3 at-risk LPs",
+      "owner": "Natalie Grieve"
+    }
+  ],
+  "nextFocus": "Model the economics of the raise and Fund III fees.",
+  "nextPreparation": "Bring the fundraising budget and the draft Fund III LPA terms.",
+  "tests": [
+    {
+      "question": "What re-up rate are we targeting?",
+      "expectedFacts": [
+        "75% re-up rate",
+        "by commitment value"
+      ]
+    },
+    {
+      "question": "How often will Richard meet the top LPs?",
+      "expectedFacts": [
+        "top 8 LPs",
+        "twice a year"
+      ]
+    },
+    {
+      "question": "Is the 25% ticket increase ask agreed?",
+      "expectedFacts": [
+        "Pending",
+        "25% on average"
+      ]
+    }
+  ]
+}

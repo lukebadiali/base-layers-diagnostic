@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 1 - ICP and positioning",
+  "summary": "George Berrington ran the opening session with Chris Barlow and Leanne Morris to pin down who Meridian should be selling to. We agreed the core ICP is PE-backed UK manufacturers with £20m to £150m revenue in the first 18 months after acquisition. Positioning will move away from generic lean consulting towards value-creation plan delivery for operating partners.",
+  "discussion": [
+    {
+      "topic": "Current client base",
+      "keyPoints": "Chris said roughly 70% of fees in the last two years came from three PE houses. Leanne flagged that this concentration is a risk if one operating partner moves firm."
+    },
+    {
+      "topic": "Where Meridian wins",
+      "keyPoints": "Best margins and fastest decisions come on 100-day plans after a buy-out, where operating partners need shop-floor improvements quickly. Generic lean training work is slow to close and price sensitive."
+    },
+    {
+      "topic": "Competitors",
+      "keyPoints": "Leanne listed the big-four operations teams and two regional lean boutiques. Chris felt Meridian loses on brand to the big firms but wins on speed of mobilisation and hands-on delivery."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Ideal Customer Profile",
+      "recommendation": "Target PE-backed UK manufacturers with £20m to £150m revenue within 18 months of acquisition, with the operating partner as the economic buyer.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Positioning and differentiation",
+      "recommendation": "Position Meridian as the team that delivers the operational lines of the value-creation plan, mobilising a team on site within 10 working days.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Market segmentation",
+      "recommendation": "Add mid-market PE houses with fewer than 15 portfolio companies as a second segment, aiming to open 5 new PE relationships in 12 months.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Pricing and value",
+      "recommendation": "Stop quoting day rates on 100-day plans and quote a fixed fee per workstream starting at £45k.",
+      "agreed": "Pending"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Pull fee data by client and sector for the last 24 months",
+      "owner": "Leanne Morris"
+    },
+    {
+      "action": "List every operating partner Meridian has worked with since 2022",
+      "owner": "Chris Barlow"
+    }
+  ],
+  "nextFocus": "Turn the agreed ICP into a value proposition and commercial narrative for operating partners.",
+  "nextPreparation": "Leanne to bring three recent win stories with the before and after numbers.",
+  "tests": [
+    {
+      "question": "What did we agree our ICP is?",
+      "expectedFacts": [
+        "PE-backed UK manufacturers",
+        "£20m to £150m revenue",
+        "18 months of acquisition"
+      ]
+    },
+    {
+      "question": "Is the fixed-fee pricing for 100-day plans agreed yet?",
+      "expectedFacts": [
+        "Pending",
+        "£45k per workstream"
+      ]
+    },
+    {
+      "question": "What was the recommendation on market segmentation?",
+      "expectedFacts": [
+        "mid-market PE houses",
+        "5 new PE relationships"
+      ]
+    }
+  ]
+}

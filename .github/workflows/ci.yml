@@ -218,6 +218,9 @@ jobs:
           VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY || 'ci-build-verification-placeholder' }}
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
           VITE_GIT_SHA: ${{ github.sha }}
+          # Client Knowledge Agent staff panel on the Admin page (staff only;
+          # clients are refused server-side until knowledgeConfig/access is set).
+          VITE_KNOWLEDGE_ADMIN: "1"
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           GITHUB_SHA: ${{ github.sha }}
         run: npm run build
@@ -255,6 +258,9 @@ jobs:
           VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY || 'ci-build-verification-placeholder' }}
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
           VITE_GIT_SHA: ${{ github.sha }}
+          # Client Knowledge Agent staff panel on the Admin page (staff only;
+          # clients are refused server-side until knowledgeConfig/access is set).
+          VITE_KNOWLEDGE_ADMIN: "1"
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           GITHUB_SHA: ${{ github.sha }}
         run: npm run build
@@ -376,6 +382,9 @@ jobs:
           VITE_RECAPTCHA_ENTERPRISE_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY || 'ci-build-verification-placeholder' }}
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
           VITE_GIT_SHA: ${{ github.sha }}
+          # Client Knowledge Agent staff panel on the Admin page (staff only;
+          # clients are refused server-side until knowledgeConfig/access is set).
+          VITE_KNOWLEDGE_ADMIN: "1"
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           GITHUB_SHA: ${{ github.sha }}
         run: npm run build

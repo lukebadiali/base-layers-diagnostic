@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 1 - ICP and positioning with PE deal teams",
+  "summary": "Luke Badiali ran the first session with Simon Clarke and Priya Natarajan on who Harcourt sells to and how it is positioned. Tech DD for PE deal teams is the entry point, but the 100-day plans for portfolio companies carry the better margin. We agreed to focus on mid-market buyout funds and to position Harcourt as deal-to-value rather than DD only.",
+  "discussion": [
+    {
+      "topic": "Revenue split",
+      "keyPoints": "Simon said about 65% of revenue is tech DD and 35% is 100-day plans and IT strategy for portfolio companies. Priya noted DD is price-pressured and won in competitive panels."
+    },
+    {
+      "topic": "Which funds buy",
+      "keyPoints": "Priya said the best relationships are with mid-market buyout funds doing deals of 50m to 400m GBP enterprise value. Large-cap funds use the Big Four and growth equity funds rarely commission tech DD."
+    },
+    {
+      "topic": "Positioning",
+      "keyPoints": "Simon felt Harcourt is seen as a cheaper DD alternative. Both agreed the link from DD findings into the 100-day plan is the real differentiator."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Ideal Customer Profile",
+      "recommendation": "Focus on UK mid-market buyout funds doing deals of 50m to 400m GBP enterprise value, with the deal partner and operating partner as joint buyers.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Positioning and differentiation",
+      "recommendation": "Position Harcourt as deal-to-value: the same team that does the tech DD writes and delivers the 100-day plan.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Category framing",
+      "recommendation": "Stop describing Harcourt as a tech DD provider and use the category 'technology value creation for private equity'.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Commercial strategy",
+      "recommendation": "Aim for 50% of revenue from post-deal work within two years, up from 35%.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Competitive landscape",
+      "recommendation": "Benchmark DD fees against the Big Four on deals below 100m GBP.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "List the 25 mid-market funds Harcourt has worked with and rank by deal volume",
+      "owner": "Priya Natarajan"
+    }
+  ],
+  "nextFocus": "Build the value proposition and narrative that links tech DD to the 100-day plan.",
+  "nextPreparation": "Simon to bring three DD reports where findings led to post-deal work.",
+  "tests": [
+    {
+      "question": "What deal size range did we agree for our ICP?",
+      "expectedFacts": [
+        "50m to 400m GBP",
+        "mid-market buyout funds"
+      ]
+    },
+    {
+      "question": "Is the new category framing agreed yet?",
+      "expectedFacts": [
+        "technology value creation for private equity",
+        "Pending"
+      ]
+    },
+    {
+      "question": "What revenue mix target did we set for post-deal work?",
+      "expectedFacts": [
+        "50% of revenue from post-deal",
+        "within two years"
+      ]
+    }
+  ]
+}

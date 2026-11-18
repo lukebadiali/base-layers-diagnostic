@@ -1,0 +1,78 @@
+{
+  "sessionName": "Week 3 - Demand generation into PE houses",
+  "summary": "George Berrington took Joanna Pike and Oliver Grant through demand generation aimed at PE operating partners and portfolio CHROs. Larkspur currently gets almost all new work through referral and has no outbound motion. We agreed a small, partner-led outbound programme and a quarterly roundtable, with paid inbound parked for now.",
+  "discussion": [
+    {
+      "topic": "Where work comes from today",
+      "keyPoints": "Joanna estimated 85% of new engagements come from referrals by former clients. Oliver said the pipeline goes quiet whenever the partners are fully billable."
+    },
+    {
+      "topic": "Outbound concerns",
+      "keyPoints": "Joanna was uneasy about cold outreach damaging relationships with PE houses. George suggested partner-signed, deal-triggered emails rather than volume sequences."
+    },
+    {
+      "topic": "Events",
+      "keyPoints": "Oliver has hosted one dinner before which produced two projects. Both partners liked a repeatable roundtable format."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Outbound",
+      "recommendation": "Run partner-signed outbound to 40 named operating partners, triggered by announced acquisitions in the target segment.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Events",
+      "recommendation": "Host a quarterly People in Deals roundtable in London for 12 to 15 operating partners and portfolio CHROs.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Cadences and sequences",
+      "recommendation": "Use a four-touch sequence over 21 days: deal congratulation, cost of inaction one-pager, roundtable invite, call request.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Inbound",
+      "recommendation": "Defer paid LinkedIn advertising until the case studies from Week 2 are published.",
+      "agreed": "No"
+    },
+    {
+      "area": "Lead quality and volume",
+      "recommendation": "Target 6 qualified operating partner conversations per month by the end of the quarter.",
+      "agreed": "Yes"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Build the list of 40 named operating partners with recent deal activity",
+      "owner": "Oliver Grant"
+    }
+  ],
+  "nextFocus": "Tighten the sales process so outbound conversations turn into scoped proposals.",
+  "nextPreparation": "Joanna to bring the last five proposals Larkspur sent, won or lost.",
+  "tests": [
+    {
+      "question": "How many operating partners did we agree to target with outbound?",
+      "expectedFacts": [
+        "40 named operating partners",
+        "partner-signed"
+      ]
+    },
+    {
+      "question": "What did we agree about the roundtable events?",
+      "expectedFacts": [
+        "People in Deals roundtable",
+        "quarterly",
+        "12 to 15"
+      ]
+    },
+    {
+      "question": "Is the four-touch outreach sequence agreed?",
+      "expectedFacts": [
+        "four-touch sequence",
+        "21 days",
+        "Pending"
+      ]
+    }
+  ]
+}

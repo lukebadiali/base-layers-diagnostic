@@ -1,0 +1,81 @@
+{
+  "sessionName": "Week 10 - Origination economics",
+  "summary": "Closing session to put numbers on the origination plan. Agreed a target cost per completed deal, a £95k proprietary programme budget and three deployment scenarios for Fund II. The abort cost cap needs IC agreement and the monitoring fee increase was rejected.",
+  "discussion": [
+    {
+      "topic": "Cost per deal",
+      "keyPoints": "Including abort fees on broken deals, Mark estimated each completed deal costs around £420k to originate and close."
+    },
+    {
+      "topic": "Proprietary programme budget",
+      "keyPoints": "The founder outreach, succession report and dinners from weeks 3 and 7 come to around £95k a year. Helen wanted a clear test of whether it pays back."
+    },
+    {
+      "topic": "Fees",
+      "keyPoints": "Mark raised increasing the monitoring fee charged to portfolio companies. Helen felt it undermined the operator-led positioning."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Cost of acquisition",
+      "recommendation": "Cut cost per completed deal, including abort costs, from around £420k to £300k.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Sales and marketing ROI",
+      "recommendation": "Fund the proprietary programme at £95k a year and judge it on 2 proprietary completions by the end of 2027.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Unit economics",
+      "recommendation": "Require IC sign-off for any deal where abort costs will exceed £150k.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Revenue scenarios",
+      "recommendation": "Plan Fund II deployment on three scenarios: low 2 deals, base 4 deals and high 5 deals a year.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pricing strategy",
+      "recommendation": "Raise the annual monitoring fee charged to portfolio companies from £60k to £80k.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Take the £150k abort cost cap to the next IC meeting",
+      "owner": "Helen Brooks"
+    },
+    {
+      "action": "Set up quarterly tracking of cost per completed deal",
+      "owner": "Mark Lyons"
+    }
+  ],
+  "nextFocus": "Review progress against the 60/40 origination mix and the 2027 proprietary completions target at the quarterly check-in.",
+  "nextPreparation": "Bring the Monday dashboard and the first quarter of CRM data.",
+  "tests": [
+    {
+      "question": "What cost per completed deal are we targeting?",
+      "expectedFacts": [
+        "£420k to £300k",
+        "abort costs"
+      ]
+    },
+    {
+      "question": "How will we judge the proprietary programme?",
+      "expectedFacts": [
+        "£95k a year",
+        "2 proprietary completions",
+        "end of 2027"
+      ]
+    },
+    {
+      "question": "Did we agree to raise the monitoring fee?",
+      "expectedFacts": [
+        "No",
+        "£60k to £80k"
+      ]
+    }
+  ]
+}

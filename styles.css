@@ -4763,3 +4763,121 @@ button.action-chevron:focus-visible {
     padding: 32px 20px;
   }
 }
+
+/* Client Knowledge Agent staff preview (src/views/knowledge-admin.js). Hidden unless VITE_KNOWLEDGE_ADMIN=1. */
+.knowledge-admin h3 {
+  margin: 18px 0 8px;
+  font-size: 14px;
+}
+.knowledge-admin .row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.knowledge-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 360px;
+}
+.knowledge-select,
+.knowledge-question {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+}
+.knowledge-question {
+  flex: 1 1 280px;
+}
+.knowledge-file {
+  flex: 0 1 auto;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.knowledge-file::file-selector-button {
+  margin-right: 10px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+}
+.knowledge-hint {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.knowledge-table tr.is-replaced td,
+.knowledge-table tr.is-empty td {
+  color: var(--ink-4);
+}
+.knowledge-archived {
+  margin: 10px 0 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--red-bg);
+  color: var(--red);
+}
+.knowledge-status .row {
+  margin-top: 8px;
+}
+.knowledge-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.knowledge-table th,
+.knowledge-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.knowledge-error {
+  margin-top: 4px;
+  color: var(--red);
+  font-size: 12px;
+}
+.knowledge-ok {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--green-bg);
+  color: var(--green);
+}
+ul.knowledge-answer-text {
+  padding-left: 30px;
+}
+ul.knowledge-answer-text li + li {
+  margin-top: 4px;
+}
+.knowledge-answer-text {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--brand-tint);
+  color: var(--ink);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.knowledge-scope {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--brand-ink);
+  cursor: pointer;
+}
+.knowledge-sources {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--brand-ink);
+}

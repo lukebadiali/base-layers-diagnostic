@@ -1,0 +1,77 @@
+{
+  "sessionName": "Week 5 - Fundraising pipeline",
+  "summary": "Set out the Fund III fundraising pipeline with six stages and targets for conversion and coverage. Agreed a soft-circle coverage target before launch and an 8-week rule for silent LPs. The June 2027 first close date is still to be confirmed.",
+  "discussion": [
+    {
+      "topic": "LP tracker",
+      "keyPoints": "Natalie's tracker mixes stages and has no dates. She estimated about 40% of first meetings turn into data room access."
+    },
+    {
+      "topic": "Timing",
+      "keyPoints": "Richard wants a first close by June 2027. Natalie said average LP decision cycles in Fund II were around 9 months."
+    },
+    {
+      "topic": "Silent LPs",
+      "keyPoints": "Several LPs have gone quiet after the data room. Nobody is sure whether to keep chasing."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Stages and exit criteria",
+      "recommendation": "Use six stages: Target, First meeting, Data room, Due diligence, Investment committee, Committed.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Conversion rates",
+      "recommendation": "Track first meeting to data room and hold it at 40% or better.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Velocity and cycle time",
+      "recommendation": "Plan for a first close in June 2027 against a 9-month average LP decision cycle.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Pipeline coverage",
+      "recommendation": "Hold soft circles of 2.5x the target, around £1.1bn, before formal launch.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Stalled deals",
+      "recommendation": "Move any LP silent for 8 weeks to a nurture list with quarterly letters only.",
+      "agreed": "Yes"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Rebuild the LP tracker in the six stages with dates",
+      "owner": "Natalie Grieve"
+    }
+  ],
+  "nextFocus": "Choose systems and reporting for investor relations.",
+  "nextPreparation": "Bring the current CRM licence details and the partners meeting pack.",
+  "tests": [
+    {
+      "question": "What coverage do we need before launch?",
+      "expectedFacts": [
+        "2.5x the target",
+        "£1.1bn"
+      ]
+    },
+    {
+      "question": "What happens to LPs that go quiet?",
+      "expectedFacts": [
+        "silent for 8 weeks",
+        "nurture list"
+      ]
+    },
+    {
+      "question": "Is the June 2027 first close agreed?",
+      "expectedFacts": [
+        "Pending",
+        "June 2027",
+        "9-month"
+      ]
+    }
+  ]
+}

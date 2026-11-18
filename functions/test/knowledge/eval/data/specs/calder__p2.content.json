@@ -1,0 +1,71 @@
+{
+  "sessionName": "Week 2 - Founder and adviser narrative",
+  "summary": "Built on the operator-led positioning agreed in week 1 to write the value proposition for founders and a separate message for corporate finance advisers. We agreed a named 100-day plan as the core promise and a two-track messaging structure. Case studies are blocked on management consent.",
+  "discussion": [
+    {
+      "topic": "What founders actually buy",
+      "keyPoints": "Helen said founders care most about who will sit on their board, not the fund. Mark noted founders often confuse Calder with the debt funds and assume heavy leverage."
+    },
+    {
+      "topic": "What advisers need to hear",
+      "keyPoints": "Advisers want certainty of completion. Mark pointed out that 3 of the last 4 Calder deals closed on the terms in the indicative offer, which nobody outside the firm knows."
+    },
+    {
+      "topic": "Using portfolio results",
+      "keyPoints": "Both were keen to use portfolio growth numbers but Helen was cautious about naming companies without the management teams agreeing."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Value proposition",
+      "recommendation": "Lead with: capital plus a named operating partner and a written 100-day plan for every new investment.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Messaging architecture",
+      "recommendation": "Run two message tracks, one for founders and one for corporate finance advisers. The adviser track leads with 3 of the last 4 deals closing on agreed terms.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Proof and outcomes",
+      "recommendation": "Publish four anonymised portfolio case studies, starting with the industrial services business that grew revenue 2.4x under Calder ownership.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Cost of inaction",
+      "recommendation": "Frame founder conversations around the cost of delaying succession planning, including the lower multiple a business gets without a step-up management team.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Ask the four portfolio CEOs for consent to use their results in case studies",
+      "owner": "Helen Brooks"
+    }
+  ],
+  "nextFocus": "Plan how Calder generates more proprietary deal flow alongside adviser-led processes.",
+  "nextPreparation": "Bring a list of the corporate finance advisers sending deals in the last two years and how many each sent.",
+  "tests": [
+    {
+      "question": "What did we agree is the core promise to founders?",
+      "expectedFacts": [
+        "named operating partner",
+        "100-day plan"
+      ]
+    },
+    {
+      "question": "What is the lead message for corporate finance advisers?",
+      "expectedFacts": [
+        "3 of the last 4 deals",
+        "closing on agreed terms"
+      ]
+    },
+    {
+      "question": "Did we agree to use the cost of delaying succession in founder conversations?",
+      "expectedFacts": [
+        "No",
+        "cost of delaying succession planning"
+      ]
+    }
+  ]
+}

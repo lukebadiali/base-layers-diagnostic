@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 5 - Deal pipeline stages",
+  "summary": "Set out a six-stage deal pipeline with exit criteria linked to the week 4 scoring screen. Agreed conversion and coverage targets and a 45-day rule for stalled deals. The cycle time target needs more work before Helen and Mark sign it off.",
+  "discussion": [
+    {
+      "topic": "Deal log review",
+      "keyPoints": "Mark's deal log showed roughly 1 in 9 first meetings reach an indicative offer and the average time from first meeting to exclusivity is around 26 weeks."
+    },
+    {
+      "topic": "Coverage",
+      "keyPoints": "Calder wants 4 platform deals a year from Fund II. Helen asked how many live opportunities that really needs at each stage."
+    },
+    {
+      "topic": "Stalled deals",
+      "keyPoints": "Several deals sat untouched for months without a decision. Mark said nobody feels able to kill a deal a partner likes."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Stages and exit criteria",
+      "recommendation": "Use six stages: Identified, First meeting, Qualified, Indicative offer, Exclusivity, Completed. A deal only becomes Qualified with a score of 3 or more on the five-criterion screen.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Conversion rates",
+      "recommendation": "Track first meeting to indicative offer and lift it from about 1 in 9 to 1 in 6.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Velocity and cycle time",
+      "recommendation": "Cut time from first meeting to exclusivity from around 26 weeks to 16 weeks.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Pipeline coverage",
+      "recommendation": "Hold 24 qualified opportunities in the pipeline at any time to support 4 platform deals a year.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Stalled deals",
+      "recommendation": "Any deal with no movement for 45 days is reviewed at the Monday pipeline meeting and either revived with a next step or parked.",
+      "agreed": "Yes"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Re-stage the current deal log into the six stages",
+      "owner": "Mark Lyons"
+    }
+  ],
+  "nextFocus": "Choose how the pipeline is recorded and reported, and replace the Excel deal log.",
+  "nextPreparation": "Bring the Excel deal log and any CRM quotes already received.",
+  "tests": [
+    {
+      "question": "How many qualified opportunities should we hold in the pipeline?",
+      "expectedFacts": [
+        "24 qualified opportunities",
+        "4 platform deals a year"
+      ]
+    },
+    {
+      "question": "What did we agree about deals that stall?",
+      "expectedFacts": [
+        "45 days",
+        "Monday pipeline meeting"
+      ]
+    },
+    {
+      "question": "Is the 16-week cycle time target agreed?",
+      "expectedFacts": [
+        "Pending",
+        "26 weeks to 16 weeks"
+      ]
+    }
+  ]
+}

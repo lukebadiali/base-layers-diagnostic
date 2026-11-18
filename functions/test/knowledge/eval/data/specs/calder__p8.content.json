@@ -1,0 +1,77 @@
+{
+  "sessionName": "Week 8 - Adviser network and partners",
+  "summary": "Reviewed Calder's corporate finance adviser relationships and other referral partners. Agreed to tier the 40 active advisers and give the top tier more partner time and a quarterly deal criteria card. Bank partnerships need more thought and co-investing above the mandate was rejected.",
+  "discussion": [
+    {
+      "topic": "Adviser relationships",
+      "keyPoints": "Of around 40 advisers who have sent deals, about 10 account for most of the qualified flow. Helen said relationships depend on whichever partner knows the adviser."
+    },
+    {
+      "topic": "Banks",
+      "keyPoints": "Mark suggested the leveraged finance teams at regional banks see deals early. Helen was unsure how formal that should be."
+    },
+    {
+      "topic": "Bigger deals",
+      "keyPoints": "Some advisers bring deals above £50m EV. Mark asked about co-investing with a larger fund on those."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Referral networks",
+      "recommendation": "Tier the 40 advisers into A (10), B (15) and C. A-tier advisers get a quarterly lunch with a named Calder partner.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Partner enablement",
+      "recommendation": "Send A-tier advisers a one-page deal criteria card, updated every quarter with the week 1 target profile.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Partner strategy",
+      "recommendation": "Set up formal introducer relationships with the leveraged finance teams at three regional banks.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Alliances and joint ventures",
+      "recommendation": "Co-invest alongside a larger fund on deals above £50m EV.",
+      "agreed": "No"
+    },
+    {
+      "area": "Industry presence",
+      "recommendation": "Sponsor the regional M&A awards in Leeds at a cost of £8k.",
+      "agreed": "Yes"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Assign a named partner to each of the 10 A-tier advisers",
+      "owner": "Helen Brooks"
+    }
+  ],
+  "nextFocus": "Look at how Calder supports portfolio companies after completion and uses exited CEOs as references.",
+  "nextPreparation": "Bring the current post-completion plan template and a list of exited management teams.",
+  "tests": [
+    {
+      "question": "How did we tier the advisers?",
+      "expectedFacts": [
+        "A (10), B (15) and C",
+        "quarterly lunch"
+      ]
+    },
+    {
+      "question": "What did we decide about deals above £50m EV?",
+      "expectedFacts": [
+        "No",
+        "co-invest",
+        "larger fund"
+      ]
+    },
+    {
+      "question": "What are we sending to A-tier advisers?",
+      "expectedFacts": [
+        "one-page deal criteria card",
+        "every quarter"
+      ]
+    }
+  ]
+}

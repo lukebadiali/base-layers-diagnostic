@@ -1,0 +1,81 @@
+{
+  "sessionName": "Week 6 - CRM and forecasting",
+  "summary": "George Berrington met Simon Clarke and Priya Natarajan on revenue operations. Fund and deal partner contacts live in spreadsheets and personal inboxes, and the practice management system only tracks instructed work. We agreed to adopt a relationship-focused CRM and a monthly forecast that separates DD and post-deal revenue.",
+  "discussion": [
+    {
+      "topic": "Systems today",
+      "keyPoints": "Simon said the practice management system handles timesheets and billing well but has no pre-instruction pipeline. Priya keeps fund relationships in her own spreadsheet."
+    },
+    {
+      "topic": "Relationship mapping",
+      "keyPoints": "Priya stressed that the same deal partner moves between funds, so contacts must track people as well as firms."
+    },
+    {
+      "topic": "Forecasting",
+      "keyPoints": "Simon wants a forecast he can share with the board. DD is hard to forecast more than 4 weeks out."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "CRM",
+      "recommendation": "Adopt Affinity as the relationship CRM for the 9 partners and directors, integrated with Outlook, by the end of the quarter.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Data quality",
+      "recommendation": "Track deal partners as individuals linked to their current fund, and record fund moves within 2 weeks.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Forecasting",
+      "recommendation": "Forecast DD on a 4-week rolling basis and 100-day plans on a 2-quarter basis, presented to the board monthly.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Funnel metrics",
+      "recommendation": "Report DD-to-100-day plan conversion and average DD fee each month.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Reporting and dashboards",
+      "recommendation": "Build a separate dashboard for each of the 6 DD leads.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Run an Affinity trial with Priya's fund relationship spreadsheet imported",
+      "owner": "Priya Natarajan"
+    },
+    {
+      "action": "Draft the monthly board forecast template",
+      "owner": "George Berrington"
+    }
+  ],
+  "nextFocus": "Align marketing and thought leadership with the deal-to-value narrative.",
+  "nextPreparation": "Simon to gather any published articles or webinars from the last year.",
+  "tests": [
+    {
+      "question": "Which CRM did we agree to adopt?",
+      "expectedFacts": [
+        "Affinity",
+        "9 partners and directors"
+      ]
+    },
+    {
+      "question": "Is the forecasting approach agreed?",
+      "expectedFacts": [
+        "4-week rolling",
+        "2-quarter",
+        "Pending"
+      ]
+    },
+    {
+      "question": "What did we agree about tracking deal partners?",
+      "expectedFacts": [
+        "individuals linked to their current fund",
+        "within 2 weeks"
+      ]
+    }
+  ]
+}

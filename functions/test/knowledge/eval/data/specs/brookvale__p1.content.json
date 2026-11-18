@@ -1,0 +1,80 @@
+{
+  "sessionName": "Week 1 - Win rates and sector focus",
+  "summary": "Luke Badiali opened the programme with Thomas Avery and Grace Lindqvist. Brookvale's win rate on CDD pitches has fallen from 38 percent to 24 percent in two years as larger advisory firms discount to win mid-market mandates. We agreed to narrow the ICP to mid-market PE houses doing deals with enterprise values of 50m to 300m and to focus on three sectors where Brookvale has depth.",
+  "discussion": [
+    {
+      "topic": "Win rate decline",
+      "keyPoints": "Thomas shared that win rate dropped from 38 to 24 percent. In most losses the larger firm quoted 20 to 30 percent below Brookvale. Grace felt Brookvale was competing on price where it cannot win."
+    },
+    {
+      "topic": "Where Brookvale is strongest",
+      "keyPoints": "Grace pointed to healthcare services, B2B software and testing, inspection and certification, where the team has run more than 40 projects in total. Thomas worried narrowing would reduce deal flow."
+    },
+    {
+      "topic": "Buyer type",
+      "keyPoints": "Repeat mandates come from deal partners at funds of 200m to 1bn. Larger funds use the big firms by default and rarely switch."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Ideal Customer Profile",
+      "recommendation": "Target mid-market PE houses with fund sizes of 200m to 1bn doing deals at 50m to 300m enterprise value.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Market segmentation",
+      "recommendation": "Focus on three sectors: healthcare services, B2B software and testing, inspection and certification.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Competitive landscape",
+      "recommendation": "Stop pitching against the large firms on deals above 300m enterprise value unless invited by an existing deal partner.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Positioning and differentiation",
+      "recommendation": "Position Brookvale as the sector specialist that delivers a partner-led red flag view in 10 working days.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pricing and value",
+      "recommendation": "Match competitor discounts on contested pitches.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Pull the last 60 pitches with outcome, sector, deal size and competitor",
+      "owner": "Grace Lindqvist"
+    },
+    {
+      "action": "List the 30 PE houses that fit the new ICP",
+      "owner": "Thomas Avery"
+    }
+  ],
+  "nextFocus": "Build the value proposition and commercial narrative around sector depth and speed.",
+  "nextPreparation": "Grace to bring the three most recent lost pitch decks.",
+  "tests": [
+    {
+      "question": "What has happened to our win rate?",
+      "expectedFacts": [
+        "38 percent to 24 percent"
+      ]
+    },
+    {
+      "question": "Which three sectors are we focusing on?",
+      "expectedFacts": [
+        "healthcare services",
+        "B2B software",
+        "testing, inspection and certification"
+      ]
+    },
+    {
+      "question": "Did we agree to stop pitching against large firms on bigger deals?",
+      "expectedFacts": [
+        "Pending",
+        "above 300m enterprise value"
+      ]
+    }
+  ]
+}

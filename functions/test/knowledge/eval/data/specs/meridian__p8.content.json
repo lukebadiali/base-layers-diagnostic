@@ -1,0 +1,71 @@
+{
+  "sessionName": "Week 8 - Partnerships and referral networks",
+  "summary": "Luke Badiali reviewed referral sources with Chris and Leanne. Beyond the three PE houses, referrals come informally from a handful of transaction services and interim management firms. We agreed to formalise two referral partnerships and test a joint offer with an operational due diligence provider.",
+  "discussion": [
+    {
+      "topic": "Referral sources",
+      "keyPoints": "Chris listed 7 firms that had referred work, including two interim management agencies and a corporate finance boutique. None are tracked or thanked formally."
+    },
+    {
+      "topic": "Alliance idea",
+      "keyPoints": "Leanne suggested partnering with an operational due diligence firm so Meridian is introduced pre-deal. Chris worried about conflicts if Meridian then delivers the work."
+    },
+    {
+      "topic": "Industry presence",
+      "keyPoints": "Meridian is not a member of any PE industry body. Chris questioned the value of paid memberships."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Referral networks",
+      "recommendation": "Formalise referral agreements with the two interim management agencies, paying a 10% introducer fee on first-year fees.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Alliances and joint ventures",
+      "recommendation": "Pilot a joint pre-deal and 100-day offer with one operational due diligence firm on 2 deals.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Industry presence",
+      "recommendation": "Join the regional PE network as an associate member at £4,500 a year.",
+      "agreed": "No"
+    },
+    {
+      "area": "Partner enablement",
+      "recommendation": "Give referral partners a one-page brief on the operating partner proposition and the 10-working-day mobilisation promise.",
+      "agreed": "Yes"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Draft the referral agreement with the 10% introducer fee",
+      "owner": "Chris Barlow"
+    }
+  ],
+  "nextFocus": "Retention and expansion within existing PE portfolios.",
+  "nextPreparation": "Leanne to map every current and past client against its PE owner.",
+  "tests": [
+    {
+      "question": "What introducer fee did we agree for referral partners?",
+      "expectedFacts": [
+        "10% introducer fee",
+        "first-year fees"
+      ]
+    },
+    {
+      "question": "Are we joining the regional PE network?",
+      "expectedFacts": [
+        "No",
+        "£4,500 a year"
+      ]
+    },
+    {
+      "question": "Is the due diligence alliance agreed?",
+      "expectedFacts": [
+        "Pending",
+        "2 deals"
+      ]
+    }
+  ]
+}

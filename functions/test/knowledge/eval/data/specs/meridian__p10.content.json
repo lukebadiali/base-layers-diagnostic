@@ -1,0 +1,70 @@
+{
+  "sessionName": "Week 10 - Commercial model and margins",
+  "summary": "Luke Badiali reviewed Meridian's financial model with Chris and Leanne. Utilisation is 68% against a target of 75% and margins vary widely between day-rate and fixed-fee work. We agreed a target pricing model built on fixed-fee workstreams and a cost of acquisition benchmark.",
+  "discussion": [
+    {
+      "topic": "Utilisation and margin",
+      "keyPoints": "Average gross margin is 38%, but fixed-fee 100-day work runs at 46%. Chris said day-rate lean work drags the average down."
+    },
+    {
+      "topic": "Pricing",
+      "keyPoints": "Week 1 left the £45k fixed fee per workstream as pending. Chris is now more comfortable with it given the margin data, but worried about scope creep."
+    },
+    {
+      "topic": "Acquisition cost",
+      "keyPoints": "Leanne estimated partner time on business development at roughly £14k per new client won."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Pricing strategy",
+      "recommendation": "Price 100-day plans as fixed-fee workstreams from £45k each with a change-control clause, and phase out day rates on PE work.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Margins",
+      "recommendation": "Set a minimum gross margin of 42% for any engagement before it is signed.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Cost of acquisition",
+      "recommendation": "Cap business development cost at £15k per new client, tracked quarterly.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Revenue scenarios",
+      "recommendation": "Model a base case of £5.2m fees next year and a downside where one core PE house drops out.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Build the margin check into the proposal sign-off",
+      "owner": "Chris Barlow"
+    }
+  ],
+  "nextFocus": "Review the commercial model again after one quarter of live data.",
+  "nextPreparation": "Leanne to track margin and acquisition cost on every new engagement for the quarter.",
+  "tests": [
+    {
+      "question": "What pricing model did we agree?",
+      "expectedFacts": [
+        "fixed-fee workstreams from £45k",
+        "phase out day rates"
+      ]
+    },
+    {
+      "question": "What minimum margin did we agree?",
+      "expectedFacts": [
+        "42%"
+      ]
+    },
+    {
+      "question": "Is the cost of acquisition cap agreed?",
+      "expectedFacts": [
+        "Pending",
+        "£15k per new client"
+      ]
+    }
+  ]
+}

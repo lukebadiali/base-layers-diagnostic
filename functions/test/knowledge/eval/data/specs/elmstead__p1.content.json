@@ -1,0 +1,80 @@
+{
+  "sessionName": "Week 1 - ICP and tender dependence",
+  "summary": "George Berrington ran the opening strategy session with Andrew Fenwick and Kate Rowley. We mapped where Elmstead's last three years of revenue came from and found 71 percent arrived through open tenders, which explains the lumpy pipeline. We agreed the ICP should centre on regulated water utilities and NHS integrated care boards, with central government departments treated as opportunistic.",
+  "discussion": [
+    {
+      "topic": "Revenue mix review",
+      "keyPoints": "Andrew shared that 71 percent of fee income over three years came from open tenders, with an average win rate of 22 percent. Kate said the bid team is exhausted and the firm often bids for work it has no relationship behind."
+    },
+    {
+      "topic": "Where Elmstead wins",
+      "keyPoints": "The best margins and repeat work came from water utilities going through regulatory price review programmes and from NHS integrated care boards on merger and operating model change. Kate raised a concern that dropping central government would hurt the brand."
+    },
+    {
+      "topic": "Positioning",
+      "keyPoints": "Andrew described Elmstead as a generalist change house. George pushed back that buyers in regulated sectors want people who understand the regulator, not general change capability. Andrew did not agree to the 35k fixed-fee discovery phase yet, preferring to keep day rates until the ICP work settles."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Ideal Customer Profile",
+      "recommendation": "Define the ICP as regulated water utilities and NHS integrated care boards with a transformation budget above 400k and a named change director.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Market segmentation",
+      "recommendation": "Treat central government departments as an opportunistic third segment, bid only where Elmstead has a prior relationship with the senior responsible owner.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Positioning and differentiation",
+      "recommendation": "Position Elmstead as the change partner for organisations under regulatory pressure, rather than a generalist change consultancy.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Commercial strategy",
+      "recommendation": "Set a target to cut tender-sourced revenue from 71 percent to 50 percent within 24 months by building pre-tender relationships.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pricing and value",
+      "recommendation": "Move away from day-rate-only bids and test a fixed-fee discovery phase priced at 35k for water utility clients.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Pull a list of the 18 water utilities and 42 integrated care boards with change directors named",
+      "owner": "Kate Rowley"
+    },
+    {
+      "action": "Draft a one-line positioning statement for regulated sectors",
+      "owner": "Andrew Fenwick"
+    }
+  ],
+  "nextFocus": "Turn the regulatory-pressure positioning into a value proposition and commercial narrative.",
+  "nextPreparation": "Kate to bring three recent win stories and three losses from the last 12 months.",
+  "tests": [
+    {
+      "question": "What share of our revenue did we say came from open tenders?",
+      "expectedFacts": [
+        "71 percent",
+        "open tenders"
+      ]
+    },
+    {
+      "question": "Is the decision on central government as a segment agreed yet?",
+      "expectedFacts": [
+        "Pending",
+        "prior relationship with the senior responsible owner"
+      ]
+    },
+    {
+      "question": "Did we agree the fixed-fee discovery phase for water utilities?",
+      "expectedFacts": [
+        "35k",
+        "not agreed"
+      ]
+    }
+  ]
+}

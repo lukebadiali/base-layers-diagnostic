@@ -1,0 +1,73 @@
+{
+  "sessionName": "Week 10 - Origination economics",
+  "summary": "Luke Badiali modelled the cost and return of the origination engine with James Whitlow and Sophie Archer. The full engine costs around £210,000 a year including the analyst, CRM, events and content. We agreed it pays back if it lifts proprietary deals and saves about one turn of EBITDA on entry.",
+  "discussion": [
+    {
+      "topic": "Costs",
+      "keyPoints": "Analyst £55,000 loaded, CRM £18,000, dinners £24,000, report and video £40,000, plus about £73,000 of partner time."
+    },
+    {
+      "topic": "Returns",
+      "keyPoints": "A proprietary deal at 7x rather than 8x on a £5m EBITDA platform saves £5m of entry value."
+    },
+    {
+      "topic": "Scepticism",
+      "keyPoints": "James questioned whether the 40% proprietary target is realistic in year one."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Cost of acquisition",
+      "recommendation": "Track origination cost per signed heads of terms, with a target below £70,000.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Sales and marketing ROI",
+      "recommendation": "Approve a budget of £210,000 a year for the engine, reviewed at 12 months.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Revenue scenarios",
+      "recommendation": "Model three scenarios for year one: 1, 2 or 3 proprietary platforms.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Unit economics",
+      "recommendation": "Charge deal sourcing costs to portfolio companies where possible.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Build the three-scenario model",
+      "owner": "Luke Badiali"
+    },
+    {
+      "action": "Take the £210,000 budget to the partners meeting",
+      "owner": "James Whitlow"
+    }
+  ],
+  "nextFocus": "Review progress against the origination targets in the follow-up session.",
+  "nextPreparation": "Sophie to bring the 12-week outreach results by sub-sector.",
+  "tests": [
+    {
+      "question": "What is the target cost per heads of terms?",
+      "expectedFacts": [
+        "below £70,000"
+      ]
+    },
+    {
+      "question": "Has the £210,000 budget been approved?",
+      "expectedFacts": [
+        "pending",
+        "£210,000 a year"
+      ]
+    },
+    {
+      "question": "How many proprietary platforms are in the scenarios?",
+      "expectedFacts": [
+        "1, 2 or 3"
+      ]
+    }
+  ]
+}

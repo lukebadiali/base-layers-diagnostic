@@ -1,0 +1,71 @@
+{
+  "sessionName": "Week 5 - Origination pipeline stages",
+  "summary": "George Berrington mapped Ashcombe's origination pipeline with James Whitlow and Sophie Archer. The target tracker has 340 names but no consistent stages, so nobody can see conversion. We agreed six stages with exit criteria and a coverage target.",
+  "discussion": [
+    {
+      "topic": "Current tracker",
+      "keyPoints": "Sophie's spreadsheet holds 340 targets but stages are free text. James could not say how many were in active dialogue."
+    },
+    {
+      "topic": "Conversion",
+      "keyPoints": "Rough analysis showed about 1 in 25 founder conversations becomes a signed heads of terms."
+    },
+    {
+      "topic": "Stalled targets",
+      "keyPoints": "Around 40 targets have had no contact in over 6 months but are still marked warm."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Stages and exit criteria",
+      "recommendation": "Use six stages: identified, contacted, first meeting, qualified, indicative offer, heads of terms, each with a written exit criterion.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Pipeline coverage",
+      "recommendation": "Hold 25 qualified founders at any time to deliver 4 platform deals a year.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Stalled deals",
+      "recommendation": "Move any target with no contact for 120 days to a nurture list owned by the analyst.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Velocity and cycle time",
+      "recommendation": "Cut first meeting to heads of terms from 19 weeks to 12 weeks.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Re-stage all 340 targets into the six stages",
+      "owner": "Sophie Archer"
+    }
+  ],
+  "nextFocus": "Move the pipeline out of spreadsheets into a CRM.",
+  "nextPreparation": "Sophie to list the CRM tools she has used before and current licence costs.",
+  "tests": [
+    {
+      "question": "How many qualified founders do we need in the pipeline?",
+      "expectedFacts": [
+        "25 qualified founders",
+        "4 platform deals a year"
+      ]
+    },
+    {
+      "question": "Did we agree to cut the cycle to 12 weeks?",
+      "expectedFacts": [
+        "not agreed",
+        "19 weeks to 12 weeks"
+      ]
+    },
+    {
+      "question": "What happens to targets with no contact?",
+      "expectedFacts": [
+        "120 days",
+        "nurture list"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 7 - Sector insight campaigns",
+  "summary": "Luke Badiali led a campaign session with Thomas Avery and Grace Lindqvist. Brookvale has published almost nothing in the last year despite strong sector knowledge. We agreed a campaign plan built on the quarterly sector briefings, Thomas's profile with deal partners and the sanitised deal library from week 2.",
+  "discussion": [
+    {
+      "topic": "Content audit",
+      "keyPoints": "Grace found two articles and one webinar in 12 months. Thomas said the team is always on billable work and content slips."
+    },
+    {
+      "topic": "Thomas as the voice",
+      "keyPoints": "Luke suggested Thomas writes a monthly note on what IC committees are asking in each sector. Thomas agreed in principle but wanted Grace to draft."
+    },
+    {
+      "topic": "Measurement",
+      "keyPoints": "Grace asked how to judge whether content leads to mandates, given deal partners rarely say how they heard of Brookvale."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Campaign planning",
+      "recommendation": "Run one campaign per sector per year, starting with healthcare services in Q1.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Founder brand",
+      "recommendation": "Thomas to publish a monthly 'what ICs are asking' note on LinkedIn, drafted by Grace.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Content strategy",
+      "recommendation": "Hire a part-time sector writer at around 3k a month.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Case studies and social proof",
+      "recommendation": "Turn five deal library entries into two-page case summaries for pitch packs.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Campaign measurement",
+      "recommendation": "Ask every new deal partner how they heard of Brookvale and log it in the CRM.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Draft the first 'what ICs are asking' note on healthcare services",
+      "owner": "Grace Lindqvist"
+    }
+  ],
+  "nextFocus": "Develop partnerships with intermediaries and complementary advisers.",
+  "nextPreparation": "Thomas to list the advisers Brookvale has worked alongside on deals.",
+  "tests": [
+    {
+      "question": "Is hiring a sector writer agreed?",
+      "expectedFacts": [
+        "Pending",
+        "3k a month"
+      ]
+    },
+    {
+      "question": "Which sector campaign comes first?",
+      "expectedFacts": [
+        "healthcare services",
+        "Q1"
+      ]
+    },
+    {
+      "question": "What is Thomas publishing?",
+      "expectedFacts": [
+        "monthly",
+        "what ICs are asking"
+      ]
+    }
+  ]
+}

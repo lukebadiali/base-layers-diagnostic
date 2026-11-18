@@ -1,0 +1,72 @@
+{
+  "sessionName": "Week 2 - Fund III narrative",
+  "summary": "Turned the specialist positioning from week 1 into a Fund III narrative. Agreed a three-part story, a lead proof point from Fund II returns and an off-market sourcing message. A published point of view on special educational needs consolidation is still being considered.",
+  "discussion": [
+    {
+      "topic": "What LPs remember",
+      "keyPoints": "Natalie said LP feedback from Fund II was that the deck was dense and the sourcing story got lost. Richard said 9 of the 11 Fund II deals were sourced off-market, which hardly features."
+    },
+    {
+      "topic": "Track record",
+      "keyPoints": "Fund II is at 2.1x gross MOIC and 24% gross IRR with three realised exits. Richard wants realised exits up front."
+    },
+    {
+      "topic": "Sector view",
+      "keyPoints": "Richard has a strong view on consolidation in special educational needs provision. Natalie worried that publishing it could unsettle a portfolio company's local authority clients."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Value proposition",
+      "recommendation": "Lead with: sector specialists in regulated healthcare services and education, with 9 of 11 Fund II deals sourced off-market.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Commercial narrative",
+      "recommendation": "Tell a three-part story: regulated sectors with steady demand, buy-and-build platforms, and measurable social outcomes.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Proof and outcomes",
+      "recommendation": "Open the track record section with Fund II at 2.1x gross MOIC and 24% gross IRR, showing the three realised exits first.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Differentiation and point of view",
+      "recommendation": "Publish a point of view paper on consolidation in special educational needs provision ahead of launch.",
+      "agreed": "Pending"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Redraft the first ten pages of the Fund III deck around the three-part story",
+      "owner": "Natalie Grieve"
+    }
+  ],
+  "nextFocus": "Plan the LP outreach programme and channel mix for the raise.",
+  "nextPreparation": "Bring the full LP target list with current relationship owners.",
+  "tests": [
+    {
+      "question": "What is the lead sourcing proof point?",
+      "expectedFacts": [
+        "9 of 11 Fund II deals",
+        "off-market"
+      ]
+    },
+    {
+      "question": "Which Fund II numbers do we open the track record with?",
+      "expectedFacts": [
+        "2.1x gross MOIC",
+        "24% gross IRR",
+        "three realised exits"
+      ]
+    },
+    {
+      "question": "Is the special educational needs paper agreed?",
+      "expectedFacts": [
+        "Pending",
+        "special educational needs"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "sessionName": "Week 6 - IR systems and reporting",
+  "summary": "Looked at the systems behind the raise. Agreed to use the existing CRM rather than buy a specialist IR platform, a probability-weighted commitment forecast and a monthly dashboard for the partners. The DDQ answer library is pending resourcing.",
+  "discussion": [
+    {
+      "topic": "Systems",
+      "keyPoints": "Natalie runs LP tracking in spreadsheets. A specialist IR platform was quoted at around £25k a year. Richard prefers to use the CRM the deal team already has."
+    },
+    {
+      "topic": "Forecasting",
+      "keyPoints": "Partners have no shared view of likely commitments. Richard wants a single number each month."
+    },
+    {
+      "topic": "DDQ answers",
+      "keyPoints": "Natalie rewrites the same DDQ answers each time and estimated a library of around 300 answers would cover most questions."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "CRM",
+      "recommendation": "Move LP tracking into the existing deal CRM rather than buy a specialist IR platform, saving around £25k a year.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Forecasting",
+      "recommendation": "Run a weighted commitment forecast: 90% at Investment committee, 50% at Due diligence and 20% at Data room.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Reporting and dashboards",
+      "recommendation": "Present a monthly fundraising dashboard to the partners meeting with commitments, soft circles and stage counts.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Playbooks",
+      "recommendation": "Build a DDQ answer library of around 300 approved answers.",
+      "agreed": "Pending"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Set up the LP pipeline in the existing CRM",
+      "owner": "Natalie Grieve"
+    }
+  ],
+  "nextFocus": "Plan Fund III marketing and thought leadership.",
+  "nextPreparation": "Bring Fund II portfolio case study material and recent press.",
+  "tests": [
+    {
+      "question": "Are we buying a specialist IR platform?",
+      "expectedFacts": [
+        "existing deal CRM",
+        "£25k a year"
+      ]
+    },
+    {
+      "question": "What weightings are in the commitment forecast?",
+      "expectedFacts": [
+        "90% at Investment committee",
+        "50% at Due diligence",
+        "20% at Data room"
+      ]
+    },
+    {
+      "question": "Is the DDQ answer library agreed?",
+      "expectedFacts": [
+        "Pending",
+        "300 approved answers"
+      ]
+    }
+  ]
+}

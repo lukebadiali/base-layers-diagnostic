@@ -1,0 +1,76 @@
+{
+  "sessionName": "Week 3 - Reaching deal partners early",
+  "summary": "Luke Badiali reviewed demand generation with Thomas Avery and Grace Lindqvist. Nearly all mandates arrive as short-notice RFPs from deal partners who already know Brookvale. We agreed a partner-to-partner outreach rhythm, a sector briefing series and an intermediary channel through sell-side corporate finance advisers.",
+  "discussion": [
+    {
+      "topic": "Source of mandates",
+      "keyPoints": "Thomas's list showed 22 deal partners gave work in three years, and 9 of them gave 70 percent of it. New deal partners almost never appear."
+    },
+    {
+      "topic": "Intermediaries",
+      "keyPoints": "Grace said sell-side corporate finance advisers choose the VDD provider on many processes, but Brookvale has relationships with only two."
+    },
+    {
+      "topic": "Content",
+      "keyPoints": "Luke suggested quarterly sector briefings, which deal partners use when screening targets. Thomas worried about consultant time on non-billable work."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "Outbound",
+      "recommendation": "Thomas and Grace each to hold two breakfast meetings a month with deal partners not yet on the client list.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Channel mix",
+      "recommendation": "Add sell-side corporate finance advisers as a second channel, targeting 10 relationships by year end.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Inbound",
+      "recommendation": "Publish a quarterly sector briefing for each of the three sectors, gated by email.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Events",
+      "recommendation": "Host one deal partner dinner per sector each year with 10 guests.",
+      "agreed": "No"
+    },
+    {
+      "area": "Lead quality and volume",
+      "recommendation": "Track pre-RFP conversations, aiming for 8 a month across the partners.",
+      "agreed": "Yes"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Build a list of 40 corporate finance advisers active in mid-market healthcare and software sales",
+      "owner": "Grace Lindqvist"
+    }
+  ],
+  "nextFocus": "Tighten pitch execution so early conversations convert at a better rate.",
+  "nextPreparation": "Grace to bring the scoping notes from two recent pitches.",
+  "tests": [
+    {
+      "question": "How many sell-side adviser relationships are we targeting?",
+      "expectedFacts": [
+        "10 relationships",
+        "corporate finance advisers"
+      ]
+    },
+    {
+      "question": "Is the quarterly sector briefing agreed?",
+      "expectedFacts": [
+        "Pending",
+        "quarterly sector briefing"
+      ]
+    },
+    {
+      "question": "How concentrated is our deal partner base?",
+      "expectedFacts": [
+        "9 of them",
+        "70 percent"
+      ]
+    }
+  ]
+}

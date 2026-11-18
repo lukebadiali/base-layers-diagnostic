@@ -1,0 +1,80 @@
+{
+  "sessionName": "Week 6 - CRM and reporting",
+  "summary": "Luke Badiali met Joanna Pike and Oliver Grant to replace the spreadsheet tracker with a proper CRM and agree what the partners will review each month. We agreed on HubSpot Sales Professional and a monthly dashboard built on the five stages from Week 5. Forecasting retainers separately from project work was raised but not settled.",
+  "discussion": [
+    {
+      "topic": "CRM choice",
+      "keyPoints": "Joanna confirmed budget for licences. Oliver wanted something consultants would actually use and that tracks relationships with PE houses as well as portfolio companies."
+    },
+    {
+      "topic": "Data quality",
+      "keyPoints": "Contacts sit in individual inboxes and the old tracker. Luke stressed that each opportunity must link to both the PE house and the portfolio company."
+    },
+    {
+      "topic": "Forecasting",
+      "keyPoints": "Joanna wants to see retainer income as recurring revenue. Oliver worried that splitting forecasts would add admin the consultants will resist."
+    }
+  ],
+  "recommendations": [
+    {
+      "area": "CRM",
+      "recommendation": "Move to HubSpot Sales Professional with 6 paid seats for partners and senior consultants, live by the end of next month.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Data quality",
+      "recommendation": "Require every opportunity to be linked to a PE house and a portfolio company record, with a monthly data hygiene check.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Forecasting",
+      "recommendation": "Forecast retainers as monthly recurring revenue separately from project fees.",
+      "agreed": "Pending"
+    },
+    {
+      "area": "Reporting and dashboards",
+      "recommendation": "Build a one-page partner dashboard covering pipeline by stage, win rate and retainer count, reviewed on the first Monday of each month.",
+      "agreed": "Yes"
+    },
+    {
+      "area": "Playbooks",
+      "recommendation": "Write a sales playbook in the CRM covering the four-touch sequence and the discovery guide.",
+      "agreed": "No"
+    }
+  ],
+  "actions": [
+    {
+      "action": "Set up HubSpot pipeline with the five agreed stages and import live opportunities",
+      "owner": "Oliver Grant"
+    },
+    {
+      "action": "Draft the partner dashboard layout",
+      "owner": "Luke Badiali"
+    }
+  ],
+  "nextFocus": "Align marketing campaigns and thought leadership with the operating partner narrative.",
+  "nextPreparation": "Joanna to list any articles or talks she has done in the last year.",
+  "tests": [
+    {
+      "question": "Which CRM did we agree to move to and how many seats?",
+      "expectedFacts": [
+        "HubSpot Sales Professional",
+        "6 paid seats"
+      ]
+    },
+    {
+      "question": "Is forecasting retainers separately agreed?",
+      "expectedFacts": [
+        "monthly recurring revenue",
+        "Pending"
+      ]
+    },
+    {
+      "question": "When will the partners review the dashboard?",
+      "expectedFacts": [
+        "first Monday of each month",
+        "one-page partner dashboard"
+      ]
+    }
+  ]
+}

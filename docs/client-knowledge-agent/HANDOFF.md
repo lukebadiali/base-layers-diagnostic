@@ -88,7 +88,7 @@ The project is `bedeveloped-base-layers`:
 - **Deployed 17 Nov (afternoon), `9dd40a2`:** all five knowledge callables (`knowledgeIngest`, `knowledgeAsk`, `knowledgeUploads`, `knowledgeSetStatus`, `knowledgeCoverage`). This carries the retrieval re-rank, the NOT AGREED and pronoun wording, the stricter caller check, fail-closed retrieval and the all-clients staff mode. Snapshots are in `~/Desktop/knowledge-deploy-snapshot-5` and `-6`.
 - Every deploy passed the IAM / IdP gate, and the diff showed **nothing lost**.
 - **Hosting:** CI deployed `main` at `18dbee4` (#104) on 18 Nov; the live bundle contains the Agent tab and the widget.
-- **#102 server half:** `inviteInternal` and `gdprEraseUser` still need a named-functions deploy (§6). The 18 Nov attempt stopped at the pre-deploy gate because the gcloud and firebase-tools logins had expired; nothing changed in production.
+- **Deployed 20 Nov, `18dbee4`:** `inviteInternal` and `gdprEraseUser` (#102's server half), named-functions deploy per §6. Gate passed; the diff showed **nothing lost**. Both refuse unauthenticated calls. Snapshot in `~/Desktop/functions-deploy-snapshot-102b`.
 - **Clients:** they cannot ask. `knowledgeConfig/access` does not exist, which means off.
 
 ### PRs
@@ -97,7 +97,7 @@ The project is `bedeveloped-base-layers`:
 |---|---|
 | #104 | Agent tab, jobs page, client widget. Merged 18 Nov (`18dbee4`), hosting deployed. |
 | #103 | Knowledge agent and the eval. Merged 18 Nov (`6593a79`). Functions were already live from `9dd40a2`. |
-| #102 | Internal-account reactivation and GDPR erasure deleting the Auth record. Merged 18 Nov (`1f1617c`). **Functions not yet deployed.** |
+| #102 | Internal-account reactivation and GDPR erasure deleting the Auth record. Merged 18 Nov (`1f1617c`). Functions deployed 20 Nov. |
 | #101 | MFA Verify spinner. Merged. |
 | #99 | October handover doc. Open, needs review. |
 
@@ -267,11 +267,10 @@ Still open:
 
 ## 5. Next task
 
-1. **Deploy #102's functions** (`inviteInternal`, `gdprEraseUser`) with the §6 procedure, once the logins are renewed.
-2. **Describer text.** Stop embedding describer-written decisions, takeaways and challenges as statements. Either drop them from chunk text, as was done for `openQuestions`, or label them "BeDeveloped's summary (not recorded in the form)". Then add a prompt rule: say a decision was agreed only if a recommendation's Status says so. Re-run the eval and count the "takeaway" and invented-decision unsupported claims; the target is close to 0. Forms already uploaded keep their old chunk text until they are re-uploaded.
-3. **Small eval fix:** include the next-session date in the grader's form text (`build_grade_batches.py`).
-4. **Optional:** bring p90 under 3s.
-5. **Optional:** make uploads survive a closed tab by moving processing server-side (for example, upload to Storage and process on a trigger).
+1. **Describer text.** Stop embedding describer-written decisions, takeaways and challenges as statements. Either drop them from chunk text, as was done for `openQuestions`, or label them "BeDeveloped's summary (not recorded in the form)". Then add a prompt rule: say a decision was agreed only if a recommendation's Status says so. Re-run the eval and count the "takeaway" and invented-decision unsupported claims; the target is close to 0. Forms already uploaded keep their old chunk text until they are re-uploaded.
+2. **Small eval fix:** include the next-session date in the grader's form text (`build_grade_batches.py`).
+3. **Optional:** bring p90 under 3s.
+4. **Optional:** make uploads survive a closed tab by moving processing server-side (for example, upload to Storage and process on a trigger).
 
 ---
 

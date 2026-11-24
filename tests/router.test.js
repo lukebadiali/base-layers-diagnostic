@@ -116,12 +116,12 @@ describe("src/router.js — setRoute + dispatcher shape", () => {
     expect(renderDashboard).toHaveBeenCalled();
   });
 
-  it("renderRoute shows the knowledge agent page to staff and never to the client view", () => {
+  it("renderRoute sends the old knowledge route to Admin for staff and to the dashboard for the client view", () => {
     const mk = (/** @type {boolean} */ client) => {
-      const renderKnowledge = vi.fn(() => document.createElement("div"));
+      const renderAdmin = vi.fn(() => document.createElement("div"));
       const renderDashboard = vi.fn(() => document.createElement("div"));
       return {
-        renderKnowledge,
+        renderAdmin,
         renderDashboard,
         deps: {
           isClientView: () => client,
@@ -135,8 +135,7 @@ describe("src/router.js — setRoute + dispatcher shape", () => {
           renderChat: vi.fn(),
           renderRoadmap: vi.fn(),
           renderFunnel: vi.fn(),
-          renderAdmin: vi.fn(),
-          renderKnowledge,
+          renderAdmin,
         },
       };
     };
@@ -148,7 +147,8 @@ describe("src/router.js — setRoute + dispatcher shape", () => {
       /** @type {*} */ ({ id: "o1" }),
       staff.deps,
     );
-    expect(staff.renderKnowledge).toHaveBeenCalled();
+    expect(staff.renderAdmin).toHaveBeenCalled();
+    expect(state.route).toBe("admin");
 
     const client = mk(true);
     state.route = "knowledge";
@@ -158,7 +158,7 @@ describe("src/router.js — setRoute + dispatcher shape", () => {
       /** @type {*} */ ({ id: "o1" }),
       client.deps,
     );
-    expect(client.renderKnowledge).not.toHaveBeenCalled();
+    expect(client.renderAdmin).not.toHaveBeenCalled();
     expect(client.renderDashboard).toHaveBeenCalled();
   });
 });

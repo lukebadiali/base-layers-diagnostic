@@ -1117,7 +1117,6 @@ import {
       renderRoadmap,
       renderFunnel,
       renderAdmin,
-      renderKnowledge,
     });
   }
 
@@ -2871,19 +2870,19 @@ import {
   // ================================================================
   // ADMIN (internal only)
   // ================================================================
-  /** Client Knowledge Agent staff page (the "Agent" tab), created once (VITE_KNOWLEDGE_ADMIN=1 only). */
+  /** Client Knowledge Agent staff panel (a section of the Admin page), created once (VITE_KNOWLEDGE_ADMIN=1 only). */
   let knowledgePanelPromise = null;
 
-  // Client Knowledge Agent staff page. Off unless the build sets
-  // VITE_KNOWLEDGE_ADMIN=1; the check is inline so Vite drops this branch (and
-  // the lazy chunk) from a production build without the flag. The router only
-  // reaches it for staff. The panel is created once and reused: the page
-  // re-renders on unrelated changes, and rebuilding would drop uploads in
-  // progress (they keep running while staff are on other tabs).
-  function renderKnowledge(_user) {
+  // Client Knowledge Agent staff panel, shown as a section of the Admin page.
+  // Off unless the build sets VITE_KNOWLEDGE_ADMIN=1; the check is inline so
+  // Vite drops this branch (and the lazy chunk) from a production build
+  // without the flag. Admin is staff-only. The panel is created once and
+  // reused: the page re-renders on unrelated changes, and rebuilding would
+  // drop uploads in progress (they keep running while staff are elsewhere).
+  function renderKnowledgeSection() {
     const frag = h("div");
-    frag.appendChild(h("h1", { class: "view-title" }, "Client knowledge agent"));
     if (import.meta.env.VITE_KNOWLEDGE_ADMIN !== "1") return frag;
+    frag.appendChild(h("h2", { id: "admin-knowledge" }, "Client knowledge agent"));
     const slot = h("div");
     frag.appendChild(slot);
     const next = { orgs: loadOrgMetas(), activeOrgId: state.orgId };
@@ -3263,6 +3262,9 @@ import {
       });
     }
     frag.appendChild(intCard);
+
+    // Client knowledge agent (uploads, jobs, what it knows, test questions)
+    frag.appendChild(renderKnowledgeSection());
 
     // Settings
     frag.appendChild(h("h2", {}, "Settings"));

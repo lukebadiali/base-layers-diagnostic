@@ -43,7 +43,7 @@ import {
  *   render?: () => void,
  *   currentUser?: () => *,
  *   addAction?: (createdBy: string, pillarId: number|null, title: string, opts?: *) => void,
- *   addManyActions?: (createdBy: string, items: Array<{ title: string, pillarId: number|null }>, opts?: *) => number,
+ *   addManyActions?: (createdBy: string, items: Array<{ title: string, pillarId: number|null, owner?: string, due?: string }>, opts?: *) => number,
  *   updateAction?: (id: string, patch: *) => void,
  *   deleteAction?: (id: string) => void,
  *   modal?: (children: *) => *,
@@ -672,6 +672,14 @@ export function createActionsView(deps) {
       h("input", { type: "text", placeholder: "Action description" })
     );
     const select = pillarSelectEl();
+    // Owner and due used to be settable only after the action existed, from
+    // its expanded row. Both are optional here and save as "" when left blank.
+    const owner = /** @type {HTMLInputElement} */ (
+      h("input", { type: "text", class: "new-action-owner", placeholder: "Who owns this" })
+    );
+    const due = /** @type {HTMLInputElement} */ (
+      h("input", { type: "date", class: "action-panel-input new-action-due" })
+    );
     const internalWrap = !isClientView(user)
       ? h("label", { class: "field-row" }, [
           h("input", { type: "checkbox", id: "actInternal" }),
@@ -684,6 +692,7 @@ export function createActionsView(deps) {
       title,
       h("div", { class: "progress-spacer" }),
       select,
+      h("div", { class: "new-action-meta" }, [panelField("Owner", owner), panelField("Due", due)]),
       internalWrap,
       h("div", { class: "row" }, [
         h("button", { class: "btn secondary", onclick: () => m.close() }, "Cancel"),
@@ -695,7 +704,11 @@ export function createActionsView(deps) {
               const t = title.value.trim();
               if (!t) return;
               const internal = internalCheckboxChecked(internalWrap);
-              addAction(user.id, pillarIdFromSelect(select), t, { internal });
+              addAction(user.id, pillarIdFromSelect(select), t, {
+                internal,
+                owner: owner.value.trim(),
+                due: due.value,
+              });
               m.close();
               render();
             },
@@ -722,7 +735,7 @@ export function createActionsView(deps) {
   // button that opens this sits behind the same isClient gate as "+ New action".
   /** @param {*} user */
   function openBulkActionModal(user) {
-    /** @type {Array<{ title: string, pillarId: number|null }>} */
+    /** @type {Array<{ title: string, pillarId: number|null, owner: string, due: string }>} */
     let items = [];
     // The text the current `items` were parsed from. Going Back and returning
     // without touching the text must NOT re-parse: that would throw away the
@@ -737,6 +750,10 @@ export function createActionsView(deps) {
     // #modalRoot, so the step change happens inside a host element instead.
     const host = h("div", { class: "bulk-host" });
     const m = modal([host]);
+    // The review rows carry five controls (wording, pillar, owner, due,
+    // remove), which do not fit the standard 520px dialogue.
+    const modalEl = host.closest(".modal");
+    if (modalEl) modalEl.classList.add("modal-wide");
 
     /** @param {HTMLElement} el */
     const show = (el) => {
@@ -823,7 +840,7 @@ export function createActionsView(deps) {
           return;
         }
         if (ta.value !== parsedFrom) {
-          items = titles.map((title) => ({ title, pillarId: null }));
+          items = titles.map((title) => ({ title, pillarId: null, owner: "", due: "" }));
           parsedFrom = ta.value;
         }
         show(reviewStep());
@@ -834,7 +851,7 @@ export function createActionsView(deps) {
         h(
           "p",
           { class: "section-explainer" },
-          "One action per line. Bullet markers and numbering are stripped automatically, and commas inside a line are kept. A single line with no line breaks is split on its commas. You will be able to set a pillar for each one on the next step.",
+          "One action per line. Bullet markers and numbering are stripped automatically, and commas inside a line are kept. A single line with no line breaks is split on its commas. On the next step you can set a pillar, owner and due date for each one, or for all of them at once.",
         ),
       );
       wrap.appendChild(h("div", { class: "outcomes-add-row" }, [clipBtn]));
@@ -894,8 +911,28 @@ export function createActionsView(deps) {
             "×",
           );
 
+          const owner = /** @type {HTMLInputElement} */ (
+            h("input", { type: "text", class: "bulk-review-owner", placeholder: "Owner" })
+          );
+          owner.value = item.owner;
+          owner.setAttribute("aria-label", `Owner for "${item.title}"`);
+          owner.addEventListener("input", () => {
+            items[i].owner = owner.value;
+          });
+
+          const due = /** @type {HTMLInputElement} */ (
+            h("input", { type: "date", class: "bulk-review-due" })
+          );
+          due.value = item.due;
+          due.setAttribute("aria-label", `Due date for "${item.title}"`);
+          due.addEventListener("change", () => {
+            items[i].due = due.value;
+          });
+
           row.appendChild(text);
           row.appendChild(sel);
+          row.appendChild(owner);
+          row.appendChild(due);
           row.appendChild(remove);
           list.appendChild(row);
         });
@@ -926,9 +963,48 @@ export function createActionsView(deps) {
         renderList();
       });
 
+      // Same idea for owner and due date: one value for the batch, then fix
+      // the exceptions row by row. The owner applies on change (blur or
+      // Enter), not per keystroke, so typing a name does not rebuild the list
+      // under the cursor.
+      const applyOwner = /** @type {HTMLInputElement} */ (
+        h("input", { type: "text", class: "bulk-apply-owner", placeholder: "Who owns these" })
+      );
+      applyOwner.addEventListener("change", () => {
+        const owner = applyOwner.value.trim();
+        items.forEach((it) => {
+          it.owner = owner;
+        });
+        renderList();
+      });
+      const applyDue = /** @type {HTMLInputElement} */ (
+        h("input", { type: "date", class: "bulk-apply-due" })
+      );
+      applyDue.addEventListener("change", () => {
+        items.forEach((it) => {
+          it.due = applyDue.value;
+        });
+        renderList();
+      });
+      const applyRest = h("div", { class: "bulk-apply-row" }, [
+        h("label", { class: "bulk-apply-all-wrap" }, [
+          h("span", { class: "action-panel-label" }, "Set every owner to"),
+          applyOwner,
+        ]),
+        h("label", { class: "bulk-apply-all-wrap" }, [
+          h("span", { class: "action-panel-label" }, "Set every due date to"),
+          applyDue,
+        ]),
+      ]);
+
       const addAll = () => {
         const clean = items
-          .map((it) => ({ title: it.title.trim(), pillarId: it.pillarId }))
+          .map((it) => ({
+            title: it.title.trim(),
+            pillarId: it.pillarId,
+            owner: it.owner.trim(),
+            due: it.due,
+          }))
           .filter((it) => it.title);
         if (!clean.length) {
           notify("info", "Nothing to add — every line is empty.");
@@ -947,10 +1023,11 @@ export function createActionsView(deps) {
         h(
           "p",
           { class: "section-explainer" },
-          "Give each one a pillar, fix any wording, and drop anything that should not be there. Leave a pillar blank if the action does not belong to one of the ten.",
+          'Give each one a pillar, an owner and a due date, fix any wording, and drop anything that should not be there. Use the "Set every" boxes to fill a whole column at once, then change any row that differs. Anything left blank can be filled in later.',
         ),
       );
       wrap.appendChild(applyAllWrap);
+      wrap.appendChild(applyRest);
       wrap.appendChild(list);
       const internalWrap = internalControl();
       if (internalWrap) wrap.appendChild(internalWrap);

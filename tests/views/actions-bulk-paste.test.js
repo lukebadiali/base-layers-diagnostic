@@ -337,6 +337,79 @@ describe("action plan — the review step (v6 ACT-09 / ACT-10)", () => {
     ).toEqual([snapshotOrg.pillars[1].id, snapshotOrg.pillars[1].id, snapshotOrg.pillars[5].id]);
   }, 20000);
 
+  it("sets owner and due date for every row at once, and a row changed afterwards keeps its own", async () => {
+    await bootAs("u_internal-luke");
+    const { ta } = await openPasteModal();
+    type(ta, "First\nSecond\nThird");
+    goToReview();
+
+    setValue(
+      /** @type {HTMLInputElement} */ (document.querySelector("#modalRoot .bulk-apply-owner")),
+      "  Luke ",
+      "change",
+    );
+    setValue(
+      /** @type {HTMLInputElement} */ (document.querySelector("#modalRoot .bulk-apply-due")),
+      "2026-12-15",
+      "change",
+    );
+    const rows = () =>
+      Array.from(document.querySelectorAll("#modalRoot .bulk-review-row")).map((row) => ({
+        owner: /** @type {HTMLInputElement} */ (row.querySelector(".bulk-review-owner")),
+        due: /** @type {HTMLInputElement} */ (row.querySelector(".bulk-review-due")),
+      }));
+    expect(rows().map((r) => r.owner.value)).toEqual(["Luke", "Luke", "Luke"]);
+    expect(rows().map((r) => r.due.value)).toEqual(["2026-12-15", "2026-12-15", "2026-12-15"]);
+
+    setValue(rows()[1].owner, "Hugh");
+    setValue(rows()[2].due, "2027-01-10", "change");
+    clickButton("Add all");
+    await Promise.resolve();
+
+    const added = storedOrg().actions.slice(0, 3);
+    expect(added.map((/** @type {*} */ a) => a.owner)).toEqual(["Luke", "Hugh", "Luke"]);
+    expect(added.map((/** @type {*} */ a) => a.due)).toEqual([
+      "2026-12-15",
+      "2026-12-15",
+      "2027-01-10",
+    ]);
+  }, 20000);
+
+  it("leaves owner and due blank when the review step does not set them", async () => {
+    await bootAs("u_internal-luke");
+    const { ta } = await openPasteModal();
+    type(ta, "First\nSecond");
+    goToReview();
+    clickButton("Add all");
+    await Promise.resolve();
+    storedOrg()
+      .actions.slice(0, 2)
+      .forEach((/** @type {*} */ a) => {
+        expect(a.owner).toBe("");
+        expect(a.due).toBe("");
+      });
+  }, 20000);
+
+  it("the New action dialogue sets owner and due date on creation", async () => {
+    await bootAs("u_internal-luke");
+    clickButton("+ New action");
+    await Promise.resolve();
+    /** @type {HTMLInputElement} */ (
+      document.querySelector("#modalRoot input[type='text']")
+    ).value = "Book the workshop room";
+    /** @type {HTMLInputElement} */ (document.querySelector("#modalRoot .new-action-owner")).value =
+      " Miles ";
+    /** @type {HTMLInputElement} */ (document.querySelector("#modalRoot .new-action-due")).value =
+      "2026-12-01";
+    clickButton("Add");
+    await Promise.resolve();
+
+    const a = storedOrg().actions[0];
+    expect(a.title).toBe("Book the workshop room");
+    expect(a.owner).toBe("Miles");
+    expect(a.due).toBe("2026-12-01");
+  }, 20000);
+
   it("applies the internal flag to the whole batch", async () => {
     await bootAs("u_internal-luke");
     const { ta } = await openPasteModal();

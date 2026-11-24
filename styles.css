@@ -1978,6 +1978,9 @@ button.action-chevron:focus-visible {
   max-width: 520px;
   box-shadow: var(--shadow-md);
 }
+.modal.modal-wide {
+  max-width: 920px;
+}
 .modal h3 {
   margin-top: 0;
   font-family: var(--font-display);
@@ -4098,7 +4101,7 @@ button.action-chevron:focus-visible {
 }
 .bulk-review-row {
   display: grid;
-  grid-template-columns: 1fr 190px auto;
+  grid-template-columns: 1fr 170px 130px 140px auto;
   gap: 8px;
   align-items: center;
   padding: 8px 10px;
@@ -4108,7 +4111,11 @@ button.action-chevron:focus-visible {
   border-bottom: 0;
 }
 .bulk-review-text,
-.bulk-review-pillar {
+.bulk-review-pillar,
+.bulk-review-owner,
+.bulk-review-due,
+.bulk-apply-owner,
+.bulk-apply-due {
   font: inherit;
   font-size: 13px;
   padding: 6px 8px;
@@ -4120,13 +4127,46 @@ button.action-chevron:focus-visible {
 .bulk-review-remove {
   line-height: 1;
 }
+.bulk-apply-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+}
+.bulk-apply-row .bulk-apply-all-wrap {
+  flex: 1 1 220px;
+  margin-top: 0;
+}
+.bulk-apply-owner,
+.bulk-apply-due {
+  flex: 1;
+}
+.new-action-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.new-action-meta .action-panel-field {
+  grid-column: auto;
+}
 
 @media (max-width: 640px) {
   .bulk-review-row {
     grid-template-columns: 1fr auto;
     grid-template-areas:
       "text remove"
-      "pillar pillar";
+      "pillar pillar"
+      "owner owner"
+      "due due";
+  }
+  .bulk-review-owner {
+    grid-area: owner;
+  }
+  .bulk-review-due {
+    grid-area: due;
+  }
+  .new-action-meta {
+    grid-template-columns: 1fr;
   }
   .bulk-review-text {
     grid-area: text;

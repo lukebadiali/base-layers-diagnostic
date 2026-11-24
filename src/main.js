@@ -2434,18 +2434,20 @@ import {
   // the review step, so expressing "one pillar for the whole batch" is now the
   // caller's job (the review step's apply-to-all control), not a shape this
   // function imposes on every caller. pillarId may be null.
+  // Each item may also carry owner and due (YYYY-MM-DD), set in the review
+  // step; both default to empty, as before.
   function addManyActions(createdBy, items, { internal = false } = {}) {
     const user = currentUser();
     const orgMeta = activeOrgForUser(user);
     if (!orgMeta || !items.length) return 0;
     const o = loadOrg(orgMeta.id);
     o.actions = o.actions || [];
-    const created = items.map(({ title, pillarId }) => ({
+    const created = items.map(({ title, pillarId, owner = "", due = "" }) => ({
       id: uid("act_"),
       pillarId,
       title,
-      owner: "",
-      due: "",
+      owner,
+      due,
       done: false,
       internal,
       createdAt: iso(),
